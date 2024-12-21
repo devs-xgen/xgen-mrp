@@ -1,4 +1,3 @@
-// src/types/admin/user.ts
 
 export interface UserProfile {
     id: string

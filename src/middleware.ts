@@ -9,7 +9,6 @@ export default withAuth(
         const token = req.nextauth.token
         const pathname = req.nextUrl.pathname
 
-        // Handle root path
         if (pathname === '/') {
             if (token) {
                 // Redirect based on role

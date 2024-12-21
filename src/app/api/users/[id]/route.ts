@@ -10,7 +10,7 @@ export async function DELETE(
     try {
         const id = params.id
 
-        // Delete user (this will cascade to profile due to the relation setup)
+        // Delete user
         await prisma.user.delete({
             where: { id },
         })

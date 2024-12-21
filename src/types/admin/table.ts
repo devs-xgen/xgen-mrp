@@ -7,5 +7,4 @@ export interface UserTableMeta {
     onStatusChange: (userId: string, newStatus: string) => void
 }
 
-// This combines the base TableMeta with our custom meta
 export type ExtendedTableMeta = TableMeta<UserData> & UserTableMeta

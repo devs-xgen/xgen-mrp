@@ -75,7 +75,7 @@ export default function AdminDashboard() {
                 ))}
             </div>
 
-            {/* You can add more sections here like recent orders, low stock alerts, etc. */}
+            {/* DITO ANG IBANG COMPONENTS */}
         </div>
     )
 }

@@ -48,7 +48,7 @@ export function DeleteUserDialog({
         } catch (error) {
             console.error('Error deleting user:', error)
             setError(error instanceof Error ? error.message : 'An error occurred')
-            onOpenChange(true) // Keep dialog open on error
+            onOpenChange(true)
         } finally {
             setIsLoading(false)
         }

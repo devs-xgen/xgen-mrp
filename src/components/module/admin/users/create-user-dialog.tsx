@@ -85,8 +85,6 @@ export function CreateUserDialog({
             setIsLoading(true)
             setError(null)
 
-            // Structure the data to match our API expectations
-            // In your CreateUserDialog's onSubmit function:
             const userData = {
                 email: values.email,
                 password: values.password,
@@ -115,11 +113,11 @@ export function CreateUserDialog({
                 throw new Error(data.error || data.message || 'Failed to create user')
             }
 
-            console.log('User created successfully:', data) // Debug log
+            console.log('User created successfully:', data)
             form.reset()
             onSuccess?.()
         } catch (error) {
-            console.error('Error in form submission:', error) // Debug log
+            console.error('Error in form submission:', error)
             setError(error instanceof Error ? error.message : 'An error occurred')
         } finally {
             setIsLoading(false)
