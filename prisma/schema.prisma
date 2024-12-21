@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String       @id @default(cuid())
+  email       String       @unique
+  password    String
+  role        Role         @default(OPERATOR)
+  status      UserStatus   @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  lastLoginAt DateTime?
+  createdBy   String?
+  modifiedBy  String?
+  profile     UserProfile?
+}
+
+model UserProfile {
+  id               String            @id @default(cuid())
+  userId           String            @unique
+  firstName        String
+  lastName         String
+  phoneNumber      String?
+  address          String?
+  city             String?
+  state            String?
+  country          String?
+  postalCode       String?
+  department       String?
+  position         String?
+  employeeId       String? // For internal reference
+  dateOfBirth      DateTime?
+  gender           Gender?
+  avatar           String? // URL to profile picture
+  bio              String?           @db.Text
+  emergencyContact EmergencyContact?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model EmergencyContact {
+  id             String   @id @default(cuid())
+  profileId      String   @unique
+  name           String
+  relationship   String
+  phoneNumber    String
+  altPhoneNumber String?
+  email          String?
+  address        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  userProfile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  ADMIN // Full system access
+  MANAGER // Can manage inventory and operators
+  OPERATOR // Basic inventory operations
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
