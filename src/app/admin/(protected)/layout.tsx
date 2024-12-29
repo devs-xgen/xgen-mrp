@@ -2,6 +2,8 @@ import { getServerSession } from "next-auth/next"
 import { redirect } from "next/navigation"
 import AdminSidebar from "@/components/module/admin/adminSidebar"
 import { authOptions } from "@/lib/auth"
+import AppSidebar from "@/components/shared/AppSidebar"
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 
 export default async function AdminProtectedLayout({
     children,
@@ -14,10 +16,15 @@ export default async function AdminProtectedLayout({
         redirect('/admin/login')
     }
 
+    // Check if user has admin role
+    if (!['ADMIN', 'MANAGER'].includes(session.user.role)) {
+        redirect('/worker/dashboard')
+    }
+
     return (
         <div className="flex h-screen bg-gray-100">
-            <AdminSidebar />
-            <main className="flex-1 overflow-y-auto p-8">
+            <AppSidebar />
+            <main className="flex-1 overflow-y-auto p-8 transition-all duration-300">
                 {children}
             </main>
         </div>
