@@ -58,12 +58,11 @@ interface CreateSupplierDialogProps {
     onSuccess?: () => Promise<void>
 }
 
-// Update the interface for GeoNames response
 interface GeoNamesResult {
     postalCodes?: Array<{
         postalCode: string;
         placeName: string;
-        adminName1: string; // state/province
+        adminName1: string;
         countryCode: string;
     }>;
 }
@@ -83,12 +82,10 @@ async function generatePostalCode({
             return "Need city and country"
         }
 
-        // Create a deterministic but unique-looking code
         const cityCode = city.substring(0, 3).toUpperCase()
         const stateCode = state ? state.substring(0, 2).toUpperCase() : 'XX'
         const countryCode = country.substring(0, 2).toUpperCase()
 
-        // Generate a pseudo-random but consistent number based on the input
         const hash = Array.from(city + state + country)
             .reduce((acc, char) => acc + char.charCodeAt(0), 0)
         const numberPart = (hash % 9000 + 1000).toString()
