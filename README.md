@@ -13,3 +13,13 @@ Admin user created: {
   password: worker123
 }
 ```
+
+
+
+products need na mins hindi day
+
+
+dropdown inventory system in navigation 
+creating materials page in.
+
+default suyppliers purchase

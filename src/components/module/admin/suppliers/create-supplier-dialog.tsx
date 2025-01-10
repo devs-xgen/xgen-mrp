@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import * as z from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -25,6 +25,14 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
+import { PhoneInput } from "@/components/ui/phone-input"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 
 // Form validation schema
 const formSchema = z.object({
@@ -32,15 +40,15 @@ const formSchema = z.object({
     code: z.string().min(1, "Code is required"),
     contactPerson: z.string().optional(),
     email: z.string().email().optional(),
-    phone: z.string().optional(),
+    phone: z.string().regex(/^\+\d{1,3}\d+$/, "Invalid phone number format").optional(),
     address: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
     country: z.string().optional(),
     postalCode: z.string().optional(),
     paymentTerms: z.string().optional(),
-    leadTime: z.number().min(0),
-    status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+    leadTime: z.number().min(0).describe('Lead time in hours'),
+    status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED", "ARCHIVED"]),
     notes: z.string().optional(),
 })
 
@@ -48,6 +56,48 @@ type FormData = z.infer<typeof formSchema>
 
 interface CreateSupplierDialogProps {
     onSuccess?: () => Promise<void>
+}
+
+// Update the interface for GeoNames response
+interface GeoNamesResult {
+    postalCodes?: Array<{
+        postalCode: string;
+        placeName: string;
+        adminName1: string; // state/province
+        countryCode: string;
+    }>;
+}
+
+// Fallback to a simpler implementation that doesn't rely on external APIs
+async function generatePostalCode({
+    city,
+    state,
+    country
+}: {
+    city?: string,
+    state?: string,
+    country?: string
+}): Promise<string> {
+    try {
+        if (!city || !country) {
+            return "Need city and country"
+        }
+
+        // Create a deterministic but unique-looking code
+        const cityCode = city.substring(0, 3).toUpperCase()
+        const stateCode = state ? state.substring(0, 2).toUpperCase() : 'XX'
+        const countryCode = country.substring(0, 2).toUpperCase()
+
+        // Generate a pseudo-random but consistent number based on the input
+        const hash = Array.from(city + state + country)
+            .reduce((acc, char) => acc + char.charCodeAt(0), 0)
+        const numberPart = (hash % 9000 + 1000).toString()
+
+        return `${cityCode}${stateCode}-${numberPart}`
+    } catch (error) {
+        console.error('Failed to generate postal code:', error)
+        return "Error generating code"
+    }
 }
 
 export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
@@ -74,15 +124,45 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
         }
     })
 
+    // Update the useEffect to handle the new implementation
+    useEffect(() => {
+        const { city, state, country } = form.getValues()
+        if (city && country) {
+            const updatePostalCode = async () => {
+                const generatedCode = await generatePostalCode({
+                    city,
+                    state,
+                    country
+                })
+                form.setValue('postalCode', generatedCode)
+            }
+            updatePostalCode()
+        }
+    }, [form.watch(['city', 'state', 'country'])])
+
     const onSubmit = async (data: FormData) => {
         try {
             setLoading(true)
+
+            // Generate postal code based on city, state, and country
+            const generatedPostalCode = await generatePostalCode({
+                city: data.city || '',
+                state: data.state || '',
+                country: data.country || ''
+            })
+
+            // Update the data with the generated postal code
+            const submissionData = {
+                ...data,
+                postalCode: generatedPostalCode
+            }
+
             const response = await fetch("/api/suppliers", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify(data),
+                body: JSON.stringify(submissionData),
             })
 
             if (!response.ok) {
@@ -189,7 +269,10 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
                                     <FormItem>
                                         <FormLabel>Phone</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="Phone" {...field} />
+                                            <PhoneInput
+                                                value={field.value}
+                                                onChange={field.onChange}
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -211,36 +294,7 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
                             )}
                         />
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="city"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>City</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="City" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="state"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>State</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="State" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-4">
                             <FormField
                                 control={form.control}
                                 name="country"
@@ -248,25 +302,107 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
                                     <FormItem>
                                         <FormLabel>Country</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="Country" {...field} />
+                                            <Input
+                                                placeholder="Country"
+                                                {...field}
+                                                onChange={async (e) => {
+                                                    field.onChange(e)
+                                                    const { city, state } = form.getValues()
+                                                    if (city) {
+                                                        const newCode = await generatePostalCode({
+                                                            city,
+                                                            state,
+                                                            country: e.target.value
+                                                        })
+                                                        form.setValue('postalCode', newCode)
+                                                    }
+                                                }}
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
+
                             <FormField
                                 control={form.control}
-                                name="postalCode"
+                                name="state"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Postal Code</FormLabel>
+                                        <FormLabel>State/Region</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="Postal Code" {...field} />
+                                            <Input
+                                                placeholder="State/Region"
+                                                {...field}
+                                                onChange={async (e) => {
+                                                    field.onChange(e)
+                                                    const { city, country } = form.getValues()
+                                                    if (city && country) {
+                                                        const newCode = await generatePostalCode({
+                                                            city: city || '',
+                                                            state: e.target.value,
+                                                            country: country || ''
+                                                        })
+                                                        form.setValue('postalCode', newCode)
+                                                    }
+                                                }}
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="city"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>City</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="City"
+                                                    {...field}
+                                                    onChange={async (e) => {
+                                                        field.onChange(e)
+                                                        const { state, country } = form.getValues()
+                                                        if (country) {
+                                                            const newCode = await generatePostalCode({
+                                                                city: e.target.value,
+                                                                state: state || '',
+                                                                country: country || ''
+                                                            })
+                                                            form.setValue('postalCode', newCode)
+                                                        }
+                                                    }}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="postalCode"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Postal Code</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="Auto-generated postal code"
+                                                    {...field}
+                                                    disabled
+                                                    value={field.value || "Complete location fields"}
+                                                    className="bg-muted"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
                         </div>
 
                         <FormField
@@ -289,10 +425,12 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
                                 name="leadTime"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Lead Time (days)</FormLabel>
+                                        <FormLabel>Lead Time (hours)</FormLabel>
                                         <FormControl>
                                             <Input
                                                 type="number"
+                                                min="0"
+                                                placeholder="Lead time in hours"
                                                 {...field}
                                                 onChange={e => field.onChange(parseInt(e.target.value))}
                                             />
@@ -307,9 +445,22 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Status</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Status" {...field} />
-                                        </FormControl>
+                                        <Select
+                                            value={field.value}
+                                            onValueChange={field.onChange}
+                                        >
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select status" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="ACTIVE">Active</SelectItem>
+                                                <SelectItem value="INACTIVE">Inactive</SelectItem>
+                                                <SelectItem value="SUSPENDED">Suspended</SelectItem>
+                                                <SelectItem value="ARCHIVED">Archived</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )}

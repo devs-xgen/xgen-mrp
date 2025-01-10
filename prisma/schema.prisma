@@ -71,6 +71,7 @@ model ProductCategory {
   products    Product[]
 }
 
+// ! TABLE WILL BE USED FOR INVENTORY
 model MaterialType {
   id          String     @id @default(cuid())
   name        String     @unique
@@ -83,6 +84,7 @@ model MaterialType {
   materials   Material[]
 }
 
+// ! TABLE WILL BE USED FOR INVENTORY
 model UnitOfMeasure {
   id          String     @id @default(cuid())
   name        String     @unique
@@ -96,6 +98,7 @@ model UnitOfMeasure {
   materials   Material[]
 }
 
+// ! TABLE WILL BE USED FOR INVENTORY
 model Product {
   id                String            @id @default(cuid())
   sku               String            @unique
@@ -120,6 +123,7 @@ model Product {
   orderLines        OrderLine[]
 }
 
+// ! TABLE WILL BE USED FOR INVENTORY
 model Material {
   id                 String              @id @default(cuid())
   name               String
@@ -143,7 +147,9 @@ model Material {
   purchaseOrderLines PurchaseOrderLine[]
 }
 
+// ! TABLE WILL BE USED FOR INVENTORY
 // BILLS OF MATERIAL
+
 model BOM {
   id              String   @id @default(cuid())
   productId       String
