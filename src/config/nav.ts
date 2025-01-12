@@ -79,10 +79,22 @@ export const adminNavItems: NavItem[] = [
     ]
   },
   {
-    icon: Truck,
-    label: 'Suppliers',
-    href: '/admin/suppliers',
-    description: 'Supplier management'
+    icon: Users,
+    label: 'Partners',
+    items: [
+      {
+        icon: Truck,
+        label: 'Suppliers',
+        href: '/admin/suppliers',
+        description: 'Supplier management'
+      },
+      {
+        icon: Users,
+        label: 'Customers',
+        href: '/admin/customers',
+        description: 'Customer management'
+      }
+    ]
   },
   {
     icon: Users,

@@ -289,10 +289,34 @@ model PurchaseOrderLine {
   material      Material      @relation(fields: [materialId], references: [id])
 }
 
+model Customer {
+  id            String          @id @default(cuid())
+  name          String
+  code          String          @unique
+  contactPerson String
+  email         String
+  phone         String
+  address       String?
+  city          String?
+  state         String?
+  country       String?
+  postalCode    String?
+  tinNumber     String?         @unique  // Tax Identification Number
+  creditLimit   Decimal?        @db.Decimal(10, 2)
+  paymentTerms  String?
+  status        Status          @default(ACTIVE)
+  notes         String?         @db.Text
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  createdBy     String?
+  modifiedBy    String?
+  orders        CustomerOrder[]
+}
+
 model CustomerOrder {
   id               String            @id @default(cuid())
   orderNumber      String            @unique
-  customerId       String // References User
+  customerId       String
   orderDate        DateTime
   requiredDate     DateTime
   status           Status            @default(ACTIVE)
@@ -304,6 +328,7 @@ model CustomerOrder {
   updatedAt        DateTime          @updatedAt
   createdBy        String?
   modifiedBy       String?
+  customer         Customer          @relation(fields: [customerId], references: [id])
   orderLines       OrderLine[]
   productionOrders ProductionOrder[]
 }
