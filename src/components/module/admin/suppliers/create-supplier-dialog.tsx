@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import * as z from "zod"
 import { useForm } from "react-hook-form"
+import { Status } from "@prisma/client"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -48,7 +49,7 @@ const formSchema = z.object({
     postalCode: z.string().optional(),
     paymentTerms: z.string().optional(),
     leadTime: z.number().min(0).describe('Lead time in hours'),
-    status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED", "ARCHIVED"]),
+    status: z.nativeEnum(Status),
     notes: z.string().optional(),
 })
 
@@ -141,17 +142,20 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
         try {
             setLoading(true)
 
-            // Generate postal code based on city, state, and country
-            const generatedPostalCode = await generatePostalCode({
-                city: data.city || '',
-                state: data.state || '',
-                country: data.country || ''
-            })
+            // Only generate postal code if it's empty or has the placeholder text
+            let postalCode = data.postalCode
+            if (!postalCode || postalCode === "Complete location fields") {
+                postalCode = await generatePostalCode({
+                    city: data.city || '',
+                    state: data.state || '',
+                    country: data.country || ''
+                })
+            }
 
-            // Update the data with the generated postal code
+            // Update the data with the postal code
             const submissionData = {
                 ...data,
-                postalCode: generatedPostalCode
+                postalCode: postalCode
             }
 
             const response = await fetch("/api/suppliers", {
@@ -388,13 +392,21 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
                                             <FormLabel>Postal Code</FormLabel>
                                             <FormControl>
                                                 <Input
-                                                    placeholder="Auto-generated postal code"
+                                                    placeholder="Enter postal code or complete location fields for auto-generation"
                                                     {...field}
-                                                    disabled
-                                                    value={field.value || "Complete location fields"}
-                                                    className="bg-muted"
+                                                    className={field.value === "Complete location fields" ? "bg-muted" : ""}
+                                                    onChange={(e) => {
+                                                        field.onChange(e)
+                                                        // Clear the "Complete location fields" placeholder if user starts typing
+                                                        if (field.value === "Complete location fields" && e.target.value) {
+                                                            field.onChange("")
+                                                        }
+                                                    }}
                                                 />
                                             </FormControl>
+                                            <p className="text-sm text-muted-foreground">
+                                                Auto-generated based on location or enter manually
+                                            </p>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -452,10 +464,11 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                <SelectItem value="ACTIVE">Active</SelectItem>
-                                                <SelectItem value="INACTIVE">Inactive</SelectItem>
-                                                <SelectItem value="SUSPENDED">Suspended</SelectItem>
-                                                <SelectItem value="ARCHIVED">Archived</SelectItem>
+                                                {Object.values(Status).map((status) => (
+                                                    <SelectItem key={status} value={status}>
+                                                        {status}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />

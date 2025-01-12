@@ -31,13 +31,15 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { createColumns } from "./columns"  // Adjusted to only use data
 import { Supplier } from "@prisma/client"
+import { Loader2 } from "lucide-react"
 
 interface DataTableProps {
     data: Supplier[]  // Only passing data (suppliers) as prop
     onSuccess?: () => Promise<void>
+    isLoading?: boolean  // Add isLoading prop
 }
 
-export function SupplierDataTable({ data, onSuccess }: DataTableProps) {
+export function SupplierDataTable({ data, onSuccess, isLoading }: DataTableProps) {
     const [sorting, setSorting] = useState<SortingState>([])
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
@@ -107,23 +109,27 @@ export function SupplierDataTable({ data, onSuccess }: DataTableProps) {
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => {
-                                    return (
-                                        <TableHead key={header.id}>
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                    header.column.columnDef.header,
-                                                    header.getContext()
-                                                )}
-                                        </TableHead>
-                                    )
-                                })}
+                                {headerGroup.headers.map((header) => (
+                                    <TableHead key={header.id}>
+                                        {header.isPlaceholder
+                                            ? null
+                                            : flexRender(
+                                                header.column.columnDef.header,
+                                                header.getContext()
+                                            )}
+                                    </TableHead>
+                                ))}
                             </TableRow>
                         ))}
                     </TableHeader>
                     <TableBody>
-                        {table.getRowModel().rows?.length ? (
+                        {isLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={columns.length} className="h-24 text-center">
+                                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                                </TableCell>
+                            </TableRow>
+                        ) : table.getRowModel().rows?.length ? (
                             table.getRowModel().rows.map((row) => (
                                 <TableRow
                                     key={row.id}

@@ -1,54 +1,71 @@
 "use client"
 
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { toast } from "@/hooks/use-toast"
 import { Customer } from "@prisma/client"
-import { toast } from "sonner"
 
 interface DeleteCustomerDialogProps {
-  customer: Customer
-  open: boolean
-  onOpenChange: (open: boolean) => void
+    customer: Customer
+    open: boolean
+    onOpenChange: (open: boolean) => void
+    onSuccess?: () => Promise<void>
 }
 
 export function DeleteCustomerDialog({
-  customer,
-  open,
-  onOpenChange,
+    customer,
+    open,
+    onOpenChange,
+    onSuccess
 }: DeleteCustomerDialogProps) {
-  async function onDelete() {
-    try {
-      // Add your API call here
-      toast.success("Customer deleted successfully")
-      onOpenChange(false)
-    } catch (error) {
-      toast.error("Failed to delete customer")
-    }
-  }
+    const handleDelete = async () => {
+        try {
+            const response = await fetch(`/api/customers/${customer.id}`, {
+                method: "DELETE",
+            })
 
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete the customer
-            and all related data.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  )
+            if (!response.ok) {
+                throw new Error("Failed to delete customer")
+            }
+
+            toast({
+                title: "Success",
+                description: "Customer deleted successfully",
+            })
+            onOpenChange(false)
+            await onSuccess?.()
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: error instanceof Error ? error.message : "Failed to delete customer",
+                variant: "destructive",
+            })
+        }
+    }
+
+    return (
+        <AlertDialog open={open} onOpenChange={onOpenChange}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete the customer &quot;{customer.name}&quot;.
+                        This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    )
 } 
