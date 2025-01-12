@@ -1,3 +1,5 @@
+// src/app/admin/(protected)/products/page.tsx
+
 import { Metadata } from "next"
 import { getProducts, getCategories } from "@/lib/api/products"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"

@@ -1,12 +1,20 @@
-import { prisma } from "@/lib/db"
+import { prisma } from '@/lib/db'
 
 export async function getProducts() {
-    const products = await prisma.product.findMany({
-        orderBy: {
-            createdAt: 'desc',
-        },
-    })
-    return products
+    try {
+        const products = await prisma.product.findMany({
+            orderBy: {
+                createdAt: 'desc',
+            },
+            include: {
+                category: true,
+            }
+        })
+        return products
+    } catch (error) {
+        console.error('Error fetching products:', error)
+        throw error
+    }
 }
 
 export async function getCategories() {

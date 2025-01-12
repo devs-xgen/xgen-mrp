@@ -1,13 +1,107 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
-import { LogOut, ChevronLeft, ChevronRight } from 'lucide-react'
+import { LogOut, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getNavItems } from '@/config/nav'
 import { Button } from '@/components/ui/button'
-import { useState } from 'react'
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+
+interface NavItemProps {
+    item: any
+    isCollapsed: boolean
+    isActive: boolean
+    isChild?: boolean
+}
+
+function NavItem({ item, isCollapsed, isActive, isChild = false }: NavItemProps) {
+    const [isOpen, setIsOpen] = useState(false)
+    const pathname = usePathname()
+
+    if (item.items) {
+        return (
+            <Collapsible
+                open={isOpen}
+                onOpenChange={setIsOpen}
+                className="w-full"
+            >
+                <CollapsibleTrigger className={cn(
+                    'flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group',
+                    isOpen
+                        ? 'bg-slate-700 text-slate-100'
+                        : 'text-slate-300 hover:bg-slate-700 hover:text-slate-100'
+                )}>
+                    {item.icon && <item.icon className="h-5 w-5 shrink-0" />}
+                    <span className={cn(
+                        "transition-all duration-300",
+                        isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto",
+                        item.icon ? "ml-3" : "ml-0"
+                    )}>
+                        {item.label}
+                    </span>
+                    {!isCollapsed && (
+                        <ChevronDown
+                            className={cn(
+                                "h-4 w-4 transition-transform ml-auto",
+                                isOpen && "transform rotate-180"
+                            )}
+                        />
+                    )}
+                    {isCollapsed && (
+                        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-slate-900 text-slate-100 text-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                            {item.label}
+                        </div>
+                    )}
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-0.5 pt-1">
+                    {item.items.map((subItem: any) => (
+                        <NavItem
+                            key={subItem.href}
+                            item={subItem}
+                            isCollapsed={isCollapsed}
+                            isActive={pathname === subItem.href}
+                            isChild
+                        />
+                    ))}
+                </CollapsibleContent>
+            </Collapsible>
+        )
+    }
+
+    return (
+        <Link
+            href={item.href || '#'}
+            className={cn(
+                'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group',
+                isActive
+                    ? 'bg-slate-700 text-slate-100'
+                    : 'text-slate-300 hover:bg-slate-700 hover:text-slate-100',
+                isChild && "pl-9"
+            )}
+        >
+            {item.icon && <item.icon className="h-5 w-5 shrink-0" />}
+            <span className={cn(
+                "transition-all duration-300",
+                isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto",
+                item.icon ? "ml-3" : "ml-0"
+            )}>
+                {item.label}
+            </span>
+            {isCollapsed && (
+                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-slate-900 text-slate-100 text-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                    {item.label}
+                </div>
+            )}
+        </Link>
+    )
+}
 
 export default function AppSidebar() {
     const pathname = usePathname()
@@ -47,37 +141,14 @@ export default function AppSidebar() {
             </div>
 
             <nav className="flex-1 space-y-1 p-4">
-                {navItems.map((item) => {
-                    const Icon = item.icon
-                    const isActive = pathname === item.href
-
-                    return (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className={cn(
-                                'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group',
-                                isActive
-                                    ? 'bg-slate-700 text-slate-100'
-                                    : 'text-slate-300 hover:bg-slate-700 hover:text-slate-100'
-                            )}
-                        >
-                            <Icon className="h-5 w-5 shrink-0" />
-                            <span className={cn(
-                                "ml-3 transition-all duration-300",
-                                isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
-                            )}>
-                                {item.label}
-                            </span>
-                            {/* Tooltip for collapsed state */}
-                            {isCollapsed && (
-                                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-slate-900 text-slate-100 rounded-md text-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                                    {item.label}
-                                </div>
-                            )}
-                        </Link>
-                    )
-                })}
+                {navItems.map((item) => (
+                    <NavItem
+                        key={item.href || item.label}
+                        item={item}
+                        isCollapsed={isCollapsed}
+                        isActive={pathname === item.href}
+                    />
+                ))}
             </nav>
 
             <div className={cn(

@@ -12,12 +12,12 @@ model User {
   email       String       @unique
   password    String
   role        Role         @default(OPERATOR)
-  status      UserStatus   @default(ACTIVE)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-  lastLoginAt DateTime?
   createdBy   String?
+  lastLoginAt DateTime?
   modifiedBy  String?
+  status      UserStatus   @default(ACTIVE)
   profile     UserProfile?
 }
 
@@ -38,10 +38,10 @@ model UserProfile {
   dateOfBirth      DateTime?
   gender           Gender?
   avatar           String?
-  bio              String?           @db.Text
-  emergencyContact EmergencyContact?
+  bio              String?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+  emergencyContact EmergencyContact?
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -62,7 +62,7 @@ model EmergencyContact {
 model ProductCategory {
   id          String    @id @default(cuid())
   name        String    @unique
-  description String?   @db.Text
+  description String?
   status      Status    @default(ACTIVE)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -74,7 +74,7 @@ model ProductCategory {
 model MaterialType {
   id          String     @id @default(cuid())
   name        String     @unique
-  description String?    @db.Text
+  description String?
   status      Status     @default(ACTIVE)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -87,7 +87,7 @@ model UnitOfMeasure {
   id          String     @id @default(cuid())
   name        String     @unique
   symbol      String
-  description String?    @db.Text
+  description String?
   status      Status     @default(ACTIVE)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -100,7 +100,7 @@ model Product {
   id                String            @id @default(cuid())
   sku               String            @unique
   name              String
-  description       String?           @db.Text
+  description       String?
   categoryId        String
   sizeRange         String[]
   colorOptions      String[]
@@ -114,10 +114,10 @@ model Product {
   updatedAt         DateTime          @updatedAt
   createdBy         String?
   modifiedBy        String?
-  category          ProductCategory   @relation(fields: [categoryId], references: [id])
   boms              BOM[]
-  productionOrders  ProductionOrder[]
   orderLines        OrderLine[]
+  category          ProductCategory   @relation(fields: [categoryId], references: [id])
+  productionOrders  ProductionOrder[]
 }
 
 model Material {
@@ -136,14 +136,13 @@ model Material {
   updatedAt          DateTime            @updatedAt
   createdBy          String?
   modifiedBy         String?
+  boms               BOM[]
+  supplier           Supplier            @relation(fields: [supplierId], references: [id])
   type               MaterialType        @relation(fields: [typeId], references: [id])
   unitOfMeasure      UnitOfMeasure       @relation(fields: [unitOfMeasureId], references: [id])
-  supplier           Supplier            @relation(fields: [supplierId], references: [id])
-  boms               BOM[]
   purchaseOrderLines PurchaseOrderLine[]
 }
 
-// BILLS OF MATERIAL
 model BOM {
   id              String   @id @default(cuid())
   productId       String
@@ -154,11 +153,10 @@ model BOM {
   updatedAt       DateTime @updatedAt
   createdBy       String?
   modifiedBy      String?
-  product         Product  @relation(fields: [productId], references: [id])
   material        Material @relation(fields: [materialId], references: [id])
+  product         Product  @relation(fields: [productId], references: [id])
 }
 
-// Production Management
 model ProductionOrder {
   id              String         @id @default(cuid())
   productId       String
@@ -168,21 +166,21 @@ model ProductionOrder {
   status          Status         @default(ACTIVE)
   priority        Priority       @default(MEDIUM)
   customerOrderId String?
-  notes           String?        @db.Text
+  notes           String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   createdBy       String?
   modifiedBy      String?
-  product         Product        @relation(fields: [productId], references: [id])
-  customerOrder   CustomerOrder? @relation(fields: [customerOrderId], references: [id])
   operations      Operation[]
+  customerOrder   CustomerOrder? @relation(fields: [customerOrderId], references: [id])
+  product         Product        @relation(fields: [productId], references: [id])
   qualityChecks   QualityCheck[]
 }
 
 model WorkCenter {
   id              String      @id @default(cuid())
   name            String
-  description     String?     @db.Text
+  description     String?
   capacityPerHour Int
   operatingHours  Int
   efficiencyRate  Decimal     @db.Decimal(5, 2)
@@ -201,24 +199,24 @@ model Operation {
   startTime         DateTime
   endTime           DateTime
   status            Status          @default(ACTIVE)
-  notes             String?         @db.Text
+  notes             String?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   createdBy         String?
   modifiedBy        String?
-  workCenter        WorkCenter      @relation(fields: [workCenterId], references: [id])
   productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id])
+  workCenter        WorkCenter      @relation(fields: [workCenterId], references: [id])
 }
 
 model QualityCheck {
   id                String          @id @default(cuid())
   productionOrderId String
-  inspectorId       String // References User
+  inspectorId       String
   checkDate         DateTime
   status            Status          @default(ACTIVE)
-  defectsFound      String?         @db.Text
-  actionTaken       String?         @db.Text
-  notes             String?         @db.Text
+  defectsFound      String?
+  actionTaken       String?
+  notes             String?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   createdBy         String?
@@ -239,9 +237,9 @@ model Supplier {
   country        String?
   postalCode     String?
   paymentTerms   String?
-  leadTime       Int // in days
+  leadTime       Int
   status         Status          @default(ACTIVE)
-  notes          String?         @db.Text
+  notes          String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   createdBy      String?
@@ -258,7 +256,7 @@ model PurchaseOrder {
   expectedDelivery DateTime
   status           Status              @default(ACTIVE)
   totalAmount      Decimal             @db.Decimal(10, 2)
-  notes            String?             @db.Text
+  notes            String?
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
   createdBy        String?
@@ -274,30 +272,55 @@ model PurchaseOrderLine {
   quantity      Int
   unitPrice     Decimal       @db.Decimal(10, 2)
   status        Status        @default(ACTIVE)
-  notes         String?       @db.Text
+  notes         String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   createdBy     String?
   modifiedBy    String?
-  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [id])
   material      Material      @relation(fields: [materialId], references: [id])
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [id])
+}
+
+model Customer {
+  id            String          @id @default(cuid())
+  name          String
+  code          String          @unique
+  contactPerson String
+  email         String
+  phone         String
+  address       String?
+  city          String?
+  state         String?
+  country       String?
+  postalCode    String?
+  tinNumber     String?         @unique
+  creditLimit   Decimal?        @db.Decimal(10, 2)
+  paymentTerms  String?
+  status        Status          @default(ACTIVE)
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  createdBy     String?
+  modifiedBy    String?
+  orders        CustomerOrder[]
 }
 
 model CustomerOrder {
   id               String            @id @default(cuid())
   orderNumber      String            @unique
-  customerId       String // References User
+  customerId       String
   orderDate        DateTime
   requiredDate     DateTime
   status           Status            @default(ACTIVE)
   totalAmount      Decimal           @db.Decimal(10, 2)
   shippingAddress  String?
   billingAddress   String?
-  notes            String?           @db.Text
+  notes            String?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   createdBy        String?
   modifiedBy       String?
+  customer         Customer          @relation(fields: [customerId], references: [id])
   orderLines       OrderLine[]
   productionOrders ProductionOrder[]
 }
@@ -309,7 +332,7 @@ model OrderLine {
   quantity      Int
   unitPrice     Decimal       @db.Decimal(10, 2)
   status        Status        @default(ACTIVE)
-  notes         String?       @db.Text
+  notes         String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   createdBy     String?
@@ -318,7 +341,6 @@ model OrderLine {
   product       Product       @relation(fields: [productId], references: [id])
 }
 
-// ENUMS
 enum Role {
   ADMIN
   MANAGER
