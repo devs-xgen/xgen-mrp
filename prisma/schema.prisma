@@ -8,17 +8,18 @@ datasource db {
 }
 
 model User {
-  id          String       @id @default(cuid())
-  email       String       @unique
+  id          String        @id @default(cuid())
+  email       String        @unique
   password    String
-  role        Role         @default(OPERATOR)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  role        Role          @default(OPERATOR)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   createdBy   String?
   lastLoginAt DateTime?
   modifiedBy  String?
-  status      UserStatus   @default(ACTIVE)
+  status      UserStatus    @default(ACTIVE)
   profile     UserProfile?
+  Transaction Transaction[]
 }
 
 model UserProfile {
@@ -323,6 +324,7 @@ model CustomerOrder {
   customer         Customer          @relation(fields: [customerId], references: [id])
   orderLines       OrderLine[]
   productionOrders ProductionOrder[]
+  transaction      Transaction[]
 }
 
 model OrderLine {
@@ -341,10 +343,34 @@ model OrderLine {
   product       Product       @relation(fields: [productId], references: [id])
 }
 
+model Transaction {
+  id            String        @id @default(cuid())
+  orderId       String
+  paymentMethod PaymentMethod
+  amount        Decimal       @db.Decimal(10, 2)
+  handledBy     String // User who processed the payment
+  paymentDate   DateTime
+  status        Status        @default(COMPLETED)
+  notes         String?       @db.Text
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  handledByUser User          @relation(fields: [handledBy], references: [id])
+  customerOrder CustomerOrder @relation(fields: [orderId], references: [id])
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  ONLINE
+  OTHER
+}
+
 enum Role {
   ADMIN
   MANAGER
   OPERATOR
+  POS_OPERATOR
 }
 
 enum UserStatus {
