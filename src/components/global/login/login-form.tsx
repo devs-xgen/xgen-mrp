@@ -16,6 +16,7 @@ import {
     FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { EyeIcon, EyeOffIcon } from "lucide-react"
 
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
@@ -34,6 +35,7 @@ export function LoginForm() {
     const pathname = usePathname()
     const { toast } = useToast()
     const [isLoading, setIsLoading] = useState(false)
+    const [showPassword, setShowPassword] = useState(false)
 
     // Determine user type based on the pathname
     const userType = pathname.includes('/admin') ? 'ADMIN' : 'OPERATOR'
@@ -115,11 +117,26 @@ export function LoginForm() {
                         <FormItem>
                             <FormLabel>Password</FormLabel>
                             <FormControl>
-                                <Input
-                                    type="password"
-                                    {...field}
-                                    disabled={isLoading}
-                                />
+                                <div className="relative">
+                                    <Input
+                                        type={showPassword ? "text" : "password"}
+                                        {...field}
+                                        disabled={isLoading}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-transparent"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                    >
+                                        {showPassword ? (
+                                            <EyeOffIcon className="h-4 w-4" />
+                                        ) : (
+                                            <EyeIcon className="h-4 w-4" />
+                                        )}
+                                    </Button>
+                                </div>
                             </FormControl>
                             <FormMessage />
                         </FormItem>
