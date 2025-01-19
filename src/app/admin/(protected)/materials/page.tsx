@@ -3,6 +3,8 @@
 import { Metadata } from "next";
 import { MaterialDataTable } from "@/components/module/admin/materials/data-table";
 import { CreateMaterialDialog } from "@/components/module/admin/materials/create-material-dialog";
+import { MaterialTypeDialog } from "@/components/module/admin/materials/material-type-dialog"
+import { UnitOfMeasureDialog } from "@/components/module/admin/materials/unit-of-measure-dialog"
 import {
   Card,
   CardContent,
@@ -10,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button"
 import {
   getMaterials,
   getMaterialTypes,
@@ -44,12 +47,22 @@ export default async function MaterialsPage() {
         <h1 className="text-3xl font-bold tracking-tight">
           Materials Management
         </h1>
-        <CreateMaterialDialog
-          materialTypes={materialTypes}
-          unitOfMeasures={unitOfMeasures}
-          suppliers={suppliers}
-          onSuccess={refreshData}
-        />
+        <div className="flex items-center gap-2">
+          <MaterialTypeDialog
+            materialTypes={materialTypes}
+            onSuccess={refreshData}
+          />
+          <UnitOfMeasureDialog
+            unitOfMeasures={unitOfMeasures}
+            onSuccess={refreshData}
+          />
+          <CreateMaterialDialog
+            materialTypes={materialTypes}
+            unitOfMeasures={unitOfMeasures}
+            suppliers={suppliers}
+            onSuccess={refreshData}
+          />
+        </div>
       </div>
 
       <div className="mt-8">

@@ -1,3 +1,5 @@
+// src/app/api/material-types/[typeId]/route.ts
+
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { getServerSession } from "next-auth"
@@ -6,37 +8,13 @@ import * as z from "zod"
 
 const materialTypeSchema = z.object({
     name: z.string().min(2).max(50),
-    description: z.string().max(500).optional(),
+    description: z.string().max(500).optional().nullable(),
     status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
 })
 
 interface RouteParams {
     params: {
         typeId: string
-    }
-}
-
-export async function GET(req: Request, { params }: RouteParams) {
-    try {
-        const session = await getServerSession(authOptions)
-        if (!session) {
-            return new NextResponse("Unauthorized", { status: 401 })
-        }
-
-        const materialType = await prisma.materialType.findUnique({
-            where: {
-                id: params.typeId,
-            },
-        })
-
-        if (!materialType) {
-            return new NextResponse("Material type not found", { status: 404 })
-        }
-
-        return NextResponse.json(materialType)
-    } catch (error) {
-        console.error("[MATERIAL_TYPE_GET]", error)
-        return new NextResponse("Internal error", { status: 500 })
     }
 }
 
@@ -49,6 +27,23 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
         const json = await req.json()
         const body = materialTypeSchema.parse(json)
+
+        // Check for duplicate name, excluding current record
+        const existingType = await prisma.materialType.findFirst({
+            where: {
+                name: body.name,
+                NOT: {
+                    id: params.typeId
+                }
+            },
+        })
+
+        if (existingType) {
+            return new NextResponse(
+                "A material type with this name already exists",
+                { status: 400 }
+            )
+        }
 
         const materialType = await prisma.materialType.update({
             where: {
@@ -63,6 +58,9 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         return NextResponse.json(materialType)
     } catch (error) {
         console.error("[MATERIAL_TYPE_PATCH]", error)
+        if (error instanceof z.ZodError) {
+            return new NextResponse(JSON.stringify(error.errors), { status: 400 })
+        }
         return new NextResponse("Internal error", { status: 500 })
     }
 }
@@ -74,7 +72,7 @@ export async function DELETE(req: Request, { params }: RouteParams) {
             return new NextResponse("Unauthorized", { status: 401 })
         }
 
-        // Check if material type is being used by any materials
+        // Check if material type is being used
         const materialsUsingType = await prisma.material.findFirst({
             where: {
                 typeId: params.typeId
@@ -83,7 +81,7 @@ export async function DELETE(req: Request, { params }: RouteParams) {
 
         if (materialsUsingType) {
             return new NextResponse(
-                "Cannot delete material type as it is being used by materials", 
+                "Cannot delete material type as it is being used by materials",
                 { status: 400 }
             )
         }
