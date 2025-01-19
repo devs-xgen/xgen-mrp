@@ -1,62 +1,76 @@
 // src/app/admin/(protected)/materials/page.tsx
 
-import { Metadata } from "next"
-import { getProducts, getCategories } from "@/lib/api/products"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ProductDataTable } from "@/components/module/admin/products/data-table"
-import { CreateProductDialog } from "@/components/module/admin/products/create-product-dialog"
-import { CategoryManagement } from "@/components/module/admin/products/category-management"
-import { revalidatePath } from "next/cache"
+import { Metadata } from "next";
+import { MaterialDataTable } from "@/components/module/admin/materials/data-table";
+import { CreateMaterialDialog } from "@/components/module/admin/materials/create-material-dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  getMaterials,
+  getMaterialTypes,
+  getUnitOfMeasures,
+  getSuppliers,
+} from "@/lib/actions/materials";
+import { revalidatePath } from "next/cache";
 
 export const metadata: Metadata = {
-    title: "Products Management",
-    description: "Manage your product inventory",
-}
+  title: "Materials Management",
+  description: "Manage your material inventory",
+};
 
 async function refreshData() {
-    'use server'
-    revalidatePath('/admin/products')
+  "use server";
+  revalidatePath("/admin/materials");
 }
 
-export default async function ProductsPage() {
-    const [products, categories] = await Promise.all([
-        getProducts(),
-        getCategories()
-    ])
+export default async function MaterialsPage() {
+  // Fetch all required data in parallel
+  const [materials, materialTypes, unitOfMeasures, suppliers] =
+    await Promise.all([
+      getMaterials(),
+      getMaterialTypes(),
+      getUnitOfMeasures(),
+      getSuppliers(),
+    ]);
 
-    return (
-        <div className="container mx-auto py-6">
-            <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold tracking-tight">Products Management</h1>
-                <div className="flex items-center gap-4">
-                    <CategoryManagement
-                        categories={categories}
-                        onSuccess={refreshData}
-                    />
-                    <CreateProductDialog
-                        categories={categories}
-                        onSuccess={refreshData}
-                    />
-                </div>
-            </div>
+  return (
+    <div className="container mx-auto py-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">
+          Materials Management
+        </h1>
+        <CreateMaterialDialog
+          materialTypes={materialTypes}
+          unitOfMeasures={unitOfMeasures}
+          suppliers={suppliers}
+          onSuccess={refreshData}
+        />
+      </div>
 
-            <div className="mt-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Products</CardTitle>
-                        <CardDescription>
-                            Manage and monitor your product inventory
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <ProductDataTable
-                            data={products}
-                            categories={categories}
-                            onSuccess={refreshData}
-                        />
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
-    )
+      <div className="mt-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Materials</CardTitle>
+            <CardDescription>
+              Manage and monitor your material inventory
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <MaterialDataTable
+              data={materials}
+              materialTypes={materialTypes}
+              unitOfMeasures={unitOfMeasures}
+              suppliers={suppliers}
+              onSuccess={refreshData}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 }

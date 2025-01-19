@@ -126,12 +126,13 @@ model Material {
   name               String
   typeId             String
   unitOfMeasureId    String
-  color              String?
+  sku                String              @unique
   costPerUnit        Decimal             @db.Decimal(10, 2)
   currentStock       Int
   minimumStockLevel  Int
   leadTime           Int
   supplierId         String
+  notes              String?             @db.Text
   status             Status              @default(ACTIVE)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
