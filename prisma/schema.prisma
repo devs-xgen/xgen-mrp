@@ -18,8 +18,8 @@ model User {
   lastLoginAt DateTime?
   modifiedBy  String?
   status      UserStatus    @default(ACTIVE)
-  profile     UserProfile?
   Transaction Transaction[]
+  profile     UserProfile?
 }
 
 model UserProfile {
@@ -126,18 +126,18 @@ model Material {
   name               String
   typeId             String
   unitOfMeasureId    String
-  sku                String              @unique
   costPerUnit        Decimal             @db.Decimal(10, 2)
   currentStock       Int
   minimumStockLevel  Int
   leadTime           Int
   supplierId         String
-  notes              String?             @db.Text
   status             Status              @default(ACTIVE)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   createdBy          String?
   modifiedBy         String?
+  notes              String?
+  sku                String              @unique
   boms               BOM[]
   supplier           Supplier            @relation(fields: [supplierId], references: [id])
   type               MaterialType        @relation(fields: [typeId], references: [id])
@@ -349,10 +349,10 @@ model Transaction {
   orderId       String
   paymentMethod PaymentMethod
   amount        Decimal       @db.Decimal(10, 2)
-  handledBy     String // User who processed the payment
+  handledBy     String
   paymentDate   DateTime
   status        Status        @default(COMPLETED)
-  notes         String?       @db.Text
+  notes         String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   handledByUser User          @relation(fields: [handledBy], references: [id])
