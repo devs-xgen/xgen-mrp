@@ -1,129 +1,93 @@
-// src/app/admin/(protected)/purchase-orders/page.tsx
+// src/app/admin/(protected)/purchase-order/page.tsx
 
-'use client'
-
-import { useState, useEffect, useCallback } from 'react'
-import { PurchaseOrder } from "@prisma/client"
-import { createColumns } from '@/components/module/admin/purchase-orders/columns'
+import { Metadata } from "next";
+import { ProductDataTable } from "@/components/module/admin/purchase-orders/data-table";
+import { CreatePurchaseOrderDialog } from "@/components/module/admin/purchase-orders/create-purchase-dialog";
+import { SupplierManagement } from "@/components/module/admin/suppliers/supplier-management";
+import { MaterialDialog } from "@/components/module/admin/materials/material-management";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
-} from '@/components/ui/card'
-import { CreatePurchaseOrderDialog } from '@/components/module/admin/purchase-orders/create-purchase-dialog'
-import { EditPurchaseOrderDialog } from '@/components/module/admin/purchase-orders/edit-purchase-dialog'
-import { DeletePurchaseOrderDialog } from '@/components/module/admin/purchase-orders/delete-purchase-dialog'
-import { useToast } from "@/hooks/use-toast"
-import { ProductDataTable } from '@/components/module/admin/purchase-orders/data-table'
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  addPurchaseOrderLine,
+  getPurchaseOrderLines,
+  updatePurchaseOrderLine,
+} from "@/lib/actions/purchaseorderline";
+import { getSuppliers, getMaterials } from "@/lib/actions/materials";
+import { revalidatePath } from "next/cache";
 
-export default function PurchaseOrdersPage() {
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<PurchaseOrder | null>(null)
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const { toast } = useToast()
+async function refreshData() {
+  "use server";
+  revalidatePath("/admin/purchase-orders");
+}
 
-  const fetchPurchaseOrders = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      const response = await fetch('/api/purchase-orders')
-      if (!response.ok) throw new Error('Failed to fetch purchase orders')
-      const data = await response.json()
-      setPurchaseOrders(data)
-    } catch (error) {
-      console.error('Error fetching purchase orders:', error)
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch purchase orders. Please try again."
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }, [toast])
+export default async function PurchaseOrdersPage() {
+  // Fetch required data
+  const [purchaseOrderLines, suppliers, rawMaterials] = await Promise.all([
+    getPurchaseOrderLines(),
+    getSuppliers(),
+    getMaterials(),
+  ]);
 
-  useEffect(() => {
-    fetchPurchaseOrders()
-  }, [fetchPurchaseOrders])
-
-  const handleEdit = useCallback((purchaseOrder: PurchaseOrder) => {
-    setSelectedPurchaseOrder(purchaseOrder)
-    setIsEditDialogOpen(true)
-  }, [])
-
-  const handleDelete = useCallback((purchaseOrder: PurchaseOrder) => {
-    setSelectedPurchaseOrder(purchaseOrder)
-    setIsDeleteDialogOpen(true)
-  }, [])
-
-  const handleStatusChange = useCallback(async (purchaseOrderId: string, newStatus: string) => {
-    await fetchPurchaseOrders()
-  }, [fetchPurchaseOrders])
-
-  const handleSuccess = useCallback(async () => {
-    await fetchPurchaseOrders()
-  }, [fetchPurchaseOrders])
+  // Transform rawMaterials to match the expected Material type
+  const materials = rawMaterials.map((item) => ({
+    id: item.unitOfMeasure.id,
+    name: item.unitOfMeasure.name,
+    symbol: item.unitOfMeasure.symbol,
+    description: item.unitOfMeasure.description,
+    status: item.unitOfMeasure.status,
+    category: item.type?.name || "Uncategorized", // Provide a default category if missing
+    createdAt: item.unitOfMeasure.createdAt,
+    updatedAt: item.unitOfMeasure.updatedAt,
+    createdBy: item.unitOfMeasure.createdBy,
+    modifiedBy: item.unitOfMeasure.modifiedBy,
+  }));
 
   return (
-    <div className="container mx-auto py-10">
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle className="text-2xl">Purchase Order Management</CardTitle>
-              <CardDescription>Manage purchase orders and their details</CardDescription>
-            </div>
-            <CreatePurchaseOrderDialog
-              onSuccess={handleSuccess} suppliers={[]}            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ProductDataTable
-            data={purchaseOrders}
-            columns={createColumns}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onStatusChange={handleStatusChange}
-            isLoading={isLoading}
+    <div className="container mx-auto py-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">
+          Purchase Orders Management
+        </h1>
+        <div className="flex items-center gap-2">
+          {/* Supplier Management */}
+          <SupplierManagement suppliers={suppliers} onSuccess={refreshData} />
+          
+          {/* Material Dialog */}
+          <MaterialDialog materials={materials} onSuccess={refreshData} />
+          
+          {/* Create Purchase Order Dialog */}
+          <CreatePurchaseOrderDialog
+            suppliers={suppliers}
+            materials={materials}
+            onSuccess={refreshData}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {selectedPurchaseOrder && (
-        <>
-          <EditPurchaseOrderDialog
-            open={isEditDialogOpen}
-            onOpenChange={setIsEditDialogOpen}
-            purchaseOrder={selectedPurchaseOrder}
-            onSuccess={async () => {
-              setIsEditDialogOpen(false)
-              setSelectedPurchaseOrder(null)
-              await handleSuccess()
-              toast({
-                title: "Success",
-                description: "Purchase order updated successfully."
-              })
-            }}
-          />
-          <DeletePurchaseOrderDialog
-            open={isDeleteDialogOpen}
-            onOpenChange={setIsDeleteDialogOpen}
-            purchaseOrder={selectedPurchaseOrder}
-            onSuccess={async () => {
-              setIsDeleteDialogOpen(false)
-              setSelectedPurchaseOrder(null)
-              await handleSuccess()
-              toast({
-                title: "Success",
-                description: "Purchase order deleted successfully."
-              })
-            }}
-          />
-        </>
-      )}
+      <div className="mt-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Purchase Orders</CardTitle>
+            <CardDescription>
+              Manage and monitor your purchase orders
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Product Data Table */}
+            <ProductDataTable
+              data={purchaseOrderLines}
+              suppliers={suppliers}
+              materials={materials}
+              onSuccess={refreshData}
+            />
+          </CardContent>
+        </Card>
+      </div>
     </div>
-  )
+  );
 }

@@ -47,3 +47,22 @@ export async function getSuppliers() {
         },
     })
 }
+
+export async function getPurchaseOrders() {
+    return prisma.purchaseOrder.findMany({
+      where: {
+        status: 'ACTIVE', // Adjust this filter based on your application's logic
+      },
+      orderBy: {
+        orderDate: 'desc', // Orders the results by orderDate in descending order
+      },
+      include: {
+        supplier: true, // Includes the related supplier data
+        orderLines: {
+          include: {
+            material: true, // Includes the related material data in each order line
+          },
+        },
+      },
+    });
+  }
