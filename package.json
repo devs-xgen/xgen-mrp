@@ -62,7 +62,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/lodash": "^4.17.14",
     "@types/next-auth": "^3.15.0",
-    "@types/node": "^20.17.10",
+    "@types/node": "^20.17.16",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/react-input-mask": "^3.0.6",
@@ -74,6 +74,9 @@
     "prisma": "^6.2.1",
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.3"
+  },
+  "prisma": {
+      "seed": "ts-node prisma/seed.ts"
   }
 }

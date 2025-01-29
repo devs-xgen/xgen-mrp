@@ -126,17 +126,13 @@ export function CreateMaterialDialog({
                 Add a new material to your inventory
               </DialogDescription>
             </div>
-            <Button
-              type="submit"
-              form="create-material-form"
-              disabled={isLoading}
-            >
-              {isLoading ? "Creating..." : "Create Material"}
-            </Button>
+            <Button type="submit" form="create-material-form" disabled={isLoading}>
+              {isLoading ? "Creating..." : "Create Material"}
+            </Button>
           </div>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form id="create-material-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Basic Information</h3>
