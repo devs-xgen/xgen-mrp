@@ -1,93 +1,91 @@
-// src/app/admin/(protected)/purchase-order/page.tsx
+"use client";
 
-import { Metadata } from "next";
-import { ProductDataTable } from "@/components/module/admin/purchase-orders/data-table";
-import { CreatePurchaseOrderDialog } from "@/components/module/admin/purchase-orders/create-purchase-dialog";
-import { SupplierManagement } from "@/components/module/admin/suppliers/supplier-management";
-import { MaterialDialog } from "@/components/module/admin/materials/material-management";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  addPurchaseOrderLine,
-  getPurchaseOrderLines,
-  updatePurchaseOrderLine,
-} from "@/lib/actions/purchaseorderline";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Select, SelectItem } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { addPurchaseOrderLine } from "@/lib/actions/purchaseorderline";
 import { getSuppliers, getMaterials } from "@/lib/actions/materials";
-import { revalidatePath } from "next/cache";
 
-async function refreshData() {
-  "use server";
-  revalidatePath("/admin/purchase-orders");
+interface Supplier {
+  id: string;
+  name: string;
 }
 
-export default async function PurchaseOrdersPage() {
-  // Fetch required data
-  const [purchaseOrderLines, suppliers, rawMaterials] = await Promise.all([
-    getPurchaseOrderLines(),
-    getSuppliers(),
-    getMaterials(),
-  ]);
+interface Material {
+  id: string;
+  name: string;
+}
 
-  // Transform rawMaterials to match the expected Material type
-  const materials = rawMaterials.map((item) => ({
-    id: item.unitOfMeasure.id,
-    name: item.unitOfMeasure.name,
-    symbol: item.unitOfMeasure.symbol,
-    description: item.unitOfMeasure.description,
-    status: item.unitOfMeasure.status,
-    category: item.type?.name || "Uncategorized", // Provide a default category if missing
-    createdAt: item.unitOfMeasure.createdAt,
-    updatedAt: item.unitOfMeasure.updatedAt,
-    createdBy: item.unitOfMeasure.createdBy,
-    modifiedBy: item.unitOfMeasure.modifiedBy,
-  }));
+interface PurchaseOrderLine {
+  materialId: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export default function PurchaseOrderForm() {
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [selectedSupplier, setSelectedSupplier] = useState<string>("");
+  const [orderLines, setOrderLines] = useState<PurchaseOrderLine[]>([]);
+
+  useEffect(() => {
+    async function fetchData() {
+      const [supplierData, materialData] = await Promise.all([
+        getSuppliers(),
+        getMaterials(),
+      ]);
+      setSuppliers(supplierData);
+      setMaterials(materialData.map((item) => ({
+        id: item.unitOfMeasure.id,
+        name: item.unitOfMeasure.name,
+      })));
+    }
+    fetchData();
+  }, []);
+
+  const addOrderLine = () => {
+    setOrderLines([...orderLines, { materialId: "", quantity: 1, unitPrice: 0 }]);
+  };
+
+  const updateOrderLine = (index: number, key: keyof PurchaseOrderLine, value: any) => {
+    const newOrderLines = [...orderLines];
+    newOrderLines[index][key] = value;
+    setOrderLines(newOrderLines);
+  };
+
+  const handleSubmit = async () => {
+    await addPurchaseOrderLine({
+      supplierId: selectedSupplier,
+      orderLines,
+    });
+  };
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Purchase Orders Management
-        </h1>
-        <div className="flex items-center gap-2">
-          {/* Supplier Management */}
-          <SupplierManagement suppliers={suppliers} onSuccess={refreshData} />
-          
-          {/* Material Dialog */}
-          <MaterialDialog materials={materials} onSuccess={refreshData} />
-          
-          {/* Create Purchase Order Dialog */}
-          <CreatePurchaseOrderDialog
-            suppliers={suppliers}
-            materials={materials}
-            onSuccess={refreshData}
-          />
+    <div className="p-4 space-y-4">
+      <h2 className="text-xl font-bold">Create Purchase Order</h2>
+      <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
+        {suppliers.map((supplier) => (
+          <SelectItem key={supplier.id} value={supplier.id}>
+            {supplier.name}
+          </SelectItem>
+        ))}
+      </Select>
+      
+      {orderLines.map((line, index) => (
+        <div key={index} className="flex space-x-2">
+          <Select value={line.materialId} onValueChange={(val) => updateOrderLine(index, "materialId", val)}>
+            {materials.map((material) => (
+              <SelectItem key={material.id} value={material.id}>{material.name}</SelectItem>
+            ))}
+          </Select>
+          <Input type="number" value={line.quantity} onChange={(e) => updateOrderLine(index, "quantity", Number(e.target.value))} />
+          <Input type="number" value={line.unitPrice} onChange={(e) => updateOrderLine(index, "unitPrice", Number(e.target.value))} />
         </div>
-      </div>
-
-      <div className="mt-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Purchase Orders</CardTitle>
-            <CardDescription>
-              Manage and monitor your purchase orders
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Product Data Table */}
-            <ProductDataTable
-              data={purchaseOrderLines}
-              suppliers={suppliers}
-              materials={materials}
-              onSuccess={refreshData}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      ))}
+      
+      <Button onClick={addOrderLine}>Add Material</Button>
+      <Button onClick={handleSubmit} className="bg-blue-500 text-white">Submit Order</Button>
     </div>
   );
 }
