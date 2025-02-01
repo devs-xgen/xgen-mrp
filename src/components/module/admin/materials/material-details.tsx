@@ -15,6 +15,7 @@ import {
     TabsTrigger,
 } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { values } from "lodash"
 
 interface MaterialDetailsProps {
     material: Material & {
@@ -23,6 +24,9 @@ interface MaterialDetailsProps {
         supplier: Supplier
     }
 }
+
+
+
 
 export function MaterialDetails({ material }: MaterialDetailsProps) {
     return (
