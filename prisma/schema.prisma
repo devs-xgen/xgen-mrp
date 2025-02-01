@@ -1,406 +1,406 @@
 generator client {
-  provider = "prisma-client-js"
+provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+provider = "postgresql"
+url = env("DATABASE_URL")
 }
 
 model User {
-  id          String        @id @default(cuid())
-  email       String        @unique
-  password    String
-  role        Role          @default(OPERATOR)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  createdBy   String?
-  lastLoginAt DateTime?
-  modifiedBy  String?
-  status      UserStatus    @default(ACTIVE)
-  Transaction Transaction[]
-  profile     UserProfile?
+id String @id @default(cuid())
+email String @unique
+password String
+role Role @default(OPERATOR)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+lastLoginAt DateTime?
+modifiedBy String?
+status UserStatus @default(ACTIVE)
+Transaction Transaction[]
+profile UserProfile?
 }
 
 model UserProfile {
-  id               String            @id @default(cuid())
-  userId           String            @unique
-  firstName        String
-  lastName         String
-  phoneNumber      String?
-  address          String?
-  city             String?
-  state            String?
-  country          String?
-  postalCode       String?
-  department       String?
-  position         String?
-  employeeId       String?
-  dateOfBirth      DateTime?
-  gender           Gender?
-  avatar           String?
-  bio              String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  emergencyContact EmergencyContact?
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+id String @id @default(cuid())
+userId String @unique
+firstName String
+lastName String
+phoneNumber String?
+address String?
+city String?
+state String?
+country String?
+postalCode String?
+department String?
+position String?
+employeeId String?
+dateOfBirth DateTime?
+gender Gender?
+avatar String?
+bio String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+emergencyContact EmergencyContact?
+user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model EmergencyContact {
-  id             String      @id @default(cuid())
-  profileId      String      @unique
-  name           String
-  relationship   String
-  phoneNumber    String
-  altPhoneNumber String?
-  email          String?
-  address        String?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  userProfile    UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+id String @id @default(cuid())
+profileId String @unique
+name String
+relationship String
+phoneNumber String
+altPhoneNumber String?
+email String?
+address String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+userProfile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 }
 
 model ProductCategory {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  description String?
-  status      Status    @default(ACTIVE)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  createdBy   String?
-  modifiedBy  String?
-  products    Product[]
+id String @id @default(cuid())
+name String @unique
+description String?
+status Status @default(ACTIVE)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+modifiedBy String?
+products Product[]
 }
 
 model MaterialType {
-  id          String     @id @default(cuid())
-  name        String     @unique
-  description String?
-  status      Status     @default(ACTIVE)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  createdBy   String?
-  modifiedBy  String?
-  materials   Material[]
+id String @id @default(cuid())
+name String @unique
+description String?
+status Status @default(ACTIVE)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+modifiedBy String?
+materials Material[]
 }
 
 model UnitOfMeasure {
-  id          String     @id @default(cuid())
-  name        String     @unique
-  symbol      String
-  description String?
-  status      Status     @default(ACTIVE)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  createdBy   String?
-  modifiedBy  String?
-  materials   Material[]
+id String @id @default(cuid())
+name String @unique
+symbol String
+description String?
+status Status @default(ACTIVE)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+modifiedBy String?
+materials Material[]
 }
 
 model Product {
-  id                String            @id @default(cuid())
-  sku               String            @unique
-  name              String
-  description       String?
-  categoryId        String
-  sizeRange         String[]
-  colorOptions      String[]
-  unitCost          Decimal           @db.Decimal(10, 2)
-  sellingPrice      Decimal           @db.Decimal(10, 2)
-  minimumStockLevel Int
-  currentStock      Int
-  leadTime          Int
-  status            Status            @default(ACTIVE)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  createdBy         String?
-  modifiedBy        String?
-  boms              BOM[]
-  orderLines        OrderLine[]
-  category          ProductCategory   @relation(fields: [categoryId], references: [id])
-  productionOrders  ProductionOrder[]
+id String @id @default(cuid())
+sku String @unique
+name String
+description String?
+categoryId String
+sizeRange String[]
+colorOptions String[]
+unitCost Decimal @db.Decimal(10, 2)
+sellingPrice Decimal @db.Decimal(10, 2)
+minimumStockLevel Int
+currentStock Int
+leadTime Int
+status Status @default(ACTIVE)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+modifiedBy String?
+boms BOM[]
+orderLines OrderLine[]
+category ProductCategory @relation(fields: [categoryId], references: [id])
+productionOrders ProductionOrder[]
 }
 
 model Material {
-  id                 String              @id @default(cuid())
-  name               String
-  typeId             String
-  unitOfMeasureId    String
-  costPerUnit        Decimal             @db.Decimal(10, 2)
-  currentStock       Int
-  minimumStockLevel  Int
-  leadTime           Int
-  supplierId         String
-  status             Status              @default(ACTIVE)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  createdBy          String?
-  modifiedBy         String?
-  notes              String?
-  sku                String              @unique
-  boms               BOM[]
-  supplier           Supplier            @relation(fields: [supplierId], references: [id])
-  type               MaterialType        @relation(fields: [typeId], references: [id])
-  unitOfMeasure      UnitOfMeasure       @relation(fields: [unitOfMeasureId], references: [id])
-  purchaseOrderLines PurchaseOrderLine[]
+id String @id @default(cuid())
+name String
+typeId String
+unitOfMeasureId String
+costPerUnit Decimal @db.Decimal(10, 2)
+currentStock Int
+minimumStockLevel Int
+leadTime Int
+supplierId String
+status Status @default(ACTIVE)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+modifiedBy String?
+notes String?
+sku String @unique
+boms BOM[]
+supplier Supplier @relation(fields: [supplierId], references: [id])
+type MaterialType @relation(fields: [typeId], references: [id])
+unitOfMeasure UnitOfMeasure @relation(fields: [unitOfMeasureId], references: [id])
+purchaseOrderLines PurchaseOrderLine[]
 }
 
 model BOM {
-  id              String   @id @default(cuid())
-  productId       String
-  materialId      String
-  quantityNeeded  Decimal  @db.Decimal(10, 3)
-  wastePercentage Decimal  @db.Decimal(5, 2)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  createdBy       String?
-  modifiedBy      String?
-  material        Material @relation(fields: [materialId], references: [id])
-  product         Product  @relation(fields: [productId], references: [id])
+id String @id @default(cuid())
+productId String
+materialId String
+quantityNeeded Decimal @db.Decimal(10, 3)
+wastePercentage Decimal @db.Decimal(5, 2)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+modifiedBy String?
+material Material @relation(fields: [materialId], references: [id])
+product Product @relation(fields: [productId], references: [id])
 }
 
 model ProductionOrder {
-  id              String         @id @default(cuid())
-  productId       String
-  quantity        Int
-  startDate       DateTime
-  dueDate         DateTime
-  status          Status         @default(ACTIVE)
-  priority        Priority       @default(MEDIUM)
-  customerOrderId String?
-  notes           String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  createdBy       String?
-  modifiedBy      String?
-  operations      Operation[]
-  customerOrder   CustomerOrder? @relation(fields: [customerOrderId], references: [id])
-  product         Product        @relation(fields: [productId], references: [id])
-  qualityChecks   QualityCheck[]
+id String @id @default(cuid())
+productId String
+quantity Int
+startDate DateTime
+dueDate DateTime
+status Status @default(ACTIVE)
+priority Priority @default(MEDIUM)
+customerOrderId String?
+notes String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+modifiedBy String?
+operations Operation[]
+customerOrder CustomerOrder? @relation(fields: [customerOrderId], references: [id])
+product Product @relation(fields: [productId], references: [id])
+qualityChecks QualityCheck[]
 }
 
 model WorkCenter {
-  id              String      @id @default(cuid())
-  name            String
-  description     String?
-  capacityPerHour Int
-  operatingHours  Int
-  efficiencyRate  Decimal     @db.Decimal(5, 2)
-  status          Status      @default(ACTIVE)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  createdBy       String?
-  modifiedBy      String?
-  operations      Operation[]
+id String @id @default(cuid())
+name String
+description String?
+capacityPerHour Int
+operatingHours Int
+efficiencyRate Decimal @db.Decimal(5, 2)
+status Status @default(ACTIVE)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+modifiedBy String?
+operations Operation[]
 }
 
 model Operation {
-  id                String          @id @default(cuid())
-  workCenterId      String
-  productionOrderId String
-  startTime         DateTime
-  endTime           DateTime
-  status            Status          @default(ACTIVE)
-  notes             String?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  createdBy         String?
-  modifiedBy        String?
-  productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id])
-  workCenter        WorkCenter      @relation(fields: [workCenterId], references: [id])
+id String @id @default(cuid())
+workCenterId String
+productionOrderId String
+startTime DateTime
+endTime DateTime
+status Status @default(ACTIVE)
+notes String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+modifiedBy String?
+productionOrder ProductionOrder @relation(fields: [productionOrderId], references: [id])
+workCenter WorkCenter @relation(fields: [workCenterId], references: [id])
 }
 
 model QualityCheck {
-  id                String          @id @default(cuid())
-  productionOrderId String
-  inspectorId       String
-  checkDate         DateTime
-  status            Status          @default(ACTIVE)
-  defectsFound      String?
-  actionTaken       String?
-  notes             String?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  createdBy         String?
-  modifiedBy        String?
-  productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id])
+id String @id @default(cuid())
+productionOrderId String
+inspectorId String
+checkDate DateTime
+status Status @default(ACTIVE)
+defectsFound String?
+actionTaken String?
+notes String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+modifiedBy String?
+productionOrder ProductionOrder @relation(fields: [productionOrderId], references: [id])
 }
 
 model Supplier {
-  id             String          @id @default(cuid())
-  name           String
-  code           String          @unique
-  contactPerson  String
-  email          String
-  phone          String
-  address        String?
-  city           String?
-  state          String?
-  country        String?
-  postalCode     String?
-  paymentTerms   String?
-  leadTime       Int
-  status         Status          @default(ACTIVE)
-  notes          String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  createdBy      String?
-  modifiedBy     String?
-  materials      Material[]
-  purchaseOrders PurchaseOrder[]
+id String @id @default(cuid())
+name String
+code String @unique
+contactPerson String
+email String
+phone String
+address String?
+city String?
+state String?
+country String?
+postalCode String?
+paymentTerms String?
+leadTime Int
+status Status @default(ACTIVE)
+notes String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+modifiedBy String?
+materials Material[]
+purchaseOrders PurchaseOrder[]
 }
 
 model PurchaseOrder {
-  id               String              @id @default(cuid())
-  poNumber         String              @unique
-  supplierId       String
-  orderDate        DateTime
-  expectedDelivery DateTime
-  status           Status              @default(ACTIVE)
-  totalAmount      Decimal             @db.Decimal(10, 2)
-  notes            String?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-  createdBy        String?
-  modifiedBy       String?
-  supplier         Supplier            @relation(fields: [supplierId], references: [id])
-  orderLines       PurchaseOrderLine[]
+id String @id @default(cuid())
+poNumber String @unique
+supplierId String
+orderDate DateTime
+expectedDelivery DateTime
+status Status @default(ACTIVE)
+totalAmount Decimal @db.Decimal(10, 2)
+notes String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+modifiedBy String?
+supplier Supplier @relation(fields: [supplierId], references: [id])
+orderLines PurchaseOrderLine[]
 }
 
 model PurchaseOrderLine {
-  id            String        @id @default(cuid())
-  poId          String
-  materialId    String
-  quantity      Int
-  unitPrice     Decimal       @db.Decimal(10, 2)
-  status        Status        @default(ACTIVE)
-  notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  createdBy     String?
-  modifiedBy    String?
-  material      Material      @relation(fields: [materialId], references: [id])
-  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [id])
+id String @id @default(cuid())
+poId String
+materialId String
+quantity Int
+unitPrice Decimal @db.Decimal(10, 2)
+status Status @default(ACTIVE)
+notes String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+modifiedBy String?
+material Material @relation(fields: [materialId], references: [id])
+purchaseOrder PurchaseOrder @relation(fields: [poId], references: [id])
 }
 
 model Customer {
-  id            String          @id @default(cuid())
-  name          String
-  code          String          @unique
-  contactPerson String
-  email         String
-  phone         String
-  address       String?
-  city          String?
-  state         String?
-  country       String?
-  postalCode    String?
-  tinNumber     String?         @unique
-  creditLimit   Decimal?        @db.Decimal(10, 2)
-  paymentTerms  String?
-  status        Status          @default(ACTIVE)
-  notes         String?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  createdBy     String?
-  modifiedBy    String?
-  orders        CustomerOrder[]
+id String @id @default(cuid())
+name String
+code String @unique
+contactPerson String
+email String
+phone String
+address String?
+city String?
+state String?
+country String?
+postalCode String?
+tinNumber String? @unique
+creditLimit Decimal? @db.Decimal(10, 2)
+paymentTerms String?
+status Status @default(ACTIVE)
+notes String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+modifiedBy String?
+orders CustomerOrder[]
 }
 
 model CustomerOrder {
-  id               String            @id @default(cuid())
-  orderNumber      String            @unique
-  customerId       String
-  orderDate        DateTime
-  requiredDate     DateTime
-  status           Status            @default(ACTIVE)
-  totalAmount      Decimal           @db.Decimal(10, 2)
-  shippingAddress  String?
-  billingAddress   String?
-  notes            String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  createdBy        String?
-  modifiedBy       String?
-  customer         Customer          @relation(fields: [customerId], references: [id])
-  orderLines       OrderLine[]
-  productionOrders ProductionOrder[]
-  transaction      Transaction[]
+id String @id @default(cuid())
+orderNumber String @unique
+customerId String
+orderDate DateTime
+requiredDate DateTime
+status Status @default(ACTIVE)
+totalAmount Decimal @db.Decimal(10, 2)
+shippingAddress String?
+billingAddress String?
+notes String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+modifiedBy String?
+customer Customer @relation(fields: [customerId], references: [id])
+orderLines OrderLine[]
+productionOrders ProductionOrder[]
+transaction Transaction[]
 }
 
 model OrderLine {
-  id            String        @id @default(cuid())
-  orderId       String
-  productId     String
-  quantity      Int
-  unitPrice     Decimal       @db.Decimal(10, 2)
-  status        Status        @default(ACTIVE)
-  notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  createdBy     String?
-  modifiedBy    String?
-  customerOrder CustomerOrder @relation(fields: [orderId], references: [id])
-  product       Product       @relation(fields: [productId], references: [id])
+id String @id @default(cuid())
+orderId String
+productId String
+quantity Int
+unitPrice Decimal @db.Decimal(10, 2)
+status Status @default(ACTIVE)
+notes String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+createdBy String?
+modifiedBy String?
+customerOrder CustomerOrder @relation(fields: [orderId], references: [id])
+product Product @relation(fields: [productId], references: [id])
 }
 
 model Transaction {
-  id            String        @id @default(cuid())
-  orderId       String
-  paymentMethod PaymentMethod
-  amount        Decimal       @db.Decimal(10, 2)
-  handledBy     String
-  paymentDate   DateTime
-  status        Status        @default(COMPLETED)
-  notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  handledByUser User          @relation(fields: [handledBy], references: [id])
-  customerOrder CustomerOrder @relation(fields: [orderId], references: [id])
+id String @id @default(cuid())
+orderId String
+paymentMethod PaymentMethod
+amount Decimal @db.Decimal(10, 2)
+handledBy String
+paymentDate DateTime
+status Status @default(COMPLETED)
+notes String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+handledByUser User @relation(fields: [handledBy], references: [id])
+customerOrder CustomerOrder @relation(fields: [orderId], references: [id])
 }
 
 enum PaymentMethod {
-  CASH
-  CREDIT_CARD
-  DEBIT_CARD
-  ONLINE
-  OTHER
+CASH
+CREDIT_CARD
+DEBIT_CARD
+ONLINE
+OTHER
 }
 
 enum Role {
-  ADMIN
-  MANAGER
-  OPERATOR
-  POS_OPERATOR
+ADMIN
+MANAGER
+OPERATOR
+POS_OPERATOR
 }
 
 enum UserStatus {
-  ACTIVE
-  INACTIVE
-  SUSPENDED
+ACTIVE
+INACTIVE
+SUSPENDED
 }
 
 enum Gender {
-  MALE
-  FEMALE
-  OTHER
-  PREFER_NOT_TO_SAY
+MALE
+FEMALE
+OTHER
+PREFER_NOT_TO_SAY
 }
 
 enum Status {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-  ACTIVE
-  INACTIVE
-  SUSPENDED
-  ARCHIVED
+PENDING
+IN_PROGRESS
+COMPLETED
+CANCELLED
+ACTIVE
+INACTIVE
+SUSPENDED
+ARCHIVED
 }
 
 enum Priority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
+LOW
+MEDIUM
+HIGH
+URGENT
 }
