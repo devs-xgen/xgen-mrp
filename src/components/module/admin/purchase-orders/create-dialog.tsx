@@ -34,6 +34,8 @@ import {
 } from "@/components/ui/select"
 import { createPurchaseOrder } from "@/lib/actions/purchase-order"
 import { useToast } from "@/hooks/use-toast"
+import { ComboboxField } from "./combobox-field"
+
 
 // Form Schema
 const formSchema = z.object({
@@ -59,7 +61,37 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>
 
-export function CreatePurchaseOrderDialog() {
+interface Material {
+  id: string
+  name: string
+  sku: string
+  costPerUnit: number
+  currentStock: number
+  unitOfMeasure: {
+    symbol: string
+    name: string
+  }
+}
+
+interface Supplier {
+  id: string
+  name: string
+  code: string
+  contactPerson: string
+  email: string
+  phone: string
+}
+
+interface CreatePurchaseOrderDialogProps {
+  materials: Material[]
+  suppliers: Supplier[]
+}
+
+
+export function CreatePurchaseOrderDialog({
+  materials,
+  suppliers
+}: CreatePurchaseOrderDialogProps) {
   const [open, setOpen] = React.useState(false)
   const { toast } = useToast()
   
@@ -69,6 +101,14 @@ export function CreatePurchaseOrderDialog() {
       orderLines: [{ materialId: "", quantity: 1, unitPrice: 0 }],
     },
   })
+
+  const handleMaterialSelect = (value: string, index: number) => {
+    const material = materials.find(m => m.id === value)
+    if (material) {
+      form.setValue(`orderLines.${index}.materialId`, value)
+      form.setValue(`orderLines.${index}.unitPrice`, material.costPerUnit)
+    }
+  }
 
   async function onSubmit(values: FormValues) {
     try {
@@ -107,6 +147,7 @@ export function CreatePurchaseOrderDialog() {
     }
   }
 
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -124,22 +165,26 @@ export function CreatePurchaseOrderDialog() {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
+          <FormField
               control={form.control}
               name="supplierId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Supplier</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a supplier" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {/* Add suppliers here */}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <ComboboxField
+                      options={suppliers.map(s => ({
+                        id: s.id,
+                        name: s.name,
+                        code: s.code
+                      }))}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder="Select supplier"
+                      emptyText="No suppliers found"
+                      createNewPath="/admin/suppliers"
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -175,16 +220,20 @@ export function CreatePurchaseOrderDialog() {
                     name={`orderLines.${index}.materialId`}
                     render={({ field }) => (
                       <FormItem className="flex-1">
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select material" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {/* Add materials here */}
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <ComboboxField
+                            options={materials.map(m => ({
+                              id: m.id,
+                              name: `${m.name} (${m.unitOfMeasure.symbol})`,
+                              code: m.sku
+                            }))}
+                            value={field.value}
+                            onValueChange={(value) => handleMaterialSelect(value, index)}
+                            placeholder="Select material"
+                            emptyText="No materials found"
+                            createNewPath="/admin/materials"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -200,7 +249,7 @@ export function CreatePurchaseOrderDialog() {
                             type="number" 
                             min={1} 
                             {...field} 
-                            onChange={e => field.onChange(parseInt(e.target.value))} 
+                            onChange={e => field.onChange(parseInt(e.target.value) || 0)} 
                           />
                         </FormControl>
                         <FormMessage />
@@ -219,7 +268,7 @@ export function CreatePurchaseOrderDialog() {
                             step="0.01" 
                             min={0} 
                             {...field} 
-                            onChange={e => field.onChange(parseFloat(e.target.value))} 
+                            onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
                           />
                         </FormControl>
                         <FormMessage />
@@ -262,4 +311,5 @@ export function CreatePurchaseOrderDialog() {
       </DialogContent>
     </Dialog>
   )
+
 }

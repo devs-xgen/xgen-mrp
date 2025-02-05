@@ -1,68 +1,37 @@
+// src/lib/actions/materials.ts
 'use server'
 
 import { prisma } from "@/lib/db"
 
-export async function getMaterials() {
-    return prisma.material.findMany({
-        include: {
-            type: true,
-            unitOfMeasure: true,
-            supplier: true,
-        },
-        orderBy: {
-            name: 'asc',
-        },
-    })
-}
-
-export async function getMaterialTypes() {
-    return prisma.materialType.findMany({
-        where: {
-            status: 'ACTIVE',
-        },
-        orderBy: {
-            name: 'asc',
-        },
-    })
-}
-
-export async function getUnitOfMeasures() {
-    return prisma.unitOfMeasure.findMany({
-        where: {
-            status: 'ACTIVE',
-        },
-        orderBy: {
-            name: 'asc',
-        },
-    })
-}
-
-export async function getSuppliers() {
-    return prisma.supplier.findMany({
-        where: {
-            status: 'ACTIVE',
-        },
-        orderBy: {
-            name: 'asc',
-        },
-    })
-}
-
-export async function getPurchaseOrders() {
-    return prisma.purchaseOrder.findMany({
+export async function getAllMaterials() {
+  try {
+    const materials = await prisma.material.findMany({
       where: {
-        status: 'ACTIVE', // Adjust this filter based on your application's logic
+        status: 'ACTIVE'
+      },
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        costPerUnit: true,
+        currentStock: true,
+        unitOfMeasure: {
+          select: {
+            symbol: true,
+            name: true
+          }
+        }
       },
       orderBy: {
-        orderDate: 'desc', // Orders the results by orderDate in descending order
-      },
-      include: {
-        supplier: true, // Includes the related supplier data
-        orderLines: {
-          include: {
-            material: true, // Includes the related material data in each order line
-          },
-        },
-      },
-    });
+        name: 'asc'
+      }
+    })
+
+    return materials.map(material => ({
+      ...material,
+      costPerUnit: material.costPerUnit.toNumber()
+    }))
+  } catch (error) {
+    throw new Error('Failed to fetch materials')
   }
+}

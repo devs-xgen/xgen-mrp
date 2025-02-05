@@ -9,7 +9,6 @@ import { DataTableColumnHeader } from "./data-table-column-header"
 import { DataTableRowActions } from "./data-table-row-actions"
 import { formatDate } from "@/lib/utils"
 import { Status } from "@prisma/client"
-import { Decimal } from "@prisma/client/runtime/library"
 
 export const columns: ColumnDef<PurchaseOrder>[] = [
   {
@@ -81,7 +80,7 @@ export const columns: ColumnDef<PurchaseOrder>[] = [
       <DataTableColumnHeader column={column} title="Total Amount" />
     ),
     cell: ({ row }) => {
-      const amount = (row.getValue("totalAmount") as Decimal).toNumber()
+      const amount = row.getValue("totalAmount") as number
       const formatted = new Intl.NumberFormat("en-US", {
         style: "currency",
         currency: "PHP",

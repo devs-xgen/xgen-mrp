@@ -1,8 +1,9 @@
 // src/components/module/admin/purchase-orders/data-table-row-actions.tsx
 "use client"
 
+import { useState } from "react"
 import { Row } from "@tanstack/react-table"
-import { Copy, MoreHorizontal, Pen, Trash } from "lucide-react"
+import { Eye, MoreHorizontal, Trash } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -24,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { useState } from "react"
+import { PurchaseOrderSheet } from "./purchase-order-sheet"
 
 interface DataTableRowActionsProps {
   row: Row<PurchaseOrder>
@@ -32,6 +33,7 @@ interface DataTableRowActionsProps {
 
 export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showViewSheet, setShowViewSheet] = useState(false)
   const { toast } = useToast()
   const purchase = row.original
 
@@ -65,13 +67,9 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[160px]">
-          <DropdownMenuItem>
-            <Pen className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
-            Edit
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Copy className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
-            Make a copy
+          <DropdownMenuItem onClick={() => setShowViewSheet(true)}>
+            <Eye className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+            View/Edit
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -104,6 +102,12 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PurchaseOrderSheet 
+        purchaseOrder={purchase}
+        open={showViewSheet}
+        onOpenChange={setShowViewSheet}
+      />
     </>
   )
 }

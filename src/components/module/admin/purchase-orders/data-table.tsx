@@ -33,13 +33,11 @@ import { PurchaseOrder, PurchaseOrderLine } from "@/types/admin/purchase-order"
 interface DataTableProps {
   columns: ColumnDef<PurchaseOrder>[]
   data: PurchaseOrder[]
-  orderLines: PurchaseOrderLine[]
 }
 
 export function DataTable({
   columns,
   data,
-  orderLines,
 }: DataTableProps) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})

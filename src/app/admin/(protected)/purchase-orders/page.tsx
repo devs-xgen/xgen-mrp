@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/card"
 import { getPurchaseOrders } from "@/lib/actions/purchase-order"
 import { getPurchaseOrderLines } from "@/lib/actions/purchaseorderline"
+import { getAllMaterials } from "@/lib/actions/materials" 
+import { getAllSuppliers } from "@/lib/actions/suppliers"
 
 export const metadata: Metadata = {
   title: "Purchase Orders | Admin Dashboard",
@@ -19,9 +21,11 @@ export const metadata: Metadata = {
 }
 
 export default async function PurchaseOrdersPage() {
-  // Fetch purchase orders and their lines
-  const purchaseOrders = await getPurchaseOrders()
-  const purchaseOrderLines = await getPurchaseOrderLines()
+  const [purchaseOrders, materials, suppliers] = await Promise.all([
+    getPurchaseOrders(),
+    getAllMaterials(),
+    getAllSuppliers()
+  ])
 
   return (
     <div className="flex flex-col gap-6 p-8">
@@ -32,7 +36,10 @@ export default async function PurchaseOrdersPage() {
             Manage and track all purchase orders
           </p>
         </div>
-        <CreatePurchaseOrderDialog />
+        <CreatePurchaseOrderDialog 
+          materials={materials} 
+          suppliers={suppliers} 
+        />
       </div>
 
       <Card>
@@ -46,7 +53,6 @@ export default async function PurchaseOrdersPage() {
           <DataTable 
             columns={columns} 
             data={purchaseOrders}
-            orderLines={purchaseOrderLines} 
           />
         </CardContent>
       </Card>
