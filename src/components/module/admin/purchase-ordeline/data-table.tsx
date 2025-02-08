@@ -13,6 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+
 import {
   Table,
   TableBody,
@@ -20,186 +21,126 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  PurchaseOrderLine,
-  Material,
-} from "@prisma/client";
-import { createColumns } from "./columns"; // Adjust this import based on your columns setup
+} from "@/components/ui/table"; // Adjust path if needed
 
-interface PurchaseOrderLineWithRelations extends PurchaseOrderLine {
-  material: Material; // Assuming you want to include material details
-}
+import { DataTablePagination } from "./data-table-pagination"; // Adjust path if needed
+import { DataTableToolbar } from "./data-table-toolbar"; // Adjust path if needed
+import { PurchaseOrderLine } from "@/types/admin/purchase-order"; // Import your type
+import { Material } from "@prisma/client"; // Import Material type
 
 interface DataTableProps {
-  data: PurchaseOrderLineWithRelations[];
+  data: PurchaseOrderLine[];
   materials: Material[];
-  onSuccess?: () => Promise<void>;
+  onSuccess: () => void;
 }
 
-export function PurchaseOrderLineDataTable({
-  data,
-  materials,
-  onSuccess,
-}: DataTableProps) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+export function PurchaseOrderLineDataTable({ data, materials, onSuccess }: DataTableProps) {
   const [rowSelection, setRowSelection] = React.useState({});
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>([]);
 
-  // Create columns with the required props
-  const columns = React.useMemo(
-    () => createColumns({ materials, onSuccess }),
-    [materials, onSuccess]
-  );
+  const columns: ColumnDef<PurchaseOrderLine>[] = [
+    {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => {
+        return `PN-${String(row.index + 1).padStart(4, '0')}`; // Generate sequential number
+      },
+      // cell: ({ row }) => {
+      //   const idNumber = row.original.id; // Get the actual ID
+      //   return `PN-${String(idNumber).padStart(4, '0')}`; // Format as PN-0001
+      // },
+    },
+    {
+      accessorKey: "material.name",
+      header: "Material",
+      cell: ({ row }) => {
+        const materialId = row.original.materialId;
+        const material = materials.find((m) => m.id === materialId);
+        return material ? material.name : "Unknown";
+      },
+    },
+    {
+      accessorKey: "quantity",
+      header: "Quantity",
+    },
+    // Add more columns as needed (unit price, total price, etc.)
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <button onClick={() => {
+          // Edit logic here (e.g., open a modal)
+          console.log("Edit clicked for row:", row.original);
+        }}>
+          Edit
+        </button>
+      ),
+    },
+  ];
 
   const table = useReactTable({
     data,
     columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
-      columnFilters,
       columnVisibility,
       rowSelection,
+      columnFilters,
     },
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
   });
 
   return (
-    <div className="w-full">
-      <div className="flex items-center py-4 gap-2">
-        <Input
-          placeholder="Filter by material name..."
-          value={(table.getColumn("material.name")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("material.name")?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
-        <Input
-          placeholder="Filter by quantity..."
-          value={(table.getColumn("quantity")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("quantity")?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
-              Columns
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+    <div className="space-y-4">
+      <DataTableToolbar table={table} />
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
+            {data.length > 0 && // <-- Conditional rendering
+              table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
                     <TableHead key={header.id}>
                       {header.isPlaceholder
                         ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                        : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
+                  ))}
+                </TableRow>
+              ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {data.length > 0 ? ( // <-- Conditional rendering
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
+                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No results.
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  {data.length === 0 ? "No results." : "Loading..."}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="text-muted-foreground flex-1 text-sm">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <DataTablePagination table={table} />
     </div>
   );
 }

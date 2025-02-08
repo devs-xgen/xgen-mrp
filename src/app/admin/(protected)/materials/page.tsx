@@ -14,11 +14,15 @@ import {
 } from "@/components/ui/card";
 // import { Button } from "@/components/ui/button"
 import {
-  getMaterials,
-  getMaterialTypes,
-  getUnitOfMeasures,
-  getSuppliers,
+  getAllMaterials,
+  getAllMaterialTypes,
+  getAllUnitMeasures,
 } from "@/lib/actions/materials";
+
+import {
+  getAllSuppliers
+} from "@/lib/actions/suppliers";
+
 import { revalidatePath } from "next/cache";
 
 export const metadata: Metadata = {
@@ -35,10 +39,10 @@ export default async function MaterialsPage() {
   // Fetch all required data in parallel
   const [materials, materialTypes, unitOfMeasures, suppliers] =
     await Promise.all([
-      getMaterials(),
-      getMaterialTypes(),
-      getUnitOfMeasures(),
-      getSuppliers(),
+      getAllMaterials(),
+      getAllMaterialTypes(),
+      getAllUnitMeasures(),
+      getAllSuppliers(),
     ]);
 
   return (
