@@ -15,6 +15,7 @@ import { MoreHorizontal, Pencil, Trash } from "lucide-react";
 import { WorkCenter, Status } from "@prisma/client";
 import { EditWorkCenterDialog } from "./edit-center-dialog";
 import { DeleteWorkCenterDialog } from "./delete-center-dialog";
+import React from "react";
 
 interface DataTableColumnProps {
   onSuccess?: () => Promise<void>;
@@ -121,36 +122,39 @@ export const createColumns = ({ onSuccess }: DataTableColumnProps): ColumnDef<Wo
       const workCenter = row.original;
       return (
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <EditWorkCenterDialog
-              workCenter={workCenter}
-              onSuccess={onSuccess}
-              trigger={
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-              }
-            />
-            <DeleteWorkCenterDialog
-              workCenter={workCenter}
-              onSuccess={onSuccess}
-              trigger={
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <Trash className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              }
-            />
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Open menu</span>
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+
+          <EditWorkCenterDialog
+            workCenter={workCenter}
+            onSuccess={onSuccess}
+            trigger={ // Correct: Button *inside* DropdownMenuItem
+              <Button variant="ghost" className="w-full justify-start"> {/* Style as needed */}
+                <Pencil className="mr-2 h-4 w-4" /> Edit
+              </Button>
+            }
+          >
+          </EditWorkCenterDialog>
+
+          <DeleteWorkCenterDialog
+            workCenter={workCenter}
+            onSuccess={onSuccess}
+            trigger={ // Correct: Button *inside* DropdownMenuItem
+              <Button variant="ghost" className="w-full justify-start"> {/* Style as needed */}
+                <Trash className="mr-2 h-4 w-4" /> Delete
+              </Button>
+            }
+          >
+          </DeleteWorkCenterDialog>
+
+        </DropdownMenuContent>
+      </DropdownMenu>
       );
     },
   },

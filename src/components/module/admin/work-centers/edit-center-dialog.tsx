@@ -28,16 +28,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea"; // If you need a textarea
+import { Textarea } from "@/components/ui/textarea"; 
 import { toast } from "@/hooks/use-toast";
-import { WorkCenter, Status } from "@prisma/client"; // Import WorkCenter
+import { WorkCenter, Status } from "@prisma/client"; 
 
 interface FormData {
   name: string;
-  description?: string; // Description is optional
-  capacityPerHour?: number; // Capacity is optional and a number
-  operatingHours?: number; // Operating Hours is optional and a number
-  efficiencyRate?: number; // Efficiency Rate is optional and a number
+  description?: string; 
+  capacityPerHour?: number; 
+  operatingHours?: number; 
+  efficiencyRate?: number; 
   status: Status;
 }
 
@@ -59,9 +59,9 @@ export function EditWorkCenterDialog({
     defaultValues: {
       name: workCenter.name,
       description: workCenter.description || "",
-      capacityPerHour: workCenter.capacityPerHour || undefined, // Use undefined for optional numbers
+      capacityPerHour: workCenter.capacityPerHour || undefined, 
       operatingHours: workCenter.operatingHours || undefined,
-      efficiencyRate: workCenter.efficiencyRate ? parseFloat(workCenter.efficiencyRate.toString()) : undefined, // Parse decimal
+      efficiencyRate: workCenter.efficiencyRate ? parseFloat(workCenter.efficiencyRate.toString()) : undefined, 
       status: workCenter.status,
     },
   });
@@ -78,8 +78,8 @@ export function EditWorkCenterDialog({
       });
 
       if (!response.ok) {
-        const errorData = await response.json(); // Get error details if available
-        throw new Error(errorData.message || "Failed to update work center"); // Use more specific error message
+        const errorData = await response.json(); 
+        throw new Error(errorData.message || "Failed to update work center"); 
       }
 
       toast({
@@ -88,10 +88,10 @@ export function EditWorkCenterDialog({
       });
       setOpen(false);
       onSuccess?.();
-    } catch (error: any) { // Type the error as any
+    } catch (error: any) { 
       toast({
         title: "Error",
-        description: error.message || "Failed to update work center", // Display potentially more specific error
+        description: error.message || "Failed to update work center", 
         variant: "destructive",
       });
     } finally {
