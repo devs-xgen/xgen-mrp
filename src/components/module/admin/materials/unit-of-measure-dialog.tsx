@@ -331,7 +331,7 @@ export function UnitOfMeasureDialog({
                                                             ? 'bg-green-100 text-green-800'
                                                             : 'bg-gray-100 text-gray-800'
                                                         }`}>
-                                                        {unit.status.toLowerCase()}
+                                                        {unit.status ? unit.status.toLowerCase() : "-"}
                                                     </span>
                                                 </TableCell>
                                                 <TableCell>

@@ -320,7 +320,7 @@ export function MaterialTypeDialog({
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
                             }`}>
-                            {type.status.toLowerCase()}
+                            {type.status ? type.status.toLowerCase() : "-"}
                           </span>
                         </TableCell>
                         <TableCell>

@@ -12,35 +12,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Pencil, Trash } from "lucide-react";
-import {
-  Material,
-  MaterialType,
-  Status,
-  UnitOfMeasure,
-  Supplier,
-} from "@prisma/client";
-import { EditMaterialDialog } from "./edit-material-dialog";
-import { DeleteMaterialDialog } from "./delete-material-dialog";
-
-interface MaterialWithRelations extends Material {
-  type: MaterialType;
-  unitOfMeasure: UnitOfMeasure;
-  supplier: Supplier;
-}
+import { WorkCenter, Status } from "@prisma/client";
+import { EditWorkCenterDialog } from "./edit-center-dialog";
+import { DeleteWorkCenterDialog } from "./delete-center-dialog";
 
 interface DataTableColumnProps {
-  materialTypes: MaterialType[];
-  unitOfMeasures: UnitOfMeasure[];
-  suppliers: Supplier[];
   onSuccess?: () => Promise<void>;
 }
 
-export const createColumns = ({
-  materialTypes,
-  unitOfMeasures,
-  suppliers,
-  onSuccess,
-}: DataTableColumnProps): ColumnDef<MaterialWithRelations>[] => [
+export const createColumns = ({ onSuccess }: DataTableColumnProps): ColumnDef<WorkCenter>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -61,54 +41,54 @@ export const createColumns = ({
     enableHiding: false,
   },
   {
-    accessorKey: "sku",
-    header: "SKU",
+    accessorKey: "id",
+    header: "Work Center Code",
+    cell: ({ row }) => {
+      const id = row.original.id;
+      const formattedId = `WC-${id.substring(id.length - 4).toUpperCase()}`;
+      return <span className="font-mono text-blue-600">{formattedId}</span>;
+    },
   },
   {
     accessorKey: "name",
     header: "Name",
   },
   {
-    accessorKey: "type.name",
-    header: "Type",
+    accessorKey: "capacityPerHour",
+    header: "Capacity/Hour",
+    cell: ({ row }) => <span>{row.original.capacityPerHour}</span>,
   },
   {
-    accessorKey: "unitOfMeasure.symbol",
-    header: "Unit",
-  },
-  {
-    accessorKey: "currentStock",
-    header: "Stock",
+    accessorKey: "operatingHours",
+    header: "Operating Hours",
     cell: ({ row }) => {
-      const stock = row.getValue("currentStock") as number;
-      const minStock = row.original.minimumStockLevel;
-
-      return (
-        <div className="flex items-center gap-2">
-          <span>
-            {stock} {row.original.unitOfMeasure.symbol}
-          </span>
-          {stock <= minStock && <Badge variant="destructive">Low Stock</Badge>}
-        </div>
-      );
+      const hours = row.original.operatingHours
+        ? `${row.original.operatingHours} hrs`
+        : "N/A";
+      return <span>{hours}</span>;
     },
   },
   {
-    accessorKey: "costPerUnit",
-    header: "Cost Per Unit",
+    accessorKey: "efficiencyRate",
+    header: "Efficiency Rate (%)",
     cell: ({ row }) => {
-      const cost = Number(row.getValue("costPerUnit"));
-      const formatted = new Intl.NumberFormat("en-PH", {
-        style: "currency",
-        currency: "PHP",
-      }).format(cost);
-
-      return formatted;
+      const efficiency = row.original.efficiencyRate
+        ? Number(row.original.efficiencyRate)
+        : 0;
+      return <span>{efficiency.toFixed(2)}%</span>;
     },
   },
   {
-    accessorKey: "supplier.name",
-    header: "Supplier",
+    accessorKey: "utilizationRate",
+    header: "Utilization Rate",
+    cell: ({ row }) => {
+      const { capacityPerHour, efficiencyRate } = row.original;
+      const efficiency = efficiencyRate ? Number(efficiencyRate) : null;
+      const capacity = capacityPerHour ? Number(capacityPerHour) : null;
+      if (efficiency === null || capacity === null) return <span>N/A units/hr</span>;
+      const utilization = (capacity * (efficiency / 100)).toFixed(2);
+      return <span>{utilization} units/hr</span>;
+    },
   },
   {
     accessorKey: "status",
@@ -117,16 +97,28 @@ export const createColumns = ({
       const status = row.getValue("status") as Status;
       return (
         <Badge variant={status === "ACTIVE" ? "default" : "secondary"}>
-          {status  ? status.toLowerCase() : "-"}
+          {status.toLowerCase()}
         </Badge>
       );
     },
   },
   {
+    accessorKey: "createdAt",
+    header: "Created At",
+    cell: ({ row }) => {
+      const date = row.original.createdAt ? new Date(row.original.createdAt) : null;
+      return <span>{date ? date.toLocaleString() : "N/A"}</span>;
+    },
+  },
+  {
+    accessorKey: "modifiedBy",
+    header: "Modified By",
+    cell: ({ row }) => <span>{row.original.modifiedBy || "N/A"}</span>,
+  },
+  {
     id: "actions",
     cell: ({ row }) => {
-      const material = row.original;
-
+      const workCenter = row.original;
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -137,11 +129,8 @@ export const createColumns = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <EditMaterialDialog
-              material={material}
-              materialTypes={materialTypes}
-              unitOfMeasures={unitOfMeasures}
-              suppliers={suppliers}
+            <EditWorkCenterDialog
+              workCenter={workCenter}
               onSuccess={onSuccess}
               trigger={
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -150,8 +139,8 @@ export const createColumns = ({
                 </DropdownMenuItem>
               }
             />
-            <DeleteMaterialDialog
-              material={material}
+            <DeleteWorkCenterDialog
+              workCenter={workCenter}
               onSuccess={onSuccess}
               trigger={
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
