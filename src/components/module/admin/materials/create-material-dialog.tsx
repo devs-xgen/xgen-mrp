@@ -1,350 +1,271 @@
-"use client";
+// src/components/module/admin/materials/create-material-dialog.tsx
+"use client"
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus } from "lucide-react";
-import { MaterialType, Status, UnitOfMeasure, Supplier } from "@prisma/client";
-import { Button } from "@/components/ui/button";
+import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import { Status } from "@prisma/client"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/ui/form"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { materialSchema, type MaterialFormValues } from "@/lib/material";
-import { useToast } from "@/hooks/use-toast";
+} from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { createMaterial } from "@/lib/actions/materials"
+import { useToast } from "@/hooks/use-toast"
+import { Plus } from "lucide-react"
+import { RichTextEditor } from "@/components/global/rich-text-editor"
+
+// Schema for form validation
+const materialSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  sku: z.string().min(2, "SKU must be at least 2 characters"),
+  typeId: z.string().min(1, "Material type is required"),
+  unitOfMeasureId: z.string().min(1, "Unit of measure is required"),
+  costPerUnit: z.string().transform((val) => parseFloat(val)),
+  currentStock: z.string().transform((val) => parseInt(val)),
+  minimumStockLevel: z.string().transform((val) => parseInt(val)),
+  leadTime: z.string().transform((val) => parseInt(val)),
+  supplierId: z.string().min(1, "Supplier is required"),
+  notes: z.string().optional(),
+  status: z.nativeEnum(Status).default(Status.ACTIVE),
+})
+
+type MaterialFormValues = z.infer<typeof materialSchema>
 
 interface CreateMaterialDialogProps {
-  materialTypes: MaterialType[];
-  unitOfMeasures: UnitOfMeasure[];
-  suppliers: Supplier[];
-  onSuccess?: () => Promise<void>;
-  trigger?: React.ReactNode;
+  materialTypes: { id: string; name: string }[]
+  unitOfMeasures: { id: string; name: string; symbol: string }[]
+  suppliers: { id: string; name: string }[]
 }
 
 export function CreateMaterialDialog({
   materialTypes,
   unitOfMeasures,
   suppliers,
-  onSuccess,
-  trigger,
 }: CreateMaterialDialogProps) {
-  const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-
+  const [open, setOpen] = useState(false)
+  const { toast } = useToast()
+  
   const form = useForm<MaterialFormValues>({
     resolver: zodResolver(materialSchema),
     defaultValues: {
       name: "",
       sku: "",
-      typeId: "",
-      unitOfMeasureId: "",
+      costPerUnit: "0",
+      currentStock: "0",
+      minimumStockLevel: "0",
+      leadTime: "0",
       notes: "",
-      costPerUnit: 0,
-      currentStock: 0,
-      minimumStockLevel: 0,
-      leadTime: 0,
-      supplierId: "",
       status: Status.ACTIVE,
     },
-  });
+  })
 
-  const onSubmit = async (values: MaterialFormValues) => {
+  async function onSubmit(data: MaterialFormValues) {
     try {
-      setIsLoading(true);
-      const response = await fetch("/api/materials", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to create material");
-      }
-
+      await createMaterial(data)
+      setOpen(false)
+      form.reset()
       toast({
         title: "Success",
         description: "Material created successfully",
-      });
-
-      form.reset();
-      setOpen(false);
-      if (onSuccess) await onSuccess();
+      })
     } catch (error) {
       toast({
         title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to create material",
+        description: "Failed to create material",
         variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+      })
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || (
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Material
-          </Button>
-        )}
+        <Button>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Material
+        </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-[800px] h-[90vh] overflow-y-auto">
-        <DialogHeader className="sticky top-0 bg-background pt-4 pb-2 border-b">
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle>Create Material</DialogTitle>
-              <DialogDescription>
-                Add a new material to your inventory
-              </DialogDescription>
-            </div>
-            <Button type="submit" form="create-material-form" disabled={isLoading}>
-              {isLoading ? "Creating..." : "Create Material"}
-            </Button>
-          </div>
+      <DialogContent className="max-w-screen-lg">
+        <DialogHeader>
+          <DialogTitle>Add New Material</DialogTitle>
+          <DialogDescription>
+            Create a new material in your inventory system.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form id="create-material-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Basic Information Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Basic Information</h3>
-              <div className="grid grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter material name"
-                          {...field}
-                          className="h-10"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="sku"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>SKU</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter SKU"
-                          {...field}
-                          className="h-10"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              {/* Basic Information */}
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Material name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Classification Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Classification</h3>
-              <div className="grid grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="typeId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Type</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="h-10">
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {materialTypes.map((type) => (
-                            <SelectItem key={type.id} value={type.id}>
-                              {type.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="unitOfMeasureId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Unit of Measure</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="h-10">
-                            <SelectValue placeholder="Select unit" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {unitOfMeasures.map((unit) => (
-                            <SelectItem key={unit.id} value={unit.id}>
-                              {unit.name} ({unit.symbol})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
+              <FormField
+                control={form.control}
+                name="sku"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>SKU</FormLabel>
+                    <FormControl>
+                      <Input placeholder="SKU number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Stock Information Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Stock Information</h3>
-              <div className="grid grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="currentStock"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Current Stock</FormLabel>
+              {/* Type and Unit */}
+              <FormField
+                control={form.control}
+                name="typeId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Material Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(e.target.valueAsNumber)
-                          }
-                          className="h-10"
-                        />
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select material type" />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="minimumStockLevel"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Min Stock Level</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(e.target.valueAsNumber)
-                          }
-                          className="h-10"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
+                      <SelectContent>
+                        {materialTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.id}>
+                            {type.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Cost and Supply Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Cost and Supply</h3>
-              <div className="grid grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="costPerUnit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cost Per Unit</FormLabel>
+              <FormField
+                control={form.control}
+                name="unitOfMeasureId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Unit of Measure</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(parseFloat(e.target.value))
-                          }
-                          className="h-10"
-                        />
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select unit" />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="leadTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Lead Time (Days)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(e.target.valueAsNumber)
-                          }
-                          className="h-10"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                      <SelectContent>
+                        {unitOfMeasures.map((unit) => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.name} ({unit.symbol})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
+              {/* Cost and Stock */}
+              <FormField
+                control={form.control}
+                name="costPerUnit"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cost Per Unit</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" min="0" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="currentStock"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Current Stock</FormLabel>
+                    <FormControl>
+                      <Input type="number" min="0" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="minimumStockLevel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Minimum Stock Level</FormLabel>
+                    <FormControl>
+                      <Input type="number" min="0" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="leadTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Lead Time (days)</FormLabel>
+                    <FormControl>
+                      <Input type="number" min="0" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Supplier and Status */}
               <FormField
                 control={form.control}
                 name="supplierId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Supplier</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="h-10">
+                        <SelectTrigger>
                           <SelectValue placeholder="Select supplier" />
                         </SelectTrigger>
                       </FormControl>
@@ -360,33 +281,65 @@ export function CreateMaterialDialog({
                   </FormItem>
                 )}
               />
-            </div>
 
-            {/* Notes Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Additional Information</h3>
               <FormField
                 control={form.control}
-                name="notes"
+                name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notes (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Add any additional notes or details about the material"
-                        className="resize-none min-h-[100px]"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Object.values(Status).map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+
+            {/* Notes */}
+            <FormField
+  control={form.control}
+  name="notes"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Notes</FormLabel>
+      <FormControl>
+        <RichTextEditor
+          value={field.value || ''}
+          onChange={field.onChange}
+          placeholder="Additional notes about the material..."
+        />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">Create Material</Button>
+            </div>
           </form>
         </Form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

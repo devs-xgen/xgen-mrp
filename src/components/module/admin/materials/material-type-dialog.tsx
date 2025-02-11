@@ -44,6 +44,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+import { createMaterialType, updateMaterialType, deleteMaterialType } from "@/lib/actions/material-types"
+
+
 const materialTypeSchema = z.object({
   name: z.string()
     .min(2, "Name must be at least 2 characters")
@@ -80,35 +83,15 @@ export function MaterialTypeDialog({
     },
   })
 
+
   const onSubmit = async (values: MaterialTypeFormValues) => {
     try {
       setIsLoading(true)
-      const url = editingType
-        ? `/api/material-types/${editingType.id}`
-        : "/api/material-types"
-
-      console.log('Submitting to:', url, 'with values:', values) // Debug log
-
-      const response = await fetch(url, {
-        method: editingType ? "PATCH" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: values.name,
-          description: values.description || null,
-          status: values.status || "ACTIVE"
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.text()
-        console.error('Response error:', errorData) // Debug log
-        throw new Error(errorData || "Failed to save material type")
+      if (editingType) {
+        await updateMaterialType(editingType.id, values)
+      } else {
+        await createMaterialType(values)
       }
-
-      const data = await response.json()
-      console.log('Success response:', data) // Debug log
 
       toast({
         title: "Success",
@@ -119,7 +102,6 @@ export function MaterialTypeDialog({
       setEditingType(null)
       if (onSuccess) await onSuccess()
     } catch (error) {
-      console.error('Submit error:', error) // Debug log
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to save material type",
@@ -130,28 +112,12 @@ export function MaterialTypeDialog({
     }
   }
 
-  const onEdit = (type: MaterialType) => {
-    setEditingType(type)
-    form.reset({
-      name: type.name,
-      description: type.description || "",
-      status: type.status,
-    })
-  }
-
   const onDelete = async (type: MaterialType) => {
     if (!confirm('Are you sure you want to delete this material type?')) return
 
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/material-types/${type.id}`, {
-        method: "DELETE",
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || "Failed to delete material type")
-      }
+      await deleteMaterialType(type.id)
 
       toast({
         title: "Success",
@@ -170,6 +136,38 @@ export function MaterialTypeDialog({
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const onEdit = (type: MaterialType) => {
+    setEditingType(type)
+    form.reset({
+      name: type.name,
+      description: type.description || "",
+      status: type.status,
+    })
+  }
+
+
+
+  const getStatusBadgeStyle = (status: Status | null | undefined) => {
+    if (!status) return 'bg-gray-100 text-gray-800'
+    
+    switch (status) {
+      case Status.ACTIVE:
+        return 'bg-green-100 text-green-800'
+      case Status.INACTIVE:
+        return 'bg-gray-100 text-gray-800'
+      case Status.SUSPENDED:
+        return 'bg-yellow-100 text-yellow-800'
+      case Status.ARCHIVED:
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+  const getStatusDisplay = (status: Status | null | undefined) => {
+    if (!status) return 'Unknown'
+    return status.toString().charAt(0).toUpperCase() + status.toString().slice(1).toLowerCase()
   }
 
   return (
@@ -316,14 +314,13 @@ export function MaterialTypeDialog({
                         <TableCell className="font-medium">{type.name}</TableCell>
                         <TableCell>{type.description}</TableCell>
                         <TableCell>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${type.status === 'ACTIVE'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                            }`}>
-                            {type.status.toLowerCase()}
-                          </span>
-                        </TableCell>
-                        <TableCell>
+  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+    getStatusBadgeStyle(type.status)
+  }`}>
+    {getStatusDisplay(type.status)}
+  </span>
+</TableCell>
+<TableCell>
                           <div className="flex items-center gap-2">
                             <Button
                               variant="ghost"

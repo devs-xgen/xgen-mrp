@@ -156,7 +156,7 @@ export function CreatePurchaseOrderDialog({
           Create Order
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="max-w-screen-2xl w-full h-[90vh]">
         <DialogHeader>
           <DialogTitle>Create Purchase Order</DialogTitle>
           <DialogDescription>
