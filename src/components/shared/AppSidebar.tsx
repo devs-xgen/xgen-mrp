@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect  } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
@@ -21,10 +21,18 @@ interface NavItemProps {
     isChild?: boolean
 }
 
+
+
 function NavItem({ item, isCollapsed, isActive, isChild = false }: NavItemProps) {
     const [isOpen, setIsOpen] = useState(false)
     const pathname = usePathname()
+    useEffect(() => {
+        if (isCollapsed) {
+            setIsOpen(false);
+        }
+    }, [isCollapsed]);
 
+    
     if (item.items) {
         return (
             <Collapsible
@@ -33,11 +41,10 @@ function NavItem({ item, isCollapsed, isActive, isChild = false }: NavItemProps)
                 className="w-full"
             >
                 <CollapsibleTrigger className={cn(
-                    'flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group',
-                    isOpen
-                        ? 'bg-slate-700 text-slate-100'
-                        : 'text-slate-300 hover:bg-slate-700 hover:text-slate-100'
-                )}>
+    'flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group',
+    isOpen ? 'text-slate-100' : 'text-slate-300 hover:bg-slate-700 hover:text-slate-100'
+)}>
+
                     {item.icon && <item.icon className="h-5 w-5 shrink-0" />}
                     <span className={cn(
                         "transition-all duration-300",

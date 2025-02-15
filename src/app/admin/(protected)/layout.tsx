@@ -1,6 +1,5 @@
 import { getServerSession } from "next-auth/next"
 import { redirect } from "next/navigation"
-import AdminSidebar from "@/components/module/admin/adminSidebar"
 import { authOptions } from "@/lib/auth"
 import AppSidebar from "@/components/shared/AppSidebar"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"

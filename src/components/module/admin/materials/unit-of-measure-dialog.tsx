@@ -1,292 +1,344 @@
 // src/components/module/admin/materials/unit-of-measure-dialog.tsx
 
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Ruler, Pencil, Trash, Loader2 } from "lucide-react"
-import { UnitOfMeasure, Status } from "@prisma/client"
-import { Button } from "@/components/ui/button"
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Ruler, Pencil, Trash, Loader2 } from "lucide-react";
+import { UnitOfMeasure, Status } from "@prisma/client";
+import { Button } from "@/components/ui/button";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { useToast } from "@/hooks/use-toast"
-import * as z from "zod"
-import { Textarea } from "@/components/ui/textarea"
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import * as z from "zod";
+import { Textarea } from "@/components/ui/textarea";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table"
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  createUnitOfMeasure,
+  updateUnitOfMeasure,
+  deleteUnitOfMeasure,
+} from "@/lib/actions/unit-of-measure";
 
 const unitOfMeasureSchema = z.object({
-    name: z.string()
-        .min(2, "Name must be at least 2 characters")
-        .max(50, "Name must not exceed 50 characters"),
-    symbol: z.string()
-        .min(1, "Symbol is required")
-        .max(10, "Symbol must not exceed 10 characters"),
-    description: z.string()
-        .max(500, "Description must not exceed 500 characters")
-        .optional(),
-    status: z.nativeEnum(Status).default(Status.ACTIVE),
-})
+  name: z
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .max(50, "Name must not exceed 50 characters"),
+  symbol: z
+    .string()
+    .min(1, "Symbol is required")
+    .max(10, "Symbol must not exceed 10 characters"),
+  description: z
+    .string()
+    .max(500, "Description must not exceed 500 characters")
+    .optional(),
+  status: z.nativeEnum(Status).default(Status.ACTIVE),
+});
 
-type UnitOfMeasureFormValues = z.infer<typeof unitOfMeasureSchema>
+type UnitOfMeasureFormValues = z.infer<typeof unitOfMeasureSchema>;
 
 interface UnitOfMeasureDialogProps {
-    unitOfMeasures: UnitOfMeasure[]
-    onSuccess?: () => Promise<void>
+  unitOfMeasures: UnitOfMeasure[];
+  onSuccess?: () => Promise<void>;
 }
 
 export function UnitOfMeasureDialog({
-    unitOfMeasures,
-    onSuccess,
+  unitOfMeasures,
+  onSuccess,
 }: UnitOfMeasureDialogProps) {
-    const [open, setOpen] = useState(false)
-    const [isLoading, setIsLoading] = useState(false)
-    const [isTableLoading, setIsTableLoading] = useState(false)
-    const [editingUnit, setEditingUnit] = useState<UnitOfMeasure | null>(null)
-    const { toast } = useToast()
+  const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTableLoading, setIsTableLoading] = useState(false);
+  const [editingUnit, setEditingUnit] = useState<UnitOfMeasure | null>(null);
+  const { toast } = useToast();
 
-    const form = useForm<UnitOfMeasureFormValues>({
-        resolver: zodResolver(unitOfMeasureSchema),
-        defaultValues: {
-            name: "",
-            symbol: "",
-            description: "",
-            status: Status.ACTIVE,
-        },
-    })
+  const form = useForm<UnitOfMeasureFormValues>({
+    resolver: zodResolver(unitOfMeasureSchema),
+    defaultValues: {
+      name: "",
+      symbol: "",
+      description: "",
+      status: Status.ACTIVE,
+    },
+  });
 
-    const onSubmit = async (values: UnitOfMeasureFormValues) => {
-        try {
-            setIsLoading(true)
-            const url = editingUnit
-                ? `/api/unit-of-measure/${editingUnit.id}`
-                : "/api/unit-of-measure"
+  // In your UnitOfMeasureDialog component, modify the onSubmit function:
+  const onSubmit = async (values: UnitOfMeasureFormValues) => {
+    try {
+      setIsLoading(true);
 
-            const response = await fetch(url, {
-                method: editingUnit ? "PATCH" : "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(values),
-            })
+      if (editingUnit) {
+        await updateUnitOfMeasure(editingUnit.id, {
+          name: values.name,
+          symbol: values.symbol,
+          description: values.description,
+          status: values.status,
+        });
+      } else {
+        await createUnitOfMeasure({
+          name: values.name,
+          symbol: values.symbol,
+          description: values.description,
+          status: values.status,
+        });
+      }
 
-            if (!response.ok) {
-                const error = await response.json()
-                throw new Error(error.message || "Failed to save unit of measure")
-            }
+      toast({
+        title: "Success",
+        description: `Unit of measure ${
+          editingUnit ? "updated" : "created"
+        } successfully`,
+      });
 
-            toast({
-                title: "Success",
-                description: `Unit of measure ${editingUnit ? "updated" : "created"} successfully`,
-            })
-
-            form.reset()
-            setEditingUnit(null)
-            if (onSuccess) await onSuccess()
-        } catch (error) {
-            toast({
-                title: "Error",
-                description: error instanceof Error ? error.message : "Failed to save unit of measure",
-                variant: "destructive",
-            })
-        } finally {
-            setIsLoading(false)
-        }
+      form.reset();
+      setEditingUnit(null);
+      setOpen(false);
+      if (onSuccess) await onSuccess();
+    } catch (error) {
+      console.error("Form submission error:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to save unit of measure",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    const onEdit = (unit: UnitOfMeasure) => {
-        setEditingUnit(unit)
-        form.reset({
-            name: unit.name,
-            symbol: unit.symbol,
-            description: unit.description || "",
-            status: unit.status,
-        })
+  const onEdit = (unit: UnitOfMeasure) => {
+    setEditingUnit(unit);
+    form.reset({
+      name: unit.name,
+      symbol: unit.symbol,
+      description: unit.description || "",
+      status: unit.status,
+    });
+  };
+
+  const onDelete = async (unit: UnitOfMeasure) => {
+    if (!confirm("Are you sure you want to delete this unit of measure?"))
+      return;
+
+    try {
+      setIsLoading(true);
+      await deleteUnitOfMeasure(unit.id);
+
+      toast({
+        title: "Success",
+        description: "Unit of measure deleted successfully",
+      });
+
+      if (onSuccess) await onSuccess();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to delete unit of measure. It might be in use.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    const onDelete = async (unit: UnitOfMeasure) => {
-        if (!confirm('Are you sure you want to delete this unit of measure?')) return
+  const getStatusBadgeStyle = (status: Status | null | undefined) => {
+    if (!status) return "bg-gray-100 text-gray-800";
 
-        try {
-            setIsLoading(true)
-            const response = await fetch(`/api/unit-of-measures/${unit.id}`, {
-                method: "DELETE",
-            })
-
-            if (!response.ok) {
-                const error = await response.json()
-                throw new Error(error.message || "Failed to delete unit of measure")
-            }
-
-            toast({
-                title: "Success",
-                description: "Unit of measure deleted successfully",
-            })
-
-            if (onSuccess) await onSuccess()
-        } catch (error) {
-            toast({
-                title: "Error",
-                description: error instanceof Error
-                    ? error.message
-                    : "Failed to delete unit of measure. It might be in use.",
-                variant: "destructive",
-            })
-        } finally {
-            setIsLoading(false)
-        }
+    switch (status) {
+      case Status.ACTIVE:
+        return "bg-green-100 text-green-800";
+      case Status.INACTIVE:
+        return "bg-gray-100 text-gray-800";
+      case Status.SUSPENDED:
+        return "bg-yellow-100 text-yellow-800";
+      case Status.ARCHIVED:
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
+  };
 
+  const getStatusDisplay = (status: Status | null | undefined) => {
+    if (!status) return "Unknown";
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                    <Ruler className="h-4 w-4 mr-2" />
-                    Units of Measure
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-5xl">
-                <DialogHeader>
-                    <DialogTitle>Manage Units of Measure</DialogTitle>
-                    <DialogDescription>
-                        Create and manage units of measure for materials
-                    </DialogDescription>
-                </DialogHeader>
+      status.toString().charAt(0).toUpperCase() +
+      status.toString().slice(1).toLowerCase()
+    );
+  };
 
-                <div className="grid grid-cols-[400px,1fr] gap-6">
-                    {/* Form Section - Left Side */}
-                    <div className="space-y-4 border rounded-lg p-4">
-                        <h3 className="font-medium">
-                            {editingUnit ? "Edit Unit of Measure" : "Add New Unit of Measure"}
-                        </h3>
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="name"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Name</FormLabel>
-                                                <FormControl>
-                                                    <Input {...field} placeholder="Enter name" className="h-10" />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="symbol"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Symbol</FormLabel>
-                                                <FormControl>
-                                                    <Input {...field} placeholder="e.g., kg, m, pcs" className="h-10" />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-                                <FormField
-                                    control={form.control}
-                                    name="description"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Description (Optional)</FormLabel>
-                                            <FormControl>
-                                                <Textarea
-                                                    {...field}
-                                                    placeholder="Enter description"
-                                                    className="resize-none h-20"
-                                                    value={field.value ?? ''}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="status"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Status</FormLabel>
-                                            <Select
-                                                onValueChange={field.onChange}
-                                                defaultValue={field.value}
-                                            >
-                                                <FormControl>
-                                                    <SelectTrigger className="h-10">
-                                                        <SelectValue placeholder="Select status" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {Object.values(Status).map((status) => (
-                                                        <SelectItem key={status} value={status}>
-                                                            {status.toLowerCase()}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <div className="flex justify-end gap-2 pt-4">
-                                    {editingUnit && (
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => {
-                                                setEditingUnit(null)
-                                                form.reset()
-                                            }}
-                                        >
-                                            Cancel
-                                        </Button>
-                                    )}
-                                    <Button type="submit" disabled={isLoading}>
-                                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        {isLoading
-                                            ? (editingUnit ? "Saving..." : "Creating...")
-                                            : (editingUnit ? "Save Changes" : "Create Unit")
-                                        }
-                                    </Button>
-                                </div>
-                            </form>
-                        </Form>
-                    </div>
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <Ruler className="h-4 w-4 mr-2" />
+          Units of Measure
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-5xl">
+        <DialogHeader>
+          <DialogTitle>Manage Units of Measure</DialogTitle>
+          <DialogDescription>
+            Create and manage units of measure for materials
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid grid-cols-[400px,1fr] gap-6">
+          {/* Form Section - Left Side */}
+          <div className="space-y-4 border rounded-lg p-4">
+            <h3 className="font-medium">
+              {editingUnit ? "Edit Unit of Measure" : "Add New Unit of Measure"}
+            </h3>
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-4"
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="Enter name"
+                            className="h-10"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="symbol"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Symbol</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="e.g., kg, m, pcs"
+                            className="h-10"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          placeholder="Enter description"
+                          className="resize-none h-20"
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.values(Status).map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {status.toLowerCase()}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end gap-2 pt-4">
+                  {editingUnit && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setEditingUnit(null);
+                        form.reset();
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    {isLoading
+                      ? editingUnit
+                        ? "Saving..."
+                        : "Creating..."
+                      : editingUnit
+                      ? "Save Changes"
+                      : "Create Unit"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </div>
 
                     {/* Table Section - Right Side */}
                     <div className="border rounded-lg">
@@ -331,7 +383,7 @@ export function UnitOfMeasureDialog({
                                                             ? 'bg-green-100 text-green-800'
                                                             : 'bg-gray-100 text-gray-800'
                                                         }`}>
-                                                        {unit.status ? unit.status.toLowerCase() : "-"}
+                                                        {unit.status.toLowerCase()}
                                                     </span>
                                                 </TableCell>
                                                 <TableCell>

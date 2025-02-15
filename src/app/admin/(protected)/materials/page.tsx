@@ -1,93 +1,69 @@
 // src/app/admin/(protected)/materials/page.tsx
-
 import { Metadata } from "next";
-import { MaterialDataTable } from "@/components/module/admin/materials/data-table";
-import { CreateMaterialDialog } from "@/components/module/admin/materials/create-material-dialog";
-import { MaterialTypeDialog } from "@/components/module/admin/materials/material-type-dialog"
-import { UnitOfMeasureDialog } from "@/components/module/admin/materials/unit-of-measure-dialog"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-// import { Button } from "@/components/ui/button"
-import {
-  getAllMaterials,
-  getAllMaterialTypes,
-  getAllUnitMeasures,
+  getMaterials,
+  getMaterialTypes,
+  getUnitOfMeasures,
+  getSuppliers,
 } from "@/lib/actions/materials";
-
-import {
-  getAllSuppliers
-} from "@/lib/actions/suppliers";
-
-import { revalidatePath } from "next/cache";
+import { DataTable } from "@/components/module/admin/materials/data-table";
+import { columns } from "@/components/module/admin/materials/columns";
+import { Button } from "@/components/ui/button";
+import { CreateMaterialDialog } from "@/components/module/admin/materials/create-material-dialog";
+import { MaterialTypeDialog } from "@/components/module/admin/materials/material-type-dialog";
+import { UnitOfMeasureDialog } from "@/components/module/admin/materials/unit-of-measure-dialog";
 
 export const metadata: Metadata = {
   title: "Materials Management",
-  description: "Manage your material inventory",
+  description: "Manage and monitor your material inventory",
 };
 
-async function refreshData() {
+async function revalidateData() {
   "use server";
-  revalidatePath("/admin/materials");
+  try {
+    const materialTypes = await getMaterialTypes();
+    const unitOfMeasures = await getUnitOfMeasures();
+    return { materialTypes, unitOfMeasures };
+  } catch (error) {
+    console.error("Error revalidating data:", error);
+    throw new Error("Failed to refresh data");
+  }
 }
 
 export default async function MaterialsPage() {
-  // Fetch all required data in parallel
-  const [materials, materialTypes, unitOfMeasures, suppliers] =
-    await Promise.all([
-      getAllMaterials(),
-      getAllMaterialTypes(),
-      getAllUnitMeasures(),
-      getAllSuppliers(),
-    ]);
+  const materials = await getMaterials();
+  const materialTypes = await getMaterialTypes();
+  const unitOfMeasures = await getUnitOfMeasures();
+  const suppliers = await getSuppliers();
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Materials Management
-        </h1>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Materials Management
+          </h1>
+          <p className="text-muted-foreground">
+            Manage and monitor your material inventory
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           <MaterialTypeDialog
             materialTypes={materialTypes}
-            onSuccess={refreshData}
+            onSuccess={revalidateData}
           />
           <UnitOfMeasureDialog
             unitOfMeasures={unitOfMeasures}
-            onSuccess={refreshData}
+            onSuccess={revalidateData}
           />
           <CreateMaterialDialog
             materialTypes={materialTypes}
             unitOfMeasures={unitOfMeasures}
             suppliers={suppliers}
-            onSuccess={refreshData}
           />
         </div>
       </div>
-
-      <div className="mt-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Materials</CardTitle>
-            <CardDescription>
-              Manage and monitor your material inventory
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <MaterialDataTable
-              data={materials}
-              materialTypes={materialTypes}
-              unitOfMeasures={unitOfMeasures}
-              suppliers={suppliers}
-              onSuccess={refreshData}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      <DataTable columns={columns} data={materials} />
     </div>
   );
 }

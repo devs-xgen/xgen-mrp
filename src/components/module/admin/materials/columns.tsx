@@ -1,46 +1,14 @@
-"use client";
+// src/components/module/admin/materials/columns.tsx
+"use client"
 
-import { ColumnDef } from "@tanstack/react-table";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Pencil, Trash } from "lucide-react";
-import {
-  Material,
-  MaterialType,
-  Status,
-  UnitOfMeasure,
-  Supplier,
-} from "@prisma/client";
-import { EditMaterialDialog } from "./edit-material-dialog";
-import { DeleteMaterialDialog } from "./delete-material-dialog";
+import { ColumnDef } from "@tanstack/react-table"
+import { Material } from "@/types/admin/materials"
+import { Badge } from "@/components/ui/badge"
+import { DataTableColumnHeader } from "./data-table-column-header"
+import { DataTableRowActions } from "./data-table-row-actions"
+import { Checkbox } from "@/components/ui/checkbox"
 
-interface MaterialWithRelations extends Material {
-  type: MaterialType;
-  unitOfMeasure: UnitOfMeasure;
-  supplier: Supplier;
-}
-
-interface DataTableColumnProps {
-  materialTypes: MaterialType[];
-  unitOfMeasures: UnitOfMeasure[];
-  suppliers: Supplier[];
-  onSuccess?: () => Promise<void>;
-}
-
-export const createColumns = ({
-  materialTypes,
-  unitOfMeasures,
-  suppliers,
-  onSuccess,
-}: DataTableColumnProps): ColumnDef<MaterialWithRelations>[] => [
+export const columns: ColumnDef<Material>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -62,107 +30,74 @@ export const createColumns = ({
   },
   {
     accessorKey: "sku",
-    header: "SKU",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="SKU" />
+    ),
   },
   {
     accessorKey: "name",
-    header: "Name",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Name" />
+    ),
   },
   {
     accessorKey: "type.name",
-    header: "Type",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Type" />
+    ),
   },
   {
-    accessorKey: "unitOfMeasure.symbol",
-    header: "Unit",
-  },
-  {
-    accessorKey: "currentStock",
-    header: "Stock",
+    accessorKey: "unitOfMeasure",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Unit" />
+    ),
     cell: ({ row }) => {
-      const stock = row.getValue("currentStock") as number;
-      const minStock = row.original.minimumStockLevel;
-
-      return (
-        <div className="flex items-center gap-2">
-          <span>
-            {stock} {row.original.unitOfMeasure.symbol}
-          </span>
-          {stock <= minStock && <Badge variant="destructive">Low Stock</Badge>}
-        </div>
-      );
+      const unit = row.original.unitOfMeasure
+      return `${unit.name} (${unit.symbol})`
     },
   },
   {
+    accessorKey: "currentStock",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Stock" />
+    ),
+  },
+  {
     accessorKey: "costPerUnit",
-    header: "Cost Per Unit",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Cost Per Unit" />
+    ),
     cell: ({ row }) => {
-      const cost = Number(row.getValue("costPerUnit"));
-      const formatted = new Intl.NumberFormat("en-PH", {
+      const amount = parseFloat(row.original.costPerUnit.toString())
+      const formatted = new Intl.NumberFormat("en-US", {
         style: "currency",
         currency: "PHP",
-      }).format(cost);
-
-      return formatted;
+      }).format(amount)
+      return formatted
     },
   },
   {
     accessorKey: "supplier.name",
-    header: "Supplier",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Supplier" />
+    ),
   },
   {
     accessorKey: "status",
-    header: "Status",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Status" />
+    ),
     cell: ({ row }) => {
-      const status = row.getValue("status") as Status;
+      const status = row.original.status
       return (
         <Badge variant={status === "ACTIVE" ? "default" : "secondary"}>
           {status  ? status.toLowerCase() : "-"}
         </Badge>
-      );
+      )
     },
   },
   {
     id: "actions",
-    cell: ({ row }) => {
-      const material = row.original;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <EditMaterialDialog
-              material={material}
-              materialTypes={materialTypes}
-              unitOfMeasures={unitOfMeasures}
-              suppliers={suppliers}
-              onSuccess={onSuccess}
-              trigger={
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-              }
-            />
-            <DeleteMaterialDialog
-              material={material}
-              onSuccess={onSuccess}
-              trigger={
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <Trash className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              }
-            />
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
+    cell: ({ row }) => <DataTableRowActions row={row} />,
   },
-];
+]
