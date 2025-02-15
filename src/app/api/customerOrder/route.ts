@@ -1,51 +1,73 @@
-import { prisma } from "@/lib/db";
-import { NextResponse } from "next/server";
+// POST /api/customer-orders
+import { NextApiRequest, NextApiResponse } from "next";
+import { prisma } from "@/lib/db"; // Ensure correct import path
 
-// Create Customer Order
-export async function POST(req: Request) {
-    try {
-        const json = await req.json();
-        const order = await prisma.customerOrder.create({
-            data: {
-                orderNumber: json.orderNumber,
-                customerId: json.customerId,
-                orderDate: new Date(json.orderDate),
-                requiredDate: new Date(json.requiredDate),
-                status: json.status || 'ACTIVE',
-                totalAmount: json.totalAmount,
-                shippingAddress: json.shippingAddress,
-                billingAddress: json.billingAddress,
-                notes: json.notes,
-            },
-        });
-        return NextResponse.json(order);
-    } catch (error: any) {
-        if (error.code === "P2002") {
-            return NextResponse.json(
-                { error: "A customer order with this order number already exists" },
-                { status: 400 }
-            );
-        }
-        return NextResponse.json(
-            { error: "Error creating customer order" },
-            { status: 500 }
-        );
+export async function POST(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    const data = req.body; // Get data from request body
+
+    // Validate requiredDate and orderDate
+    if (!data.requiredDate || isNaN(Date.parse(data.requiredDate))) {
+      return res.status(400).json({ error: "Invalid or missing requiredDate" });
     }
+    if (!data.orderDate || isNaN(Date.parse(data.orderDate))) {
+      return res.status(400).json({ error: "Invalid or missing orderDate" });
+    }
+
+    // Validate numerical values
+    if (isNaN(Number(data.totalAmount))) {
+      return res.status(400).json({ error: "Invalid totalAmount" });
+    }
+
+    const customerOrder = await prisma.customerOrder.create({
+      data: {
+        orderNumber: data.orderNumber,
+        customerId: data.customerId,
+        orderDate: new Date(data.orderDate), // Ensure this is a Date
+        requiredDate: new Date(data.requiredDate), // Properly formatted Date
+        status: data.status,
+        totalAmount: Number(data.totalAmount), // Ensure it's a number
+        shippingAddress: data.shippingAddress,
+        billingAddress: data.billingAddress,
+        notes: data.notes,
+        createdBy: data.createdBy,
+        modifiedBy: data.modifiedBy,
+
+        // Connect related records if needed (e.g., orderLines):
+        orderLines: {
+          create: data.orderLines?.map((orderLineData: any) => ({
+            productId: orderLineData.productId,
+            quantity: isNaN(Number(orderLineData.quantity)) ? 0 : Number(orderLineData.quantity),
+            unitPrice: isNaN(Number(orderLineData.unitPrice)) ? 0 : Number(orderLineData.unitPrice),
+            status: orderLineData.status,
+            notes: orderLineData.notes,
+            createdBy: orderLineData.createdBy,
+            modifiedBy: orderLineData.modifiedBy,
+          })),
+        },
+      },
+    });
+
+    res.status(201).json(customerOrder); // 201 Created
+  } catch (error) {
+    console.error("Error creating customer order:", error);
+    res.status(500).json({ error: "Failed to create customer order" });
+  }
 }
 
-// Get All Customer Orders
-export async function GET() {
-    try {
-        const orders = await prisma.customerOrder.findMany({
-            orderBy: {
-                orderDate: "desc",
-            },
-        });
-        return NextResponse.json(orders);
-    } catch (error) {
-        return NextResponse.json(
-            { error: "Error fetching customer orders" },
-            { status: 500 }
-        );
-    }
+// GET /api/customer-orders
+export async function GET(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    const customerOrders = await prisma.customerOrder.findMany({
+      include: { // Include related data if needed
+        customer: true,
+        orderLines: true,
+        productionOrders: true,
+      },
+    });
+    res.status(200).json(customerOrders);
+  } catch (error) {
+    console.error("Error getting customer orders:", error);
+    res.status(500).json({ error: 'Failed to get customer orders' });
+  }
 }
