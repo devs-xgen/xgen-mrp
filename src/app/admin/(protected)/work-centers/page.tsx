@@ -1,65 +1,45 @@
-// pages/admin/work-center/index.tsx (Server Component)
+// src/app/admin/(protected)/work-centers/page.tsx
 import { Metadata } from "next";
-import { WorkCenterDataTable } from "@/components/module/admin/work-centers/data-table";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { getAllWorkCenters } from "@/lib/actions/workcenter";
-import { revalidatePath } from "next/cache";
-import { CreateWorkCenterDialog } from "@/components/module/admin/work-centers/create-center-dialog";
+import { getWorkCenters } from "@/lib/actions/work-center";
+import { columns } from "@/components/module/admin/work-centers/columns";
+import { DataTable } from "@/components/module/admin/work-centers/data-table";
+import { WorkCenterDialog } from "@/components/module/admin/work-centers/create-work-center-dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata: Metadata = {
   title: "Work Centers",
-  description: "Manage your work centers",
+  description: "Manage work centers and production capacity",
 };
 
-async function refreshData() {
-  "use server";
-  revalidatePath("/admin/work-center");
-}
-
 export default async function WorkCentersPage() {
-  const workCenters = await getAllWorkCenters();
+  const workCenters = await getWorkCenters();
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Work Centers Management
-        </h1>
-        <div className="flex items-center gap-2">
-                  {/* <MaterialTypeDialog
-                    materialTypes={materialTypes}
-                    onSuccess={refreshData}
-                  />
-                  <UnitOfMeasureDialog
-                    unitOfMeasures={unitOfMeasures}
-                    onSuccess={refreshData}
-                  /> */}
-                  <CreateWorkCenterDialog
-                    onSuccess={refreshData} 
-                    workCenterTypes={[]}                 
-                   />
+    <div className="flex flex-col gap-6 p-8">
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Work Centers</h2>
+          <p className="text-muted-foreground">
+            Manage your production work centers and their capacities
+          </p>
         </div>
+        <WorkCenterDialog />
       </div>
 
-      <div className="mt-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Work Centers</CardTitle>
-            <CardDescription>
-              Manage and monitor your work centers
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <WorkCenterDataTable data={workCenters} onSuccess={refreshData} />
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>All Work Centers</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DataTable
+            columns={columns}
+            data={workCenters.map((wc) => ({
+              ...wc,
+              efficiencyRate: `${Number(wc.efficiencyRate).toFixed(1)}`,
+            }))}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

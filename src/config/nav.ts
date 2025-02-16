@@ -57,7 +57,7 @@ export const adminNavItems: NavItem[] = [
       },
       {
         label: 'Work Centers',
-        href: '/admin/production/work-centers',
+        href: '/admin/work-centers',
         description: 'Manage work centers'
       }
     ]
