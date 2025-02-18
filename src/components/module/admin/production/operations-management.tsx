@@ -1,57 +1,56 @@
 // src/components/module/admin/production/operations-management.tsx
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Status } from "@prisma/client"
-import { formatDate } from "@/lib/utils"
-import { Loader2 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { updateOperationStatus } from "@/lib/actions/production-order"
+import { useState } from "react";
+import { Status } from "@prisma/client";
+import { formatDate } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { updateOperationStatus } from "@/lib/actions/production-order";
 
-// Import UI components
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
   Card,
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card"
-import { AddOperationDialog } from "./add-operation-dialog"
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { AddOperationDialog } from "./add-operation-dialog";
 
 interface WorkCenter {
-  id: string
-  name: string
-  capacityPerHour: number
+  id: string;
+  name: string;
+  capacityPerHour: number;
 }
 
 interface Operation {
-  id: string
-  workCenterId: string
-  startTime: Date
-  endTime: Date
-  status: Status
-  notes?: string | null
+  id: string;
+  workCenterId: string;
+  startTime: Date;
+  endTime: Date;
+  status: Status;
+  notes?: string | null;
   workCenter: {
-    name: string
-  }
+    name: string;
+  };
 }
 
 interface OperationsManagementProps {
-  productionOrderId: string
-  operations: Operation[]
-  workCenters: WorkCenter[]
-  onRefresh?: () => Promise<void>
-  isLoading?: boolean
+  productionOrderId: string;
+  operations: Operation[];
+  workCenters: WorkCenter[];
+  onRefresh?: () => Promise<void>;
+  isLoading?: boolean;
 }
 
 export function OperationsManagement({
@@ -59,64 +58,69 @@ export function OperationsManagement({
   operations,
   workCenters,
   onRefresh,
-  isLoading = false
+  isLoading = false,
 }: OperationsManagementProps) {
-  const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const { toast } = useToast()
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleStatusUpdate = async (id: string, newStatus: Status) => {
     try {
-      setUpdatingId(id)
-      await updateOperationStatus(id, newStatus)
-      if (onRefresh) await onRefresh()
-      
+      setUpdatingId(id);
+      await updateOperationStatus(id, newStatus);
+      if (onRefresh) await onRefresh();
+
       toast({
         title: "Operation Updated",
-        description: `Operation status updated to ${newStatus.toLowerCase().replace("_", " ")}`
-      })
+        description: `Operation status updated to ${newStatus
+          .toLowerCase()
+          .replace("_", " ")}`,
+      });
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update operation",
-        variant: "destructive"
-      })
+        description:
+          error instanceof Error ? error.message : "Failed to update operation",
+        variant: "destructive",
+      });
     } finally {
-      setUpdatingId(null)
+      setUpdatingId(null);
     }
-  }
+  };
 
   const getNextStatus = (currentStatus: Status): Status | null => {
     switch (currentStatus) {
       case "PENDING":
-        return "IN_PROGRESS"
+        return "IN_PROGRESS";
       case "IN_PROGRESS":
-        return "COMPLETED"
+        return "COMPLETED";
       default:
-        return null
+        return null;
     }
-  }
+  };
 
-  const getStatusBadgeVariant = (status: Status): "default" | "secondary" | "outline" => {
+  const getStatusBadgeVariant = (
+    status: Status
+  ): "default" | "secondary" | "outline" => {
     switch (status) {
       case "COMPLETED":
-        return "default"
+        return "default";
       case "IN_PROGRESS":
-        return "secondary"
+        return "secondary";
       default:
-        return "outline"
+        return "outline";
     }
-  }
+  };
 
   const getActionButtonText = (nextStatus: Status) => {
     switch (nextStatus) {
       case "IN_PROGRESS":
-        return "Start"
+        return "Start";
       case "COMPLETED":
-        return "Complete"
+        return "Complete";
       default:
-        return "Update"
+        return "Update";
     }
-  }
+  };
 
   return (
     <Card>
@@ -124,7 +128,9 @@ export function OperationsManagement({
         <div className="flex justify-between items-center">
           <div>
             <CardTitle>Operations</CardTitle>
-            <CardDescription>Manage production operations and their status</CardDescription>
+            <CardDescription>
+              Manage production operations and their status
+            </CardDescription>
           </div>
           <AddOperationDialog
             workCenters={workCenters}
@@ -154,32 +160,26 @@ export function OperationsManagement({
               </TableRow>
             ) : (
               operations.map((operation) => {
-                const nextStatus = getNextStatus(operation.status)
+                const nextStatus = getNextStatus(operation.status);
                 return (
                   <TableRow key={operation.id}>
-                    <TableCell>
-                      {operation.workCenter.name}
-                    </TableCell>
-                    <TableCell>
-                      {formatDate(operation.startTime)}
-                    </TableCell>
-                    <TableCell>
-                      {formatDate(operation.endTime)}
-                    </TableCell>
+                    <TableCell>{operation.workCenter.name}</TableCell>
+                    <TableCell>{formatDate(operation.startTime)}</TableCell>
+                    <TableCell>{formatDate(operation.endTime)}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(operation.status)}>
                         {operation.status.toLowerCase().replace("_", " ")}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      {operation.notes || "—"}
-                    </TableCell>
+                    <TableCell>{operation.notes || "—"}</TableCell>
                     <TableCell className="text-right">
                       {nextStatus && (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleStatusUpdate(operation.id, nextStatus)}
+                          onClick={() =>
+                            handleStatusUpdate(operation.id, nextStatus)
+                          }
                           disabled={updatingId === operation.id || isLoading}
                         >
                           {updatingId === operation.id && (
@@ -190,12 +190,12 @@ export function OperationsManagement({
                       )}
                     </TableCell>
                   </TableRow>
-                ))
-              }
+                );
+              })
             )}
           </TableBody>
         </Table>
       </CardContent>
     </Card>
-  )
+  );
 }
