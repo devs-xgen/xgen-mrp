@@ -86,3 +86,46 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+
+/* Dark Theme */
+.dark-theme .bg-neutral-800 { /* Add .dark-theme prefix */
+  background-color: #1f2937;
+}
+
+.dark-theme .text-slate-100 { /* Add .dark-theme prefix */
+  color: #f8f9fa;
+}
+
+/* ... other dark theme styles */
+
+/* Light Theme */
+.light-theme .bg-white { /* Add .light-theme prefix */
+  background-color: white;
+}
+
+.light-theme .text-gray-800 { /* Add .light-theme prefix */
+  color: #333;
+}
+
+/* ... other light theme styles */
+
+/* Hover Styles (Less Specific) */
+.bg-gray-700:hover {  /* Keep these less specific */
+  background-color: gray;
+}
+
+.bg-gray-200:hover { /* Keep these less specific */
+  background-color: lightgray;
+}
+
+/* ... other hover styles */
+
+/* Add this to your body tag in _app.tsx or layout.tsx*/
+body.dark {
+  @apply dark-theme
+}
+
+body.light {
+  @apply light-theme
+}

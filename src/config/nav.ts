@@ -108,6 +108,12 @@ export const adminNavItems: NavItem[] = [
     href: '/admin/settings',
     description: 'System configuration'
   }
+  // {
+  //   icon: Text,
+  //   label: 'Text',
+  //   href: '/admin/text',
+  //   description: 'text sample'
+  // }
 ]
 
 export const operatorNavItems = [
