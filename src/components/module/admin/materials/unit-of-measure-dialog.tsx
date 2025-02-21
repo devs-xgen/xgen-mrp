@@ -340,81 +340,84 @@ export function UnitOfMeasureDialog({
             </Form>
           </div>
 
-                    {/* Table Section - Right Side */}
-                    <div className="border rounded-lg">
-                        <div className="p-4 border-b">
-                            <h3 className="font-medium">Units of Measure List</h3>
+          {/* Table Section - Right Side */}
+          <div className="border rounded-lg">
+            <div className="p-4 border-b">
+              <h3 className="font-medium">Units of Measure List</h3>
+            </div>
+            <div className="max-h-[500px] overflow-y-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-background">
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Symbol</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isTableLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center">
+                        <div className="flex items-center justify-center">
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                          <span className="ml-2">Loading...</span>
                         </div>
-                        <div className="max-h-[500px] overflow-y-auto">
-                            <Table>
-                                <TableHeader className="sticky top-0 bg-background">
-                                    <TableRow>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Symbol</TableHead>
-                                        <TableHead>Description</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="w-[100px]">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {isTableLoading ? (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">
-                                                <div className="flex items-center justify-center">
-                                                    <Loader2 className="h-6 w-6 animate-spin" />
-                                                    <span className="ml-2">Loading...</span>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : unitOfMeasures.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">
-                                                No units of measure found. Create one using the form.
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        unitOfMeasures.map((unit) => (
-                                            <TableRow key={unit.id}>
-                                                <TableCell className="font-medium">{unit.name}</TableCell>
-                                                <TableCell>{unit.symbol}</TableCell>
-                                                <TableCell>{unit.description}</TableCell>
-                                                <TableCell>
-                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${unit.status === 'ACTIVE'
-                                                            ? 'bg-green-100 text-green-800'
-                                                            : 'bg-gray-100 text-gray-800'
-                                                        }`}>
-                                                        {unit.status ? unit.status.toLowerCase() : 'default status'}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => onEdit(unit)}
-                                                            disabled={isTableLoading}
-                                                        >
-                                                            <Pencil className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => onDelete(unit)}
-                                                            disabled={isTableLoading}
-                                                        >
-                                                            <Trash className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </div>
-                </div>
-            </DialogContent>
-        </Dialog>
-    )
+                      </TableCell>
+                    </TableRow>
+                  ) : unitOfMeasures.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center">
+                        No units of measure found. Create one using the form.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    unitOfMeasures.map((unit) => (
+                      <TableRow key={unit.id}>
+                        <TableCell className="font-medium">
+                          {unit.name}
+                        </TableCell>
+                        <TableCell>{unit.symbol}</TableCell>
+                        <TableCell>{unit.description}</TableCell>
+                        <TableCell>
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeStyle(
+                              unit.status
+                            )}`}
+                          >
+                            {getStatusDisplay(unit.status)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onEdit(unit)}
+                              disabled={isTableLoading}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onDelete(unit)}
+                              disabled={isTableLoading}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
