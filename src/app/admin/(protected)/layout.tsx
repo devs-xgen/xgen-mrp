@@ -1,37 +1,28 @@
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import AppSidebar from "@/components/shared/AppSidebar";
-import { ThemeProvider } from "@/context/ThemeContext"; // Using ThemeProvider here
+import { ThemeProvider } from "@/context/ThemeContext"; // ThemeProvider is fine in server components
+import LayoutWithTheme from "@/components/shared/LayoutWithTheme"; // Import the new client component
 
 export default async function AdminProtectedLayout({
-    children,
+  children,
 }: {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }) {
-    const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions);
 
-    // Redirect if no session or not an admin
-    if (!session?.user) {
-        redirect('/admin/login');
-    }
+  // Redirect if no session or not an admin
+  if (!session?.user) {
+    redirect("/admin/login");
+  }
 
-    if (!['ADMIN', 'MANAGER'].includes(session.user.role)) {
-        redirect('/worker/dashboard');
-    }
+  if (!["ADMIN", "MANAGER"].includes(session.user.role)) {
+    redirect("/worker/dashboard");
+  }
 
-    return (
-        <ThemeProvider>
-            <LayoutWithTheme>{children}</LayoutWithTheme>
-        </ThemeProvider>
-    );
+  return (
+    <ThemeProvider>
+      <LayoutWithTheme>{children}</LayoutWithTheme>
+    </ThemeProvider>
+  );
 }
-
-const LayoutWithTheme = ({ children }: { children: React.ReactNode }) => {
-    return (
-        <div className="flex h-screen">
-            <AppSidebar />
-            <main className="flex-1 overflow-y-auto p-8">{children}</main>
-        </div>
-    );
-};

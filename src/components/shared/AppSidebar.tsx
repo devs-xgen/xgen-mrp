@@ -98,6 +98,8 @@ function NavItem({
       )}
     >
       {item.icon && <item.icon className="h-5 w-5 shrink-0" />}
+
+      {!isCollapsed || item.items ? (
       <span
         className={cn(
           "transition-all duration-300",
@@ -107,7 +109,9 @@ function NavItem({
       >
         {item.label}
       </span>
-      {isCollapsed && (
+      ) : null}
+
+      {isCollapsed && !item.items && (
         <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-slate-700 text-slate-100 text-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
           {item.label}
         </div>
@@ -123,19 +127,25 @@ export default function AppSidebar() {
   const isAdmin = ["ADMIN", "MANAGER"].includes(session?.user?.role || "");
   const portalType = isAdmin ? "Admin" : "Worker";
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isLightMode, setIsLightMode] = useState(false);
+  // const [isLightMode, setIsLightMode] = useState(false);
+  const { theme, setTheme } = useTheme();
   // const { theme } = useTheme();
 
-  const toggleLightMode = () => {  
-    setIsLightMode((prev) => !prev);  
-  };  
+  // const toggleLightMode = () => {  
+  //   setIsLightMode((prev) => !prev);  
+  // };  
+
+  const toggleLightMode = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
 
   return (
     <div
       className={cn(
         "flex h-full flex-col bg-neutral-800 text-slate-100 transition-all duration-300",
         isCollapsed ? "w-20" : "w-64",
-        isLightMode ? "bg-white text-black" : "bg-neutral-800 text-slate-100"
+        // isLightMode ? "bg-white text-black" : "bg-neutral-800 text-slate-100"
+        theme === "light" ? "bg-white text-black" : "bg-neutral-800 text-slate-100"
       )}
     >
       <div className="relative p-4 border-b border-slate-700">
@@ -166,7 +176,8 @@ export default function AppSidebar() {
           className="absolute right-10 top-1/2 -translate-y-1/2"  
           onClick={toggleLightMode}  
         >  
-          {isLightMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}  
+          {/* {isLightMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}   */}
+          {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}  
         </Button>  
       </div>
 
