@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { LogOut, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { LogOut, ChevronLeft, ChevronRight, ChevronDown, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getNavItems } from "@/config/nav";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useTheme } from "@/context/ThemeContext";
 
 interface NavItemProps {
   item: any;
@@ -65,7 +66,7 @@ function NavItem({
             />
           )}
           {isCollapsed && (
-            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-slate-900 text-slate-100 text-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-slate-700 text-slate-100 text-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
               {item.label}
             </div>
           )}
@@ -97,17 +98,21 @@ function NavItem({
       )}
     >
       {item.icon && <item.icon className="h-5 w-5 shrink-0" />}
+
+      {!isCollapsed || item.items ? (
       <span
         className={cn(
           "transition-all duration-300",
-          isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto",
+          isCollapsed ? "opacity-50 w-0" : "opacity-100 w-auto",
           item.icon ? "ml-3" : "ml-0"
         )}
       >
         {item.label}
       </span>
-      {isCollapsed && (
-        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-slate-900 text-slate-100 text-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+      ) : null}
+
+      {isCollapsed && !item.items && (
+        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-slate-700 text-slate-100 text-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
           {item.label}
         </div>
       )}
@@ -122,12 +127,25 @@ export default function AppSidebar() {
   const isAdmin = ["ADMIN", "MANAGER"].includes(session?.user?.role || "");
   const portalType = isAdmin ? "Admin" : "Worker";
   const [isCollapsed, setIsCollapsed] = useState(false);
+  // const [isLightMode, setIsLightMode] = useState(false);
+  const { theme, setTheme } = useTheme();
+  // const { theme } = useTheme();
+
+  // const toggleLightMode = () => {  
+  //   setIsLightMode((prev) => !prev);  
+  // };  
+
+  const toggleLightMode = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
 
   return (
     <div
       className={cn(
         "flex h-full flex-col bg-neutral-800 text-slate-100 transition-all duration-300",
-        isCollapsed ? "w-20" : "w-64"
+        isCollapsed ? "w-20" : "w-64",
+        // isLightMode ? "bg-white text-black" : "bg-neutral-800 text-slate-100"
+        theme === "light" ? "bg-white text-black" : "bg-neutral-800 text-slate-100"
       )}
     >
       <div className="relative p-4 border-b border-slate-700">
@@ -152,6 +170,15 @@ export default function AppSidebar() {
             <ChevronLeft className="h-5 w-5" />
           )}
         </Button>
+        <Button  
+          variant="ghost"  
+          size="icon"  
+          className="absolute right-10 top-1/2 -translate-y-1/2"  
+          onClick={toggleLightMode}  
+        >  
+          {/* {isLightMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}   */}
+          {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}  
+        </Button>  
       </div>
 
       <nav className="flex-1 space-y-1 p-4">
