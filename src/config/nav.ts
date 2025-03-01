@@ -10,7 +10,9 @@ import {
   Truck,
   BadgeDollarSign,
   UserCircle,
-  Box
+  Box,
+  Boxes,
+  CheckSquare
 } from 'lucide-react'
 
 interface NavItem {
@@ -57,6 +59,7 @@ export const adminNavItems: NavItem[] = [
       },
       {
         label: 'Work Centers',
+
         href: '/admin/work-centers',
         description: 'Manage work centers'
       }
@@ -117,7 +120,7 @@ export const adminNavItems: NavItem[] = [
 ]
 
 export const operatorNavItems = [
-  {
+ {
     icon: LayoutDashboard,
     label: 'Dashboard',
     href: '/worker/dashboard',
@@ -125,9 +128,28 @@ export const operatorNavItems = [
   },
   {
     icon: Factory,
-    label: 'Production Tasks',
-    href: '/worker/production',
-    description: 'View and manage production tasks'
+    label: 'Production',
+    description: 'Production management',
+    items: [
+      {
+        icon: ClipboardList,
+        label: 'Tasks',
+        href: '/worker/production',
+        description: 'View and manage production tasks'
+      },
+      {
+        icon: CheckSquare,
+        label: 'Quality Control',
+        href: '/worker/production/quality',
+        description: 'Quality inspection tasks'
+      },
+      {
+        icon: Boxes,
+        label: 'Work in Progress',
+        href: '/worker/production/wip',
+        description: 'Track work in progress'
+      }
+    ]
   },
   {
     icon: Package,
@@ -138,14 +160,33 @@ export const operatorNavItems = [
   {
     icon: BadgeDollarSign,
     label: 'Orders',
-    href: '/worker/orders',
-    description: 'View orders and requirements'
+    description: 'Orders management',
+    items: [
+      {
+        icon: ShoppingCart,
+        label: 'Customer Orders',
+        href: '/worker/orders',
+        description: 'View customer order requirements'
+      },
+      {
+        icon: Truck,
+        label: 'Shipments',
+        href: '/worker/orders/shipments',
+        description: 'Manage order shipments'
+      }
+    ]
   },
   {
     icon: UserCircle,
     label: 'Profile',
     href: '/worker/profile',
     description: 'Manage your profile'
+  },
+  {
+    icon: Settings,
+    label: 'Settings',
+    href: '/worker/settings',
+    description: 'Account settings and preferences'
   }
 ]
 

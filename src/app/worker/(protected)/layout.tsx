@@ -1,29 +1,30 @@
-import { getServerSession } from "next-auth/next"
-import { redirect } from "next/navigation"
-import WorkerSidebar from "@/components/module/worker/workerSidebar"
-import { authOptions } from "@/lib/auth"
+// src/app/worker/(protected)/layout.tsx
+import { getServerSession } from "next-auth/next";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { ThemeProvider } from "@/context/ThemeContext";
+import LayoutWithTheme from "@/components/shared/LayoutWithTheme";
 
 export default async function WorkerProtectedLayout({
-    children,
+  children,
 }: {
-    children: React.ReactNode
+  children: React.ReactNode;
 }) {
-    const session = await getServerSession(authOptions)
+  const session = await getServerSession(authOptions);
 
-    if (!session?.user) {
-        redirect('/auth/signin')
-    }
+  // Redirect if no session
+  if (!session?.user) {
+    redirect("/worker/login");
+  }
 
-    if (session.user.role === 'ADMIN') {
-        redirect('/admin/dashboard')
-    }
+  // Redirect if admin trying to access worker pages
+  if (["ADMIN", "MANAGER"].includes(session.user.role)) {
+    redirect("/admin/dashboard");
+  }
 
-    return (
-        <div className="flex h-screen">
-            <WorkerSidebar />
-            <main className="flex-1 overflow-y-auto p-8">
-                {children}
-            </main>
-        </div>
-    )
+  return (
+    <ThemeProvider>
+      <LayoutWithTheme>{children}</LayoutWithTheme>
+    </ThemeProvider>
+  );
 }

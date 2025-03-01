@@ -12,9 +12,8 @@ interface BaseEntity {
   status: Status
 }
 
-// Generic get function
 export async function getEntities<T>(
-  model: any,  // Prisma model
+  model: any, 
   orderBy: object = { name: 'asc' }
 ) {
   try {
