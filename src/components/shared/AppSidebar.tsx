@@ -145,7 +145,8 @@ export default function AppSidebar() {
         "flex h-full flex-col bg-neutral-800 text-slate-100 transition-all duration-300",
         isCollapsed ? "w-20" : "w-64",
         // isLightMode ? "bg-white text-black" : "bg-neutral-800 text-slate-100"
-        theme === "light" ? "bg-white text-black" : "bg-neutral-800 text-slate-100"
+        // theme === "light" ? "bg-white text-black" : "bg-neutral-800 text-slate-100" 
+        // If I want to colored the appsidebar into white too 
       )}
     >
       <div className="relative p-4 border-b border-slate-700">
