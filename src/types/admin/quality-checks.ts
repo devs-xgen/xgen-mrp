@@ -35,6 +35,7 @@ export interface QualityCheckColumn {
 
 export interface CreateQualityCheckInput {
   productionOrderId: string
+  inspectorId: string 
   checkDate: Date
   defectsFound?: string
   actionTaken?: string

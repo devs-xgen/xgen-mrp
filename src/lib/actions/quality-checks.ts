@@ -60,20 +60,30 @@ export async function getQualityCheck(id: string) {
 }
 
 export async function createQualityCheck(data: CreateQualityCheckInput) {
+  console.log({ data });
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) throw new Error('Unauthorized')
 
+    // Check if productionOrderId exists in data
+    if (!data || !data.productionOrderId) {
+      throw new Error('Production order ID is required');
+    }
+
     const check = await prisma.qualityCheck.create({
       data: {
-        productionOrderId: data.productionOrderId,
-        inspectorId: session.user.id,
+        productionOrder: {
+          connect: { 
+            id: data.productionOrderId 
+          },
+        },
+        inspectorId: session.user.id, 
         checkDate: data.checkDate,
         status: Status.PENDING,
         defectsFound: data.defectsFound || null,
         actionTaken: data.actionTaken || null,
         notes: data.notes || null,
-        createdBy: session.user.id
+        createdBy: session.user.id,
       },
       include: {
         productionOrder: {
@@ -93,7 +103,7 @@ export async function createQualityCheck(data: CreateQualityCheckInput) {
   }
 }
 
-export async function updateQualityCheck(data: UpdateQualityCheckInput) {
+export async function updateQualityCheck(id: string, newStatus: string, data: UpdateQualityCheckInput) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) throw new Error('Unauthorized')
