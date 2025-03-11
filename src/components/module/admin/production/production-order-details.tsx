@@ -210,6 +210,7 @@ export function ProductionOrderDetails({
       />
 
       <QualityChecks
+        productionOrderId={order.id}
         checks={order.qualityChecks}
         onAddCheck={() => {}}
         isLoading={isLoading}
