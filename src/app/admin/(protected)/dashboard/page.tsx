@@ -6,6 +6,7 @@ import {
     ShoppingCart,
     Users,
 } from "lucide-react"
+import { CURRENCY_SYMBOLS } from "@/lib/constant"
 
 export const metadata: Metadata = {
     title: "Admin Dashboard",
@@ -16,7 +17,7 @@ export default function AdminDashboard() {
     const stats = [
         {
             title: "Total Revenue",
-            value: "$12,345",
+            value: `${CURRENCY_SYMBOLS.PESO}12,345`,
             icon: CircleDollarSign,
             trend: "+12%",
             trendDirection: "up",

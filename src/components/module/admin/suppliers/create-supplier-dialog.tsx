@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
 import { PhoneInput } from "@/components/ui/phone-input"
+import { generatePostalCode, updateLocationData } from "@/lib/utils/location"
 import {
     Select,
     SelectContent,
@@ -34,6 +35,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 
 // Form validation schema
 const formSchema = z.object({
@@ -47,6 +49,7 @@ const formSchema = z.object({
     state: z.string().optional(),
     country: z.string().optional(),
     postalCode: z.string().optional(),
+    barangay: z.string().optional(), // Added barangay to schema
     paymentTerms: z.string().optional(),
     leadTime: z.number().min(0).describe('Lead time in hours'),
     status: z.nativeEnum(Status),
@@ -59,48 +62,11 @@ interface CreateSupplierDialogProps {
     onSuccess?: () => Promise<void>
 }
 
-interface GeoNamesResult {
-    postalCodes?: Array<{
-        postalCode: string;
-        placeName: string;
-        adminName1: string;
-        countryCode: string;
-    }>;
-}
-
-// Fallback to a simpler implementation that doesn't rely on external APIs
-async function generatePostalCode({
-    city,
-    state,
-    country
-}: {
-    city?: string,
-    state?: string,
-    country?: string
-}): Promise<string> {
-    try {
-        if (!city || !country) {
-            return "Need city and country"
-        }
-
-        const cityCode = city.substring(0, 3).toUpperCase()
-        const stateCode = state ? state.substring(0, 2).toUpperCase() : 'XX'
-        const countryCode = country.substring(0, 2).toUpperCase()
-
-        const hash = Array.from(city + state + country)
-            .reduce((acc, char) => acc + char.charCodeAt(0), 0)
-        const numberPart = (hash % 9000 + 1000).toString()
-
-        return `${cityCode}${stateCode}-${numberPart}`
-    } catch (error) {
-        console.error('Failed to generate postal code:', error)
-        return "Error generating code"
-    }
-}
-
 export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [barangay, setBarangay] = useState("")
+    const [postalCodeLoading, setPostalCodeLoading] = useState(false)
 
     const form = useForm<FormData>({
         resolver: zodResolver(formSchema),
@@ -115,6 +81,7 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
             state: "",
             country: "",
             postalCode: "",
+            barangay: "", // Added default value
             paymentTerms: "",
             leadTime: 0,
             status: "ACTIVE",
@@ -124,40 +91,78 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
 
     // Update the useEffect to handle the new implementation
     useEffect(() => {
-        const { city, state, country } = form.getValues()
-        if (city && country) {
+        const { city, state, country } = form.getValues();
+        
+        if (country === 'Philippines') {
+            // For Philippines, only update postal code if barangay is provided
+            if (city && barangay) {
+                const updatePostalCode = async () => {
+                    
+                    const generatedCode = await generatePostalCode({
+                        city,
+                        state,
+                        country,
+                        barangay
+                    });
+                    form.setValue('postalCode', generatedCode);
+                };
+                updatePostalCode();
+            }
+        } else if (city && country) {
+            // For other countries
             const updatePostalCode = async () => {
                 const generatedCode = await generatePostalCode({
                     city,
                     state,
                     country
-                })
-                form.setValue('postalCode', generatedCode)
-            }
-            updatePostalCode()
+                });
+                form.setValue('postalCode', generatedCode);
+            };
+            updatePostalCode();
         }
-    }, [form.watch(['city', 'state', 'country'])])
+    }, [form.watch(['city', 'state', 'country']), barangay]);
 
     const onSubmit = async (data: FormData) => {
         try {
             setLoading(true)
-
+            setPostalCodeLoading(true)
             // Only generate postal code if it's empty or has the placeholder text
             let postalCode = data.postalCode
             if (!postalCode || postalCode === "Complete location fields") {
-                postalCode = await generatePostalCode({
-                    city: data.city || '',
-                    state: data.state || '',
-                    country: data.country || ''
-                })
+                // For Philippines, require barangay for accurate postal code
+                if (data.country === 'Philippines') {
+                    if (!barangay) {
+                        toast({
+                            title: "Missing Barangay",
+                            description: "Please enter a barangay name to generate the correct postal code",
+                            variant: "destructive",
+                        });
+                        setLoading(false)
+                        return; // Prevent form submission
+                    }
+                    
+                    postalCode = await generatePostalCode({
+                        city: data.city || '',
+                        state: data.state || '',
+                        country: 'Philippines',
+                        barangay: barangay
+                    });
+                } else {
+                    // For other countries
+                    postalCode = await generatePostalCode({
+                        city: data.city || '',
+                        state: data.state || '',
+                        country: data.country || ''
+                    });
+                }
             }
-
+    
             // Update the data with the postal code
             const submissionData = {
                 ...data,
                 postalCode: postalCode
             }
-
+    
             const response = await fetch("/api/suppliers", {
                 method: "POST",
                 headers: {
@@ -165,12 +170,12 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
                 },
                 body: JSON.stringify(submissionData),
             })
-
+    
             if (!response.ok) {
                 const error = await response.json()
                 throw new Error(error.error || "Failed to create supplier")
             }
-
+    
             toast({
                 title: "Success",
                 description: "Supplier created successfully",
@@ -186,8 +191,13 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
             })
         } finally {
             setLoading(false)
+            setPostalCodeLoading(false)
         }
     }
+
+    // function setPostalCodeLoading(arg0: boolean) {
+    //     throw new Error("Function not implemented.")
+    // }
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -294,125 +304,219 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
                                 </FormItem>
                             )}
                         />
-
+                        
                         <div className="space-y-4">
-                            <FormField
-                                control={form.control}
-                                name="country"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Country</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                placeholder="Country"
-                                                {...field}
-                                                onChange={async (e) => {
-                                                    field.onChange(e)
-                                                    const { city, state } = form.getValues()
-                                                    if (city) {
-                                                        const newCode = await generatePostalCode({
-                                                            city,
-                                                            state,
-                                                            country: e.target.value
-                                                        })
-                                                        form.setValue('postalCode', newCode)
-                                                    }
-                                                }}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                        {/* Country field */}
+                        <FormField
+                            control={form.control}
+                            name="country"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Country</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="Country"
+                                            {...field}
+                                            onChange={async (e) => {
+                                                field.onChange(e);
+                                                console.log("Country changed to:", e.target.value); // Debug log
+                                                const { city, state } = form.getValues();
+                                                if (city) {
+                                                    const newCode = await generatePostalCode({
+                                                        city,
+                                                        state,
+                                                        country: e.target.value,
+                                                        barangay: e.target.value === 'Philippines' ? barangay : undefined
+                                                    });
+                                                    form.setValue('postalCode', newCode);
+                                                    console.log("New postal code set:", newCode); // Debug log
+                                                }
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
-                            <FormField
-                                control={form.control}
-                                name="state"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>State/Region</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                placeholder="State/Region"
-                                                {...field}
-                                                onChange={async (e) => {
-                                                    field.onChange(e)
-                                                    const { city, country } = form.getValues()
-                                                    if (city && country) {
-                                                        const newCode = await generatePostalCode({
-                                                            city: city || '',
-                                                            state: e.target.value,
-                                                            country: country || ''
-                                                        })
-                                                        form.setValue('postalCode', newCode)
-                                                    }
-                                                }}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                        {/* State/Region field */}
+                        <FormField
+                            control={form.control}
+                            name="state"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>State/Region</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="State/Region"
+                                            {...field}
+                                            onChange={async (e) => {
+                                                field.onChange(e);
+                                                const { city, country } = form.getValues();
+                                                if (city && country) {
+                                                    const newCode = await generatePostalCode({
+                                                        city: city || '',
+                                                        state: e.target.value,
+                                                        country: country || '',
+                                                        barangay: country === 'Philippines' ? barangay : undefined
+                                                    });
+                                                    form.setValue('postalCode', newCode);
+                                                }
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="city"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>City</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="City"
-                                                    {...field}
-                                                    onChange={async (e) => {
-                                                        field.onChange(e)
-                                                        const { state, country } = form.getValues()
-                                                        if (country) {
-                                                            const newCode = await generatePostalCode({
-                                                                city: e.target.value,
-                                                                state: state || '',
-                                                                country: country || ''
-                                                            })
-                                                            form.setValue('postalCode', newCode)
-                                                        }
-                                                    }}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
+                        {/* Barangay field (only shown for Philippines) */}
+                        {form.watch('country') === 'Philippines' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="barangay">Barangay <span className="text-red-500">*</span></Label>
+                                <Input
+                                    id="barangay"
+                                    placeholder="Enter barangay name for postal code lookup"
+                                    value={barangay}
+                                    className={!barangay && form.watch('country') === 'Philippines' ? "border-red-300" : ""}
+                                    onChange={async (e) => {
+                                        const newBarangay = e.target.value;
+                                        setBarangay(newBarangay);
+                                        form.setValue('barangay', newBarangay);
+                                        
+                                        // Clear the postal code first
+                                        form.setValue('postalCode', '');
+                                        
+                                        // Force a slight delay to ensure UI updates
+                                        setTimeout(async () => {
+                                            const { city, state, country } = form.getValues();
+                                            if (city && country === 'Philippines') {
+                                                try {
+                                                    // Force bypass any caching by adding a timestamp
+                                                    const timestamp = new Date().getTime();
+                                                    console.log(`Requesting postal code for ${city}, ${newBarangay} at ${timestamp}`);
+                                                    
+                                                    const newCode = await generatePostalCode({
+                                                        city,
+                                                        state,
+                                                        country,
+                                                        barangay: newBarangay
+                                                    });
+                                                    
+                                                    // Set the postal code after a slight delay
+                                                    form.setValue('postalCode', newCode);
+                                                    console.log(`Updated postal code to ${newCode} for ${city}, ${newBarangay}`);
+                                                } catch (err) {
+                                                    console.error("Error generating postal code:", err);
+                                                    form.setValue('postalCode', "Error");
+                                                }
+                                            }
+                                        }, 100);
+                                    }}
                                 />
-
-                                <FormField
-                                    control={form.control}
-                                    name="postalCode"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Postal Code</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="Enter postal code or complete location fields for auto-generation"
-                                                    {...field}
-                                                    className={field.value === "Complete location fields" ? "bg-muted" : ""}
-                                                    onChange={(e) => {
-                                                        field.onChange(e)
-                                                        // Clear the "Complete location fields" placeholder if user starts typing
-                                                        if (field.value === "Complete location fields" && e.target.value) {
-                                                            field.onChange("")
-                                                        }
-                                                    }}
-                                                />
-                                            </FormControl>
-                                            <p className="text-sm text-muted-foreground">
-                                                Auto-generated based on location or enter manually
-                                            </p>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                {!barangay && form.watch('country') === 'Philippines' ? (
+                                    <p className="text-xs text-red-500">
+                                        Barangay is required for Philippines addresses to generate correct postal code
+                                    </p>
+                                ) : (
+                                    <p className="text-xs text-muted-foreground">
+                                        Enter barangay name to automatically generate the correct postal code
+                                    </p>
+                                )}
                             </div>
+                        )}
+
+                        {/* City and Postal Code fields */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="city"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>City</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="City"
+                                                {...field}
+                                                onChange={async (e) => {
+                                                    field.onChange(e);
+                                                    const { state, country } = form.getValues();
+                                                    if (country) {
+                                                        const newCode = await generatePostalCode({
+                                                            city: e.target.value,
+                                                            state: state || '',
+                                                            country: country || '',
+                                                            barangay: country === 'Philippines' ? barangay : undefined
+                                                        });
+                                                        form.setValue('postalCode', newCode);
+                                                    }
+                                                }}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="postalCode"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Postal Code</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter barangay to auto-generate postal code"
+                                                {...field}
+                                                className={field.value === "Complete location fields" ? "bg-muted" : ""}
+                                                onChange={(e) => {
+                                                    field.onChange(e);
+                                                    // Clear the "Complete location fields" placeholder if user starts typing
+                                                    if (field.value === "Complete location fields" && e.target.value) {
+                                                        field.onChange("");
+                                                    }
+                                                    
+                                                    // If user manually enters a postal code, update the location store
+                                                    // Prioritize barangay for Philippines addresses
+                                                    if (e.target.value && e.target.value !== "Complete location fields") {
+                                                        const { city, state, country } = form.getValues();
+                                                        
+                                                        // Check if we have a barangay value to use
+                                                        if (country === 'Philippines' && barangay) {
+                                                            // For Philippines, prioritize barangay for postal code lookup
+                                                            updateLocationData({
+                                                                city: city || 'Quezon City',
+                                                                state: state || 'NCR',
+                                                                country: 'Philippines',
+                                                                barangay: barangay,
+                                                                postalCode: e.target.value
+                                                            });
+                                                            
+                                                            console.log(`Manually set postal code ${e.target.value} for barangay: ${barangay}`);
+                                                        } else if (city && country) {
+                                                            // For other countries or when barangay is not available
+                                                            updateLocationData({
+                                                                city,
+                                                                state: state || '',
+                                                                country,
+                                                                postalCode: e.target.value
+                                                            });
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        </FormControl>
+                                        <p className="text-sm text-muted-foreground">
+                                            {form.watch('country') === 'Philippines' 
+                                                ? "Enter barangay name first for automatic postal code generation" 
+                                                : "Auto-generated based on location or enter manually"}
+                                        </p>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         </div>
+                    </div>
 
                         <FormField
                             control={form.control}
@@ -507,5 +611,5 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
                 </Form>
             </DialogContent>
         </Dialog>
-    )
+    );
 }
