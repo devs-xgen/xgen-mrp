@@ -96,8 +96,8 @@ export const columns: ColumnDef<Material>[] = [
       )
     },
   },
-  {
-    id: "actions",
-    cell: ({ row }) => <DataTableRowActions row={row} />,
-  },
+  // {
+  //   id: "actions",
+  //   cell: ({ row }) => <DataTableRowActions row={row} materialTypes={[]} unitOfMeasures={[]} suppliers={[]} />,
+  // },
 ]

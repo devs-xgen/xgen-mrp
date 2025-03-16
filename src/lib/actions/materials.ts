@@ -221,3 +221,68 @@ export async function getSuppliers() {
     throw new Error('Failed to fetch suppliers')
   }
 }
+
+export async function getMaterialsWithRelations() {
+  try {
+    const materials = await prisma.material.findMany({
+      include: {
+        supplier: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        },
+        type: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        unitOfMeasure: {
+          select: {
+            id: true,
+            name: true,
+            symbol: true
+          }
+        },
+        purchaseOrderLines: {
+          include: {
+            purchaseOrder: {
+              select: {
+                id: true,
+                poNumber: true,
+                orderDate: true,
+                status: true
+              }
+            }
+          }
+        },
+        boms: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    })
+    
+    // Convert Decimal to number for client-side use
+    return materials.map(material => ({
+      ...material,
+      costPerUnit: material.costPerUnit.toNumber(),
+      // Map any other Decimal fields if needed
+    }))
+  } catch (error) {
+    console.error('Error fetching materials with relations:', error)
+    throw new Error('Failed to fetch materials with relations')
+  }
+}
