@@ -37,6 +37,7 @@ import {
     SelectTrigger, 
     SelectValue 
 } from "@/components/ui/select"
+import { generatePostalCode } from "@/lib/utils/location"
 
 const formSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -65,6 +66,7 @@ interface CreateCustomerDialogProps {
 export function CreateCustomerDialog({ onSuccess }: CreateCustomerDialogProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [barangay, setBarangay] = useState("")
 
     const form = useForm<FormData>({
         resolver: zodResolver(formSchema),
@@ -274,7 +276,22 @@ export function CreateCustomerDialog({ onSuccess }: CreateCustomerDialogProps) {
                                             <FormItem>
                                                 <FormLabel>Country</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="Country" {...field} />
+                                                    <Input 
+                                                        placeholder="Country" 
+                                                        {...field}
+                                                        onChange={async (e) => {
+                                                            field.onChange(e);
+                                                            const { city, state } = form.getValues();
+                                                            if (city) {
+                                                                const newCode = await generatePostalCode({
+                                                                    city,
+                                                                    state,
+                                                                    country: e.target.value,
+                                                                });
+                                                                form.setValue('postalCode', newCode);
+                                                            }
+                                                        }} 
+                                                    />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -287,7 +304,22 @@ export function CreateCustomerDialog({ onSuccess }: CreateCustomerDialogProps) {
                                             <FormItem>
                                                 <FormLabel>State/Region</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="State/Region" {...field} />
+                                                    <Input 
+                                                        placeholder="State/Province/Region" 
+                                                        {...field}
+                                                        onChange={async (e) => {
+                                                            field.onChange(e);
+                                                            const { city, country } = form.getValues();
+                                                            if (city && country) {
+                                                                const newCode = await generatePostalCode({
+                                                                    city,
+                                                                    state: e.target.value,
+                                                                    country,
+                                                                });
+                                                                form.setValue('postalCode', newCode);
+                                                            }
+                                                        }}
+                                                    />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -303,7 +335,23 @@ export function CreateCustomerDialog({ onSuccess }: CreateCustomerDialogProps) {
                                             <FormItem>
                                                 <FormLabel>City</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="City" {...field} />
+                                                    <Input 
+                                                        placeholder="City" 
+                                                        {...field}
+                                                        onChange={async (e) => {
+                                                            field.onChange(e);
+                                                            const { state, country } = form.getValues();
+                                                            if (country) {
+                                                                const newCode = await generatePostalCode({
+                                                                    city: e.target.value,
+                                                                    state: state || '',
+                                                                    country: country || '',
+                                                                    barangay: country === 'Philippines' ? barangay : undefined
+                                                                });
+                                                                form.setValue('postalCode', newCode);
+                                                            }
+                                                        }}
+                                                    />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -316,13 +364,50 @@ export function CreateCustomerDialog({ onSuccess }: CreateCustomerDialogProps) {
                                             <FormItem>
                                                 <FormLabel>Postal Code</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="Postal code" {...field} />
+                                                    <Input 
+                                                        placeholder="Postal/Zip Code" 
+                                                        {...field} 
+                                                        className={field.value === "Complete location fields" ? "bg-muted" : ""}
+                                                    />
                                                 </FormControl>
+                                                <FormDescription>
+                                                    Auto-generated or enter manually
+                                                </FormDescription>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
                                 </div>
+                                
+                                {/* Barangay field for Philippines */}
+                                {form.watch('country') === 'Philippines' && (
+                                    <FormItem className="mt-4">
+                                        <FormLabel>Barangay</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                id="barangay"
+                                                placeholder="Enter barangay"
+                                                value={barangay}
+                                                onChange={async (e) => {
+                                                    setBarangay(e.target.value);
+                                                    const { city, state, country } = form.getValues();
+                                                    if (city && country === 'Philippines') {
+                                                        const newCode = await generatePostalCode({
+                                                            city,
+                                                            state,
+                                                            country,
+                                                            barangay: e.target.value
+                                                        });
+                                                        form.setValue('postalCode', newCode);
+                                                    }
+                                                }}
+                                            />
+                                        </FormControl>
+                                        <FormDescription>
+                                            Used for postal code lookup
+                                        </FormDescription>
+                                    </FormItem>
+                                )}
                             </CardContent>
                         </Card>
 
