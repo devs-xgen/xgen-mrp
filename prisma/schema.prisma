@@ -109,6 +109,9 @@ unitCost Decimal @db.Decimal(10, 2)
 sellingPrice Decimal @db.Decimal(10, 2)
 minimumStockLevel Int
 currentStock Int
+expectedStock Int @default(0)
+committedStock Int @default(0)
+calculatedStock Int @default(0)
 leadTime Int
 status Status @default(ACTIVE)
 createdAt DateTime @default(now())
@@ -128,6 +131,9 @@ typeId String
 unitOfMeasureId String
 costPerUnit Decimal @db.Decimal(10, 2)
 currentStock Int
+expectedStock Int @default(0)
+committedStock Int @default(0)
+calculatedStock Int @default(0)
 minimumStockLevel Int
 leadTime Int
 supplierId String
@@ -144,6 +150,7 @@ type MaterialType @relation(fields: [typeId], references: [id])
 unitOfMeasure UnitOfMeasure @relation(fields: [unitOfMeasureId], references: [id])
 purchaseOrderLines PurchaseOrderLine[]
 }
+
 
 model BOM {
 id String @id @default(cuid())

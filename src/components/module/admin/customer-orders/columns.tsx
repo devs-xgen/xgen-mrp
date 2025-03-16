@@ -88,8 +88,25 @@ export const columns: ColumnDef<CustomerOrder>[] = [
   },
   {
     accessorKey: "unitPrice",
-    header: "Unit Price",
-    cell: ({ row }) => <span>{formatCurrency(row.original.unitPrice)}</span>
+    header: ({ column }) => (
+      <CustomerOrderColumnHeader column={column} title="Average Unit Price" />
+    ),
+    cell: ({ row }) => {
+      // Get orderLines from the original data
+      const orderLines = row.original.orderLines;
+      
+      if (!orderLines || orderLines.length === 0) {
+        return <div>-</div>;
+      }
+      
+      // Calculate average unit price
+      const totalPrice = orderLines.reduce((sum, line) => 
+        sum + Number(line.unitPrice), 0);
+      const avgPrice = totalPrice / orderLines.length;
+      
+      const formattedPrice = formatCurrency(avgPrice);
+      return <div className="font-medium">{formattedPrice}</div>;
+    },
   },
   {
     accessorKey: "status",
