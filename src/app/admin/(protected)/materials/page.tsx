@@ -82,6 +82,7 @@ import { CreateMaterialDialog } from "@/components/module/admin/materials/create
 import { MaterialTypeDialog } from "@/components/module/admin/materials/material-type-dialog";
 import { UnitOfMeasureDialog } from "@/components/module/admin/materials/unit-of-measure-dialog";
 import { revalidatePath } from "next/cache";
+import MaterialsDashboard from "@/components/module/admin/materials/materialDashboard";
 
 export const metadata: Metadata = {
   title: "Materials Management",
@@ -142,6 +143,14 @@ export default async function MaterialsPage() {
           />
         </div>
       </div>
+
+      {/* Dashboard Component */}
+      <MaterialsDashboard 
+        materials={materials}
+        materialTypes={materialTypes}
+        unitOfMeasures={unitOfMeasures}
+        suppliers={suppliers}
+      />
       
       <DataTable
         columns={columns}
