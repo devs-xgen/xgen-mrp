@@ -12,7 +12,8 @@ import {
   UserCircle,
   Box,
   Boxes,
-  CheckSquare
+  CheckSquare,
+  UserSquare
 } from 'lucide-react'
 
 interface NavItem {
@@ -96,7 +97,13 @@ export const adminNavItems: NavItem[] = [
         label: 'Customers',
         href: '/admin/customers',
         description: 'Customer management'
-      }
+      },
+      {
+        icon: UserSquare,
+        label: 'Inspectors',
+        href: '/admin/inspectors',
+        description: 'Worker management'
+      },
     ]
   },
   {

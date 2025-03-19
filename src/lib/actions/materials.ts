@@ -2,9 +2,11 @@
 'use server'
 
 import { prisma } from "@/lib/db"
-
+import { getServerSession } from "next-auth/next" // Replace auth import
+import { authOptions } from "@/lib/auth" // Import authOptions instead
 import { revalidatePath } from "next/cache"
 import { Material, MaterialCreateInput, MaterialUpdateInput } from "@/types/admin/materials"
+import { Status } from "@prisma/client"
 
 // was used in purchase order
 export async function getAllMaterials() {
@@ -145,21 +147,149 @@ export async function createMaterial(data: MaterialCreateInput) {
 
 export async function updateMaterial(data: MaterialUpdateInput) {
   try {
-    const material = await prisma.material.update({
-      where: { id: data.id },
-      data,
+    // Get the current user for audit trail
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id || "system"
+
+    // Calculate effective stock level
+    const calculatedStock = data.currentStock + data.expectedStock - data.committedStock
+
+    // Extract ID and relation fields
+    const { 
+      id, 
+      typeId, 
+      unitOfMeasureId, 
+      supplierId,
+      ...otherFields 
+    } = data
+    
+    // Prepare the data for update with proper Prisma relation format
+    const updateData = {
+      ...otherFields,
+      calculatedStock, // Use the calculated value
+      modifiedBy: userId,
+      updatedAt: new Date(),
+      // Define relations properly for Prisma
+      type: typeId ? {
+        connect: { id: typeId }
+      } : undefined,
+      unitOfMeasure: unitOfMeasureId ? {
+        connect: { id: unitOfMeasureId }
+      } : undefined,
+      supplier: supplierId ? {
+        connect: { id: supplierId }
+      } : undefined
+    }
+
+    // Update the material in the database
+    const updatedMaterial = await prisma.material.update({
+      where: { id },
+      data: updateData,
       include: {
+        supplier: true,
         type: true,
         unitOfMeasure: true,
-        supplier: true,
+        boms: {
+          include: {
+            product: true,
+          },
+        },
+        purchaseOrderLines: {
+          include: {
+            purchaseOrder: true,
+          },
+        },
       },
     })
+
+    // Check for low stock levels and create alerts if necessary
+    if (calculatedStock <= data.minimumStockLevel) {
+      await createLowStockAlert({
+        materialId: id,
+        currentLevel: calculatedStock,
+        minimumLevel: data.minimumStockLevel,
+        createdBy: userId,
+      })
+    }
+
+    // Revalidate paths
     revalidatePath('/admin/materials')
-    return material
+    revalidatePath('/materials')
+    revalidatePath(`/materials/${id}`)
+    
+    // Return the updated material with converted Decimal to Number
+    return {
+      ...updatedMaterial,
+      costPerUnit: typeof updatedMaterial.costPerUnit === 'object' && 'toNumber' in updatedMaterial.costPerUnit
+        ? updatedMaterial.costPerUnit.toNumber()
+        : updatedMaterial.costPerUnit
+    }
   } catch (error) {
-    throw new Error('Failed to update material')
+    console.error("Error updating material:", error)
+    throw new Error(`Failed to update material: ${error instanceof Error ? error.message : "Unknown error"}`)
   }
 }
+
+// Helper function to create low stock alerts
+async function createLowStockAlert({
+  materialId,
+  currentLevel,
+  minimumLevel,
+  createdBy
+}: {
+  materialId: string
+  currentLevel: number
+  minimumLevel: number
+  createdBy: string
+}) {
+  try {
+    // Get the material details for the alert
+    const material = await prisma.material.findUnique({
+      where: { id: materialId },
+      include: {
+        supplier: true,
+        unitOfMeasure: true,
+      },
+    })
+
+    if (!material) {
+      throw new Error("Material not found")
+    }
+
+    // Calculate the quantity to order (restock to 2x minimum level)
+    const suggestedOrderQuantity = Math.max(minimumLevel * 2 - currentLevel, 0)
+
+    // Create the alert
+    await prisma.alert.create({
+      data: {
+        type: "LOW_STOCK",
+        title: `Low Stock Alert: ${material.name}`,
+        message: `Material "${material.name}" (SKU: ${material.sku}) has fallen below minimum stock level. Current: ${currentLevel} ${material.unitOfMeasure?.symbol || 'units'}, Minimum: ${minimumLevel} ${material.unitOfMeasure?.symbol || 'units'}.`,
+        status: "ACTIVE",
+        priority: "HIGH",
+        metadata: {
+          materialId,
+          materialName: material.name,
+          materialSku: material.sku,
+          currentLevel,
+          minimumLevel,
+          suggestedOrderQuantity,
+          supplierId: material.supplierId,
+          supplierName: material.supplier?.name,
+          leadTime: material.leadTime,
+        },
+        createdBy,
+      },
+    })
+
+    return true
+  } catch (error) {
+    console.error("Error creating low stock alert:", error)
+    // Don't throw the error to prevent blocking the main update
+    return false
+  }
+}
+
 
 export async function deleteMaterial(id: string) {
   try {
@@ -286,3 +416,5 @@ export async function getMaterialsWithRelations() {
     throw new Error('Failed to fetch materials with relations')
   }
 }
+
+

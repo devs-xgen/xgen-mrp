@@ -98,27 +98,30 @@ materials Material[]
 }
 
 model Product {
-id String @id @default(cuid())
-sku String @unique
-name String
-description String?
-categoryId String
-sizeRange String[]
-colorOptions String[]
-unitCost Decimal @db.Decimal(10, 2)
-sellingPrice Decimal @db.Decimal(10, 2)
-minimumStockLevel Int
-currentStock Int
-leadTime Int
-status Status @default(ACTIVE)
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
-createdBy String?
-modifiedBy String?
-boms BOM[]
-orderLines OrderLine[]
-category ProductCategory @relation(fields: [categoryId], references: [id])
-productionOrders ProductionOrder[]
+  id                String           @id @default(cuid())
+  sku               String           @unique
+  name              String
+  description       String?
+  categoryId        String
+  sizeRange         String[]
+  colorOptions      String[]
+  unitCost          Decimal          @db.Decimal(10, 2)
+  sellingPrice      Decimal          @db.Decimal(10, 2)
+  minimumStockLevel Int
+  currentStock      Int
+  expectedStock     Int              @default(0)
+  committedStock    Int              @default(0)
+  calculatedStock   Int              @default(0)
+  leadTime          Int
+  status            Status           @default(ACTIVE)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  createdBy         String?
+  modifiedBy        String?
+  boms              BOM[]
+  orderLines        OrderLine[]
+  category          ProductCategory  @relation(fields: [categoryId], references: [id])
+  productionOrders  ProductionOrder[]
 }
 
 model Material {
@@ -358,6 +361,26 @@ createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
 handledByUser User @relation(fields: [handledBy], references: [id])
 customerOrder CustomerOrder @relation(fields: [orderId], references: [id])
+}
+
+model Inspector {
+  inspectorId         String    @id @default(cuid())
+  firstName           String
+  lastName            String
+  email               String    @unique
+  phoneNumber         String?
+  department          String?
+  specialization      String?
+  certificationLevel  String?
+  yearsOfExperience   Int?
+  isActive            Boolean   @default(true)
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  createdBy           String?
+  modifiedBy          String?
+  @@index([email])
+  @@index([isActive])
 }
 
 enum PaymentMethod {
