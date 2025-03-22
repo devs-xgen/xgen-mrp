@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getCustomerOrders } from "@/lib/actions/customer-order";
-import { getAllProducts } from "@/lib/actions/product";
+import { getProductsForOrders } from "@/lib/actions/product";
 import { getAllCustomers } from "@/lib/actions/customers";
 
 export const metadata: Metadata = {
@@ -19,9 +19,9 @@ export const metadata: Metadata = {
 };
 
 export default async function CustomerOrdersPage() {
-  const [customerOrders, products, customers] = await Promise.all([
+  const [customerOrders, productsForOrders, customers] = await Promise.all([
     getCustomerOrders(),
-    getAllProducts(),
+    getProductsForOrders(), // Use the new function that returns data with unitPrice
     getAllCustomers(),
   ]);
 
@@ -34,7 +34,7 @@ export default async function CustomerOrdersPage() {
             Manage and track all customer orders
           </p>
         </div>
-        <CreateCustomerOrderDialog products={products} customers={customers} />
+        <CreateCustomerOrderDialog products={productsForOrders} customers={customers} />
       </div>
 
       <Card>

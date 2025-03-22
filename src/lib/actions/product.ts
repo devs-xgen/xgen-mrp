@@ -35,3 +35,33 @@ export async function getAllProducts() {
     throw new Error("Failed to fetch products");
   }
 }
+
+
+
+export async function getProductsForOrders(): Promise<ProductForOrder[]> {
+  try {
+    const products = await prisma.product.findMany({
+      where: {
+        status: 'ACTIVE' // Only include active products for ordering
+      },
+      select: {
+        id: true,
+        name: true,
+        sellingPrice: true, // This will be mapped to unitPrice
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    // Map to expected format with unitPrice
+    return products.map(product => ({
+      id: product.id,
+      name: product.name,
+      unitPrice: Number(product.sellingPrice) // Convert Decimal to number if needed
+    }));
+  } catch (error) {
+    console.error("❌ Error fetching products for orders:", error);
+    throw new Error("Failed to fetch products for orders");
+  }
+}

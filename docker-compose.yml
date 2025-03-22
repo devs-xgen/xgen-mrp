@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  nextjs:
+    container_name: inventory-frontend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - '3001:3000'
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    networks:
+      - inventory_network
+
+networks:
+  inventory_network:
+    driver: bridge

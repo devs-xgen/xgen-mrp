@@ -1,12 +1,12 @@
 'use server'
 
 import { prisma } from "@/lib/db"
-import { CreateCustomerOrderInput } from "@/types/admin/customer-order"
+import { CustomerOrder, CreateCustomerOrderInput } from "@/types/admin/customer-order"
 import { Status } from "@prisma/client"
 import { Decimal } from "@prisma/client/runtime/library" 
 import { revalidatePath } from "next/cache"
 
-export async function getCustomerOrders() {
+export async function getCustomerOrders(): Promise<CustomerOrder[]> {
   try {
     const orders = await prisma.customerOrder.findMany({
       include: {
@@ -25,7 +25,6 @@ export async function getCustomerOrders() {
                 name: true,
                 sku: true,
                 sellingPrice: true,
-                // stock: true,
               },
             },
           },
@@ -36,14 +35,34 @@ export async function getCustomerOrders() {
       },
     })
 
-    return orders.map((order: { totalAmount: { toNumber: () => any }; orderLines: any[] }) => ({
-      ...order,
-      totalAmount: order.totalAmount.toNumber(),
-      orderLines: order.orderLines.map((line: { unitPrice: { toNumber: () => any } }) => ({
-        ...line,
-        unitPrice: line.unitPrice.toNumber()
+    // Convert Prisma model to CustomerOrder type with proper type conversion
+    return orders.map(order => ({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      customerId: order.customerId,
+      orderDate: order.orderDate,
+      requiredDate: order.requiredDate,
+      status: order.status,
+      totalAmount: order.totalAmount instanceof Decimal ? order.totalAmount.toNumber() : Number(order.totalAmount),
+      notes: order.notes,
+      customer: {
+        id: order.customer.id,
+        name: order.customer.name,
+        email: order.customer.email,
+      },
+      orderLines: order.orderLines.map(line => ({
+        id: line.id,
+        productId: line.productId,
+        quantity: line.quantity,
+        unitPrice: line.unitPrice instanceof Decimal ? line.unitPrice.toNumber() : Number(line.unitPrice),
+        status: line.status,
+        product: line.product ? {
+          id: line.product.id,
+          name: line.product.name,
+          sku: line.product.sku,
+        } : undefined
       }))
-    }))
+    }));
   } catch (error) {
     console.error('Error fetching customer orders:', error)
     throw new Error('Failed to fetch customer orders')
@@ -73,12 +92,11 @@ export async function createCustomerOrder(data: CreateCustomerOrderInput) {
     const orderNumber = `CO-${year}-${String(sequenceNumber).padStart(4, '0')}`
 
     const totalAmount = data.orderLines.reduce(
-      (sum: number, line: { quantity: number; unitPrice: number }) => 
-        sum + (line.quantity * line.unitPrice),
+      (sum, line) => sum + (line.quantity * line.unitPrice),
       0
     )
 
-    // ✅ Validate and convert `requiredDate`
+    // Validate and convert `requiredDate`
     if (!data.requiredDate) {
       throw new Error('Required date is missing')
     }
@@ -93,12 +111,12 @@ export async function createCustomerOrder(data: CreateCustomerOrderInput) {
         orderNumber,
         customerId: data.customerId,
         orderDate: new Date(), // Order date is always set to now
-        requiredDate, // ✅ Now properly included
+        requiredDate, // Now properly included
         status: Status.PENDING,
         totalAmount: new Decimal(totalAmount),
         notes: data.notes,
         orderLines: {
-          create: data.orderLines.map((line: { productId: any; quantity: any; unitPrice: Decimal.Value }) => ({
+          create: data.orderLines.map(line => ({
             productId: line.productId,
             quantity: line.quantity,
             unitPrice: new Decimal(line.unitPrice),
@@ -168,7 +186,6 @@ export async function updateCustomerOrder(
                 name: true,
                 sku: true,
                 sellingPrice: true,
-                // stock: true,
               }
             }
           }
@@ -176,14 +193,34 @@ export async function updateCustomerOrder(
       }
     })
 
-    const updatedOrder = {
-      ...result,
-      totalAmount: result.totalAmount.toNumber(),
-      orderLines: result.orderLines.map((line: { unitPrice: { toNumber: () => any } }) => ({
-        ...line,
-        unitPrice: line.unitPrice.toNumber()
+    // Transform to CustomerOrder type
+    const updatedOrder: CustomerOrder = {
+      id: result.id,
+      orderNumber: result.orderNumber,
+      customerId: result.customerId,
+      orderDate: result.orderDate,
+      requiredDate: result.requiredDate,
+      status: result.status,
+      totalAmount: result.totalAmount instanceof Decimal ? result.totalAmount.toNumber() : Number(result.totalAmount),
+      notes: result.notes,
+      customer: {
+        id: result.customer.id,
+        name: result.customer.name,
+        email: result.customer.email,
+      },
+      orderLines: result.orderLines.map(line => ({
+        id: line.id,
+        productId: line.productId,
+        quantity: line.quantity,
+        unitPrice: line.unitPrice instanceof Decimal ? line.unitPrice.toNumber() : Number(line.unitPrice),
+        status: line.status,
+        product: line.product ? {
+          id: line.product.id,
+          name: line.product.name,
+          sku: line.product.sku,
+        } : undefined
       }))
-    }
+    };
 
     revalidatePath('/admin/customer-orders')
     return updatedOrder
@@ -207,12 +244,15 @@ export async function deleteCustomerOrder(id: string) {
     if (!customerOrder) {
       throw new Error('Customer order not found')
     }
+    
+    // Delete all order lines first
     if (customerOrder.orderLines.length > 0) {
-      await prisma.customerOrder.deleteMany({
+      await prisma.orderLine.deleteMany({
         where: { orderId: id }
       })
     }
 
+    // Then delete the order
     await prisma.customerOrder.delete({
       where: { id },
     })

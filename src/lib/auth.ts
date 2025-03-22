@@ -1,75 +1,90 @@
 import { prisma } from '@/lib/db'
 import { compare } from 'bcryptjs'
-import { AuthOptions } from 'next-auth'
+import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 
-export const authOptions: AuthOptions = {
+const ROLE_MAPPING = {
+    'ADMIN': ['ADMIN', 'MANAGER'],
+    'OPERATOR': ['OPERATOR', 'USER']
+}
+
+export const authOptions: NextAuthOptions = {
     providers: [
         CredentialsProvider({
+            id: 'credentials',
             name: 'credentials',
             credentials: {
-                email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" }
+                email: { type: "text" },
+                password: { type: "password" },
+                userType: { type: "text" }
             },
             async authorize(credentials) {
-                if (!credentials?.email || !credentials?.password) {
-                    return null
-                }
-
-                const user = await prisma.user.findUnique({
-                    where: {
-                        email: credentials.email
+                try {
+                    if (!credentials?.email || !credentials?.password || !credentials?.userType) {
+                        throw new Error("Please provide all required fields")
                     }
-                })
 
-                if (!user) {
-                    return null
+                    const user = await prisma.user.findUnique({
+                        where: {
+                            email: credentials.email,
+                        },
+                    })
+
+                    if (!user) {
+                        throw new Error("Invalid email or password")
+                    }
+
+                    const isPasswordValid = await compare(credentials.password, user.password)
+
+                    if (!isPasswordValid) {
+                        throw new Error("Invalid email or password")
+                    }
+
+                    const requestedUserType = credentials.userType.toUpperCase()
+                    const allowedRoles = ROLE_MAPPING[requestedUserType as keyof typeof ROLE_MAPPING] || []
+
+                    if (!allowedRoles.includes(user.role)) {
+                        throw new Error("You don't have permission to access this portal")
+                    }
+
+                    return {
+                        id: user.id,
+                        email: user.email,
+                        role: user.role,
+                        name: user.email.split("@")[0],
+                    }
+                } catch (error) {
+                    if (error instanceof Error) {
+                        throw new Error(error.message)
+                    }
+                    throw new Error("An error occurred during login")
                 }
-
-                const isPasswordValid = await compare(
-                    credentials.password,
-                    user.password
-                )
-
-                if (!isPasswordValid) {
-                    return null
-                }
-
-                return {
-                    id: user.id,
-                    email: user.email,
-                    role: user.role,
-                }
-            }
-        })
+            },
+        }),
     ],
     callbacks: {
-        jwt: async ({ token, user }) => {
+        async jwt({ token, user }) {
             if (user) {
-                return {
-                    ...token,
-                    id: user.id,
-                    role: user.role,
-                }
+                token.role = user.role
+                token.id = user.id
             }
             return token
         },
-        session: async ({ session, token }) => {
-            return {
-                ...session,
-                user: {
-                    ...session.user,
-                    id: token.id,
-                    role: token.role,
-                }
+        async session({ session, token }) {
+            if (token && session.user) {
+                session.user.id = token.id as string
+                session.user.role = token.role as string
             }
-        }
-    },
-    pages: {
-        signIn: '/auth/signin',
+            return session
+        },
     },
     session: {
-        strategy: 'jwt'
+        strategy: "jwt",
+        maxAge: 30 * 24 * 60 * 60,
+    },
+    pages: {
+        signIn: '/admin/login', // Default sign in page
+        error: '/admin/login', // Redirect to admin login on error
     },
     secret: process.env.NEXTAUTH_SECRET,
 }

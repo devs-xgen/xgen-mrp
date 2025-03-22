@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { adjustInventory } from "./actions";
 import { InventoryItem } from "./data";
 import { useFormStatus } from "react-dom";

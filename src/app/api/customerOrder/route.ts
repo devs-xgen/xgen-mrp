@@ -1,73 +1,116 @@
-// POST /api/customer-orders
-import { NextApiRequest, NextApiResponse } from "next";
-import { prisma } from "@/lib/db"; // Ensure correct import path
+import { prisma } from "@/lib/db";
+import { NextResponse } from "next/server";
 
-export async function POST(req: NextApiRequest, res: NextApiResponse) {
+// GET /api/customerOrder/[id]
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const data = req.body; // Get data from request body
-
-    // Validate requiredDate and orderDate
-    if (!data.requiredDate || isNaN(Date.parse(data.requiredDate))) {
-      return res.status(400).json({ error: "Invalid or missing requiredDate" });
-    }
-    if (!data.orderDate || isNaN(Date.parse(data.orderDate))) {
-      return res.status(400).json({ error: "Invalid or missing orderDate" });
-    }
-
-    // Validate numerical values
-    if (isNaN(Number(data.totalAmount))) {
-      return res.status(400).json({ error: "Invalid totalAmount" });
-    }
-
-    const customerOrder = await prisma.customerOrder.create({
-      data: {
-        orderNumber: data.orderNumber,
-        customerId: data.customerId,
-        orderDate: new Date(data.orderDate), // Ensure this is a Date
-        requiredDate: new Date(data.requiredDate), // Properly formatted Date
-        status: data.status,
-        totalAmount: Number(data.totalAmount), // Ensure it's a number
-        shippingAddress: data.shippingAddress,
-        billingAddress: data.billingAddress,
-        notes: data.notes,
-        createdBy: data.createdBy,
-        modifiedBy: data.modifiedBy,
-
-        // Connect related records if needed (e.g., orderLines):
-        orderLines: {
-          create: data.orderLines?.map((orderLineData: any) => ({
-            productId: orderLineData.productId,
-            quantity: isNaN(Number(orderLineData.quantity)) ? 0 : Number(orderLineData.quantity),
-            unitPrice: isNaN(Number(orderLineData.unitPrice)) ? 0 : Number(orderLineData.unitPrice),
-            status: orderLineData.status,
-            notes: orderLineData.notes,
-            createdBy: orderLineData.createdBy,
-            modifiedBy: orderLineData.modifiedBy,
-          })),
-        },
-      },
-    });
-
-    res.status(201).json(customerOrder); // 201 Created
-  } catch (error) {
-    console.error("Error creating customer order:", error);
-    res.status(500).json({ error: "Failed to create customer order" });
-  }
-}
-
-// GET /api/customer-orders
-export async function GET(req: NextApiRequest, res: NextApiResponse) {
-  try {
-    const customerOrders = await prisma.customerOrder.findMany({
-      include: { // Include related data if needed
+    const customerOrder = await prisma.customerOrder.findUnique({
+      where: { id: params.id },
+      include: {
         customer: true,
         orderLines: true,
         productionOrders: true,
       },
     });
-    res.status(200).json(customerOrders);
+
+    if (customerOrder) {
+      return NextResponse.json(customerOrder);
+    } else {
+      return new NextResponse(JSON.stringify({ error: 'Customer order not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
   } catch (error) {
-    console.error("Error getting customer orders:", error);
-    res.status(500).json({ error: 'Failed to get customer orders' });
+    console.error("Error getting customer order:", error);
+    return new NextResponse(JSON.stringify({ error: 'Failed to get customer order' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// PATCH /api/customerOrder/[id]
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const data = await request.json();
+
+    const updatedCustomerOrder = await prisma.customerOrder.update({
+      where: { id: params.id },
+      data: {
+        orderNumber: data.orderNumber,
+        customerId: data.customerId,
+        orderDate: data.orderDate,
+        requiredDate: data.requiredDate,
+        status: data.status,
+        totalAmount: data.totalAmount,
+        shippingAddress: data.shippingAddress,
+        billingAddress: data.billingAddress,
+        notes: data.notes,
+        modifiedBy: data.modifiedBy,
+
+        orderLines: {
+          upsert: data.orderLines?.map((orderLineData: any) => ({
+            where: { id: orderLineData.id || '' },
+            update: {
+              productId: orderLineData.productId,
+              quantity: orderLineData.quantity,
+              unitPrice: orderLineData.unitPrice,
+              status: orderLineData.status,
+              notes: orderLineData.notes,
+              modifiedBy: orderLineData.modifiedBy
+            },
+            create: {
+              productId: orderLineData.productId,
+              quantity: orderLineData.quantity,
+              unitPrice: orderLineData.unitPrice,
+              status: orderLineData.status,
+              notes: orderLineData.notes,
+              createdBy: orderLineData.createdBy,
+              modifiedBy: orderLineData.modifiedBy
+            },
+          })),
+        },
+      },
+      include: {
+        customer: true,
+        orderLines: true,
+        productionOrders: true,
+      },
+    });
+
+    return NextResponse.json(updatedCustomerOrder);
+  } catch (error) {
+    console.error("Error updating customer order:", error);
+    return new NextResponse(JSON.stringify({ error: 'Failed to update customer order' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// DELETE /api/customerOrder/[id]
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await prisma.customerOrder.delete({
+      where: { id: params.id },
+    });
+
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    console.error("Error deleting customer order:", error);
+    return new NextResponse(JSON.stringify({ error: 'Failed to delete customer order' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
