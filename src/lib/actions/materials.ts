@@ -151,8 +151,12 @@ export async function updateMaterial(data: MaterialUpdateInput) {
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id || "system"
 
-    // Calculate effective stock level
-    const calculatedStock = data.currentStock + data.expectedStock - data.committedStock
+    // Calculate effective stock level with null checking
+    // Use nullish coalescing to provide default value of 0 for any undefined values
+    const calculatedStock = 
+      (data.currentStock ?? 0) + 
+      (data.expectedStock ?? 0) - 
+      (data.committedStock ?? 0)
 
     // Extract ID and relation fields
     const { 
@@ -203,11 +207,11 @@ export async function updateMaterial(data: MaterialUpdateInput) {
     })
 
     // Check for low stock levels and create alerts if necessary
-    if (calculatedStock <= data.minimumStockLevel) {
+    if (calculatedStock <= (data.minimumStockLevel ?? 0)) {
       await createLowStockAlert({
         materialId: id,
         currentLevel: calculatedStock,
-        minimumLevel: data.minimumStockLevel,
+        minimumLevel: data.minimumStockLevel ?? 0,
         createdBy: userId,
       })
     }

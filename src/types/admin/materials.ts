@@ -44,6 +44,9 @@ export interface Material {
   }
   
   export interface MaterialUpdateInput extends Partial<MaterialCreateInput> {
+    [x: string]: number | undefined
+    expectedStock: number | undefined
+    committedStock: any
     id: string
     status?: Status
   }
