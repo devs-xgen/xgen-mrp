@@ -1,4 +1,3 @@
-// src/components/module/admin/production/quality-checks.tsx
 "use client";
 
 import { useState } from "react";
@@ -50,7 +49,13 @@ export function QualityChecks({
 
   const productionOrderId = propId || (params?.id as string);
 
-  const handleStatusUpdate = async (id: string, newStatus: Status, defectsFound: string | null = null, actionTaken: string | null = null, notes: string | null = null) => {
+  const handleStatusUpdate = async (
+    id: string,
+    newStatus: Status,
+    defectsFound: string | null = null,
+    actionTaken: string | null = null,
+    notes: string | null = null
+  ) => {
     try {
       setUpdatingId(id);
       const data = {
@@ -82,7 +87,9 @@ export function QualityChecks({
       toast({
         title: "Error",
         description:
-          error instanceof Error ? error.message : "Failed to update quality check",
+          error instanceof Error
+            ? error.message
+            : "Failed to update quality check",
         variant: "destructive",
       });
     } finally {
@@ -132,9 +139,9 @@ export function QualityChecks({
     }
   };
 
-  const filteredChecks = qualityChecks.filter(check => check.productionOrderId === productionOrderId);
-
-  console.log("QualityChecks component using productionOrderId:", productionOrderId);
+  const filteredChecks = qualityChecks.filter(
+    (check) => check.productionOrderId === productionOrderId
+  );
 
   return (
     <Card>
@@ -142,12 +149,13 @@ export function QualityChecks({
         <div className="flex justify-between items-center">
           <div>
             <CardTitle>Quality Checks</CardTitle>
-            <CardDescription>Quality inspection reports and actions</CardDescription>
+            <CardDescription>
+              Quality inspection reports and actions
+            </CardDescription>
           </div>
-          <CreateQualityCheckDialog 
+          <CreateQualityCheckDialog
             productionOrderId={productionOrderId}
             onRefresh={onRefresh || handleQualityCheckCreated}
-            inspectors={[]}
           />
         </div>
       </CardHeader>
@@ -156,6 +164,7 @@ export function QualityChecks({
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
+              <TableHead>Inspector</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Defects Found</TableHead>
               <TableHead>Action Taken</TableHead>
@@ -165,7 +174,7 @@ export function QualityChecks({
           <TableBody>
             {filteredChecks.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center">
+                <TableCell colSpan={6} className="text-center">
                   No quality checks recorded for this production order.
                 </TableCell>
               </TableRow>
@@ -174,27 +183,27 @@ export function QualityChecks({
                 const nextStatus = getNextStatus(check.status);
                 return (
                   <TableRow key={check.id}>
-                    <TableCell>
-                      {formatDate(check.checkDate)}
-                    </TableCell>
+                    <TableCell>{formatDate(check.checkDate)}</TableCell>
+                    <TableCell>{check.inspectorName || "Unknown"}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(check.status)}>
                         {check.status.toLowerCase().replace("_", " ")}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      {check.defectsFound || "None"}
-                    </TableCell>
-                    <TableCell>
-                      {check.actionTaken || "—"}
-                    </TableCell>
+                    <TableCell>{check.defectsFound || "None"}</TableCell>
+                    <TableCell>{check.actionTaken || "—"}</TableCell>
                     <TableCell className="text-right">
                       {nextStatus && (
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            handleStatusUpdate(check.id, nextStatus, check.defectsFound, check.actionTaken)
+                            handleStatusUpdate(
+                              check.id,
+                              nextStatus,
+                              check.defectsFound,
+                              check.actionTaken
+                            )
                           }
                           disabled={updatingId === check.id || isLoading}
                         >

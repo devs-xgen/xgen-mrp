@@ -9,6 +9,7 @@ import {
   CreateQualityCheckInput, 
   UpdateQualityCheckInput 
 } from "@/types/admin/quality-checks"
+import { getInspector, getActiveInspectors } from "./inspector"
 
 export async function getQualityChecks() {
   try {
@@ -60,7 +61,6 @@ export async function getQualityCheck(id: string) {
 }
 
 export async function createQualityCheck(data: CreateQualityCheckInput) {
-  console.log({ data });
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) throw new Error('Unauthorized')
@@ -68,6 +68,18 @@ export async function createQualityCheck(data: CreateQualityCheckInput) {
     // Check if productionOrderId exists in data
     if (!data || !data.productionOrderId) {
       throw new Error('Production order ID is required');
+    }
+    
+    // Check if inspectorId exists in data
+    if (!data || !data.inspectorId) {
+      throw new Error('Inspector ID is required');
+    }
+    
+    // Verify that the inspector exists - using our simplified function
+    try {
+      await getInspector(data.inspectorId);
+    } catch (err) {
+      throw new Error('Selected inspector does not exist');
     }
 
     const check = await prisma.qualityCheck.create({
@@ -77,7 +89,7 @@ export async function createQualityCheck(data: CreateQualityCheckInput) {
             id: data.productionOrderId 
           },
         },
-        inspectorId: session.user.id, 
+        inspectorId: data.inspectorId,
         checkDate: data.checkDate,
         status: Status.PENDING,
         defectsFound: data.defectsFound || null,
@@ -253,3 +265,5 @@ export async function getQualityMetrics() {
     throw error
   }
 }
+
+// Use the imported getActiveInspectors function instead

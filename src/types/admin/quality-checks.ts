@@ -1,42 +1,42 @@
+// src/types/admin/quality-checks.ts
 import { Status } from "@prisma/client"
 
 export interface QualityCheck {
   id: string
   productionOrderId: string
-  checkDate: Date
   inspectorId: string
+  inspectorName?: string
+  checkDate: Date
   status: Status
   defectsFound?: string | null
   actionTaken?: string | null
   notes?: string | null
-  createdAt: Date
-  updatedAt: Date
-  createdBy?: string | null
-  modifiedBy?: string | null
   productionOrder: {
-    id: string
     product: {
       name: string
       sku: string
     }
   }
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface QualityCheckColumn {
   id: string
-  checkDate: Date
   productName: string
   productSku: string
+  inspectorName: string
+  checkDate: Date
   status: Status
-  inspector: string
   defectsFound: string | null
   actionTaken: string | null
 }
 
 export interface CreateQualityCheckInput {
   productionOrderId: string
-  inspectorId: string 
+  inspectorId: string
   checkDate: Date
+  status?: Status  // Added status field to the input type
   defectsFound?: string
   actionTaken?: string
   notes?: string
@@ -45,7 +45,7 @@ export interface CreateQualityCheckInput {
 export interface UpdateQualityCheckInput {
   id: string
   status?: Status
-  defectsFound?: string
-  actionTaken?: string
-  notes?: string
+  defectsFound?: string | null
+  actionTaken?: string | null
+  notes?: string | null
 }

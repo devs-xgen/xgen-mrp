@@ -23,3 +23,12 @@ dropdown inventory system in navigation
 creating materials page in.
 
 default suyppliers purchase
+
+```
+npx prisma generate
+npx prisma --version
+npx prisma migrate dev --name add_chuchubbells
+
+npx prisma db pull
+npx prisma db push
+```
