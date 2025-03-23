@@ -61,14 +61,21 @@ const unitOfMeasureSchema = z.object({
   description: z
     .string()
     .max(500, "Description must not exceed 500 characters")
-    .optional(),
+    .optional()
+    .nullable(),
   status: z.nativeEnum(Status).default(Status.ACTIVE),
 });
 
 type UnitOfMeasureFormValues = z.infer<typeof unitOfMeasureSchema>;
 
 interface UnitOfMeasureDialogProps {
-  unitOfMeasures: UnitOfMeasure[];
+  unitOfMeasures: {
+    id: string;
+    name: string;
+    symbol: string;
+    description?: string | null;
+    status: Status;
+  }[];
   onSuccess?: () => Promise<void>;
 }
 
@@ -79,7 +86,13 @@ export function UnitOfMeasureDialog({
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isTableLoading, setIsTableLoading] = useState(false);
-  const [editingUnit, setEditingUnit] = useState<UnitOfMeasure | null>(null);
+  const [editingUnit, setEditingUnit] = useState<{
+    id: string;
+    name: string;
+    symbol: string;
+    description?: string | null;
+    status: Status;
+  } | null>(null);
   const { toast } = useToast();
 
   const form = useForm<UnitOfMeasureFormValues>({
@@ -92,7 +105,7 @@ export function UnitOfMeasureDialog({
     },
   });
 
-  // In your UnitOfMeasureDialog component, modify the onSubmit function:
+  // Submit handler for creating/updating units of measure
   const onSubmit = async (values: UnitOfMeasureFormValues) => {
     try {
       setIsLoading(true);
@@ -122,7 +135,6 @@ export function UnitOfMeasureDialog({
 
       form.reset();
       setEditingUnit(null);
-      setOpen(false);
       if (onSuccess) await onSuccess();
     } catch (error) {
       console.error("Form submission error:", error);
@@ -139,7 +151,13 @@ export function UnitOfMeasureDialog({
     }
   };
 
-  const onEdit = (unit: UnitOfMeasure) => {
+  const onEdit = (unit: {
+    id: string;
+    name: string;
+    symbol: string;
+    description?: string | null;
+    status: Status;
+  }) => {
     setEditingUnit(unit);
     form.reset({
       name: unit.name,
@@ -149,12 +167,18 @@ export function UnitOfMeasureDialog({
     });
   };
 
-  const onDelete = async (unit: UnitOfMeasure) => {
+  const onDelete = async (unit: {
+    id: string;
+    name: string;
+    symbol: string;
+    description?: string | null;
+    status: Status;
+  }) => {
     if (!confirm("Are you sure you want to delete this unit of measure?"))
       return;
 
     try {
-      setIsLoading(true);
+      setIsTableLoading(true);
       await deleteUnitOfMeasure(unit.id);
 
       toast({
@@ -173,29 +197,34 @@ export function UnitOfMeasureDialog({
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsTableLoading(false);
     }
   };
 
-  const getStatusBadgeStyle = (status: Status | null | undefined) => {
-    if (!status) return "bg-gray-100 text-gray-800";
-
+  const getStatusBadgeStyle = (status: Status) => {
     switch (status) {
       case Status.ACTIVE:
         return "bg-green-100 text-green-800";
       case Status.INACTIVE:
         return "bg-gray-100 text-gray-800";
-      case Status.SUSPENDED:
+      case Status.PENDING:
+        return "bg-blue-100 text-blue-800";
+      case Status.IN_PROGRESS:
         return "bg-yellow-100 text-yellow-800";
-      case Status.ARCHIVED:
+      case Status.COMPLETED:
+        return "bg-purple-100 text-purple-800";
+      case Status.CANCELLED:
         return "bg-red-100 text-red-800";
+      case Status.SUSPENDED:
+        return "bg-orange-100 text-orange-800";
+      case Status.ARCHIVED:
+        return "bg-gray-200 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
 
-  const getStatusDisplay = (status: Status | null | undefined) => {
-    if (!status) return "Unknown";
+  const getStatusDisplay = (status: Status) => {
     return (
       status.toString().charAt(0).toUpperCase() +
       status.toString().slice(1).toLowerCase()
@@ -317,7 +346,12 @@ export function UnitOfMeasureDialog({
                       variant="outline"
                       onClick={() => {
                         setEditingUnit(null);
-                        form.reset();
+                        form.reset({
+                          name: "",
+                          symbol: "",
+                          description: "",
+                          status: Status.ACTIVE,
+                        });
                       }}
                     >
                       Cancel

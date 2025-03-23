@@ -384,6 +384,20 @@ model Inspector {
   @@index([isActive])
 }
 
+model Alert {
+  id         String   @id @default(cuid())
+  type       String
+  title      String
+  message    String
+  status     String
+  priority   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  createdBy  String
+  modifiedBy String?
+}
+
 enum PaymentMethod {
   CASH
   CREDIT_CARD

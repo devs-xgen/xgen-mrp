@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import { useState } from "react";
 import {
   ColumnDef,
+  ColumnFiltersState,
+  SortingState,
   flexRender,
   getCoreRowModel,
-  useReactTable,
+  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  getFilteredRowModel,
-  SortingState,
-  ColumnFiltersState,
-} from "@tanstack/react-table"
+  useReactTable,
+} from "@tanstack/react-table";
 import {
   Table,
   TableBody,
@@ -19,75 +19,64 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { DataTableRowActions } from "./data-table-row-actions"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { MaterialType, UnitOfMeasure } from "@prisma/client";
+import { Material } from "@/types/admin/materials";
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
-  data: TData[]
-  materialTypes?: { id: string; name: string }[]
-  unitOfMeasures?: { id: string; name: string; symbol: string }[]
-  suppliers?: { id: string; name: string }[]
+interface DataTableProps {
+  data: Material[];
+  columns: ColumnDef<Material, any>[];
+  materialTypes: { id: string; name: string }[];
+  unitOfMeasures: { id: string; name: string; symbol?: string }[];
+  suppliers: { id: string; name: string }[];
 }
 
-export function DataTable<TData, TValue>({
-  columns,
+export function DataTable({
   data,
-  materialTypes = [],
-  unitOfMeasures = [],
-  suppliers = [],
-}: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [globalFilter, setGlobalFilter] = React.useState("")
+  columns,
+  materialTypes,
+  unitOfMeasures,
+  suppliers,
+}: DataTableProps) {
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [rowSelection, setRowSelection] = useState({});
 
-  // Define the columns with actions column
-  const allColumns = React.useMemo(() => {
-    return [
-      ...columns,
-      {
-        id: "actions",
-        cell: ({ row }) => (
-          <DataTableRowActions
-            row={row}
-            materialTypes={materialTypes}
-            unitOfMeasures={unitOfMeasures}
-            suppliers={suppliers}
-          />
-        ),
-      },
-    ]
-  }, [columns, materialTypes, unitOfMeasures, suppliers])
-
+  // Initialize the table with proper data and columns
   const table = useReactTable({
     data,
-    columns: allColumns,
+    columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
-    onGlobalFilterChange: setGlobalFilter,
+    getFilteredRowModel: getFilteredRowModel(),
+    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       columnFilters,
-      globalFilter,
+      rowSelection,
     },
-  })
+  });
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Input
-          placeholder="Search materials..."
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-          className="max-w-sm"
-        />
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Filter materials..."
+            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+            onChange={(event) =>
+              table.getColumn("name")?.setFilterValue(event.target.value)
+            }
+            className="max-w-sm"
+          />
+        </div>
       </div>
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -126,16 +115,18 @@ export function DataTable<TData, TValue>({
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={allColumns.length}
+                  colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  No materials found.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination controls */}
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} of{" "}
@@ -161,5 +152,5 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
     </div>
-  )
+  );
 }

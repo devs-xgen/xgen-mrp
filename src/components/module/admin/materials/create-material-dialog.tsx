@@ -1,12 +1,12 @@
 // src/components/module/admin/materials/create-material-dialog.tsx
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { Status } from "@prisma/client"
-import { Button } from "@/components/ui/button"
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Status } from "@prisma/client";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -23,22 +23,21 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
+} from "@/components/ui/form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { createMaterial } from "@/lib/actions/materials"
-import { useToast } from "@/hooks/use-toast"
-import { Plus } from "lucide-react"
-import { RichTextEditor } from "@/components/global/rich-text-editor"
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { createMaterial } from "@/lib/actions/materials";
+import { useToast } from "@/hooks/use-toast";
+import { Plus } from "lucide-react";
+import { RichTextEditor } from "@/components/global/rich-text-editor";
 
-// Schema for form validation
 const materialSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   sku: z.string().min(2, "SKU must be at least 2 characters"),
@@ -51,25 +50,41 @@ const materialSchema = z.object({
   supplierId: z.string().min(1, "Supplier is required"),
   notes: z.string().optional(),
   status: z.nativeEnum(Status).default(Status.ACTIVE),
-})
+});
 
-type MaterialFormValues = z.infer<typeof materialSchema>
+type MaterialFormInputs = {
+  name: string;
+  sku: string;
+  typeId: string;
+  unitOfMeasureId: string;
+  costPerUnit: string; // String for the form input
+  currentStock: string; // String for the form input
+  minimumStockLevel: string; // String for the form input
+  leadTime: string; // String for the form input
+  supplierId: string;
+  notes: string;
+  status: Status;
+};
+
+type MaterialFormValues = z.infer<typeof materialSchema>;
 
 interface CreateMaterialDialogProps {
-  materialTypes: { id: string; name: string }[]
-  unitOfMeasures: { id: string; name: string; symbol: string }[]
-  suppliers: { id: string; name: string }[]
+  materialTypes: { id: string; name: string }[];
+  unitOfMeasures: { id: string; name: string; symbol: string }[];
+  suppliers: { id: string; name: string }[];
+  onSuccess?: () => Promise<void>;
 }
 
 export function CreateMaterialDialog({
   materialTypes,
   unitOfMeasures,
   suppliers,
+  onSuccess,
 }: CreateMaterialDialogProps) {
-  const [open, setOpen] = useState(false)
-  const { toast } = useToast()
-  
-  const form = useForm<MaterialFormValues>({
+  const [open, setOpen] = useState(false);
+  const { toast } = useToast();
+
+  const form = useForm<MaterialFormInputs>({
     resolver: zodResolver(materialSchema),
     defaultValues: {
       name: "",
@@ -81,23 +96,28 @@ export function CreateMaterialDialog({
       notes: "",
       status: Status.ACTIVE,
     },
-  })
+  });
 
-  async function onSubmit(data: MaterialFormValues) {
+  async function onSubmit(data: MaterialFormInputs) {
     try {
-      await createMaterial(data)
-      setOpen(false)
-      form.reset()
+      // The zodResolver has already transformed the values during validation,
+      // so we can safely pass the data to createMaterial
+      await createMaterial(data as unknown as MaterialFormValues);
+      setOpen(false);
+      form.reset();
       toast({
         title: "Success",
         description: "Material created successfully",
-      })
+      });
+
+      // Call the onSuccess callback if provided
+      if (onSuccess) await onSuccess();
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to create material",
         variant: "destructive",
-      })
+      });
     }
   }
 
@@ -155,7 +175,10 @@ export function CreateMaterialDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Material Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select material type" />
@@ -180,7 +203,10 @@ export function CreateMaterialDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Unit of Measure</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select unit" />
@@ -263,7 +289,10 @@ export function CreateMaterialDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Supplier</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select supplier" />
@@ -288,7 +317,10 @@ export function CreateMaterialDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select status" />
@@ -310,22 +342,22 @@ export function CreateMaterialDialog({
 
             {/* Notes */}
             <FormField
-  control={form.control}
-  name="notes"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Notes</FormLabel>
-      <FormControl>
-        <RichTextEditor
-          value={field.value || ''}
-          onChange={field.onChange}
-          placeholder="Additional notes about the material..."
-        />
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes</FormLabel>
+                  <FormControl>
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      placeholder="Additional notes about the material..."
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="flex justify-end space-x-2">
               <Button
@@ -341,5 +373,5 @@ export function CreateMaterialDialog({
         </Form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -8,34 +8,29 @@ const prisma = new PrismaClient()
 
 async function main() {
     try {
-        // Create admin user with profile
-        const admin = await prisma.user.upsert({
-            where: { email: 'admin@example.com' },
-            update: {},
-            create: {
-                email: 'admin@example.com',
-                password: await hash('admin123', 12),
-                role: Role.ADMIN,
-                profile: {
-                    create: {
-                        firstName: 'Admin',
-                        lastName: 'User',
-                        department: 'Administration',
-                        position: 'System Administrator',
-                        employeeId: 'ADM001',
-                    }
+        const admin = await prisma.user.create({
+            data: {
+              email: 'admin@example.com',
+              password: await hash('admin123', 12),
+              role: Role.ADMIN,
+              profile: {
+                create: {
+                  firstName: 'Admin',
+                  lastName: 'User',
+                  department: 'Administration',
+                  position: 'System Administrator',
+                  employeeId: 'ADM001',
                 }
+              }
             },
             include: {
-                profile: true
+              profile: true
             }
-        })
+          })
 
         // Create worker/operator user with profile
-        const worker = await prisma.user.upsert({
-            where: { email: 'worker@example.com' },
-            update: {},
-            create: {
+        const worker = await prisma.user.create({
+            data: {
                 email: 'worker@example.com',
                 password: await hash('worker123', 12),
                 role: Role.OPERATOR,
@@ -56,12 +51,8 @@ async function main() {
 
         // Optional: Create emergency contact for the worker
         if (worker.profile) {
-            await prisma.emergencyContact.upsert({
-                where: {
-                    profileId: worker.profile.id
-                },
-                update: {},
-                create: {
+            await prisma.emergencyContact.create({
+                data: {
                     profileId: worker.profile.id,
                     name: 'Emergency Contact',
                     relationship: 'Family',
@@ -76,8 +67,10 @@ async function main() {
             admin: { email: admin.email, role: admin.role },
             worker: { email: worker.email, role: worker.role }
         })
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error seeding database:', error)
+        if (error.meta) console.error('Error metadata:', error.meta)
+        if (error.message) console.error('Error message:', error.message)
         process.exit(1)
     } finally {
         await prisma.$disconnect()
@@ -85,7 +78,7 @@ async function main() {
 }
 
 main()
-    .catch((e) => {
+    .catch((e: any) => {
         console.error(e)
         process.exit(1)
     })

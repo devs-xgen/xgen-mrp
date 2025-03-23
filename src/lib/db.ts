@@ -7,3 +7,11 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma = globalForPrisma.prisma ?? new PrismaClient()
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+
+
+
+// ito nasa documentation
+// import { PrismaClient } from '@prisma/client/edge'
+// import { withAccelerate } from '@prisma/extension-accelerate'
+
+// const prisma = new PrismaClient().$extends(withAccelerate())

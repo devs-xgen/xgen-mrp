@@ -1,13 +1,13 @@
 // src/components/module/admin/materials/material-type-dialog.tsx
 
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { ListTree, Pencil, Trash, Loader2 } from "lucide-react"
-import { MaterialType, Status } from "@prisma/client"
-import { Button } from "@/components/ui/button"
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ListTree, Pencil, Trash, Loader2 } from "lucide-react";
+import { MaterialType, Status } from "@prisma/client";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -23,11 +23,11 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { useToast } from "@/hooks/use-toast"
-import * as z from "zod"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import * as z from "zod";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -35,44 +35,60 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
-import { createMaterialType, updateMaterialType, deleteMaterialType } from "@/lib/actions/material-types"
-
+import {
+  createMaterialType,
+  updateMaterialType,
+  deleteMaterialType,
+} from "@/lib/actions/material-types";
 
 const materialTypeSchema = z.object({
-  name: z.string()
+  name: z
+    .string()
     .min(2, "Name must be at least 2 characters")
     .max(50, "Name must not exceed 50 characters"),
-  description: z.string()
+  description: z
+    .string()
     .max(500, "Description must not exceed 500 characters")
-    .optional(),
+    .optional()
+    .nullable(),
   status: z.nativeEnum(Status).default(Status.ACTIVE),
-})
+});
 
-type MaterialTypeFormValues = z.infer<typeof materialTypeSchema>
+type MaterialTypeFormValues = z.infer<typeof materialTypeSchema>;
 
 interface MaterialTypeDialogProps {
-  materialTypes: MaterialType[]
-  onSuccess?: () => Promise<void>
+  materialTypes: {
+    id: string;
+    name: string;
+    description?: string | null;
+    status: Status;
+  }[];
+  onSuccess?: () => Promise<void>;
 }
 
 export function MaterialTypeDialog({
   materialTypes,
   onSuccess,
 }: MaterialTypeDialogProps) {
-  const [open, setOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isTableLoading, setIsTableLoading] = useState(false)
-  const [editingType, setEditingType] = useState<MaterialType | null>(null)
-  const { toast } = useToast()
+  const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTableLoading, setIsTableLoading] = useState(false);
+  const [editingType, setEditingType] = useState<{
+    id: string;
+    name: string;
+    description?: string | null;
+    status: Status;
+  } | null>(null);
+  const { toast } = useToast();
 
   const form = useForm<MaterialTypeFormValues>({
     resolver: zodResolver(materialTypeSchema),
@@ -81,94 +97,125 @@ export function MaterialTypeDialog({
       description: "",
       status: Status.ACTIVE,
     },
-  })
-
+  });
 
   const onSubmit = async (values: MaterialTypeFormValues) => {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
+
       if (editingType) {
-        await updateMaterialType(editingType.id, values)
+        await updateMaterialType(editingType.id, {
+          name: values.name,
+          description: values.description,
+          status: values.status,
+        });
       } else {
-        await createMaterialType(values)
+        await createMaterialType({
+          name: values.name,
+          description: values.description,
+          status: values.status,
+        });
       }
 
       toast({
         title: "Success",
-        description: `Material type ${editingType ? "updated" : "created"} successfully`,
-      })
+        description: `Material type ${
+          editingType ? "updated" : "created"
+        } successfully`,
+      });
 
-      form.reset()
-      setEditingType(null)
-      if (onSuccess) await onSuccess()
+      form.reset();
+      setEditingType(null);
+      if (onSuccess) await onSuccess();
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save material type",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to save material type",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
-  const onDelete = async (type: MaterialType) => {
-    if (!confirm('Are you sure you want to delete this material type?')) return
+  const onDelete = async (type: {
+    id: string;
+    name: string;
+    description?: string | null;
+    status: Status;
+  }) => {
+    if (!confirm("Are you sure you want to delete this material type?")) return;
 
     try {
-      setIsLoading(true)
-      await deleteMaterialType(type.id)
+      setIsTableLoading(true);
+      await deleteMaterialType(type.id);
 
       toast({
         title: "Success",
         description: "Material type deleted successfully",
-      })
+      });
 
-      if (onSuccess) await onSuccess()
+      if (onSuccess) await onSuccess();
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error
-          ? error.message
-          : "Failed to delete material type. It might be in use.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to delete material type. It might be in use.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsTableLoading(false);
     }
-  }
+  };
 
-  const onEdit = (type: MaterialType) => {
-    setEditingType(type)
+  const onEdit = (type: {
+    id: string;
+    name: string;
+    description?: string | null;
+    status: Status;
+  }) => {
+    setEditingType(type);
     form.reset({
       name: type.name,
       description: type.description || "",
       status: type.status,
-    })
-  }
+    });
+  };
 
-
-
-  const getStatusBadgeStyle = (status: Status | null | undefined) => {
-    if (!status) return 'bg-gray-100 text-gray-800'
-    
+  const getStatusBadgeStyle = (status: Status) => {
     switch (status) {
       case Status.ACTIVE:
-        return 'bg-green-100 text-green-800'
+        return "bg-green-100 text-green-800";
       case Status.INACTIVE:
-        return 'bg-gray-100 text-gray-800'
+        return "bg-gray-100 text-gray-800";
+      case Status.PENDING:
+        return "bg-blue-100 text-blue-800";
+      case Status.IN_PROGRESS:
+        return "bg-yellow-100 text-yellow-800";
+      case Status.COMPLETED:
+        return "bg-purple-100 text-purple-800";
+      case Status.CANCELLED:
+        return "bg-red-100 text-red-800";
       case Status.SUSPENDED:
-        return 'bg-yellow-100 text-yellow-800'
+        return "bg-orange-100 text-orange-800";
       case Status.ARCHIVED:
-        return 'bg-red-100 text-red-800'
+        return "bg-gray-200 text-gray-800";
       default:
-        return 'bg-gray-100 text-gray-800'
+        return "bg-gray-100 text-gray-800";
     }
-  }
-  const getStatusDisplay = (status: Status | null | undefined) => {
-    if (!status) return 'Unknown'
-    return status.toString().charAt(0).toUpperCase() + status.toString().slice(1).toLowerCase()
-  }
+  };
+
+  const getStatusDisplay = (status: Status) => {
+    return (
+      status.toString().charAt(0).toUpperCase() +
+      status.toString().slice(1).toLowerCase()
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -193,7 +240,10 @@ export function MaterialTypeDialog({
               {editingType ? "Edit Material Type" : "Add New Material Type"}
             </h3>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-4"
+              >
                 <FormField
                   control={form.control}
                   name="name"
@@ -218,7 +268,7 @@ export function MaterialTypeDialog({
                           {...field}
                           placeholder="Enter description"
                           className="resize-none h-20"
-                          value={field.value ?? ''}
+                          value={field.value ?? ""}
                         />
                       </FormControl>
                       <FormMessage />
@@ -258,19 +308,28 @@ export function MaterialTypeDialog({
                       type="button"
                       variant="outline"
                       onClick={() => {
-                        setEditingType(null)
-                        form.reset()
+                        setEditingType(null);
+                        form.reset({
+                          name: "",
+                          description: "",
+                          status: Status.ACTIVE,
+                        });
                       }}
                     >
                       Cancel
                     </Button>
                   )}
                   <Button type="submit" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isLoading && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
                     {isLoading
-                      ? (editingType ? "Saving..." : "Creating...")
-                      : (editingType ? "Save Changes" : "Create Type")
-                    }
+                      ? editingType
+                        ? "Saving..."
+                        : "Creating..."
+                      : editingType
+                      ? "Save Changes"
+                      : "Create Type"}
                   </Button>
                 </div>
               </form>
@@ -311,14 +370,17 @@ export function MaterialTypeDialog({
                   ) : (
                     materialTypes.map((type) => (
                       <TableRow key={type.id}>
-                        <TableCell className="font-medium">{type.name}</TableCell>
+                        <TableCell className="font-medium">
+                          {type.name}
+                        </TableCell>
                         <TableCell>{type.description}</TableCell>
                         <TableCell>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${type.status === 'ACTIVE'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                            }`}>
-                            {type.status ? type.status.toLowerCase() : "-"}
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeStyle(
+                              type.status
+                            )}`}
+                          >
+                            {getStatusDisplay(type.status)}
                           </span>
                         </TableCell>
                         <TableCell>
@@ -351,5 +413,5 @@ export function MaterialTypeDialog({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

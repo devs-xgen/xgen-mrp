@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache"
 import { Material, MaterialCreateInput, MaterialUpdateInput } from "@/types/admin/materials"
 import { Status } from "@prisma/client"
 
-// was used in purchase order
+// used in purchase order
 export async function getAllMaterials() {
   try {
     const materials = await prisma.material.findMany({
@@ -33,11 +33,15 @@ export async function getAllMaterials() {
       }
     })
 
-    return materials.map((material: { costPerUnit: { toNumber: () => any } }) => ({
+    // Safely convert Decimal to number
+    return materials.map(material => ({
       ...material,
-      costPerUnit: material.costPerUnit.toNumber()
+      costPerUnit: typeof material.costPerUnit === 'object' && 'toNumber' in material.costPerUnit
+        ? material.costPerUnit.toNumber()
+        : Number(material.costPerUnit)
     }))
   } catch (error) {
+    console.error('Error fetching all materials:', error);
     throw new Error('Failed to fetch materials')
   }
 }
@@ -91,9 +95,6 @@ export async function getAllUnitMeasures() {
   }
 }
 
-
-
-// MAIN ACTIONS
 export async function getMaterials(): Promise<Material[]> {
   try {
     const materials = await prisma.material.findMany({
@@ -119,7 +120,13 @@ export async function getMaterials(): Promise<Material[]> {
         },
       },
     })
-    return materials
+    
+    return materials.map(material => ({
+      ...material,
+      costPerUnit: typeof material.costPerUnit === 'object' && 'toNumber' in material.costPerUnit 
+        ? material.costPerUnit.toNumber() 
+        : Number(material.costPerUnit)
+    })) as Material[]
   } catch (error) {
     throw new Error('Failed to fetch materials')
   }
@@ -127,9 +134,18 @@ export async function getMaterials(): Promise<Material[]> {
 
 export async function createMaterial(data: MaterialCreateInput) {
   try {
+    const costPerUnit = typeof data.costPerUnit === 'string' 
+      ? parseFloat(data.costPerUnit) 
+      : data.costPerUnit;
+    
+    if (isNaN(costPerUnit)) {
+      throw new Error('Invalid cost per unit value');
+    }
+    
     const material = await prisma.material.create({
       data: {
         ...data,
+        costPerUnit,
         status: 'ACTIVE',
       },
       include: {
@@ -137,13 +153,23 @@ export async function createMaterial(data: MaterialCreateInput) {
         unitOfMeasure: true,
         supplier: true,
       },
-    })
-    revalidatePath('/admin/materials')
-    return material
+    });
+    
+    const result = {
+      ...material,
+      costPerUnit: typeof material.costPerUnit === 'object' && 'toNumber' in material.costPerUnit 
+        ? material.costPerUnit.toNumber() 
+        : Number(material.costPerUnit)
+    };
+    
+    revalidatePath('/admin/materials');
+    return result as Material;
   } catch (error) {
-    throw new Error('Failed to create material')
+    console.error('Error creating material:', error);
+    throw new Error(`Failed to create material: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
+
 
 export async function updateMaterial(data: MaterialUpdateInput) {
   try {
@@ -234,7 +260,6 @@ export async function updateMaterial(data: MaterialUpdateInput) {
   }
 }
 
-// Helper function to create low stock alerts
 async function createLowStockAlert({
   materialId,
   currentLevel,
@@ -247,7 +272,6 @@ async function createLowStockAlert({
   createdBy: string
 }) {
   try {
-    // Get the material details for the alert
     const material = await prisma.material.findUnique({
       where: { id: materialId },
       include: {
@@ -260,40 +284,18 @@ async function createLowStockAlert({
       throw new Error("Material not found")
     }
 
-    // Calculate the quantity to order (restock to 2x minimum level)
     const suggestedOrderQuantity = Math.max(minimumLevel * 2 - currentLevel, 0)
 
-    // Create the alert
-    await prisma.alert.create({
-      data: {
-        type: "LOW_STOCK",
-        title: `Low Stock Alert: ${material.name}`,
-        message: `Material "${material.name}" (SKU: ${material.sku}) has fallen below minimum stock level. Current: ${currentLevel} ${material.unitOfMeasure?.symbol || 'units'}, Minimum: ${minimumLevel} ${material.unitOfMeasure?.symbol || 'units'}.`,
-        status: "ACTIVE",
-        priority: "HIGH",
-        metadata: {
-          materialId,
-          materialName: material.name,
-          materialSku: material.sku,
-          currentLevel,
-          minimumLevel,
-          suggestedOrderQuantity,
-          supplierId: material.supplierId,
-          supplierName: material.supplier?.name,
-          leadTime: material.leadTime,
-        },
-        createdBy,
-      },
-    })
+    console.warn(`LOW STOCK ALERT: Material "${material.name}" (SKU: ${material.sku}) has fallen below minimum stock level. Current: ${currentLevel} ${material.unitOfMeasure?.symbol || 'units'}, Minimum: ${minimumLevel} ${material.unitOfMeasure?.symbol || 'units'}.`);
+    
 
+    
     return true
   } catch (error) {
     console.error("Error creating low stock alert:", error)
-    // Don't throw the error to prevent blocking the main update
     return false
   }
 }
-
 
 export async function deleteMaterial(id: string) {
   try {
@@ -315,10 +317,12 @@ export async function getMaterialTypes() {
       },
       select: {
         id: true,
-        name: true
+        name: true,
+        status: true
       }
     })
   } catch (error) {
+    console.error('Error fetching material types:', error);
     throw new Error('Failed to fetch material types')
   }
 }
@@ -332,10 +336,12 @@ export async function getUnitOfMeasures() {
       select: {
         id: true,
         name: true,
-        symbol: true
+        symbol: true,
+        status: true
       }
     })
   } catch (error) {
+    console.error('Error fetching units of measure:', error);
     throw new Error('Failed to fetch units of measure')
   }
 }
@@ -409,16 +415,38 @@ export async function getMaterialsWithRelations() {
       }
     })
     
-    // Convert Decimal to number for client-side use
-    return materials.map(material => ({
-      ...material,
-      costPerUnit: material.costPerUnit.toNumber(),
-      // Map any other Decimal fields if needed
-    }))
+    // Convert Decimal to number for client-side use with safe checking
+    return materials.map(material => {
+      // Process any Decimal fields from purchase order lines
+      const processedPurchaseOrderLines = material.purchaseOrderLines?.map(line => ({
+        ...line,
+        unitPrice: typeof line.unitPrice === 'object' && 'toNumber' in line.unitPrice 
+          ? line.unitPrice.toNumber() 
+          : Number(line.unitPrice)
+      })) || [];
+      
+      // Process any Decimal fields from BOM
+      const processedBoms = material.boms?.map(bom => ({
+        ...bom,
+        quantityNeeded: typeof bom.quantityNeeded === 'object' && 'toNumber' in bom.quantityNeeded 
+          ? bom.quantityNeeded.toNumber() 
+          : Number(bom.quantityNeeded),
+        wastePercentage: typeof bom.wastePercentage === 'object' && 'toNumber' in bom.wastePercentage 
+          ? bom.wastePercentage.toNumber() 
+          : Number(bom.wastePercentage)
+      })) || [];
+      
+      return {
+        ...material,
+        costPerUnit: typeof material.costPerUnit === 'object' && 'toNumber' in material.costPerUnit 
+          ? material.costPerUnit.toNumber() 
+          : Number(material.costPerUnit),
+        purchaseOrderLines: processedPurchaseOrderLines,
+        boms: processedBoms
+      };
+    });
   } catch (error) {
     console.error('Error fetching materials with relations:', error)
     throw new Error('Failed to fetch materials with relations')
   }
 }
-
-

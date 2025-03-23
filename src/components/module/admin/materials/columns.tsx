@@ -1,103 +1,119 @@
-// src/components/module/admin/materials/columns.tsx
-"use client"
+"use client";
 
-import { ColumnDef } from "@tanstack/react-table"
-import { Material } from "@/types/admin/materials"
-import { Badge } from "@/components/ui/badge"
-import { DataTableColumnHeader } from "./data-table-column-header"
-import { DataTableRowActions } from "./data-table-row-actions"
-import { Checkbox } from "@/components/ui/checkbox"
+import { ColumnDef } from "@tanstack/react-table";
+import { MoreHorizontal, Edit, Trash, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Material } from "@/types/admin/materials";
+import { Status } from "@prisma/client";
+
+// Format currency for display
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+  }).format(amount);
+};
 
 export const columns: ColumnDef<Material>[] = [
   {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={table.getIsAllPageRowsSelected()}
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: "sku",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="SKU" />
-    ),
-  },
-  {
     accessorKey: "name",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Name" />
+    header: "Material Name",
+    cell: ({ row }) => (
+      <div>
+        <div className="font-medium">{row.getValue("name")}</div>
+        <div className="text-xs text-muted-foreground">
+          SKU: {row.original.sku}
+        </div>
+      </div>
     ),
   },
   {
-    accessorKey: "type.name",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Type" />
-    ),
+    accessorKey: "type",
+    header: "Type",
+    cell: ({ row }) => row.original.type?.name || "-",
   },
   {
     accessorKey: "unitOfMeasure",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Unit" />
-    ),
+    header: "Unit",
     cell: ({ row }) => {
-      const unit = row.original.unitOfMeasure
-      return `${unit.name} (${unit.symbol})`
+      const uom = row.original.unitOfMeasure;
+      return uom ? `${uom.name} (${uom.symbol})` : "-";
     },
-  },
-  {
-    accessorKey: "currentStock",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Stock" />
-    ),
   },
   {
     accessorKey: "costPerUnit",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Cost Per Unit" />
-    ),
-    cell: ({ row }) => {
-      const amount = parseFloat(row.original.costPerUnit.toString())
-      const formatted = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "PHP",
-      }).format(amount)
-      return formatted
-    },
+    header: "Cost / Unit",
+    cell: ({ row }) => formatCurrency(Number(row.getValue("costPerUnit"))),
   },
   {
-    accessorKey: "supplier.name",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Supplier" />
-    ),
+    accessorKey: "currentStock",
+    header: "Current Stock",
+    cell: ({ row }) => {
+      const stock = Number(row.getValue("currentStock"));
+      const minStock = row.original.minimumStockLevel;
+      const isLowStock = stock <= minStock;
+
+      return (
+        <div className="flex items-center">
+          <span>{stock}</span>
+          {isLowStock && (
+            <AlertTriangle className="ml-2 h-4 w-4 text-amber-500" />
+          )}
+        </div>
+      );
+    },
   },
   {
     accessorKey: "status",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Status" />
-    ),
+    header: "Status",
     cell: ({ row }) => {
-      const status = row.original.status
+      const status = row.getValue("status") as Status;
       return (
-        <Badge variant={status === "ACTIVE" ? "default" : "secondary"}>
-          {status  ? status.toLowerCase() : "-"}
+        <Badge
+          variant={status === "ACTIVE" ? "default" : "secondary"}
+          className="capitalize"
+        >
+          {status.toLowerCase()}
         </Badge>
-      )
+      );
     },
   },
-  // {
-  //   id: "actions",
-  //   cell: ({ row }) => <DataTableRowActions row={row} materialTypes={[]} unitOfMeasures={[]} suppliers={[]} />,
-  // },
-]
+  {
+    id: "actions",
+    cell: ({ row }) => {
+      const material = row.original;
+
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-destructive">
+              <Trash className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    },
+  },
+];
