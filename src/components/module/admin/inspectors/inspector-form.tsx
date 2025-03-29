@@ -25,8 +25,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Inspector } from "@/lib/actions/inspectors";
-import { inspectorFormSchema, type InspectorFormValues, CERTIFICATION_LEVELS } from "./schema";
+import { Inspector } from "@/lib/actions/inspector";
+import {
+  inspectorFormSchema,
+  type InspectorFormValues,
+  CERTIFICATION_LEVELS,
+} from "./schema";
 import { Switch } from "@headlessui/react";
 
 interface InspectorFormProps {
@@ -42,7 +46,7 @@ export function InspectorForm({
   departments,
   specializations,
   onSubmit,
-  isSubmitting
+  isSubmitting,
 }: InspectorFormProps) {
   // Initialize form with default values
   const form = useForm<InspectorFormValues>({
@@ -58,7 +62,7 @@ export function InspectorForm({
       yearsOfExperience: initialData?.yearsOfExperience || undefined,
       isActive: initialData?.isActive ?? true,
       notes: initialData?.notes || "",
-    }
+    },
   });
 
   // Update form when initialData changes (like when editing a different inspector)
@@ -125,7 +129,11 @@ export function InspectorForm({
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="john.doe@example.com" type="email" {...field} />
+                    <Input
+                      placeholder="john.doe@example.com"
+                      type="email"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -138,10 +146,10 @@ export function InspectorForm({
                 <FormItem>
                   <FormLabel>Phone (Optional)</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="(555) 123-4567" 
+                    <Input
+                      placeholder="(555) 123-4567"
                       {...field}
-                      value={field.value || ""} 
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />
@@ -160,10 +168,10 @@ export function InspectorForm({
                 <FormItem>
                   <FormLabel>Department</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Enter department" 
+                    <Input
+                      placeholder="Enter department"
                       {...field}
-                      value={field.value || ""} 
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />
@@ -177,10 +185,10 @@ export function InspectorForm({
                 <FormItem>
                   <FormLabel>Specialization</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Enter specialization" 
+                    <Input
+                      placeholder="Enter specialization"
                       {...field}
-                      value={field.value || ""} 
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />
@@ -197,10 +205,10 @@ export function InspectorForm({
                 <FormItem>
                   <FormLabel>Certification Level</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Enter certification level" 
+                    <Input
+                      placeholder="Enter certification level"
                       {...field}
-                      value={field.value || ""} 
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />
@@ -219,9 +227,16 @@ export function InspectorForm({
                       min="0"
                       placeholder="0"
                       {...field}
-                      value={field.value === null || field.value === undefined ? "" : field.value}
+                      value={
+                        field.value === null || field.value === undefined
+                          ? ""
+                          : field.value
+                      }
                       onChange={(e) => {
-                        const value = e.target.value === "" ? undefined : parseInt(e.target.value);
+                        const value =
+                          e.target.value === ""
+                            ? undefined
+                            : parseInt(e.target.value);
                         field.onChange(value);
                       }}
                     />
@@ -242,14 +257,12 @@ export function InspectorForm({
                 <div className="space-y-0.5">
                   <FormLabel className="text-base">Active Status</FormLabel>
                   <FormDescription>
-                    Determine if this inspector is active and available for assignments.
+                    Determine if this inspector is active and available for
+                    assignments.
                   </FormDescription>
                 </div>
                 <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onChange={field.onChange}
-                  />
+                  <Switch checked={field.value} onChange={field.onChange} />
                 </FormControl>
               </FormItem>
             )}
@@ -280,7 +293,11 @@ export function InspectorForm({
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : initialData ? "Update Inspector" : "Create Inspector"}
+            {isSubmitting
+              ? "Saving..."
+              : initialData
+              ? "Update Inspector"
+              : "Create Inspector"}
           </Button>
         </div>
       </form>

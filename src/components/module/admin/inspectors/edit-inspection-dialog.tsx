@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { InspectorForm } from "./inspector-form";
-import { updateInspector, Inspector } from "@/lib/actions/inspectors";
+import { updateInspector, Inspector } from "@/lib/actions/inspector";
 import { InspectorFormValues } from "./schema";
 
 interface EditInspectorDialogProps {

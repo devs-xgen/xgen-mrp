@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { InspectorForm } from "./inspector-form";
-import { createInspector } from "@/lib/actions/inspectors";
+import { createInspector } from "@/lib/actions/inspector";
 import { InspectorFormValues } from "./schema";
 
 interface CreateInspectorDialogProps {
@@ -57,7 +57,8 @@ export function CreateInspectorDialog({
         <DialogHeader>
           <DialogTitle>Add New Inspector</DialogTitle>
           <DialogDescription>
-            Create a new inspector record. Fill in the information below to add an inspector to the system.
+            Create a new inspector record. Fill in the information below to add
+            an inspector to the system.
           </DialogDescription>
         </DialogHeader>
         <InspectorForm

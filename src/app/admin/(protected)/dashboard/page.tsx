@@ -12,6 +12,7 @@ import {
   RecentOrders,
   OperationalAlerts,
   MaterialUtilization,
+  WorkflowConnections,
 } from "@/components/module/admin/dashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -63,6 +64,10 @@ export default function AdminDashboard() {
         <p className="text-muted-foreground">
           Overview of your inventory management system
         </p>
+      </div>
+
+      <div className="mt-2 mb-6">
+        <WorkflowConnections />
       </div>
 
       <ErrorBoundaryWrapper componentName="Stats Cards">

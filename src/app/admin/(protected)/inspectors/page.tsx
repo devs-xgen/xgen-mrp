@@ -3,7 +3,7 @@ import {
   getInspectors,
   getDepartments,
   getSpecializations,
-} from "@/lib/actions/inspectors";
+} from "@/lib/actions/inspector";
 import { DataTable } from "@/components/module/admin/inspectors/data-table";
 import { columns } from "@/components/module/admin/inspectors/columns";
 import { CreateInspectorDialog } from "@/components/module/admin/inspectors/create-inspector-dialog";
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 async function refreshData() {
   "use server";
-  revalidatePath('/admin/inspectors');
+  revalidatePath("/admin/inspectors");
 }
 
 export default async function InspectorsPage() {
@@ -44,11 +44,8 @@ export default async function InspectorsPage() {
           />
         </div>
       </div>
-      
-      <DataTable
-        columns={columns}
-        data={inspectors}
-      />
+
+      <DataTable columns={columns} data={inspectors} />
     </div>
   );
 }

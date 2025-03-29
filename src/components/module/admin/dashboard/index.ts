@@ -8,3 +8,4 @@ export { SalesByCategoryChart } from './sales-by-category';
 export { RecentOrders } from './recent-orders';
 export { OperationalAlerts } from './operational-alerts';
 export { MaterialUtilization } from './material-utilization';
+export { WorkflowConnections } from './workflow-connections';

@@ -1,7 +1,12 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal, CheckCircle, XCircle } from "lucide-react";
+import {
+  ArrowUpDown,
+  MoreHorizontal,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,11 +18,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  deleteInspector, 
+import {
+  deleteInspector,
   toggleInspectorStatus,
-  type Inspector 
-} from "@/lib/actions/inspectors";
+  type Inspector,
+} from "@/lib/actions/inspector";
 import { formatPhoneNumber } from "@/lib/utils";
 
 export const columns: ColumnDef<Inspector>[] = [
@@ -60,8 +65,12 @@ export const columns: ColumnDef<Inspector>[] = [
       const lastName = row.original.lastName;
       return (
         <div>
-          <div className="font-medium">{firstName} {lastName}</div>
-          <div className="text-sm text-muted-foreground">{row.original.email}</div>
+          <div className="font-medium">
+            {firstName} {lastName}
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {row.original.email}
+          </div>
         </div>
       );
     },
@@ -73,11 +82,17 @@ export const columns: ColumnDef<Inspector>[] = [
     cell: ({ row }) => {
       const isActive = row.original.isActive;
       return isActive ? (
-        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+        <Badge
+          variant="outline"
+          className="bg-green-50 text-green-700 border-green-200"
+        >
           <CheckCircle className="mr-1 h-3 w-3" /> Active
         </Badge>
       ) : (
-        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+        <Badge
+          variant="outline"
+          className="bg-red-50 text-red-700 border-red-200"
+        >
           <XCircle className="mr-1 h-3 w-3" /> Inactive
         </Badge>
       );
@@ -125,7 +140,9 @@ export const columns: ColumnDef<Inspector>[] = [
     cell: ({ row }) => {
       const years = row.getValue("yearsOfExperience") as number | null;
       return years !== null && years !== undefined ? (
-        <div>{years} {years === 1 ? 'year' : 'years'}</div>
+        <div>
+          {years} {years === 1 ? "year" : "years"}
+        </div>
       ) : (
         <div className="text-muted-foreground text-sm">N/A</div>
       );
@@ -142,7 +159,7 @@ export const columns: ColumnDef<Inspector>[] = [
           await toggleInspectorStatus(inspector.inspectorId, !isActive);
         } catch (error) {
           console.error("Error toggling inspector status:", error);
-          alert(`Failed to ${isActive ? 'deactivate' : 'activate'} inspector.`);
+          alert(`Failed to ${isActive ? "deactivate" : "activate"} inspector.`);
         }
       };
 
@@ -174,7 +191,9 @@ export const columns: ColumnDef<Inspector>[] = [
             <DropdownMenuItem
               onClick={() => {
                 // Will be replaced with proper edit dialog trigger
-                alert(`Edit inspector: ${inspector.firstName} ${inspector.lastName}`);
+                alert(
+                  `Edit inspector: ${inspector.firstName} ${inspector.lastName}`
+                );
               }}
             >
               Edit details

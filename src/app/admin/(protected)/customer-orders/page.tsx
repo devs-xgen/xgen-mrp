@@ -1,3 +1,4 @@
+// src/app/admin/(protected)/customer-orders/page.tsx
 import { Metadata } from "next";
 import { DataTable } from "@/components/module/admin/customer-orders/data-table";
 import { columns } from "@/components/module/admin/customer-orders/columns";
@@ -12,6 +13,7 @@ import {
 import { getCustomerOrders } from "@/lib/actions/customer-order";
 import { getProductsForOrders } from "@/lib/actions/product";
 import { getAllCustomers } from "@/lib/actions/customers";
+import { getWorkCenters } from "@/lib/actions/work-center";
 
 export const metadata: Metadata = {
   title: "Customer Orders | Admin Dashboard",
@@ -19,11 +21,21 @@ export const metadata: Metadata = {
 };
 
 export default async function CustomerOrdersPage() {
-  const [customerOrders, productsForOrders, customers] = await Promise.all([
-    getCustomerOrders(),
-    getProductsForOrders(), // Use the new function that returns data with unitPrice
-    getAllCustomers(),
-  ]);
+  const [customerOrders, productsForOrders, customers, workCenters] =
+    await Promise.all([
+      getCustomerOrders(),
+      getProductsForOrders(),
+      getAllCustomers(),
+      getWorkCenters(),
+    ]);
+
+  // Convert the products to include stock information
+  const productsWithStock = productsForOrders.map((product) => ({
+    ...product,
+    currentStock: 0, // You would normally get this from your real product data
+    minimumStockLevel: 0,
+    sku: "", // Add missing SKU field
+  }));
 
   return (
     <div className="flex flex-col gap-6 p-8">
@@ -34,7 +46,19 @@ export default async function CustomerOrdersPage() {
             Manage and track all customer orders
           </p>
         </div>
-        <CreateCustomerOrderDialog products={productsForOrders} customers={customers} />
+        {/* Use the enhanced dialog if necessary, 
+            or stick with the original if you prefer */}
+        <CreateCustomerOrderDialog
+          products={productsForOrders}
+          customers={customers}
+        />
+        {/* Alternatively, use the enhanced version:
+        <CreateCustomerOrderEnhanced 
+          products={productsWithStock} 
+          customers={customers}
+          workCenters={workCenters}
+        /> 
+        */}
       </div>
 
       <Card>
