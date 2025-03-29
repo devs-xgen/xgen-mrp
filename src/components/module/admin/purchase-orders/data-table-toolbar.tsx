@@ -1,36 +1,37 @@
 // src/components/module/admin/purchase-orders/data-table-toolbar.tsx
-"use client"
+"use client";
 
-import { Cross2Icon } from "@radix-ui/react-icons"
-import { Table } from "@tanstack/react-table"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Cross2Icon } from "@radix-ui/react-icons";
+import { Table } from "@tanstack/react-table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import { Status } from "@prisma/client"
-import { PlusIcon } from "lucide-react"
-import { CreatePurchaseOrderDialog } from "./create-dialog"
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Status } from "@prisma/client";
+import { PlusIcon } from "lucide-react";
 
 interface DataTableToolbarProps<TData> {
-  table: Table<TData>
+  table: Table<TData>;
 }
 
 export function DataTableToolbar<TData>({
   table,
 }: DataTableToolbarProps<TData>) {
-  const isFiltered = table.getState().columnFilters.length > 0
+  const isFiltered = table.getState().columnFilters.length > 0;
 
   return (
     <div className="flex items-center justify-between">
       <div className="flex flex-1 items-center space-x-2">
         <Input
           placeholder="Filter by PO number..."
-          value={(table.getColumn("poNumber")?.getFilterValue() as string) ?? ""}
+          value={
+            (table.getColumn("poNumber")?.getFilterValue() as string) ?? ""
+          }
           onChange={(event) =>
             table.getColumn("poNumber")?.setFilterValue(event.target.value)
           }
@@ -56,27 +57,32 @@ export function DataTableToolbar<TData>({
               {Object.values(Status).map((status) => {
                 const filterValue = table
                   .getColumn("status")
-                  ?.getFilterValue() as string[] | undefined
-                
+                  ?.getFilterValue() as string[] | undefined;
+
                 return (
                   <DropdownMenuCheckboxItem
                     key={status}
                     checked={filterValue?.includes(status) ?? false}
                     onCheckedChange={(checked) => {
                       if (checked) {
-                        table.getColumn("status")?.setFilterValue(
-                          filterValue ? [...filterValue, status] : [status]
-                        )
+                        table
+                          .getColumn("status")
+                          ?.setFilterValue(
+                            filterValue ? [...filterValue, status] : [status]
+                          );
                       } else {
-                        table.getColumn("status")?.setFilterValue(
-                          filterValue?.filter((value) => value !== status) ?? []
-                        )
+                        table
+                          .getColumn("status")
+                          ?.setFilterValue(
+                            filterValue?.filter((value) => value !== status) ??
+                              []
+                          );
                       }
                     }}
                   >
                     {status.toLowerCase()}
                   </DropdownMenuCheckboxItem>
-                )
+                );
               })}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -92,7 +98,6 @@ export function DataTableToolbar<TData>({
           </Button>
         )}
       </div>
-      <CreatePurchaseOrderDialog />
     </div>
-  )
+  );
 }

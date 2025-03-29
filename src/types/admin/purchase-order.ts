@@ -1,7 +1,7 @@
 // src/types/admin/purchase-order.ts
 import { Status } from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
 
+// Update to use number instead of Decimal for client-side usage
 export interface PurchaseOrder {
   id: string;
   poNumber: string;
@@ -9,7 +9,7 @@ export interface PurchaseOrder {
   orderDate: Date;
   expectedDelivery: Date;
   status: Status;
-  totalAmount: Decimal;
+  totalAmount: number; // Changed from Decimal to number
   notes?: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -22,7 +22,7 @@ export interface PurchaseOrder {
     id: string;
     materialId: string;
     quantity: number;
-    unitPrice: Decimal;
+    unitPrice: number; // Changed from Decimal to number
     status: Status;
     material: {
       id: string;
@@ -41,9 +41,11 @@ export interface PurchaseOrderLine {
   poId: string;
   materialId: string;
   quantity: number;
-  unitPrice: Decimal;
+  unitPrice: number; // Changed from Decimal to number
   status: Status;
   notes?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
   material: {
     id: string;
     name: string;
@@ -51,6 +53,13 @@ export interface PurchaseOrderLine {
     currentStock: number;
     unitOfMeasure: {
       symbol: string;
+    };
+  };
+  purchaseOrder?: {
+    poNumber: string;
+    status: Status;
+    supplier: {
+      name: string;
     };
   };
 }

@@ -39,7 +39,8 @@ export interface ProductionOrder {
     id: string
     checkDate: Date
     status: Status
-    defectsFound?: string
+    defectsFound?: string | null  // Changed from string | undefined to string | null
+    actionTaken?: string | null   // Added this field
   }[]
 }
 
@@ -65,7 +66,6 @@ export interface UpdateProductionOrderInput extends Partial<CreateProductionOrde
 
 export interface ProductionOrderColumn {
   id: string
-  orderNumber: string
   productName: string
   productSku: string
   quantity: number
@@ -73,7 +73,7 @@ export interface ProductionOrderColumn {
   dueDate: Date
   status: Status
   priority: Priority
-  customerOrderNumber?: string
+  customerOrderNumber?: string | undefined
   progress: number // Calculated from operations
   lastUpdated: Date
 }

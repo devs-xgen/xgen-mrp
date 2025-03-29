@@ -1,7 +1,7 @@
 // src/components/module/admin/purchase-orders/data-table.tsx
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -9,13 +9,11 @@ import {
   VisibilityState,
   flexRender,
   getCoreRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
+} from "@tanstack/react-table";
 
 import {
   Table,
@@ -24,25 +22,41 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 
-import { DataTablePagination } from "./data-table-pagination"
-import { DataTableToolbar } from "./data-table-toolbar"
-import { PurchaseOrder, PurchaseOrderLine } from "@/types/admin/purchase-order"
+import { DataTablePagination } from "./data-table-pagination";
+import { DataTableToolbar } from "./data-table-toolbar";
 
-interface DataTableProps {
-  columns: ColumnDef<PurchaseOrder>[]
-  data: PurchaseOrder[]
+interface DataTableProps<TData, TValue> {
+  columns: ColumnDef<TData, TValue>[];
+  data: TData[];
+  highlightId?: string; // Optional ID to highlight a row
 }
 
-export function DataTable({
+export function DataTable<TData, TValue>({
   columns,
   data,
-}: DataTableProps) {
-  const [rowSelection, setRowSelection] = React.useState({})
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  highlightId,
+}: DataTableProps<TData, TValue>) {
+  const [rowSelection, setRowSelection] = React.useState({});
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  );
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+
+  // Auto-scroll to highlighted row
+  const highlightedRowRef = React.useRef<HTMLTableRowElement>(null);
+
+  React.useEffect(() => {
+    if (highlightId && highlightedRowRef.current) {
+      highlightedRowRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [highlightId, data]);
 
   const table = useReactTable({
     data,
@@ -62,9 +76,23 @@ export function DataTable({
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-  })
+  });
+
+  // Find the page that contains the highlighted row if any
+  React.useEffect(() => {
+    if (highlightId) {
+      const allRows = table.getCoreRowModel().rows;
+      const rowIndex = allRows.findIndex(
+        (row) => (row.original as any).id === highlightId
+      );
+
+      if (rowIndex !== -1) {
+        const pageSize = table.getState().pagination.pageSize;
+        const pageIndex = Math.floor(rowIndex / pageSize);
+        table.setPageIndex(pageIndex);
+      }
+    }
+  }, [highlightId, table, data]);
 
   return (
     <div className="space-y-4">
@@ -74,38 +102,45 @@ export function DataTable({
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  )
-                })}
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                const isHighlighted =
+                  highlightId && (row.original as any).id === highlightId;
+
+                return (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    className={
+                      isHighlighted ? "bg-primary/10 animate-pulse" : ""
+                    }
+                    ref={isHighlighted ? highlightedRowRef : null}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell
@@ -121,5 +156,5 @@ export function DataTable({
       </div>
       <DataTablePagination table={table} />
     </div>
-  )
+  );
 }

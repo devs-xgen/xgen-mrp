@@ -8,7 +8,44 @@ import { revalidatePath } from "next/cache"
 import { Material, MaterialCreateInput, MaterialUpdateInput } from "@/types/admin/materials"
 import { Status } from "@prisma/client"
 
-// used in purchase order
+// export async function getAllMaterials() {
+//   try {
+//     const materials = await prisma.material.findMany({
+//       where: {
+//         status: 'ACTIVE'
+//       },
+//       select: {
+//         id: true,
+//         name: true,
+//         sku: true,
+//         costPerUnit: true,
+//         currentStock: true,
+//         unitOfMeasure: {
+//           select: {
+//             symbol: true,
+//             name: true
+//           }
+//         }
+//       },
+//       orderBy: {
+//         name: 'asc'
+//       }
+//     })
+
+//     // Safely convert Decimal to number
+//     return materials.map(material => ({
+//       ...material,
+//       costPerUnit: typeof material.costPerUnit === 'object' && 'toNumber' in material.costPerUnit
+//         ? material.costPerUnit.toNumber()
+//         : Number(material.costPerUnit)
+//     }))
+//   } catch (error) {
+//     console.error('Error fetching all materials:', error);
+//     throw new Error('Failed to fetch materials')
+//   }
+// }
+
+
 export async function getAllMaterials() {
   try {
     const materials = await prisma.material.findMany({
@@ -21,6 +58,17 @@ export async function getAllMaterials() {
         sku: true,
         costPerUnit: true,
         currentStock: true,
+        typeId: true,
+        unitOfMeasureId: true,
+        minimumStockLevel: true,
+        leadTime: true,
+        supplierId: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        createdBy: true,
+        modifiedBy: true,
+        notes: true,
         unitOfMeasure: {
           select: {
             symbol: true,
@@ -45,6 +93,7 @@ export async function getAllMaterials() {
     throw new Error('Failed to fetch materials')
   }
 }
+
 
 export async function getAllMaterialTypes() {
   try {

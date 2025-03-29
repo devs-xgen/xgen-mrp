@@ -1,3 +1,4 @@
+// src/components/module/admin/purchase-ordeline/data-table.tsx
 "use client";
 
 import * as React from "react";
@@ -21,36 +22,64 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"; // Adjust path if needed
+} from "@/components/ui/table";
 
-import { DataTablePagination } from "./data-table-pagination"; // Adjust path if needed
-import { DataTableToolbar } from "./data-table-toolbar"; // Adjust path if needed
-import { PurchaseOrderLine } from "@/types/admin/purchase-order"; // Import your type
-import { Material } from "@prisma/client"; // Import Material type
+import { DataTablePagination } from "./data-table-pagination";
+import { DataTableToolbar } from "./data-table-toolbar";
+import { PurchaseOrder, PurchaseOrderLine } from "@/types/admin/purchase-order";
+import { Badge } from "@/components/ui/badge";
+import { DataTableRowActions } from "./data-table-row-actions";
 
 interface DataTableProps {
   data: PurchaseOrderLine[];
-  materials: Material[];
+  materials: {
+    id: string;
+    name: string;
+    sku: string;
+    costPerUnit: number;
+    currentStock: number;
+    unitOfMeasure: {
+      symbol: string;
+      name: string;
+    };
+  }[];
+  purchaseOrders: PurchaseOrder[];
+  selectedPoId?: string;
   onSuccess: () => void;
 }
 
-export function PurchaseOrderLineDataTable({ data, materials, onSuccess }: DataTableProps) {
+export function PurchaseOrderLineDataTable({
+  data,
+  materials,
+  purchaseOrders,
+  selectedPoId,
+  onSuccess,
+}: DataTableProps) {
   const [rowSelection, setRowSelection] = React.useState({});
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  );
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
   const columns: ColumnDef<PurchaseOrderLine>[] = [
     {
       accessorKey: "id",
-      header: "ID",
+      header: "Line ID",
       cell: ({ row }) => {
-        return `PN-${String(row.index + 1).padStart(4, '0')}`; // Generate sequential number
+        return `PN-${String(row.index + 1).padStart(4, "0")}`;
       },
-      // cell: ({ row }) => {
-      //   const idNumber = row.original.id; // Get the actual ID
-      //   return `PN-${String(idNumber).padStart(4, '0')}`; // Format as PN-0001
-      // },
+    },
+    {
+      accessorKey: "poId",
+      header: "Purchase Order",
+      cell: ({ row }) => {
+        const poId = row.original.poId;
+        const purchaseOrder = purchaseOrders.find((po) => po.id === poId);
+        return purchaseOrder ? purchaseOrder.poNumber : "Unknown";
+      },
+      enableHiding: !!selectedPoId, // Hide this column if we're viewing lines for a specific PO
     },
     {
       accessorKey: "material.name",
@@ -58,24 +87,78 @@ export function PurchaseOrderLineDataTable({ data, materials, onSuccess }: DataT
       cell: ({ row }) => {
         const materialId = row.original.materialId;
         const material = materials.find((m) => m.id === materialId);
-        return material ? material.name : "Unknown";
+        return material ? (
+          <div>
+            <div className="font-medium">{material.name}</div>
+            <div className="text-sm text-muted-foreground">{material.sku}</div>
+          </div>
+        ) : (
+          "Unknown"
+        );
       },
     },
     {
       accessorKey: "quantity",
       header: "Quantity",
+      cell: ({ row }) => {
+        const materialId = row.original.materialId;
+        const material = materials.find((m) => m.id === materialId);
+        return `${row.original.quantity} ${
+          material?.unitOfMeasure?.symbol || ""
+        }`;
+      },
     },
-    // Add more columns as needed (unit price, total price, etc.)
+    {
+      accessorKey: "unitPrice",
+      header: "Unit Price",
+      cell: ({ row }) => {
+        const unitPrice = Number(row.original.unitPrice);
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "PHP",
+        }).format(unitPrice);
+      },
+    },
+    {
+      accessorKey: "lineTotal",
+      header: "Total",
+      cell: ({ row }) => {
+        const quantity = row.original.quantity;
+        const unitPrice = Number(row.original.unitPrice);
+        const total = quantity * unitPrice;
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "PHP",
+        }).format(total);
+      },
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const status = row.original.status;
+        let variant: "default" | "success" | "warning" | "destructive" =
+          "default";
+
+        switch (status) {
+          case "COMPLETED":
+            variant = "success";
+            break;
+          case "PENDING":
+            variant = "warning";
+            break;
+          case "CANCELLED":
+            variant = "destructive";
+            break;
+        }
+
+        return <Badge variant={variant}>{status.toLowerCase()}</Badge>;
+      },
+    },
     {
       id: "actions",
-      header: "Actions",
       cell: ({ row }) => (
-        <button onClick={() => {
-          // Edit logic here (e.g., open a modal)
-          console.log("Edit clicked for row:", row.original);
-        }}>
-          Edit
-        </button>
+        <DataTableRowActions row={row} onSuccess={onSuccess} />
       ),
     },
   ];
@@ -100,39 +183,58 @@ export function PurchaseOrderLineDataTable({ data, materials, onSuccess }: DataT
     getSortedRowModel: getSortedRowModel(),
   });
 
+  // Hide the PO column if we're viewing a specific PO's order lines
+  React.useEffect(() => {
+    if (selectedPoId) {
+      setColumnVisibility((prev) => ({ ...prev, poId: false }));
+    }
+  }, [selectedPoId]);
+
   return (
     <div className="space-y-4">
-      <DataTableToolbar table={table} />
+      <DataTableToolbar table={table} purchaseOrders={purchaseOrders} />
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            {data.length > 0 && // <-- Conditional rendering
+            {data.length > 0 &&
               table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
                     <TableHead key={header.id}>
                       {header.isPlaceholder
                         ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </TableHead>
                   ))}
                 </TableRow>
               ))}
           </TableHeader>
           <TableBody>
-            {data.length > 0 ? ( // <-- Conditional rendering
+            {data.length > 0 ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   {data.length === 0 ? "No results." : "Loading..."}
                 </TableCell>
               </TableRow>

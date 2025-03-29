@@ -1,22 +1,22 @@
 // src/components/module/admin/production/create-production-order-dialog.tsx
-"use client"
+"use client";
 
-import * as z from "zod"
-import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Priority } from "@prisma/client"
-import { CalendarIcon, Loader2 } from "lucide-react"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import * as z from "zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Priority } from "@prisma/client";
+import { CalendarIcon, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -24,24 +24,27 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
+} from "@/components/ui/form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Calendar } from "@/components/ui/calendar"
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { useToast } from "@/hooks/use-toast"
-import { createProductionOrder, updateProductionOrder } from "@/lib/actions/production-order"
+} from "@/components/ui/popover";
+import { useToast } from "@/hooks/use-toast";
+import {
+  createProductionOrder,
+  updateProductionOrder,
+} from "@/lib/actions/production-order";
+import { RichTextEditor } from "@/components/global/rich-text-editor";
 
 // Form schema for basic production order details
 const basicDetailsSchema = z.object({
@@ -50,33 +53,35 @@ const basicDetailsSchema = z.object({
   startDate: z.date({
     required_error: "Start date is required",
   }),
-  dueDate: z.date({
-    required_error: "Due date is required",
-  }).min(new Date(), "Due date must be in the future"),
+  dueDate: z
+    .date({
+      required_error: "Due date is required",
+    })
+    .min(new Date(), "Due date must be in the future"),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]),
   customerOrderId: z.string().optional(),
   notes: z.string().optional(),
-})
+});
 
 interface ProductOption {
-  id: string
-  name: string
-  sku: string
-  currentStock: number
+  id: string;
+  name: string;
+  sku: string;
+  currentStock: number;
 }
 
 interface WorkCenterOption {
-  id: string
-  name: string
-  capacityPerHour: number
+  id: string;
+  name: string;
+  capacityPerHour: number;
 }
 
 interface ProductionOrderDialogProps {
-  products: ProductOption[]
-  workCenters: WorkCenterOption[]
-  customerOrders?: { id: string; orderNumber: string }[]
-  onSuccess?: () => Promise<void>
-  children?: React.ReactNode
+  products: ProductOption[];
+  workCenters: WorkCenterOption[];
+  customerOrders?: { id: string; orderNumber: string }[];
+  onSuccess?: () => Promise<void>;
+  children?: React.ReactNode;
 }
 
 export function ProductionOrderDialog({
@@ -84,55 +89,53 @@ export function ProductionOrderDialog({
   workCenters,
   customerOrders,
   onSuccess,
-  children
+  children,
 }: ProductionOrderDialogProps) {
-  const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const { toast } = useToast()
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof basicDetailsSchema>>({
     resolver: zodResolver(basicDetailsSchema),
     defaultValues: {
       quantity: 1,
       priority: "MEDIUM",
+      notes: "",
     },
-  })
+  });
 
   async function onSubmit(values: z.infer<typeof basicDetailsSchema>) {
     try {
-      setLoading(true)
+      setLoading(true);
       await createProductionOrder({
         ...values,
         operations: [], // We'll handle operations in the next step
-      })
+      });
 
-      setOpen(false)
-      form.reset()
-      if (onSuccess) await onSuccess()
-      
+      setOpen(false);
+      form.reset();
+      if (onSuccess) await onSuccess();
+
       toast({
         title: "Production Order Created",
         description: "Successfully created new production order",
-      })
+      });
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Something went wrong",
+        description:
+          error instanceof Error ? error.message : "Something went wrong",
         variant: "destructive",
-      })
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {children || (
-          <Button variant="default">
-            Create Production Order
-          </Button>
-        )}
+        {children || <Button variant="default">Create Production Order</Button>}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
@@ -146,7 +149,10 @@ export function ProductionOrderDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Product</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a product" />
@@ -191,7 +197,10 @@ export function ProductionOrderDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Priority</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select priority" />
@@ -303,8 +312,8 @@ export function ProductionOrderDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Customer Order (Optional)</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -333,7 +342,11 @@ export function ProductionOrderDialog({
                 <FormItem>
                   <FormLabel>Notes (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea {...field} />
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      placeholder="Add any additional notes about this production order..."
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -357,5 +370,5 @@ export function ProductionOrderDialog({
         </Form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

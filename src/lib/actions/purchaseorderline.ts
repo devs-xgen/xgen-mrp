@@ -4,11 +4,27 @@
 import { prisma } from "@/lib/db"
 import { PurchaseOrderLine } from "@/types/admin/purchase-order"
 import { Prisma, Status } from "@prisma/client"
+import { revalidatePath } from "next/cache"
 
-export async function getPurchaseOrderLines(): Promise<PurchaseOrderLine[]> {
+export async function getPurchaseOrderLines(poId?: string): Promise<PurchaseOrderLine[]> {
   try {
+    // Create the where clause conditionally
+    const where = poId ? { poId } : undefined
+    
     const lines = await prisma.purchaseOrderLine.findMany({
+      where,
       include: {
+        purchaseOrder: {
+          select: {
+            poNumber: true,
+            status: true,
+            supplier: {
+              select: {
+                name: true
+              }
+            }
+          }
+        },
         material: {
           include: {
             unitOfMeasure: {
@@ -19,31 +35,95 @@ export async function getPurchaseOrderLines(): Promise<PurchaseOrderLine[]> {
           }
         }
       },
+      orderBy: {
+        createdAt: 'desc'
+      }
     })
 
     return lines.map(line => ({
-      id: line.id,
-      poId: line.poId,
-      materialId: line.materialId,
-      quantity: line.quantity,
-      unitPrice: line.unitPrice,
-      status: line.status,
-      notes: line.notes,
-      material: {
-        id: line.material.id,
-        name: line.material.name,
-        sku: line.material.sku,
-        currentStock: line.material.currentStock,
-        unitOfMeasure: {
-          symbol: line.material.unitOfMeasure.symbol
-        }
-      }
-    }))
+      ...line,
+      unitPrice: typeof line.unitPrice === 'object' && 'toNumber' in line.unitPrice
+        ? line.unitPrice.toNumber()
+        : Number(line.unitPrice)
+    })) as PurchaseOrderLine[]
   } catch (error) {
     console.error("Error retrieving PurchaseOrderLines:", error)
     throw new Error("Failed to retrieve PurchaseOrderLines.")
   }
 }
+
+// src/lib/actions/purchaseorderline.ts (Delete Function)
+// This function should be added to your purchaseorderline.ts file
+
+export async function deletePurchaseOrderLine(id: string) {
+  try {
+    // First get the orderline to know which PO to update later
+    const orderLine = await prisma.purchaseOrderLine.findUnique({
+      where: { id },
+      select: { poId: true }
+    })
+    
+    if (!orderLine) {
+      throw new Error("Order line not found")
+    }
+    
+    // Delete the order line
+    await prisma.purchaseOrderLine.delete({
+      where: { id },
+    })
+
+    // Update the total amount of the parent purchase order
+    await updatePurchaseOrderTotal(orderLine.poId)
+    
+    // Revalidate both purchase order and orderline paths  
+    revalidatePath('/admin/purchase-orderline')
+    revalidatePath('/admin/purchase-orders')
+    return true;
+  } catch (error) {
+    console.error("Error deleting PurchaseOrderLine:", error)
+    throw new Error("Failed to delete PurchaseOrderLine.")
+  }
+}
+
+// Helper function to update the total amount of a purchase order
+async function updatePurchaseOrderTotal(poId: string) {
+  try {
+    // Get all order lines for this PO
+    const orderLines = await prisma.purchaseOrderLine.findMany({
+      where: { poId },
+      select: {
+        quantity: true,
+        unitPrice: true
+      }
+    })
+    
+    // Calculate the new total amount
+    const totalAmount = orderLines.reduce((sum, line) => {
+      const unitPrice = typeof line.unitPrice === 'object' && 'toNumber' in line.unitPrice
+        ? line.unitPrice.toNumber()
+        : Number(line.unitPrice)
+      
+      return sum + (line.quantity * unitPrice)
+    }, 0)
+    
+    // Update the purchase order
+    await prisma.purchaseOrder.update({
+      where: { id: poId },
+      data: {
+        totalAmount,
+        updatedAt: new Date()
+      }
+    })
+    
+    return true
+  } catch (error) {
+    console.error("Error updating purchase order total:", error)
+    return false
+  }
+}
+
+// src/lib/actions/purchaseorderline.ts (Add Function)
+// Add this function to your purchaseorderline.ts file
 
 export async function addPurchaseOrderLine(data: { 
   poId: string
@@ -54,13 +134,14 @@ export async function addPurchaseOrderLine(data: {
   createdBy?: string
 }) {
   try {
-    return await prisma.purchaseOrderLine.create({
+    const createdLine = await prisma.purchaseOrderLine.create({
       data: {
         poId: data.poId,
         materialId: data.materialId,
         quantity: data.quantity,
         unitPrice: data.unitPrice,
         notes: data.notes,
+        status: Status.PENDING,
         createdBy: data.createdBy,
       },
       include: {
@@ -71,57 +152,17 @@ export async function addPurchaseOrderLine(data: {
         }
       }
     })
+
+    // Update the total amount of the parent purchase order
+    await updatePurchaseOrderTotal(data.poId)
+    
+    // Revalidate both purchase order and orderline paths
+    revalidatePath('/admin/purchase-orderline')
+    revalidatePath('/admin/purchase-orders')
+    
+    return createdLine
   } catch (error) {
     console.error("Error adding PurchaseOrderLine:", error)
     throw new Error("Failed to add PurchaseOrderLine.")
-  }
-}
-
-type PurchaseOrderLineUpdateInput = {
-  quantity?: number
-  unitPrice?: number
-  status?: Status
-  notes?: string | null
-  modifiedBy?: string | null
-}
-
-export async function updatePurchaseOrderline(
-  id: string, 
-  updates: PurchaseOrderLineUpdateInput
-) {
-  try {
-    const updateData: Prisma.PurchaseOrderLineUpdateInput = {
-      quantity: updates.quantity,
-      unitPrice: updates.unitPrice,
-      status: updates.status as Status,
-      notes: updates.notes,
-      modifiedBy: updates.modifiedBy,
-    }
-
-    return await prisma.purchaseOrderLine.update({
-      where: { id },
-      data: updateData,
-      include: {
-        material: {
-          include: {
-            unitOfMeasure: true
-          }
-        }
-      }
-    })
-  } catch (error) {
-    console.error("Error updating PurchaseOrderLine:", error)
-    throw new Error("Failed to update PurchaseOrderLine.")
-  }
-}
-
-export async function deletePurchaseOrderLine(id: string) {
-  try {
-    await prisma.purchaseOrderLine.delete({
-      where: { id },
-    })
-  } catch (error) {
-    console.error("Error deleting PurchaseOrderLine:", error)
-    throw new Error("Failed to delete PurchaseOrderLine.")
   }
 }
