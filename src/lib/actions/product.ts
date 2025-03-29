@@ -1,6 +1,9 @@
+// src/lib/actions/product.ts
 "use server";
 
 import { prisma } from "@/lib/db";
+import { ProductForOrder } from "@/types/admin/product";
+import { Status } from "@prisma/client";
 
 export async function getAllProducts() {
   try {
@@ -22,7 +25,7 @@ export async function getAllProducts() {
           },
           where: {
             status: {
-              in: ['PENDING', 'IN_PROGRESS']
+              in: ['PENDING', 'IN_PROGRESS', 'ACTIVE']
             }
           },
           take: 5, // Limit to recent orders
@@ -52,7 +55,10 @@ export async function getProductsForOrders(): Promise<ProductForOrder[]> {
       select: {
         id: true,
         name: true,
+        sku: true,
         sellingPrice: true, // This will be mapped to unitPrice
+        currentStock: true,
+        minimumStockLevel: true,
       },
       orderBy: {
         name: "asc",
@@ -63,17 +69,16 @@ export async function getProductsForOrders(): Promise<ProductForOrder[]> {
     return products.map(product => ({
       id: product.id,
       name: product.name,
-      unitPrice: Number(product.sellingPrice) // Convert Decimal to number if needed
+      sku: product.sku,
+      unitPrice: Number(product.sellingPrice), // Convert Decimal to number
+      currentStock: product.currentStock,
+      minimumStockLevel: product.minimumStockLevel
     }));
   } catch (error) {
     console.error("❌ Error fetching products for orders:", error);
     throw new Error("Failed to fetch products for orders");
   }
 }
-
-
-// src/lib/actions/product.ts
-// Add this function to your existing product.ts file
 
 export async function getProductById(id: string) {
   try {
@@ -92,6 +97,23 @@ export async function getProductById(id: string) {
                 costPerUnit: true
               }
             }
+          }
+        },
+        // Include production orders too for consistency
+        productionOrders: {
+          select: {
+            id: true,
+            status: true,
+            quantity: true,
+            dueDate: true
+          },
+          where: {
+            status: {
+              in: [Status.PENDING, Status.IN_PROGRESS, Status.ACTIVE]
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
           }
         }
       }
@@ -115,7 +137,14 @@ export async function getProductionOrdersByProductId(productId: string) {
       where: {
         productId
       },
-      include: {
+      select: {
+        id: true,
+        status: true,
+        quantity: true,
+        dueDate: true,
+        startDate: true,
+        priority: true,
+        createdAt: true,
         operations: {
           include: {
             workCenter: true

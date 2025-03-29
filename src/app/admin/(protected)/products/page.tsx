@@ -1,5 +1,4 @@
 // src/app/admin/(protected)/products/page.tsx
-
 import { Metadata } from "next";
 import { getAllProducts } from "@/lib/actions/product";
 import { getCategories } from "@/lib/api/products";

@@ -1,128 +1,68 @@
 // src/app/admin/(protected)/products/[id]/page.tsx
-"use client";
-
-import { useEffect, useState } from "react";
-import { notFound, useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ProductDetails } from "@/components/module/admin/products/product-details";
-import { CreateProductionDialog } from "@/components/module/admin/products/create-production-dialog";
+import { notFound } from "next/navigation";
+import { Metadata } from "next";
+import {
+  getProductById,
+  getProductionOrdersByProductId,
+} from "@/lib/actions/product";
+import { getWorkCenters } from "@/lib/actions/work-center";
+import ProductDetailClientPage from "./client-page";
+import {
+  convertDecimalsToNumbers,
+  ProductWithNumberValues,
+} from "@/types/admin/product";
 
 interface ProductDetailPageProps {
   params: {
     id: string;
   };
-  product: any; // The product data fetched from server
-  workCenters: any[]; // Work centers fetched from server
 }
 
-export default function ProductDetailClientPage({
+export async function generateMetadata({
   params,
-  product,
-  workCenters,
+}: ProductDetailPageProps): Promise<Metadata> {
+  const product = await getProductById(params.id);
+  if (!product) return { title: "Product Not Found" };
+
+  return {
+    title: `Product: ${product.name}`,
+    description: `Details for product ${product.name}`,
+  };
+}
+
+export default async function ProductDetailPage({
+  params,
 }: ProductDetailPageProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [showProductionDialog, setShowProductionDialog] = useState(false);
+  // Fetch product, production orders, and work centers in parallel
+  const [product, productionOrders, workCenters] = await Promise.all([
+    getProductById(params.id),
+    getProductionOrdersByProductId(params.id),
+    getWorkCenters(),
+  ]);
 
-  // Check if we should open the production dialog automatically
-  useEffect(() => {
-    if (searchParams.get("action") === "produce") {
-      setShowProductionDialog(true);
-    }
-  }, [searchParams]);
+  if (!product) notFound();
 
-  // This is a client component wrapper around the server-fetched data
-  if (!product) {
-    notFound();
-  }
+  // Create a merged object with proper shape
+  const enhancedProduct = {
+    ...product,
+    productionOrders:
+      productionOrders?.map((order) => ({
+        id: order.id,
+        status: order.status,
+        quantity: order.quantity,
+        dueDate: order.dueDate,
+      })) || [],
+  };
+
+  // Convert all Decimal values to numbers before sending to the client
+  const productWithNumberValues = convertDecimalsToNumbers(enhancedProduct);
+  const workCentersWithNumberValues = convertDecimalsToNumbers(workCenters);
 
   return (
-    <div className="flex flex-col gap-6 p-8">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/admin/products">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Products
-            </Button>
-          </Link>
-          <h1 className="text-2xl font-bold tracking-tight">{product.name}</h1>
-        </div>
-        <div className="flex gap-2">
-          <Link href={`/admin/products/${params.id}/edit`}>
-            <Button variant="outline">Edit Product</Button>
-          </Link>
-          <CreateProductionDialog
-            product={product}
-            workCenters={workCenters}
-            open={showProductionDialog}
-            onOpenChange={setShowProductionDialog}
-          />
-        </div>
-      </div>
-
-      <ProductDetails product={product} />
-
-      {product.currentStock <= product.minimumStockLevel && (
-        <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mt-2">
-          <h3 className="text-amber-800 font-medium">Low Stock Alert</h3>
-          <p className="text-amber-700 text-sm mt-1">
-            Current stock ({product.currentStock}) is below the minimum level (
-            {product.minimumStockLevel}). Consider creating a production order
-            to replenish inventory.
-          </p>
-          <div className="mt-3">
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setShowProductionDialog(true)}
-            >
-              Create Production Order
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Production History */}
-      <div className="mt-4">
-        <h2 className="text-xl font-bold mb-4">Production History</h2>
-        {product.productionOrders && product.productionOrders.length > 0 ? (
-          <div className="space-y-2">
-            {product.productionOrders.map((order) => (
-              <div
-                key={order.id}
-                className="border rounded-md p-3 flex justify-between items-center"
-              >
-                <div>
-                  <p className="font-medium">Order #{order.id.slice(-6)}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Quantity: {order.quantity} • Due:{" "}
-                    {new Date(order.dueDate).toLocaleDateString()}
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push(`/admin/production/${order.id}`)}
-                >
-                  View Details
-                </Button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-muted-foreground">
-            No production orders found for this product.
-          </p>
-        )}
-        <div className="mt-4">
-          <Link href={`/admin/production?productId=${params.id}`}>
-            <Button variant="outline">View All Production Orders</Button>
-          </Link>
-        </div>
-      </div>
-    </div>
+    <ProductDetailClientPage
+      params={params}
+      product={productWithNumberValues as ProductWithNumberValues}
+      workCenters={workCentersWithNumberValues}
+    />
   );
 }

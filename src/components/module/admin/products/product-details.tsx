@@ -19,41 +19,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ExtendedBOM, Product } from "@/types/admin/product";
+import { ProductWithNumberValues } from "@/types/admin/product";
 
 interface ProductDetailsProps {
-  product: {
-    id: string;
-    name: string;
-    sku: string;
-    description?: string | null;
-    status: string;
-    sellingPrice: number;
-    unitCost: number;
-    minimumStockLevel: number;
-    currentStock: number;
-    leadTime: number;
-    sizeRange: string[];
-    colorOptions: string[];
-    category: {
-      id: string;
-      name: string;
-    };
-    boms: ExtendedBOM[];
-  };
+  product: ProductWithNumberValues;
 }
 
 export function ProductDetails({ product }: ProductDetailsProps) {
-  // Calculate total material cost
-  const totalMaterialCost = product.boms.reduce((acc, bom) => {
-    return acc + Number(bom.material.costPerUnit) * Number(bom.quantityNeeded);
-  }, 0);
+  // Calculate total material cost - making sure to work with numbers
+  const totalMaterialCost =
+    product.boms?.reduce(
+      (acc, bom) => acc + bom.material.costPerUnit * bom.quantityNeeded,
+      0
+    ) || 0;
 
   // Calculate profit margin
   const profitMargin =
-    ((Number(product.sellingPrice) - Number(product.unitCost)) /
-      Number(product.sellingPrice)) *
-    100;
+    ((product.sellingPrice - product.unitCost) / product.sellingPrice) * 100;
 
   return (
     <Tabs defaultValue="overview" className="w-full">
@@ -83,7 +65,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
               </div>
               <div>
                 <span className="font-medium">Category: </span>
-                {product.category.name}
+                {product.category?.name || "Uncategorized"}
               </div>
               <div>
                 <span className="font-medium">Status: </span>
@@ -118,21 +100,33 @@ export function ProductDetails({ product }: ProductDetailsProps) {
                 <div>
                   <h4 className="font-medium mb-2">Size Range</h4>
                   <div className="flex flex-wrap gap-2">
-                    {product.sizeRange.map((size) => (
-                      <Badge key={size} variant="outline">
-                        {size}
-                      </Badge>
-                    ))}
+                    {product.sizeRange.length > 0 ? (
+                      product.sizeRange.map((size) => (
+                        <Badge key={size} variant="outline">
+                          {size}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        No sizes specified
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div>
                   <h4 className="font-medium mb-2">Colors</h4>
                   <div className="flex flex-wrap gap-2">
-                    {product.colorOptions.map((color) => (
-                      <Badge key={color} variant="outline">
-                        {color}
-                      </Badge>
-                    ))}
+                    {product.colorOptions.length > 0 ? (
+                      product.colorOptions.map((color) => (
+                        <Badge key={color} variant="outline">
+                          {color}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        No colors specified
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -196,48 +190,55 @@ export function ProductDetails({ product }: ProductDetailsProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Material</TableHead>
-                  <TableHead className="text-right">Quantity Needed</TableHead>
-                  <TableHead className="text-right">Waste %</TableHead>
-                  <TableHead className="text-right">Cost per Unit</TableHead>
-                  <TableHead className="text-right">Total Cost</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {product.boms.map((bom) => (
-                  <TableRow key={bom.id}>
-                    <TableCell>{bom.material.name}</TableCell>
-                    <TableCell className="text-right">
-                      {Number(bom.quantityNeeded).toFixed(2)}
+            {product.boms && product.boms.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Material</TableHead>
+                    <TableHead className="text-right">
+                      Quantity Needed
+                    </TableHead>
+                    <TableHead className="text-right">Waste %</TableHead>
+                    <TableHead className="text-right">Cost per Unit</TableHead>
+                    <TableHead className="text-right">Total Cost</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {product.boms.map((bom) => (
+                    <TableRow key={bom.id}>
+                      <TableCell>{bom.material.name}</TableCell>
+                      <TableCell className="text-right">
+                        {bom.quantityNeeded.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {bom.wastePercentage.toFixed(2)}%
+                      </TableCell>
+                      <TableCell className="text-right">
+                        ${bom.material.costPerUnit.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        $
+                        {(
+                          bom.material.costPerUnit * bom.quantityNeeded
+                        ).toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-right font-medium">
+                      Total Material Cost
                     </TableCell>
-                    <TableCell className="text-right">
-                      {Number(bom.wastePercentage).toFixed(2)}%
-                    </TableCell>
-                    <TableCell className="text-right">
-                      ${Number(bom.material.costPerUnit).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      $
-                      {(
-                        Number(bom.material.costPerUnit) *
-                        Number(bom.quantityNeeded)
-                      ).toFixed(2)}
+                    <TableCell className="text-right font-medium">
+                      ${totalMaterialCost.toFixed(2)}
                     </TableCell>
                   </TableRow>
-                ))}
-                <TableRow>
-                  <TableCell colSpan={4} className="text-right font-medium">
-                    Total Material Cost
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    ${totalMaterialCost.toFixed(2)}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                No bill of materials found for this product.
+              </div>
+            )}
           </CardContent>
         </Card>
       </TabsContent>
@@ -256,7 +257,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
                   <div className="space-y-2">
                     <div>
                       <span className="font-medium">Unit Cost: </span>$
-                      {Number(product.unitCost).toFixed(2)}
+                      {product.unitCost.toFixed(2)}
                     </div>
                     <div>
                       <span className="font-medium">Material Cost: </span>$
@@ -269,7 +270,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
                   <div className="space-y-2">
                     <div>
                       <span className="font-medium">Selling Price: </span>$
-                      {Number(product.sellingPrice).toFixed(2)}
+                      {product.sellingPrice.toFixed(2)}
                     </div>
                     <div>
                       <span className="font-medium">Profit Margin: </span>
@@ -286,10 +287,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    $
-                    {(
-                      Number(product.sellingPrice) - Number(product.unitCost)
-                    ).toFixed(2)}
+                    ${(product.sellingPrice - product.unitCost).toFixed(2)}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Profit per unit

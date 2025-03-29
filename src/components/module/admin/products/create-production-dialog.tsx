@@ -44,6 +44,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { Priority } from "@prisma/client";
 import { createProductionOrder } from "@/lib/actions/production-order";
+import { ProductWithNumberValues } from "@/types/admin/product";
 
 // Define the form schema
 const formSchema = z.object({
@@ -60,44 +61,42 @@ const formSchema = z.object({
   notes: z.string().optional(),
 });
 
-type WorkCenter = {
+type FormValues = z.infer<typeof formSchema>;
+
+interface WorkCenter {
   id: string;
   name: string;
   capacityPerHour: number;
-};
-
-interface ProductType {
-  id: string;
-  name: string;
-  sku: string;
-  description?: string | null;
-  status: string;
-  sellingPrice: number;
-  unitCost: number;
-  minimumStockLevel: number;
-  currentStock: number;
-  leadTime: number;
-  [key: string]: any; // To allow for other properties
 }
 
 interface CreateProductionDialogProps {
-  product: ProductType;
+  product: ProductWithNumberValues;
   workCenters: WorkCenter[];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   children?: React.ReactNode;
 }
 
 export function CreateProductionDialog({
   product,
   workCenters,
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
   children,
 }: CreateProductionDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
+  // Handle controlled/uncontrolled state
+  const isControlled =
+    controlledOpen !== undefined && setControlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = isControlled ? setControlledOpen : setUncontrolledOpen;
+
   // Initialize the form with default values
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       quantity: 1,
@@ -108,7 +107,7 @@ export function CreateProductionDialog({
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: FormValues) => {
     try {
       setIsSubmitting(true);
 

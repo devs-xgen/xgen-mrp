@@ -1,5 +1,4 @@
 // src/components/module/admin/products/data-table.tsx
-
 "use client";
 
 import { useState } from "react";
@@ -32,12 +31,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { createColumns } from "./columns";
-import { Product, ProductCategory } from "@prisma/client";
+import { Product as PrismaProduct, ProductCategory } from "@prisma/client";
+
+// Define the extended product type
+interface ExtendedProduct extends PrismaProduct {
+  productionOrders?: Array<{
+    id: string;
+    status: string;
+    quantity: number;
+    dueDate: Date;
+  }>;
+}
 
 interface DataTableProps {
-  data: Product[];
+  data: ExtendedProduct[]; // Use the extended product type
   categories: ProductCategory[];
-  workCenters: any[]; // Accept work centers
+  workCenters: any[]; // Include work centers for production order creation
   onSuccess?: () => Promise<void>;
 }
 
