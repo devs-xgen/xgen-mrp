@@ -58,10 +58,11 @@ export default async function ProductDetailPage({
   const productWithNumberValues = convertDecimalsToNumbers(enhancedProduct);
   const workCentersWithNumberValues = convertDecimalsToNumbers(workCenters);
 
+  // Add explicit type assertion with unknown as intermediate step
   return (
     <ProductDetailClientPage
       params={params}
-      product={productWithNumberValues as ProductWithNumberValues}
+      product={productWithNumberValues as unknown as ProductWithNumberValues}
       workCenters={workCentersWithNumberValues}
     />
   );
