@@ -1,11 +1,10 @@
 // src/types/admin/product.ts
-import { Decimal } from "@prisma/client/runtime/library";
 import { Status } from "@prisma/client";
 
 // Helper type for values that could be Decimal or number
-export type DecimalOrNumber = number | Decimal;
+export type DecimalOrNumber = number;
 
-// Base product type with Decimal values
+// Base product type with number values (not Decimal)
 export interface Product {
   id: string;
   name: string;
@@ -30,7 +29,9 @@ export interface Product {
   boms?: ExtendedBOM[];
 }
 
-// Helper function to convert any Decimal values to numbers
+/**
+ * A simpler version of convertDecimalsToNumbers that doesn't rely on Prisma's Decimal type
+ */
 export function convertDecimalsToNumbers<T>(obj: T): T {
   if (obj === null || obj === undefined) {
     return obj;
@@ -40,9 +41,9 @@ export function convertDecimalsToNumbers<T>(obj: T): T {
     return obj;
   }
 
-  // Handle Decimal objects
-  if (obj instanceof Decimal || (obj && typeof obj === 'object' && 'toNumber' in obj && typeof obj.toNumber === 'function')) {
-    return (obj as unknown as Decimal).toNumber() as unknown as T;
+  // Handle special case of objects with toNumber method (like Decimal)
+  if (obj && typeof obj === 'object' && 'toNumber' in obj && typeof (obj as any).toNumber === 'function') {
+    return Number((obj as any).toNumber()) as unknown as T;
   }
 
   if (Array.isArray(obj)) {
@@ -56,8 +57,8 @@ export function convertDecimalsToNumbers<T>(obj: T): T {
       result[key] = value;
     }
     else if (typeof value === 'object') {
-      if (value instanceof Decimal || (typeof value === 'object' && 'toNumber' in value && typeof value.toNumber === 'function')) {
-        result[key] = (value as unknown as Decimal).toNumber();
+      if (value && typeof value === 'object' && 'toNumber' in value && typeof (value as any).toNumber === 'function') {
+        result[key] = Number((value as any).toNumber());
       } else {
         result[key] = convertDecimalsToNumbers(value);
       }
@@ -125,6 +126,12 @@ export interface ProductWithNumberValues {
   };
   productionOrders?: ProductionOrderSummary[];
   boms?: ExtendedBOMWithNumberValues[];
+  // Add these properties to avoid type errors
+  expectedStock: number;
+  committedStock: number;
+  calculatedStock: number;
+  createdBy: string | null;
+  modifiedBy: string | null;
 }
 
 export interface ExtendedBOMWithNumberValues {

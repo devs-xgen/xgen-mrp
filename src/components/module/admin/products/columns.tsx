@@ -18,35 +18,10 @@ import { DeleteProductDialog } from "./delete-product-dialog";
 import Link from "next/link";
 import { CreateProductionDialog } from "./create-production-dialog";
 import {
-  ProductWithNumberValues,
-  convertDecimalsToNumbers,
-} from "@/types/admin/product";
-
-// Define a type for the rows in our data table
-interface ExtendedProductForTable {
-  id: string;
-  name: string;
-  sku: string;
-  sellingPrice: number; // Using number instead of Decimal
-  description?: string | null;
-  status: Status;
-  categoryId: string;
-  currentStock: number;
-  minimumStockLevel: number;
-  leadTime: number;
-  sizeRange: string[];
-  colorOptions: string[];
-  unitCost: number; // Using number instead of Decimal
-  createdAt: Date;
-  updatedAt: Date;
-  productionOrders?: Array<{
-    id: string;
-    status: string;
-    quantity: number;
-    dueDate: Date;
-  }>;
-  [key: string]: any; // Allow other properties
-}
+  ExtendedProductForTable,
+  adaptTableProductForAPI,
+  adaptTableProductForDetails,
+} from "@/lib/adapters/product-adapters";
 
 interface DataTableColumnProps {
   categories: ProductCategory[];
@@ -143,8 +118,8 @@ export const createColumns = ({
       const productionOrdersLength = product.productionOrders?.length || 0;
       const hasProductionOrders = productionOrdersLength > 0;
 
-      // Convert the product to ensure it has the correct type for CreateProductionDialog
-      const productWithNumberValues = product as ProductWithNumberValues;
+      // Convert the product to ProductWithNumberValues for CreateProductionDialog
+      const productForDialog = adaptTableProductForDetails(product);
 
       return (
         <div className="flex items-center gap-2">
@@ -155,7 +130,7 @@ export const createColumns = ({
             </Badge>
           ) : product.currentStock <= product.minimumStockLevel ? (
             <CreateProductionDialog
-              product={productWithNumberValues}
+              product={productForDialog}
               workCenters={workCenters}
             >
               <Button variant="outline" size="sm" className="h-8">
@@ -171,7 +146,10 @@ export const createColumns = ({
   {
     id: "actions",
     cell: ({ row }) => {
-      const product = row.original;
+      const tableProduct = row.original;
+
+      // Convert the table product back to a Prisma Product for the dialogs
+      const productForAPI = adaptTableProductForAPI(tableProduct);
 
       return (
         <DropdownMenu>
@@ -184,20 +162,20 @@ export const createColumns = ({
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem asChild>
-              <Link href={`/admin/products/${product.id}`}>
+              <Link href={`/admin/products/${tableProduct.id}`}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href={`/admin/production?productId=${product.id}`}>
+              <Link href={`/admin/production?productId=${tableProduct.id}`}>
                 <Factory className="mr-2 h-4 w-4" />
                 View Production
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <EditProductDialog
-              product={product}
+              product={productForAPI}
               categories={categories}
               onSuccess={onSuccess}
               trigger={
@@ -208,7 +186,7 @@ export const createColumns = ({
               }
             />
             <DeleteProductDialog
-              product={product}
+              product={productForAPI}
               onSuccess={onSuccess}
               trigger={
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>

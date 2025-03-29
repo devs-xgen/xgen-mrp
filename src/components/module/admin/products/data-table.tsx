@@ -31,22 +31,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { createColumns } from "./columns";
-import { Product as PrismaProduct, ProductCategory } from "@prisma/client";
-
-// Define the extended product type
-interface ExtendedProduct extends PrismaProduct {
-  productionOrders?: Array<{
-    id: string;
-    status: string;
-    quantity: number;
-    dueDate: Date;
-  }>;
-}
+import { ProductCategory } from "@prisma/client";
+import {
+  ExtendedProductForTable,
+  adaptProductForTable,
+} from "@/lib/adapters/product-adapters";
 
 interface DataTableProps {
-  data: ExtendedProduct[]; // Use the extended product type
+  data: any[]; // Using any to avoid Prisma dependencies
   categories: ProductCategory[];
-  workCenters: any[]; // Include work centers for production order creation
+  workCenters: any[];
   onSuccess?: () => Promise<void>;
 }
 
@@ -61,14 +55,20 @@ export function ProductDataTable({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
+  // Convert products to the table format using our adapter function
+  const adaptedData: ExtendedProductForTable[] = data.map((product) =>
+    adaptProductForTable(product)
+  );
+
+  // Now columns and data are using the same type - ExtendedProductForTable
   const columns = createColumns({
     categories,
-    workCenters, // Pass work centers to columns
+    workCenters,
     onSuccess,
   });
 
   const table = useReactTable({
-    data,
+    data: adaptedData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
