@@ -184,7 +184,7 @@ export function BOMTable({
           minimumStockLevel !== undefined &&
           currentStock < minimumStockLevel &&
           bomEntries.length > 0 && (
-            <Alert className="mb-4" variant="warning">
+            <Alert className="mb-4" variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Low Stock Warning</AlertTitle>
               <AlertDescription>

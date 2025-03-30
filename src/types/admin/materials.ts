@@ -33,10 +33,12 @@ export interface Material {
   supplier?: {
     id: string;
     name: string;
+    code?: string;
   };
   boms?: BOMEntry[];
+  purchaseOrderLines?: any[];
   
-  // Optional calculated fields for inventory management
+  // Additional stock-related fields for inventory management
   calculatedStock?: number;
   expectedStock?: number;
   committedStock?: number;
@@ -68,6 +70,11 @@ export interface MaterialCreateInput {
   leadTime: number;
   supplierId: string;
   notes?: string;
+  
+  // Optional stock tracking fields
+  expectedStock?: number;
+  committedStock?: number;
+  calculatedStock?: number;
 }
 
 // Input for updating materials
@@ -114,4 +121,25 @@ export interface MaterialAvailability {
   isAvailable: boolean;
   isBelowMinimum: boolean;
   shortfall: number;
+}
+
+// Material type and unit of measure interfaces
+export interface MaterialType {
+  id: string;
+  name: string;
+  description?: string | null;
+  status: Status;
+}
+
+export interface UnitOfMeasure {
+  id: string;
+  name: string;
+  symbol: string;
+  status: Status;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  code: string;
 }

@@ -114,9 +114,9 @@ export function MaterialSelector({
           aria-expanded={open}
           className={cn(
             "w-full justify-between",
-            disabled && "opacity-50 cursor-not-allowed"
+            disabled === true ? "opacity-50 cursor-not-allowed" : ""
           )}
-          disabled={disabled}
+          disabled={disabled === true}
         >
           {selectedMaterial ? (
             <div className="flex items-center text-left truncate">
@@ -159,7 +159,8 @@ export function MaterialSelector({
                       setOpen(false);
                     }}
                     disabled={
-                      requiredStock && material.currentStock < requiredStock
+                      requiredStock !== undefined &&
+                      material.currentStock < requiredStock
                     }
                     className={cn(
                       "flex flex-col items-start py-2",

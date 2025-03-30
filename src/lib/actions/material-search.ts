@@ -3,10 +3,11 @@
 
 import { prisma } from "@/lib/db"
 import { convertDecimalsToNumbers } from "@/types/admin/product";
+import { Status } from "@prisma/client";
 
 // Define the MaterialOption interface here instead of importing it
 // This prevents the circular dependency
-interface MaterialOption {
+export interface MaterialOption {
   id: string;
   name: string;
   sku: string;
@@ -27,26 +28,20 @@ interface MaterialOption {
 export async function searchMaterials(query: string = ""): Promise<MaterialOption[]> {
   try {
     const searchTerm = query.trim();
-    const whereClause = searchTerm
-      ? {
-          OR: [
-            { name: { contains: searchTerm, mode: 'insensitive' } },
-            { sku: { contains: searchTerm, mode: 'insensitive' } },
-          ],
-          status: 'ACTIVE',
-        }
-      : { status: 'ACTIVE' };
+    
+    // Fixed where clause using a simpler approach
+    let whereClause: any = { status: Status.ACTIVE };
+    
+    if (searchTerm) {
+      whereClause.OR = [
+        { name: { contains: searchTerm, mode: "insensitive" } },
+        { sku: { contains: searchTerm, mode: "insensitive" } },
+      ];
+    }
 
     const materials = await prisma.material.findMany({
       where: whereClause,
-      select: {
-        id: true,
-        name: true,
-        sku: true,
-        costPerUnit: true,
-        currentStock: true,
-        minimumStockLevel: true,
-        typeId: true,
+      include: {
         type: {
           select: {
             name: true,
@@ -109,7 +104,7 @@ export async function getMaterialUsage(materialId: string) {
             productionOrders: {
               where: {
                 status: {
-                  in: ['PENDING', 'IN_PROGRESS']
+                  in: [Status.PENDING, Status.IN_PROGRESS]
                 }
               },
               select: {
@@ -171,11 +166,7 @@ export async function checkMaterialAvailability(materialId: string, requiredQuan
   try {
     const material = await prisma.material.findUnique({
       where: { id: materialId },
-      select: {
-        id: true,
-        name: true,
-        currentStock: true,
-        minimumStockLevel: true,
+      include: {
         unitOfMeasure: {
           select: {
             symbol: true,
@@ -188,7 +179,7 @@ export async function checkMaterialAvailability(materialId: string, requiredQuan
                 productionOrders: {
                   where: {
                     status: {
-                      in: ['PENDING', 'IN_PROGRESS']
+                      in: [Status.PENDING, Status.IN_PROGRESS]
                     }
                   },
                   select: {
@@ -243,6 +234,3 @@ export async function checkMaterialAvailability(materialId: string, requiredQuan
     throw new Error('Failed to check material availability');
   }
 }
-
-// Export the MaterialOption interface for use in components
-export type { MaterialOption };
