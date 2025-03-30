@@ -106,7 +106,7 @@ interface Material {
   // Relations
   supplier?: { id: string; name: string };
   type?: { id: string; name: string };
-  unitOfMeasure?: { id: string; name: string; symbol: string };
+  unitOfMeasure?: { id: string; name: string; symbol?: string };
   boms?: any[];
   purchaseOrderLines?: any[];
 }
@@ -114,7 +114,7 @@ interface Material {
 interface EditMaterialDialogProps {
   material?: Material;
   materialTypes?: { id: string; name: string }[];
-  unitOfMeasures?: { id: string; name: string; symbol: string }[];
+  unitOfMeasures?: { id: string; name: string; symbol?: string }[];
   suppliers?: { id: string; name: string }[];
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -234,6 +234,11 @@ export function EditMaterialDialog({
       console.log("Material updated successfully");
       handleOpenChange(false);
       if (onSuccess) onSuccess();
+
+      toast({
+        title: "Success",
+        description: "Material updated successfully",
+      });
     } catch (error) {
       console.error("Error updating material:", error);
       toast({
@@ -260,6 +265,7 @@ export function EditMaterialDialog({
     form.watch("expectedStock"),
     form.watch("committedStock"),
     form,
+    effectiveStock,
   ]);
 
   // Debug dialog state
@@ -296,10 +302,10 @@ export function EditMaterialDialog({
               onSubmit={form.handleSubmit(onSubmit)}
               className="space-y-6 pt-4"
             >
-              {/* ... form content remains the same ... */}
+              {/* Basic Details Tab */}
               <TabsContent value="details" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  {/* Basic Information */}
+                  {/* Name */}
                   <FormField
                     control={form.control}
                     name="name"
@@ -314,8 +320,337 @@ export function EditMaterialDialog({
                     )}
                   />
 
-                  {/* ... rest of form fields ... */}
+                  {/* SKU */}
+                  <FormField
+                    control={form.control}
+                    name="sku"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>SKU</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Material Type */}
+                  <FormField
+                    control={form.control}
+                    name="typeId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Material Type</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select material type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {materialTypes.map((type) => (
+                              <SelectItem key={type.id} value={type.id}>
+                                {type.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Unit of Measure */}
+                  <FormField
+                    control={form.control}
+                    name="unitOfMeasureId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Unit of Measure</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select unit" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {unitOfMeasures.map((unit) => (
+                              <SelectItem key={unit.id} value={unit.id}>
+                                {unit.name} ({unit.symbol})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Cost Per Unit */}
+                  <FormField
+                    control={form.control}
+                    name="costPerUnit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cost Per Unit</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" min="0" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Supplier */}
+                  <FormField
+                    control={form.control}
+                    name="supplierId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Supplier</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select supplier" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {suppliers.map((supplier) => (
+                              <SelectItem key={supplier.id} value={supplier.id}>
+                                {supplier.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
+              </TabsContent>
+
+              {/* Inventory Tab */}
+              <TabsContent value="inventory" className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Current Stock */}
+                  <FormField
+                    control={form.control}
+                    name="currentStock"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Current Stock</FormLabel>
+                        <FormControl>
+                          <Input type="number" min="0" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Minimum Stock Level */}
+                  <FormField
+                    control={form.control}
+                    name="minimumStockLevel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Minimum Stock Level</FormLabel>
+                        <FormControl>
+                          <Input type="number" min="0" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Expected Stock */}
+                  <FormField
+                    control={form.control}
+                    name="expectedStock"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Expected Stock</FormLabel>
+                        <FormControl>
+                          <Input type="number" min="0" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Stock that is on order but not yet received
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Committed Stock */}
+                  <FormField
+                    control={form.control}
+                    name="committedStock"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Committed Stock</FormLabel>
+                        <FormControl>
+                          <Input type="number" min="0" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Stock already allocated to production orders
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Calculated Stock (Read-only) */}
+                  <FormField
+                    control={form.control}
+                    name="calculatedStock"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Calculated Stock</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            readOnly
+                            className="bg-muted"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Current + Expected - Committed
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Lead Time */}
+                  <FormField
+                    control={form.control}
+                    name="leadTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Lead Time (days)</FormLabel>
+                        <FormControl>
+                          <Input type="number" min="0" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </TabsContent>
+
+              {/* Metadata Tab */}
+              <TabsContent value="metadata" className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Status */}
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {Object.values(Status).map((status) => (
+                              <SelectItem key={status} value={status}>
+                                {status.charAt(0) +
+                                  status.slice(1).toLowerCase()}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Creation/Modification Info */}
+                  {material && material.createdAt && (
+                    <div className="col-span-2">
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm">
+                            Audit Information
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <p className="text-muted-foreground">Created</p>
+                              <p>
+                                {material.createdAt
+                                  ? formatDate(material.createdAt)
+                                  : "N/A"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">
+                                Created By
+                              </p>
+                              <p>{material.createdBy || "N/A"}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">
+                                Last Updated
+                              </p>
+                              <p>
+                                {material.updatedAt
+                                  ? formatDate(material.updatedAt)
+                                  : "N/A"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">
+                                Modified By
+                              </p>
+                              <p>{material.modifiedBy || "N/A"}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+                </div>
+
+                {/* Notes */}
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Additional notes about the material..."
+                          className="h-32 resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </TabsContent>
 
               <DialogFooter>

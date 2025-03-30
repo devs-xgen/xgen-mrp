@@ -30,7 +30,8 @@ import { deleteMaterial } from "@/lib/actions/materials";
 interface DataTableRowActionsProps {
   row: Row<Material>;
   materialTypes: { id: string; name: string }[];
-  unitOfMeasures: { id: string; name: string; symbol: string }[];
+  // Fix the type to match what's passed from DataTable
+  unitOfMeasures: { id: string; name: string; symbol?: string }[];
   suppliers: { id: string; name: string }[];
   onSuccess?: () => Promise<void>;
 }
@@ -79,7 +80,7 @@ export function DataTableRowActions({
       ? {
           id: unitOfMeasureInfo.id,
           name: unitOfMeasureInfo.name,
-          symbol: unitOfMeasureInfo.symbol,
+          symbol: unitOfMeasureInfo.symbol || "", // Handle optional symbol
         }
       : undefined,
   };

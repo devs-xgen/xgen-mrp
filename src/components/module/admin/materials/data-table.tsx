@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -20,9 +20,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { MaterialType, UnitOfMeasure } from "@prisma/client";
+import { DataTableRowActions } from "./data-table-row-actions";
+import { DataTableToolbar } from "./data-table-toolbar";
+import { DataTablePagination } from "./data-table-pagination";
 import { Material } from "@/types/admin/materials";
 
 interface DataTableProps {
@@ -31,6 +31,7 @@ interface DataTableProps {
   materialTypes: { id: string; name: string }[];
   unitOfMeasures: { id: string; name: string; symbol?: string }[];
   suppliers: { id: string; name: string }[];
+  onSuccess?: () => Promise<void>;
 }
 
 export function DataTable({
@@ -39,15 +40,34 @@ export function DataTable({
   materialTypes,
   unitOfMeasures,
   suppliers,
+  onSuccess,
 }: DataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState({});
 
-  // Initialize the table with proper data and columns
+  // Create a new array of columns with the actions column added
+  const columnsWithActions: ColumnDef<Material, any>[] = [
+    ...columns,
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <DataTableRowActions
+          row={row}
+          materialTypes={materialTypes}
+          unitOfMeasures={unitOfMeasures}
+          suppliers={suppliers}
+          onSuccess={onSuccess}
+        />
+      ),
+    },
+  ];
+
+  // Initialize the table with proper data and columns including actions
   const table = useReactTable({
     data,
-    columns,
+    columns: columnsWithActions,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
@@ -64,18 +84,8 @@ export function DataTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Filter materials..."
-            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn("name")?.setFilterValue(event.target.value)
-            }
-            className="max-w-sm"
-          />
-        </div>
-      </div>
+      {/* Enhanced toolbar with more robust filtering/view options */}
+      <DataTableToolbar table={table} />
 
       <div className="rounded-md border">
         <Table>
@@ -115,7 +125,7 @@ export function DataTable({
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={columns.length}
+                  colSpan={columnsWithActions.length}
                   className="h-24 text-center"
                 >
                   No materials found.
@@ -126,31 +136,8 @@ export function DataTable({
         </Table>
       </div>
 
-      {/* Pagination controls */}
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      {/* Enhanced pagination component */}
+      <DataTablePagination table={table} />
     </div>
   );
 }
