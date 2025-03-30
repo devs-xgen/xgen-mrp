@@ -1,16 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Edit, Trash, AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Material } from "@/types/admin/materials";
 import { Status } from "@prisma/client";
@@ -22,6 +13,8 @@ const formatCurrency = (amount: number) => {
     currency: "PHP",
   }).format(amount);
 };
+
+console.log("Defining columns for material table - without actions column");
 
 export const columns: ColumnDef<Material>[] = [
   {
@@ -52,7 +45,17 @@ export const columns: ColumnDef<Material>[] = [
   {
     accessorKey: "costPerUnit",
     header: "Cost / Unit",
-    cell: ({ row }) => formatCurrency(Number(row.getValue("costPerUnit"))),
+    cell: ({ row }) => {
+      console.log(
+        "Rendering costPerUnit cell for",
+        row.original.name,
+        "value:",
+        row.getValue("costPerUnit"),
+        "type:",
+        typeof row.getValue("costPerUnit")
+      );
+      return formatCurrency(Number(row.getValue("costPerUnit")));
+    },
   },
   {
     accessorKey: "currentStock",
@@ -87,33 +90,7 @@ export const columns: ColumnDef<Material>[] = [
       );
     },
   },
-  {
-    id: "actions",
-    cell: ({ row }) => {
-      const material = row.original;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
-              <Trash className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
-  },
+  // Removed the actions column since we're adding it in the DataTable component
 ];
+
+console.log("Columns defined:", columns.length, "columns");

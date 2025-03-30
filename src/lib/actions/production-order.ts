@@ -86,6 +86,7 @@ export async function getProductionOrder(id: string) {
   }
 }
 
+
 export async function createProductionOrder(data: CreateProductionOrderInput) {
   try {
     const session = await getServerSession(authOptions)
@@ -107,7 +108,8 @@ export async function createProductionOrder(data: CreateProductionOrderInput) {
             workCenterId: op.workCenterId,
             startTime: op.startTime,
             endTime: op.endTime,
-            status: Status.PENDING
+            status: Status.PENDING,
+            cost: op.cost || 0.00, // Add the required cost field with default value if not provided
           }))
         }
       },
@@ -223,44 +225,47 @@ export async function getAvailableWorkCenters() {
 
 
 
-// aksjbdfjhavsdjhlfvaklsvdfk;jasdf
+// Fixed addOperation function for src/lib/actions/production-order.ts
 export async function addOperation(
-    productionOrderId: string,
-    data: {
-      workCenterId: string
-      startTime: Date
-      endTime: Date
-      notes?: string
-    }
-  ) {
-    try {
-      const session = await getServerSession(authOptions)
-      if (!session?.user) throw new Error('Unauthorized')
-  
-      const operation = await prisma.operation.create({
-        data: {
-          workCenterId: data.workCenterId,
-          productionOrderId,
-          startTime: data.startTime,
-          endTime: data.endTime,
-          status: Status.PENDING,
-          notes: data.notes || null,
-          createdBy: session.user.id
-        },
-        include: {
-          workCenter: true
-        }
-      })
-  
-      revalidatePath(`/admin/production/${productionOrderId}`)
-      return operation
-    } catch (error) {
-      console.error('Error creating operation:', error)
-      throw error
-    }
+  productionOrderId: string,
+  data: {
+    workCenterId: string
+    startTime: Date
+    endTime: Date
+    cost: number // Add the missing required cost field
+    notes?: string
   }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) throw new Error('Unauthorized')
+
+    const operation = await prisma.operation.create({
+      data: {
+        workCenterId: data.workCenterId,
+        productionOrderId,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        cost: data.cost, // Include cost in the creation data
+        status: Status.PENDING,
+        notes: data.notes || null,
+        createdBy: session.user.id
+      },
+      include: {
+        workCenter: true
+      }
+    })
+
+    revalidatePath(`/admin/production/${productionOrderId}`)
+    return operation
+  } catch (error) {
+    console.error('Error creating operation:', error)
+    throw error
+  }
+}
+
   
-  // Update operation status
+
   export async function updateOperationStatus(
     operationId: string,
     status: Status

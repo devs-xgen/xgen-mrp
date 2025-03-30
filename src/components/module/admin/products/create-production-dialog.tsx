@@ -115,7 +115,8 @@ export function CreateProductionDialog({
       const startTime = new Date(values.startDate);
       const endTime = new Date(values.dueDate);
 
-      // Create basic operations - assuming there is at least one work center
+      // Create basic operations - adding the required cost field
+      // Default cost could be calculated based on work center hourly rate, duration, etc.
       const operations =
         workCenters.length > 0
           ? [
@@ -123,6 +124,7 @@ export function CreateProductionDialog({
                 workCenterId: workCenters[0].id,
                 startTime,
                 endTime,
+                cost: 0.0, // Add default cost value (update this with proper calculation if needed)
               },
             ]
           : [];

@@ -44,6 +44,7 @@ export interface ProductionOrder {
   }[]
 }
 
+
 export interface CreateProductionOrderInput {
   productId: string
   quantity: number
@@ -56,6 +57,7 @@ export interface CreateProductionOrderInput {
     workCenterId: string
     startTime: Date
     endTime: Date
+    cost: number
   }[]
 }
 
