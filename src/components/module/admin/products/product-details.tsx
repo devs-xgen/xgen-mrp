@@ -21,6 +21,11 @@ import {
 } from "@/components/ui/table";
 import { ProductWithNumberValues } from "@/types/admin/product";
 
+import { BOMTable } from "./bom/bom-table";
+import { adaptBOMEntryForDisplay } from "@/lib/adapters/bom-adapters";
+import { useState } from "react";
+import { getBOMForProduct } from "@/lib/actions/bom";
+
 interface ProductDetailsProps {
   product: ProductWithNumberValues;
 }
@@ -295,6 +300,32 @@ export function ProductDetails({ product }: ProductDetailsProps) {
                 </CardContent>
               </Card>
             </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="materials">
+        <Card>
+          <CardHeader>
+            <CardTitle>Bill of Materials (BOM)</CardTitle>
+            <CardDescription>
+              Materials required for product manufacturing
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Replace the static table with the interactive BOM table */}
+            <BOMTable
+              productId={product.id}
+              bomEntries={
+                product.boms?.map((bom) => adaptBOMEntryForDisplay(bom)) || []
+              }
+              onRefresh={async () => {
+                // Function to refresh BOM data
+                const freshBOM = await getBOMForProduct(product.id);
+                // You'll need to update the state here, which requires refactoring
+                // the component to handle BOM state
+              }}
+            />
           </CardContent>
         </Card>
       </TabsContent>
