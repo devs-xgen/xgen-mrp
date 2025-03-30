@@ -1,6 +1,7 @@
 // src/components/module/admin/products/product-details.tsx
 "use client";
 
+import { useState, useEffect } from "react";
 import { Status } from "@prisma/client";
 import {
   Card,
@@ -11,36 +12,55 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ProductWithNumberValues } from "@/types/admin/product";
-
-import { BOMTable } from "./bom/bom-table";
-import { adaptBOMEntryForDisplay } from "@/lib/adapters/bom-adapters";
-import { useState } from "react";
+import { BOMSection } from "./bom/BOMSection";
 import { getBOMForProduct } from "@/lib/actions/bom";
+import { useToast } from "@/hooks/use-toast";
+import { ProductBOM } from "@/types/admin/bom";
 
 interface ProductDetailsProps {
   product: ProductWithNumberValues;
 }
 
 export function ProductDetails({ product }: ProductDetailsProps) {
-  // Calculate total material cost - making sure to work with numbers
-  const totalMaterialCost =
-    product.boms?.reduce(
-      (acc, bom) => acc + bom.material.costPerUnit * bom.quantityNeeded,
-      0
-    ) || 0;
+  const [bomData, setBomData] = useState<ProductBOM | null>(null);
+  const [isLoadingBom, setIsLoadingBom] = useState(false);
+  const { toast } = useToast();
+
+  // Function to fetch updated BOM data
+  const fetchBOMData = async () => {
+    try {
+      setIsLoadingBom(true);
+      const data = await getBOMForProduct(product.id);
+      setBomData(data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load bill of materials",
+        variant: "destructive",
+      });
+      console.error("Error fetching BOM:", error);
+    } finally {
+      setIsLoadingBom(false);
+    }
+  };
+
+  // Initial load of BOM data
+  useEffect(() => {
+    fetchBOMData();
+  }, [product.id]);
 
   // Calculate profit margin
   const profitMargin =
     ((product.sellingPrice - product.unitCost) / product.sellingPrice) * 100;
+
+  // Use BOM data from state or fallback to product.boms for total calculation
+  const totalMaterialCost = bomData
+    ? bomData.totalMaterialCost
+    : product.boms?.reduce(
+        (acc, bom) => acc + bom.material.costPerUnit * bom.quantityNeeded,
+        0
+      ) || 0;
 
   return (
     <Tabs defaultValue="overview" className="w-full">
@@ -187,65 +207,8 @@ export function ProductDetails({ product }: ProductDetailsProps) {
       </TabsContent>
 
       <TabsContent value="materials">
-        <Card>
-          <CardHeader>
-            <CardTitle>Bill of Materials (BOM)</CardTitle>
-            <CardDescription>
-              Materials required for product manufacturing
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {product.boms && product.boms.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Material</TableHead>
-                    <TableHead className="text-right">
-                      Quantity Needed
-                    </TableHead>
-                    <TableHead className="text-right">Waste %</TableHead>
-                    <TableHead className="text-right">Cost per Unit</TableHead>
-                    <TableHead className="text-right">Total Cost</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {product.boms.map((bom) => (
-                    <TableRow key={bom.id}>
-                      <TableCell>{bom.material.name}</TableCell>
-                      <TableCell className="text-right">
-                        {bom.quantityNeeded.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {bom.wastePercentage.toFixed(2)}%
-                      </TableCell>
-                      <TableCell className="text-right">
-                        ${bom.material.costPerUnit.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        $
-                        {(
-                          bom.material.costPerUnit * bom.quantityNeeded
-                        ).toFixed(2)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-right font-medium">
-                      Total Material Cost
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ${totalMaterialCost.toFixed(2)}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-4 text-muted-foreground">
-                No bill of materials found for this product.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Integrated BOM Section with the new component */}
+        <BOMSection productId={product.id} productName={product.name} />
       </TabsContent>
 
       <TabsContent value="pricing">
@@ -268,6 +231,11 @@ export function ProductDetails({ product }: ProductDetailsProps) {
                       <span className="font-medium">Material Cost: </span>$
                       {totalMaterialCost.toFixed(2)}
                     </div>
+                    {bomData && (
+                      <div className="text-xs text-muted-foreground">
+                        Based on {bomData.entries.length} materials in BOM
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -300,32 +268,6 @@ export function ProductDetails({ product }: ProductDetailsProps) {
                 </CardContent>
               </Card>
             </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="materials">
-        <Card>
-          <CardHeader>
-            <CardTitle>Bill of Materials (BOM)</CardTitle>
-            <CardDescription>
-              Materials required for product manufacturing
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Replace the static table with the interactive BOM table */}
-            <BOMTable
-              productId={product.id}
-              bomEntries={
-                product.boms?.map((bom) => adaptBOMEntryForDisplay(bom)) || []
-              }
-              onRefresh={async () => {
-                // Function to refresh BOM data
-                const freshBOM = await getBOMForProduct(product.id);
-                // You'll need to update the state here, which requires refactoring
-                // the component to handle BOM state
-              }}
-            />
           </CardContent>
         </Card>
       </TabsContent>
