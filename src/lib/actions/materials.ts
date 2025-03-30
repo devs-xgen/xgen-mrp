@@ -7,44 +7,7 @@ import { authOptions } from "@/lib/auth" // Import authOptions instead
 import { revalidatePath } from "next/cache"
 import { Material, MaterialCreateInput, MaterialUpdateInput } from "@/types/admin/materials"
 import { Status } from "@prisma/client"
-
-// export async function getAllMaterials() {
-//   try {
-//     const materials = await prisma.material.findMany({
-//       where: {
-//         status: 'ACTIVE'
-//       },
-//       select: {
-//         id: true,
-//         name: true,
-//         sku: true,
-//         costPerUnit: true,
-//         currentStock: true,
-//         unitOfMeasure: {
-//           select: {
-//             symbol: true,
-//             name: true
-//           }
-//         }
-//       },
-//       orderBy: {
-//         name: 'asc'
-//       }
-//     })
-
-//     // Safely convert Decimal to number
-//     return materials.map(material => ({
-//       ...material,
-//       costPerUnit: typeof material.costPerUnit === 'object' && 'toNumber' in material.costPerUnit
-//         ? material.costPerUnit.toNumber()
-//         : Number(material.costPerUnit)
-//     }))
-//   } catch (error) {
-//     console.error('Error fetching all materials:', error);
-//     throw new Error('Failed to fetch materials')
-//   }
-// }
-
+import { convertDecimalsToNumbers } from "@/types/admin/product";
 
 export async function getAllMaterials() {
   try {
@@ -497,5 +460,106 @@ export async function getMaterialsWithRelations() {
   } catch (error) {
     console.error('Error fetching materials with relations:', error)
     throw new Error('Failed to fetch materials with relations')
+  }
+}
+
+
+
+
+
+export async function getMaterialById(id: string): Promise<Material | null> {
+  try {
+    const material = await prisma.material.findUnique({
+      where: { id },
+      include: {
+        type: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        unitOfMeasure: {
+          select: {
+            id: true,
+            name: true,
+            symbol: true,
+          },
+        },
+        supplier: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        boms: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    if (!material) {
+      return null;
+    }
+
+    // Convert any Decimal values to numbers
+    const convertedMaterial = convertDecimalsToNumbers(material);
+    
+    // Ensure all properties explicitly match the Material type
+    // This prevents any type errors
+    const result: Material = {
+      id: convertedMaterial.id,
+      name: convertedMaterial.name,
+      sku: convertedMaterial.sku,
+      typeId: convertedMaterial.typeId,
+      unitOfMeasureId: convertedMaterial.unitOfMeasureId,
+      costPerUnit: typeof convertedMaterial.costPerUnit === 'number' 
+        ? convertedMaterial.costPerUnit 
+        : Number(convertedMaterial.costPerUnit),
+      currentStock: convertedMaterial.currentStock,
+      minimumStockLevel: convertedMaterial.minimumStockLevel,
+      leadTime: convertedMaterial.leadTime,
+      supplierId: convertedMaterial.supplierId,
+      status: convertedMaterial.status,
+      notes: convertedMaterial.notes,
+      createdAt: convertedMaterial.createdAt,
+      updatedAt: convertedMaterial.updatedAt,
+      createdBy: convertedMaterial.createdBy,
+      modifiedBy: convertedMaterial.modifiedBy,
+      
+      // Relations
+      type: convertedMaterial.type,
+      unitOfMeasure: convertedMaterial.unitOfMeasure,
+      supplier: convertedMaterial.supplier,
+      boms: convertedMaterial.boms?.map(bom => ({
+        id: bom.id,
+        productId: bom.productId,
+        materialId: bom.materialId,
+        quantityNeeded: typeof bom.quantityNeeded === 'number' 
+          ? bom.quantityNeeded 
+          : Number(bom.quantityNeeded),
+        wastePercentage: typeof bom.wastePercentage === 'number' 
+          ? bom.wastePercentage 
+          : Number(bom.wastePercentage),
+        product: bom.product
+      })),
+      
+      // Optional properties
+      calculatedStock: convertedMaterial.calculatedStock,
+      expectedStock: convertedMaterial.expectedStock,
+      committedStock: convertedMaterial.committedStock
+    };
+
+    return result;
+  } catch (error) {
+    console.error('Error fetching material by ID:', error);
+    throw new Error('Failed to fetch material');
   }
 }

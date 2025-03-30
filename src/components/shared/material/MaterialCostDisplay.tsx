@@ -1,5 +1,4 @@
-"use client";
-
+// src/components/shared/material/MaterialCostDisplay.tsx
 import { cn } from "@/lib/utils";
 
 interface MaterialCostDisplayProps {

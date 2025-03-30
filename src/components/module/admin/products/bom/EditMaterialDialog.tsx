@@ -1,3 +1,4 @@
+// src/components/module/admin/products/bom/ditMaterialDialog.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -24,9 +25,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { updateBOMEntry } from "@/lib/actions/bom";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { BOMEntryForDisplay } from "@/types/admin/bom";
 import { Label } from "@/components/ui/label";
+import { MaterialCostDisplay } from "@/components/shared/material";
+import { checkMaterialAvailability } from "@/lib/actions/material-search";
+import { MaterialStatusBadge } from "@/components/shared/material";
 
 // Define the validation schema
 const formSchema = z.object({
@@ -60,6 +64,8 @@ export function EditMaterialDialog({
   onSuccess,
 }: EditMaterialDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [availabilityInfo, setAvailabilityInfo] = useState<any>(null);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
   const { toast } = useToast();
 
   // Initialize form with entry values
@@ -78,8 +84,43 @@ export function EditMaterialDialog({
         quantityNeeded: entry.quantityNeeded,
         wastePercentage: entry.wastePercentage,
       });
+      setAvailabilityInfo(null);
     }
   }, [entry, open, form]);
+
+  // When quantity changes, check availability
+  useEffect(() => {
+    const quantityNeeded = form.watch("quantityNeeded");
+    const wastePercentage = form.watch("wastePercentage");
+
+    if (open && quantityNeeded > 0) {
+      const checkAvailability = async () => {
+        setCheckingAvailability(true);
+        try {
+          // Calculate total needed including waste
+          const totalNeeded = quantityNeeded * (1 + wastePercentage / 100);
+          const info = await checkMaterialAvailability(
+            entry.materialId,
+            totalNeeded
+          );
+          setAvailabilityInfo(info);
+        } catch (error) {
+          console.error("Error checking availability:", error);
+        } finally {
+          setCheckingAvailability(false);
+        }
+      };
+
+      // Debounce the check
+      const timeout = setTimeout(checkAvailability, 500);
+      return () => clearTimeout(timeout);
+    }
+  }, [
+    form.watch("quantityNeeded"),
+    form.watch("wastePercentage"),
+    open,
+    entry.materialId,
+  ]);
 
   // Handle form submission
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -108,21 +149,25 @@ export function EditMaterialDialog({
     }
   };
 
-  // Format currency function
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "PHP",
-    }).format(amount);
+  // Calculate total quantity with waste
+  const calculateTotalWithWaste = () => {
+    const quantity = form.watch("quantityNeeded") || 0;
+    const waste = form.watch("wastePercentage") || 0;
+    return quantity * (1 + waste / 100);
   };
 
-  // Watch quantity to calculate estimated cost
-  const currentQuantity = form.watch("quantityNeeded");
-  const estimatedCost = entry.costPerUnit * currentQuantity;
+  // Get material stock status
+  const getStockStatus = (): "normal" | "low" | "out" => {
+    if (!availabilityInfo) return "normal";
+
+    if (availabilityInfo.availableStock <= 0) return "out";
+    if (!availabilityInfo.isAvailable) return "low";
+    return "normal";
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
           <DialogTitle>Edit Material: {entry.materialName}</DialogTitle>
         </DialogHeader>
@@ -131,11 +176,25 @@ export function EditMaterialDialog({
           <div className="space-y-1">
             <Label>Material</Label>
             <div className="rounded-md bg-muted p-3">
-              <div className="font-medium">{entry.materialName}</div>
-              <div className="mt-1 text-sm text-muted-foreground">
-                <p>SKU: {entry.materialSku}</p>
-                <p>Unit: {entry.unitOfMeasure}</p>
-                <p>Cost per Unit: {formatCurrency(entry.costPerUnit)}</p>
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="font-medium">{entry.materialName}</div>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    <p>SKU: {entry.materialSku}</p>
+                    <p>Unit: {entry.unitOfMeasure}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <MaterialCostDisplay cost={entry.costPerUnit} />
+                  {availabilityInfo && (
+                    <div className="mt-1">
+                      <MaterialStatusBadge
+                        stockStatus={getStockStatus()}
+                        size="sm"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -196,33 +255,68 @@ export function EditMaterialDialog({
               />
             </div>
 
-            {/* Show updated total cost */}
+            {/* Show updated total and cost */}
             <div className="rounded-md bg-muted/50 p-3 mt-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Updated Cost:</span>
+                <span className="text-sm font-medium">Total per Unit:</span>
                 <span className="font-bold">
-                  {formatCurrency(estimatedCost)}
+                  {calculateTotalWithWaste().toFixed(2)} {entry.unitOfMeasure}
                 </span>
               </div>
-              {entry.totalCost !== estimatedCost && (
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-sm font-medium">
+                  Material Cost per Unit:
+                </span>
+                <MaterialCostDisplay
+                  cost={entry.costPerUnit}
+                  quantity={calculateTotalWithWaste()}
+                  showPerUnit={false}
+                  bold
+                />
+              </div>
+              {entry.totalCost !==
+                entry.costPerUnit * calculateTotalWithWaste() && (
                 <div className="flex justify-between items-center mt-1 text-xs">
-                  <span className="text-muted-foreground">Previous:</span>
-                  <span
+                  <span className="text-muted-foreground">Previous Cost:</span>
+                  <MaterialCostDisplay
+                    cost={
+                      (entry.totalCost / entry.quantityNeeded) *
+                      (1 + entry.wastePercentage / 100)
+                    }
+                    quantity={1}
+                    size="xs"
                     className={
-                      estimatedCost > entry.totalCost
+                      entry.costPerUnit * calculateTotalWithWaste() >
+                      entry.totalCost
                         ? "text-red-500"
                         : "text-green-500"
                     }
-                  >
-                    {formatCurrency(entry.totalCost)} (
-                    {estimatedCost > entry.totalCost
-                      ? "+" + formatCurrency(estimatedCost - entry.totalCost)
-                      : "-" + formatCurrency(entry.totalCost - estimatedCost)}
-                    )
-                  </span>
+                  />
                 </div>
               )}
             </div>
+
+            {/* Material availability warning */}
+            {availabilityInfo && !availabilityInfo.isAvailable && (
+              <div className="rounded-md bg-amber-50 border border-amber-200 p-3">
+                <div className="flex gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-amber-800">
+                      Low Stock Warning
+                    </p>
+                    <p className="text-sm text-amber-700 mt-1">
+                      Current available stock (
+                      {availabilityInfo.availableStock.toFixed(2)}{" "}
+                      {availabilityInfo.unitSymbol}) is less than required
+                      amount ({availabilityInfo.requiredQuantity.toFixed(2)}{" "}
+                      {availabilityInfo.unitSymbol}). Please ensure sufficient
+                      material is available before production.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <DialogFooter>
               <Button

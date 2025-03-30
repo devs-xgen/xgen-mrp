@@ -1,17 +1,25 @@
+// src/components/module/admin/products/bom/EnhancedBOMSection.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { BOMTable } from "./BOMTable";
 import { getBOMForProduct } from "@/lib/actions/bom";
 import { ProductBOM } from "@/types/admin/bom";
 import { useToast } from "@/hooks/use-toast";
+import { BOMTable } from "./BOMTable";
 
 interface BOMSectionProps {
   productId: string;
   productName: string;
+  currentStock?: number;
+  minimumStockLevel?: number;
 }
 
-export function BOMSection({ productId, productName }: BOMSectionProps) {
+export function BOMSection({
+  productId,
+  productName,
+  currentStock,
+  minimumStockLevel,
+}: BOMSectionProps) {
   const [bom, setBom] = useState<ProductBOM | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -46,6 +54,8 @@ export function BOMSection({ productId, productName }: BOMSectionProps) {
         bom={bom}
         onRefresh={fetchBOMData}
         isLoading={loading}
+        currentStock={currentStock}
+        minimumStockLevel={minimumStockLevel}
       />
     </div>
   );

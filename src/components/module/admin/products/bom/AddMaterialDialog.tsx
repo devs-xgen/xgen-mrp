@@ -1,3 +1,4 @@
+// src/components/module/admin/products/bom/AddMaterialDialog.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -19,18 +20,16 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { createBOMEntry, getAvailableMaterials } from "@/lib/actions/bom";
-import { Loader2 } from "lucide-react";
+import { createBOMEntry } from "@/lib/actions/bom";
+import { Loader2, AlertTriangle } from "lucide-react";
+import { MaterialSelector, MaterialOption } from "@/components/shared/material";
+import { MaterialCostDisplay } from "@/components/shared/material";
+import { checkMaterialAvailability } from "@/lib/actions/material-search";
+import { Badge } from "@/components/ui/badge";
 
 // Define the validation schema
 const formSchema = z.object({
@@ -56,23 +55,14 @@ const formSchema = z.object({
     .max(100, "Waste percentage cannot exceed 100%"),
 });
 
-interface Material {
-  id: string;
-  name: string;
-  sku: string;
-  costPerUnit: number;
-  unitOfMeasure: {
-    symbol: string;
-    name: string;
-  };
-}
-
 interface AddMaterialDialogProps {
   productId: string;
   productName: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => Promise<void>;
+  preloadedMaterials?: MaterialOption[];
+  excludeMaterialIds?: string[];
 }
 
 export function AddMaterialDialog({
@@ -81,10 +71,14 @@ export function AddMaterialDialog({
   open,
   onOpenChange,
   onSuccess,
+  preloadedMaterials,
+  excludeMaterialIds = [],
 }: AddMaterialDialogProps) {
-  const [materials, setMaterials] = useState<Material[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(false);
+  const [selectedMaterial, setSelectedMaterial] =
+    useState<MaterialOption | null>(null);
+  const [availabilityInfo, setAvailabilityInfo] = useState<any>(null);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
   const { toast } = useToast();
 
   // Initialize form with default values
@@ -105,31 +99,41 @@ export function AddMaterialDialog({
         quantityNeeded: 1,
         wastePercentage: 0,
       });
+      setSelectedMaterial(null);
+      setAvailabilityInfo(null);
     }
   }, [open, form]);
 
-  // Fetch available materials when dialog opens
+  // When material or quantity changes, check availability
   useEffect(() => {
-    if (open) {
-      const fetchMaterials = async () => {
-        setIsFetching(true);
+    const materialId = form.watch("materialId");
+    const quantityNeeded = form.watch("quantityNeeded");
+    const wastePercentage = form.watch("wastePercentage");
+
+    if (materialId && quantityNeeded > 0) {
+      const checkAvailability = async () => {
+        setCheckingAvailability(true);
         try {
-          const materialsData = await getAvailableMaterials();
-          setMaterials(materialsData);
+          // Calculate total needed including waste
+          const totalNeeded = quantityNeeded * (1 + wastePercentage / 100);
+          const info = await checkMaterialAvailability(materialId, totalNeeded);
+          setAvailabilityInfo(info);
         } catch (error) {
-          toast({
-            title: "Error",
-            description: "Failed to fetch available materials",
-            variant: "destructive",
-          });
+          console.error("Error checking availability:", error);
         } finally {
-          setIsFetching(false);
+          setCheckingAvailability(false);
         }
       };
 
-      fetchMaterials();
+      // Debounce the check
+      const timeout = setTimeout(checkAvailability, 500);
+      return () => clearTimeout(timeout);
     }
-  }, [open, toast]);
+  }, [
+    form.watch("materialId"),
+    form.watch("quantityNeeded"),
+    form.watch("wastePercentage"),
+  ]);
 
   // Handle form submission
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -159,21 +163,27 @@ export function AddMaterialDialog({
     }
   };
 
-  // Format currency function
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "PHP",
-    }).format(amount);
+  // Handle material selection
+  const handleMaterialChange = (
+    materialId: string,
+    material?: MaterialOption
+  ) => {
+    form.setValue("materialId", materialId);
+    if (material) {
+      setSelectedMaterial(material);
+    }
   };
 
-  // Get selected material details
-  const selectedMaterialId = form.watch("materialId");
-  const selectedMaterial = materials.find((m) => m.id === selectedMaterialId);
+  // Calculate total with waste
+  const calculateTotalWithWaste = () => {
+    const quantity = form.watch("quantityNeeded") || 0;
+    const waste = form.watch("wastePercentage") || 0;
+    return quantity * (1 + waste / 100);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
           <DialogTitle>Add Material to {productName}</DialogTitle>
         </DialogHeader>
@@ -186,45 +196,14 @@ export function AddMaterialDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Material</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    disabled={isFetching}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            isFetching
-                              ? "Loading materials..."
-                              : "Select a material"
-                          }
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {materials.length === 0 && !isFetching ? (
-                        <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                          No materials available
-                        </div>
-                      ) : (
-                        materials.map((material) => (
-                          <SelectItem key={material.id} value={material.id}>
-                            <div className="flex flex-col">
-                              <span className="font-medium">
-                                {material.name}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                SKU: {material.sku} | Unit:{" "}
-                                {material.unitOfMeasure.symbol} | Cost:{" "}
-                                {formatCurrency(material.costPerUnit)}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <MaterialSelector
+                    value={field.value}
+                    onValueChange={handleMaterialChange}
+                    placeholder="Select a material"
+                    preloadedMaterials={preloadedMaterials}
+                    excludeMaterialIds={excludeMaterialIds}
+                    showStockWarnings={true}
+                  />
                   <FormMessage />
                 </FormItem>
               )}
@@ -232,15 +211,27 @@ export function AddMaterialDialog({
 
             {selectedMaterial && (
               <div className="rounded-md bg-muted p-3 text-sm">
-                <div className="font-medium">{selectedMaterial.name}</div>
-                <div className="mt-1 text-muted-foreground">
+                <div className="flex justify-between items-center">
                   <div>
-                    Unit: {selectedMaterial.unitOfMeasure.name} (
-                    {selectedMaterial.unitOfMeasure.symbol})
+                    <div className="font-medium">{selectedMaterial.name}</div>
+                    <div className="mt-1 text-muted-foreground">
+                      <div>
+                        Unit: {selectedMaterial.unitOfMeasureName} (
+                        {selectedMaterial.unitOfMeasureSymbol})
+                      </div>
+                      <div>Type: {selectedMaterial.typeName}</div>
+                    </div>
                   </div>
-                  <div>
-                    Cost per Unit:{" "}
-                    {formatCurrency(selectedMaterial.costPerUnit)}
+                  <div className="text-right">
+                    <div className="font-medium">
+                      <MaterialCostDisplay
+                        cost={selectedMaterial.costPerUnit}
+                      />
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Stock: {selectedMaterial.currentStock}{" "}
+                      {selectedMaterial.unitOfMeasureSymbol}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -264,6 +255,9 @@ export function AddMaterialDialog({
                         }
                       />
                     </FormControl>
+                    <FormDescription>
+                      Amount needed per unit of product
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -287,6 +281,9 @@ export function AddMaterialDialog({
                         }
                       />
                     </FormControl>
+                    <FormDescription>
+                      Additional material for scrap/waste
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -297,13 +294,44 @@ export function AddMaterialDialog({
             {selectedMaterial && form.watch("quantityNeeded") > 0 && (
               <div className="rounded-md bg-muted/50 p-3 mt-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Estimated Cost:</span>
+                  <span className="text-sm font-medium">Total per Unit:</span>
                   <span className="font-bold">
-                    {formatCurrency(
-                      selectedMaterial.costPerUnit *
-                        form.watch("quantityNeeded")
-                    )}
+                    {calculateTotalWithWaste().toFixed(2)}{" "}
+                    {selectedMaterial.unitOfMeasureSymbol}
                   </span>
+                </div>
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-sm font-medium">
+                    Material Cost per Unit:
+                  </span>
+                  <MaterialCostDisplay
+                    cost={selectedMaterial.costPerUnit}
+                    quantity={calculateTotalWithWaste()}
+                    showPerUnit={false}
+                    bold
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Material availability warning */}
+            {availabilityInfo && !availabilityInfo.isAvailable && (
+              <div className="rounded-md bg-amber-50 border border-amber-200 p-3">
+                <div className="flex gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-amber-800">
+                      Low Stock Warning
+                    </p>
+                    <p className="text-sm text-amber-700 mt-1">
+                      Current available stock (
+                      {availabilityInfo.availableStock.toFixed(2)}{" "}
+                      {availabilityInfo.unitSymbol}) is less than required
+                      amount ({availabilityInfo.requiredQuantity.toFixed(2)}{" "}
+                      {availabilityInfo.unitSymbol}). Please ensure sufficient
+                      material is available before production.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -317,7 +345,7 @@ export function AddMaterialDialog({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading || isFetching}>
+              <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Add Material
               </Button>

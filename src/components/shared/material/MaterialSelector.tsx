@@ -1,5 +1,4 @@
-"use client";
-
+// src/components/shared/material/MaterialSelector.tsx
 import { useState, useEffect } from "react";
 import { Check, ChevronsUpDown, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,18 +18,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { MaterialStatusBadge } from "./MaterialStatusBadge";
 import { MaterialCostDisplay } from "./MaterialCostDisplay";
-import { searchMaterials } from "@/lib/actions/material";
+import {
+  searchMaterials,
+  type MaterialOption,
+} from "@/lib/actions/material-search";
 import { Skeleton } from "@/components/ui/skeleton";
-
-export interface MaterialOption {
-  id: string;
-  name: string;
-  sku: string;
-  costPerUnit: number;
-  currentStock: number;
-  minimumStockLevel: number;
-  unitOfMeasureSymbol: string;
-}
 
 interface MaterialSelectorProps {
   value: string;
@@ -83,7 +75,7 @@ export function MaterialSelector({
     // Debounced search
     const handler = setTimeout(fetchMaterials, 300);
     return () => clearTimeout(handler);
-  }, [searchQuery, open, preloadedMaterials]);
+  }, [searchQuery, open, preloadedMaterials, materials.length]);
 
   // Filter out excluded materials and apply search filter
   const filteredMaterials = (preloadedMaterials || materials).filter(
@@ -133,7 +125,7 @@ export function MaterialSelector({
                 ({selectedMaterial.sku})
               </span>
               {showStockWarnings && !hasEnoughStock(selectedMaterial) && (
-                <AlertTriangle className="ml-auto h-4 w-4 text-warning" />
+                <AlertTriangle className="ml-auto h-4 w-4 text-amber-500" />
               )}
             </div>
           ) : (
@@ -188,6 +180,7 @@ export function MaterialSelector({
                       </div>
                       <MaterialStatusBadge
                         stockStatus={getStockStatus(material)}
+                        size="sm"
                       />
                     </div>
                     <div className="ml-6 flex w-full justify-between text-xs text-muted-foreground mt-1">
@@ -204,7 +197,7 @@ export function MaterialSelector({
                     {showStockWarnings &&
                       requiredStock &&
                       material.currentStock < requiredStock && (
-                        <div className="ml-6 mt-1 text-xs text-warning flex items-center">
+                        <div className="ml-6 mt-1 text-xs text-amber-600 flex items-center">
                           <AlertTriangle className="h-3 w-3 mr-1" />
                           <span>
                             Insufficient stock ({material.currentStock}/
@@ -222,3 +215,6 @@ export function MaterialSelector({
     </Popover>
   );
 }
+
+// Re-export the MaterialOption type for convenience
+export type { MaterialOption };

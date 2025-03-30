@@ -1,5 +1,4 @@
-"use client";
-
+// src/components/shared/material/MaterialStatusBadge.tsx
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, AlertTriangle } from "lucide-react";
 

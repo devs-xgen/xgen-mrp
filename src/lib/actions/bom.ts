@@ -215,42 +215,108 @@ export async function deleteBOMEntry(id: string) {
   }
 }
 
-/**
- * Fetches available materials that can be added to a product's BOM
- * 
- * @returns Array of materials with their details
- */
 export async function getAvailableMaterials() {
   try {
     const materials = await prisma.material.findMany({
       where: {
         status: 'ACTIVE'
       },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        costPerUnit: true,
+        currentStock: true,
+        minimumStockLevel: true,
+        typeId: true,
+        type: {
+          select: {
+            name: true,
+          },
+        },
         unitOfMeasure: {
           select: {
             name: true,
-            symbol: true
-          }
-        }
+            symbol: true,
+          },
+        },
       },
-      orderBy: {
-        name: 'asc'
-      }
-    })
+      orderBy: [
+        { name: 'asc' },
+      ],
+    });
     
-    // Convert any Decimal values to numbers
+    // Convert Decimal values to numbers and apply any other transformations
     return materials.map(material => ({
       ...material,
-      costPerUnit: material.costPerUnit instanceof Decimal ? 
-        material.costPerUnit.toNumber() : 
-        Number(material.costPerUnit)
-    }))
+      costPerUnit: typeof material.costPerUnit === 'object' && 'toNumber' in material.costPerUnit
+        ? material.costPerUnit.toNumber()
+        : Number(material.costPerUnit)
+    }));
   } catch (error) {
-    console.error('Error fetching available materials:', error)
-    throw new Error('Failed to fetch available materials')
+    console.error('Error fetching available materials:', error);
+    throw new Error('Failed to fetch available materials');
   }
 }
+
+
+export async function checkMaterialUsage(productId: string, materialId: string) {
+  try {
+    const bomEntry = await prisma.bOM.findFirst({
+      where: {
+        productId,
+        materialId
+      }
+    });
+    
+    return !!bomEntry;
+  } catch (error) {
+    console.error('Error checking material usage:', error);
+    throw new Error('Failed to check material usage');
+  }
+}
+
+/**
+ * Get all products that use a specific material
+ * @param materialId The material ID
+ * @returns Array of products using this material
+ */
+export async function getProductsUsingMaterial(materialId: string) {
+  try {
+    const boms = await prisma.bOM.findMany({
+      where: {
+        materialId
+      },
+      include: {
+        product: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            currentStock: true,
+            minimumStockLevel: true
+          }
+        }
+      }
+    });
+    
+    return boms.map(bom => ({
+      id: bom.id,
+      productId: bom.productId,
+      quantityNeeded: typeof bom.quantityNeeded === 'object' && 'toNumber' in bom.quantityNeeded
+        ? bom.quantityNeeded.toNumber()
+        : Number(bom.quantityNeeded),
+      wastePercentage: typeof bom.wastePercentage === 'object' && 'toNumber' in bom.wastePercentage
+        ? bom.wastePercentage.toNumber()
+        : Number(bom.wastePercentage),
+      product: bom.product
+    }));
+  } catch (error) {
+    console.error('Error getting products using material:', error);
+    throw new Error('Failed to get products using material');
+  }
+}
+
 
 /**
  * Gets materials that match a search query
