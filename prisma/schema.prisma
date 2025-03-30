@@ -132,6 +132,7 @@ model Material {
   costPerUnit        Decimal             @db.Decimal(10, 2)
   currentStock       Int
   minimumStockLevel  Int
+  committedStock     Int                 @default(0)
   leadTime           Int
   supplierId         String
   status             Status              @default(ACTIVE)
