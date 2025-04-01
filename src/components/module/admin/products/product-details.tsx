@@ -17,6 +17,7 @@ import { BOMSection } from "./bom/BOMSection";
 import { getBOMForProduct } from "@/lib/actions/bom";
 import { useToast } from "@/hooks/use-toast";
 import { ProductBOM } from "@/types/admin/bom";
+import { CURRENCY_SYMBOLS, CURRENCY_FORMATS } from "@/lib/constant";
 
 interface ProductDetailsProps {
   product: ProductWithNumberValues;
@@ -61,6 +62,13 @@ export function ProductDetails({ product }: ProductDetailsProps) {
         (acc, bom) => acc + bom.material.costPerUnit * bom.quantityNeeded,
         0
       ) || 0;
+
+      const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('en-PH', {
+          style: 'currency',
+          currency: 'PHP',
+        }).format(amount);
+      };
 
   return (
     <Tabs defaultValue="overview" className="w-full">
@@ -212,65 +220,65 @@ export function ProductDetails({ product }: ProductDetailsProps) {
       </TabsContent>
 
       <TabsContent value="pricing">
-        <Card>
+  <Card>
+    <CardHeader>
+      <CardTitle>Pricing Information</CardTitle>
+      <CardDescription>Cost, price, and margin details</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-medium mb-2">Cost Breakdown</h4>
+            <div className="space-y-2">
+              <div>
+                <span className="font-medium">Unit Cost: </span>
+                {formatCurrency(product.unitCost)}
+              </div>
+              <div>
+                <span className="font-medium">Material Cost: </span>
+                {formatCurrency(totalMaterialCost)}
+              </div>
+              {bomData && (
+                <div className="text-xs text-muted-foreground">
+                  Based on {bomData.entries.length} materials in BOM
+                </div>
+              )}
+            </div>
+          </div>
+          <div>
+            <h4 className="font-medium mb-2">Selling Information</h4>
+            <div className="space-y-2">
+              <div>
+                <span className="font-medium">Selling Price: </span>
+                {formatCurrency(product.sellingPrice)}
+              </div>
+              <div>
+                <span className="font-medium">Profit Margin: </span>
+                {profitMargin.toFixed(2)}%
+              </div>
+            </div>
+          </div>
+        </div>
+        <Card className="bg-muted">
           <CardHeader>
-            <CardTitle>Pricing Information</CardTitle>
-            <CardDescription>Cost, price, and margin details</CardDescription>
+            <CardTitle className="text-sm font-medium">
+              Profit Analysis
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium mb-2">Cost Breakdown</h4>
-                  <div className="space-y-2">
-                    <div>
-                      <span className="font-medium">Unit Cost: </span>$
-                      {product.unitCost.toFixed(2)}
-                    </div>
-                    <div>
-                      <span className="font-medium">Material Cost: </span>$
-                      {totalMaterialCost.toFixed(2)}
-                    </div>
-                    {bomData && (
-                      <div className="text-xs text-muted-foreground">
-                        Based on {bomData.entries.length} materials in BOM
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-2">Selling Information</h4>
-                  <div className="space-y-2">
-                    <div>
-                      <span className="font-medium">Selling Price: </span>$
-                      {product.sellingPrice.toFixed(2)}
-                    </div>
-                    <div>
-                      <span className="font-medium">Profit Margin: </span>
-                      {profitMargin.toFixed(2)}%
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <Card className="bg-muted">
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium">
-                    Profit Analysis
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    ${(product.sellingPrice - product.unitCost).toFixed(2)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Profit per unit
-                  </p>
-                </CardContent>
-              </Card>
+            <div className="text-2xl font-bold">
+              {formatCurrency(product.sellingPrice - product.unitCost)}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Profit per unit
+            </p>
           </CardContent>
         </Card>
-      </TabsContent>
+      </div>
+    </CardContent>
+  </Card>
+</TabsContent>
     </Tabs>
   );
 }
