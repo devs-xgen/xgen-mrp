@@ -45,7 +45,7 @@ async function createLowStockAlert({
   }
 }
 
-export async function getMaterials(): Promise<Material[]> {
+export async function getAllMaterials(): Promise<Material[]> {
   try {
     const materials = await prisma.material.findMany({
       include: {

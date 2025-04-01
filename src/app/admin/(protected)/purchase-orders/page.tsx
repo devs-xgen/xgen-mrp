@@ -43,7 +43,7 @@ export default async function PurchaseOrdersPage({ searchParams }: PageProps) {
           </p>
         </div>
         <CreatePurchaseOrderDialog
-          materials={materials}
+          materials={materials as any}
           suppliers={suppliers}
         />
       </div>

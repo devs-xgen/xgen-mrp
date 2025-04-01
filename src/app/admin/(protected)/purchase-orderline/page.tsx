@@ -98,7 +98,7 @@ export default async function PurchaseOrderLinesPage({
           <CardContent>
             <PurchaseOrderLineDataTable
               data={purchaseOrderLines}
-              materials={materials}
+              materials={materials as any}
               purchaseOrders={purchaseOrders}
               selectedPoId={poId}
               onSuccess={refreshData}
