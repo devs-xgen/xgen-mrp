@@ -1,7 +1,7 @@
 // src/app/admin/(protected)/materials/page.tsx
 import { Metadata } from "next";
 import {
-  getMaterials,
+  getAllMaterials,
   getMaterialTypes,
   getUnitOfMeasures,
   getSuppliers,
@@ -44,7 +44,7 @@ export default async function MaterialsPage() {
   // Fetch required data for materials management
   try {
     // Load data with error handling for each resource
-    const materials = await getMaterials();
+    const materials = await getAllMaterials();
     const materialTypes = await getMaterialTypes();
     const unitOfMeasures = await getUnitOfMeasures();
     const suppliers = await getSuppliers();

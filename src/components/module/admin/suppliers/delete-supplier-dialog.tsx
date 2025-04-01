@@ -17,6 +17,7 @@ import { Supplier } from "@prisma/client"
 
 interface DeleteSupplierDialogProps {
     supplier: Supplier
+    open: boolean
     trigger: React.ReactNode
     onSuccess?: () => void
 }

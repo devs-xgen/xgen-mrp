@@ -17,6 +17,7 @@ import { CreateSupplierDialog } from '@/components/module/admin/suppliers/create
 import { EditSupplierDialog } from '@/components/module/admin/suppliers/edit-supplier-dialog'
 import { DeleteSupplierDialog } from '@/components/module/admin/suppliers/delete-supplier-dialog'
 import { useToast } from "@/hooks/use-toast"
+import { Button } from '@/components/ui/button'
 
 export default function SupplierPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -75,12 +76,13 @@ export default function SupplierPage() {
             </div>
             {/* Replace Button with CreateSupplierDialog */}
             <CreateSupplierDialog
-              onSuccess={() => {
+              onSuccess={async () => {
                 fetchSuppliers()
                 toast({
                   title: "Success",
                   description: "Supplier created successfully."
                 })
+                return
               }}
             />
           </div>
@@ -101,7 +103,7 @@ export default function SupplierPage() {
         <>
           <EditSupplierDialog
             open={isEditDialogOpen}
-            onOpenChange={setIsEditDialogOpen}
+            trigger={<Button onClick={() => setIsEditDialogOpen(true)}>Edit</Button>}
             supplier={selectedSupplier}
             onSuccess={() => {
               setIsEditDialogOpen(false)
@@ -115,7 +117,7 @@ export default function SupplierPage() {
           />
           <DeleteSupplierDialog
             open={isDeleteDialogOpen}
-            onOpenChange={setIsDeleteDialogOpen}
+            trigger={<Button onClick={() => setIsDeleteDialogOpen(true)}>Edit</Button>}
             supplier={selectedSupplier}
             onSuccess={() => {
               setIsDeleteDialogOpen(false)

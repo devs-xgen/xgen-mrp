@@ -34,9 +34,13 @@ import { Supplier } from "@prisma/client"
 import { Loader2 } from "lucide-react"
 
 interface DataTableProps {
-    data: Supplier[]  // Only passing data (suppliers) as prop
+    columns: any[] // Add the correct type here
+    data: Supplier[]
+    onEdit: (supplier: Supplier) => void
+    onDelete: (supplier: Supplier) => void
+    onStatusChange: (supplierId: string, newStatus: string) => Promise<void>
     onSuccess?: () => Promise<void>
-    isLoading?: boolean  // Add isLoading prop
+    isLoading?: boolean
 }
 
 export function SupplierDataTable({ data, onSuccess, isLoading }: DataTableProps) {

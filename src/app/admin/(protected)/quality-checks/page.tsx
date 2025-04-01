@@ -28,7 +28,7 @@ export default async function QualityChecksPage() {
     productName: check.productionOrder.product.name,
     productSku: check.productionOrder.product.sku,
     status: check.status,
-    inspector: "Admin", // This would normally come from user data
+    inspectorName: "Admin", // This would normally come from user data
     defectsFound: check.defectsFound,
     actionTaken: check.actionTaken,
   }));

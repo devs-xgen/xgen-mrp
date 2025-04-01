@@ -42,6 +42,7 @@ interface FormData {
 
 interface EditSupplierDialogProps {
     supplier: Supplier
+    open: boolean
     trigger: React.ReactNode
     onSuccess?: () => void
 }
