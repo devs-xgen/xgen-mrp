@@ -166,3 +166,50 @@ export async function addPurchaseOrderLine(data: {
     throw new Error("Failed to add PurchaseOrderLine.")
   }
 }
+
+// Add to src/lib/actions/purchaseorderline.ts
+export async function updatePurchaseOrderline(
+  id: string, 
+  data: {
+    quantity: number;
+    unitPrice: number;
+    status: Status;
+    notes?: string;
+  }
+) {
+  try {
+    // First get the order line to know which PO to update later
+    const orderLine = await prisma.purchaseOrderLine.findUnique({
+      where: { id },
+      select: { poId: true }
+    });
+    
+    if (!orderLine) {
+      throw new Error("Order line not found");
+    }
+    
+    // Update the order line
+    const updated = await prisma.purchaseOrderLine.update({
+      where: { id },
+      data: {
+        quantity: data.quantity,
+        unitPrice: data.unitPrice,
+        status: data.status,
+        notes: data.notes,
+        updatedAt: new Date()
+      },
+    });
+    
+    // Update the total amount of the parent purchase order
+    await updatePurchaseOrderTotal(orderLine.poId);
+    
+    // Revalidate paths
+    revalidatePath('/admin/purchase-orderline');
+    revalidatePath('/admin/purchase-orders');
+    
+    return updated;
+  } catch (error) {
+    console.error("Error updating PurchaseOrderLine:", error);
+    throw new Error("Failed to update PurchaseOrderLine.");
+  }
+}
