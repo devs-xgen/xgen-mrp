@@ -41,6 +41,7 @@ export async function POST(req: Request) {
             data: {
                 ...body,
                 createdBy: session.user.id,
+                cost: 0,
             },
             include: {
                 workCenter: true,
