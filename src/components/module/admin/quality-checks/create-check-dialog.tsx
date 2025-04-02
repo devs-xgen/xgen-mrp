@@ -42,15 +42,25 @@ import { createQualityCheck } from "@/lib/actions/quality-checks";
 
 // Define the form schema
 const formSchema = z.object({
-  productionOrderId: z.string({
-    required_error: "Please select a production order",
-  }),
-  checkDate: z.date({
-    required_error: "Check date is required",
-  }),
+  productionOrderId: z.string(),
+  inspectorId: z.string(), // Add this line
+  checkDate: z.date(),
+  notes: z.string().optional(),
   defectsFound: z.string().optional(),
   actionTaken: z.string().optional(),
-  notes: z.string().optional(),
+});
+
+// Update your form default values to include inspectorId
+const form = useForm<z.infer<typeof formSchema>>({
+  resolver: zodResolver(formSchema),
+  defaultValues: {
+    productionOrderId: "",
+    inspectorId: "", // Add a default value, or get it from current user
+    checkDate: new Date(),
+    notes: "",
+    defectsFound: "",
+    actionTaken: "",
+  },
 });
 
 interface ProductionOrder {

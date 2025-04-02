@@ -209,3 +209,64 @@ export async function toggleInspectorStatus(id: string, isActive: boolean) {
     throw error;
   }
 }
+
+export async function createDepartment({ name, description }: { name: string; description?: string }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error('Unauthorized');
+    
+    // Get existing departments
+    const existingDepartments = await getDepartments();
+    
+    // Check if department already exists
+    if (existingDepartments.includes(name)) {
+      throw new Error("Department already exists");
+    }
+    
+    // Since you don't have a departments table, we'll create a "system" inspector
+    // that represents this department for tracking purposes
+    await prisma.inspector.create({
+      data: {
+        firstName: "DEPT",
+        lastName: name,
+        email: `dept.${name.toLowerCase().replace(/\s+/g, '.')}@system.internal`,
+        department: name,
+        notes: description || null,
+        isActive: false, // So it doesn't show up in normal inspector lists
+        createdBy: session.user.id,
+      }
+    });
+    
+    revalidatePath('/admin/inspectors');
+    return { name, description };
+  } catch (error) {
+    console.error('Error creating department:', error);
+    throw error;
+  }
+}
+
+export async function createInspectorType({ name, description }: { name: string; description?: string }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error('Unauthorized');
+    
+    await prisma.inspector.create({
+      data: {
+        firstName: "TYPE",
+        lastName: name,
+        email: `type.${name.toLowerCase().replace(/\s+/g, '.')}@system.internal`,
+        specialization: name,
+        notes: description || null,
+        isActive: false,
+        createdBy: session.user.id,
+      }
+    });
+    
+    
+    revalidatePath('/admin/inspector-types');
+    return { name, description };
+  } catch (error) {
+    console.error('Error creating inspector type:', error);
+    throw error;
+  }
+}

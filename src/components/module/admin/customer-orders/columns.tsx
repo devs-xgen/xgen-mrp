@@ -86,11 +86,11 @@ export const columns: ColumnDef<CustomerOrder>[] = [
       return <div className="font-medium">{formatted}</div>
     },
   },
-  {
-    accessorKey: "unitPrice",
-    header: "Unit Price",
-    cell: ({ row }) => <span>{formatCurrency(row.original.unitPrice)}</span>
-  },
+  // {
+  //   accessorKey: "unitPrice",
+  //   header: "Unit Price",
+  //   cell: ({ row }) => <span>{formatCurrency(row.original.unitPrice)}</span>
+  // },
   {
     accessorKey: "status",
     header: ({ column }) => (

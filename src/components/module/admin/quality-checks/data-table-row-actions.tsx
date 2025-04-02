@@ -56,14 +56,20 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const handleComplete = async () => {
     try {
       setIsUpdating(true);
-      await updateQualityCheck({
-        id: row.original.id,
-        status: "COMPLETED",
-      });
+      
+      await updateQualityCheck(
+        row.original.id,       // id (first parameter)
+        "COMPLETED",           // newStatus (second parameter)
+        {
+          id: row.original.id  
+        }                      
+      );
+      
       toast({
         title: "Quality Check Completed",
         description: "The quality check has been marked as completed.",
       });
+      router.refresh(); // Add this to refresh the UI after update
     } catch (error) {
       toast({
         title: "Error",

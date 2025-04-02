@@ -31,13 +31,26 @@ export async function generateMetadata({
 export default async function ProductionOrderPage({
   params,
 }: ProductionOrderPageProps) {
-  // Fetch both order and work centers in parallel
-  const [order, workCenters] = await Promise.all([
+  const [orderData, workCenters] = await Promise.all([
     getProductionOrder(params.id),
     getAvailableWorkCenters(),
   ]);
 
-  if (!order) notFound();
+  if (!orderData) notFound();
+
+  // Transform the qualityChecks to match the expected format
+  const order = {
+    ...orderData,
+    qualityChecks: orderData.qualityChecks.map(check => ({
+      id: check.id,
+      // Convert Date to ISO string to match the [x: string]: string index signature
+      checkDate: check.checkDate.toISOString(),
+      status: check.status,
+      defectsFound: check.defectsFound,
+      actionTaken: check.actionTaken
+      // Only include the properties expected by ProductionOrderDetails
+    }))
+  };
 
   return (
     <div className="flex flex-col gap-6 p-8">
@@ -50,7 +63,7 @@ export default async function ProductionOrderPage({
         </Link>
       </div>
 
-      <ProductionOrderDetails order={order} workCenters={workCenters} />
+      <ProductionOrderDetails order={order as any} workCenters={workCenters} />
     </div>
   );
 }

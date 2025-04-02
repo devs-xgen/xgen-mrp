@@ -94,6 +94,7 @@ export const createColumns = ({ onSuccess }: DataTableColumnProps): ColumnDef<Su
                                     Edit
                                 </DropdownMenuItem>
                             }
+                            open={false} // or manage the open state if needed
                         />
                         <DeleteSupplierDialog
                             supplier={supplier}
@@ -104,6 +105,7 @@ export const createColumns = ({ onSuccess }: DataTableColumnProps): ColumnDef<Su
                                     Delete
                                 </DropdownMenuItem>
                             }
+                            open={false}
                         />
                     </DropdownMenuContent>
                 </DropdownMenu>

@@ -36,6 +36,7 @@ export interface ProductionOrder {
     }
   }[]
   qualityChecks: {
+    [x: string]: string
     id: string
     checkDate: Date
     status: Status

@@ -28,7 +28,7 @@ export function DeleteInspectorDialog({
 }: DeleteInspectorDialogProps) {
     const handleDelete = async () => {
         try {
-            const response = await fetch(`/api/inspectors/${inspector.id}`, {
+            const response = await fetch(`/api/inspectors/${inspector.inspectorId}`, {
                 method: "DELETE",
             })
 
@@ -57,7 +57,7 @@ export function DeleteInspectorDialog({
                 <AlertDialogHeader>
                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This will permanently delete the inspector &quot;{inspector.name}&quot;.
+                        This will permanently delete the inspector &quot;{inspector.firstName} {inspector.lastName}&quot;.
                         This action cannot be undone.
                     </AlertDialogDescription>
                 </AlertDialogHeader>

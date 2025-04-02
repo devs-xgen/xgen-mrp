@@ -65,6 +65,8 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
 
             <EditInspectorDialog
                 inspector={row.original}
+                departments={[]}
+                specializations={[]}
                 open={showEditDialog}
                 onOpenChange={setShowEditDialog}
             />

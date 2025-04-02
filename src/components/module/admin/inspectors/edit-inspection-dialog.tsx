@@ -19,6 +19,8 @@ interface EditInspectorDialogProps {
   inspector: Inspector;
   departments: string[];
   specializations: string[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSuccess?: () => Promise<void>;
 }
 
@@ -26,16 +28,18 @@ export function EditInspectorDialog({
   inspector,
   departments = [],
   specializations = [],
+  open,
+  onOpenChange,
   onSuccess,
 }: EditInspectorDialogProps) {
-  const [open, setOpen] = useState(false);
+  // const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(data: InspectorFormValues) {
     setIsSubmitting(true);
     try {
       await updateInspector(inspector.inspectorId, data);
-      setOpen(false);
+      onOpenChange(false);
       if (onSuccess) await onSuccess();
       alert("Inspector updated successfully!");
     } catch (error) {
@@ -47,7 +51,7 @@ export function EditInspectorDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
           Edit details

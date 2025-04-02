@@ -46,7 +46,7 @@ import { Status } from "@prisma/client";
 
 // Define the form schema
 const formSchema = z.object({
-  status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED"]),
+  status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "ACTIVE"]),
   checkDate: z.date(),
   defectsFound: z.string().optional(),
   actionTaken: z.string().optional(),
@@ -67,7 +67,7 @@ export function EditQualityCheckForm({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      status: qualityCheck.status,
+      status: qualityCheck.status as "PENDING" | "IN_PROGRESS" | "COMPLETED",
       checkDate: new Date(qualityCheck.checkDate),
       defectsFound: qualityCheck.defectsFound || "",
       actionTaken: qualityCheck.actionTaken || "",
@@ -78,16 +78,19 @@ export function EditQualityCheckForm({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsSubmitting(true);
-      await updateQualityCheck({
-        id: qualityCheck.id,
-        ...values,
-      });
-
+      await updateQualityCheck(
+        qualityCheck.id,       // First argument: id
+        values.status,         // Second argument: newStatus
+        {
+          id: ""
+        }                 // Third argument: data (all the other values)
+      );
+  
       toast({
         title: "Quality Check Updated",
         description: "The quality check has been updated successfully.",
       });
-
+  
       // Redirect back to the detail page
       router.push(`/admin/quality-checks/${qualityCheck.id}`);
       router.refresh();

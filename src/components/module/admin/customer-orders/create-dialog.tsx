@@ -237,6 +237,7 @@ export function CreateCustomerOrderDialog({
                   workCenterId: workCenters[0].id,
                   startTime: startDate,
                   endTime: dueDate,
+                  cost: 0,
                 },
               ]
             : [];

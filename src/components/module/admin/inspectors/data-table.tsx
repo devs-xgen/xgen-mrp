@@ -36,12 +36,20 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   onRowClick?: (row: TData) => void;
+  onEdit?: (row: TData) => void;  
+  onDelete?: (row: TData) => void; 
+  onStatusChange?: (id: string, newStatus: string) => Promise<void>;
+  isLoading?: boolean;
 }
 
 export function DataTable<TData extends Inspector, TValue>({
   columns,
   data,
   onRowClick,
+  onEdit,
+  onDelete,
+  onStatusChange,
+  isLoading = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: "name", desc: false },
@@ -65,6 +73,11 @@ export function DataTable<TData extends Inspector, TValue>({
   const table = useReactTable({
     data,
     columns,
+    meta: {
+      onEdit,
+      onDelete,
+      onStatusChange,
+    },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),

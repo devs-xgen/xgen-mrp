@@ -72,7 +72,7 @@ export function CustomerOrderSheet({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       await updateCustomerOrder(customerOrder.id, {
-        orderDate: new Date(values.orderDate),
+        // orderDate: new Date(values.orderDate),
         status: values.status as Status,
         notes: values.notes,
       })

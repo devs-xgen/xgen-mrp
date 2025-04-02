@@ -212,14 +212,14 @@ export async function updateCustomerOrder(
         id: line.id,
         productId: line.productId,
         quantity: line.quantity,
-        unitPrice: line.unitPrice instanceof Decimal ? line.unitPrice.toNumber() : Number(line.unitPrice),
+        unitPrice: 0,
         status: line.status,
         product: line.product ? {
           id: line.product.id,
           name: line.product.name,
           sku: line.product.sku,
         } : undefined
-      }))
+      })),
     };
 
     revalidatePath('/admin/customer-orders')

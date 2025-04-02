@@ -39,11 +39,11 @@ export function ViewInspectorDialog({
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
                         <span className="font-medium">ID:</span>
-                        <span className="col-span-3">{inspector.employeeId}</span>
+                        <span className="col-span-3">{inspector.inspectorId}</span>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <span className="font-medium">Name:</span>
-                        <span className="col-span-3">{inspector.name}</span>
+                        <span className="col-span-3">{inspector.firstName} {inspector.lastName}</span>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <span className="font-medium">Email:</span>
@@ -51,34 +51,42 @@ export function ViewInspectorDialog({
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <span className="font-medium">Phone:</span>
-                        <span className="col-span-3">{inspector.phone}</span>
+                        <span className="col-span-3">{inspector.phoneNumber || 'Not provided'}</span>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <span className="font-medium">Certification:</span>
-                        <span className="col-span-3">{inspector.certification}</span>
+                        <span className="font-medium">Department:</span>
+                        <span className="col-span-3">{inspector.department || 'Not assigned'}</span>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <span className="font-medium">Specialization:</span>
-                        <span className="col-span-3">{inspector.specialization}</span>
+                        <span className="col-span-3">{inspector.specialization || 'None'}</span>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <span className="font-medium">Certification:</span>
+                        <span className="col-span-3">{inspector.certificationLevel || 'None'}</span>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <span className="font-medium">Years of Experience:</span>
-                        <span className="col-span-3">{inspector.yearsOfExperience}</span>
+                        <span className="col-span-3">{inspector.yearsOfExperience !== null ? `${inspector.yearsOfExperience} ${inspector.yearsOfExperience === 1 ? 'year' : 'years'}` : 'Not specified'}</span>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <span className="font-medium">Status:</span>
-                        <span className="col-span-3">{inspector.status}</span>
+                        <span className="col-span-3">{inspector.isActive ? 'Active' : 'Inactive'}</span>
                     </div>
-                    {inspector.availability && (
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <span className="font-medium">Availability:</span>
-                            <span className="col-span-3">{inspector.availability}</span>
-                        </div>
-                    )}
                     {inspector.notes && (
                         <div className="grid grid-cols-4 items-center gap-4">
                             <span className="font-medium">Notes:</span>
                             <span className="col-span-3">{inspector.notes}</span>
+                        </div>
+                    )}
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <span className="font-medium">Created:</span>
+                        <span className="col-span-3">{inspector.createdAt.toLocaleDateString()}</span>
+                    </div>
+                    {inspector.updatedAt && (
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <span className="font-medium">Last Updated:</span>
+                            <span className="col-span-3">{inspector.updatedAt.toLocaleDateString()}</span>
                         </div>
                     )}
                 </div>

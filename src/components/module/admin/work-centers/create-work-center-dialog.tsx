@@ -71,10 +71,10 @@ export function WorkCenterDialog({
       description: workCenter?.description || "",
       capacityPerHour: workCenter?.capacityPerHour || 1,
       operatingHours: workCenter?.operatingHours || 8,
-      efficiencyRate: workCenter?.efficiencyRate
-        ? Number(workCenter.efficiencyRate)
-        : 100,
-      status: workCenter?.status || "ACTIVE",
+      efficiencyRate: workCenter?.efficiencyRate ? Number(workCenter.efficiencyRate) : 100,
+      status: (workCenter?.status === "ACTIVE" || workCenter?.status === "INACTIVE")
+            ? workCenter?.status
+            : "ACTIVE",
     },
   });
 
