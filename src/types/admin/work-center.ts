@@ -37,5 +37,6 @@ export interface WorkCenterColumn {
   operatingHours: number
   efficiencyRate: string // Formatted as percentage
   status: Status
+  createdAt: Date
   updatedAt: Date
 }

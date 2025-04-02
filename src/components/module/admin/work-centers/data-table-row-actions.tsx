@@ -14,6 +14,7 @@ import {
 import { WorkCenterDialog } from "./create-work-center-dialog";
 import { DeleteWorkCenterDialog } from "./delete-work-center-dialog";
 import { WorkCenterColumn } from "@/types/admin/work-center";
+import { Decimal } from "@prisma/client/runtime/library";
 
 interface DataTableRowActionsProps {
   row: Row<WorkCenterColumn>;
@@ -24,6 +25,12 @@ export function DataTableRowActions({
   row,
   onSuccess,
 }: DataTableRowActionsProps) {
+  const workCenterData = {
+    ...row.original,
+    createdAt: row.original.createdAt ?? new Date(),
+    efficiencyRate: new Decimal(row.original.efficiencyRate), // Convert string to Decimal
+  };
+  
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -36,7 +43,7 @@ export function DataTableRowActions({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[160px]">
-        <WorkCenterDialog workCenter={row.original} onSuccess={onSuccess}>
+        <WorkCenterDialog workCenter={workCenterData} onSuccess={onSuccess}>
           <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
             Edit
           </DropdownMenuItem>
