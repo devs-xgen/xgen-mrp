@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { LogOut, ChevronLeft, ChevronRight, ChevronDown, Moon, Sun } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getNavItems } from "@/config/nav";
 import { Button } from "@/components/ui/button";
@@ -15,8 +16,22 @@ import {
 } from "@/components/ui/collapsible";
 import { useTheme } from "@/context/ThemeContext";
 
+// Define the props interface for AppSidebar
+interface AppSidebarProps {
+  theme?: string;
+  toggleTheme?: () => void;
+}
+
+// Define a proper type for navigation items
+interface NavItem {
+  label: string;
+  href?: string;
+  icon?: LucideIcon;
+  items?: NavItem[];
+}
+
 interface NavItemProps {
-  item: any;
+  item: NavItem;
   isCollapsed: boolean;
   isActive: boolean;
   isChild?: boolean;
@@ -72,9 +87,9 @@ function NavItem({
           )}
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-0.5 pt-1">
-          {item.items.map((subItem: any) => (
+          {item.items.map((subItem) => (
             <NavItem
-              key={subItem.href}
+              key={subItem.href || subItem.label}
               item={subItem}
               isCollapsed={isCollapsed}
               isActive={pathname === subItem.href}
@@ -120,23 +135,25 @@ function NavItem({
   );
 }
 
-export default function AppSidebar() {
+export default function AppSidebar({ theme: propTheme, toggleTheme: propToggleTheme }: AppSidebarProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const navItems = getNavItems(session?.user?.role || "");
+  // Type assertion to ensure navItems matches our NavItem interface
+  const navItems = getNavItems(session?.user?.role || "") as NavItem[];
   const isAdmin = ["ADMIN", "MANAGER"].includes(session?.user?.role || "");
   const portalType = isAdmin ? "Admin" : "Worker";
   const [isCollapsed, setIsCollapsed] = useState(false);
-  // const [isLightMode, setIsLightMode] = useState(false);
-  const { theme, setTheme } = useTheme();
-  // const { theme } = useTheme();
-
-  // const toggleLightMode = () => {  
-  //   setIsLightMode((prev) => !prev);  
-  // };  
-
+  
+  // Use context theme if prop theme is not provided
+  const themeContext = useTheme();
+  const theme = propTheme || themeContext.theme;
+  
   const toggleLightMode = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
+    if (propToggleTheme) {
+      propToggleTheme();
+    } else {
+      themeContext.setTheme(theme === "dark" ? "light" : "dark");
+    }
   };
 
   return (
@@ -144,9 +161,8 @@ export default function AppSidebar() {
       className={cn(
         "flex h-full flex-col bg-neutral-800 text-slate-100 transition-all duration-300",
         isCollapsed ? "w-20" : "w-64",
-        // isLightMode ? "bg-white text-black" : "bg-neutral-800 text-slate-100"
+        // If you want to color the AppSidebar based on theme:
         // theme === "light" ? "bg-white text-black" : "bg-neutral-800 text-slate-100" 
-        // If I want to colored the appsidebar into white too 
       )}
     >
       <div className="relative p-4 border-b border-slate-700">
@@ -177,7 +193,6 @@ export default function AppSidebar() {
           className="absolute right-10 top-1/2 -translate-y-1/2"  
           onClick={toggleLightMode}  
         >  
-          {/* {isLightMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}   */}
           {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}  
         </Button>  
       </div>

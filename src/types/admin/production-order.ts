@@ -36,12 +36,11 @@ export interface ProductionOrder {
     }
   }[]
   qualityChecks: {
-    [x: string]: string
     id: string
     checkDate: Date
     status: Status
-    defectsFound?: string | null  // Changed from string | undefined to string | null
-    actionTaken?: string | null   // Added this field
+    defectsFound?: string | null
+    actionTaken?: string | null
   }[]
 }
 
