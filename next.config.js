@@ -3,6 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   experimental: {
+    // We'll keep this one and remove transpilePackages
     serverComponentsExternalPackages: ['@prisma/client', 'bcrypt'],
   },
   eslint: {
@@ -11,7 +12,7 @@ const nextConfig = {
   images: {
     domains: ['localhost'],
   },
-  transpilePackages: ['@prisma/client'],
+  // Remove the transpilePackages line since it conflicts
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
