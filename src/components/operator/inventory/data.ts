@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+
 
 export type InventoryItem = {
   id: string;
