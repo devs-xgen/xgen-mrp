@@ -11,6 +11,7 @@ const nextConfig = {
   images: {
     domains: ['localhost'],
   },
+  transpilePackages: ['@prisma/client'],
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
