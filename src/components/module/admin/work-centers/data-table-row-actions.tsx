@@ -3,7 +3,6 @@
 
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { Row } from "@tanstack/react-table";
-
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,20 +15,26 @@ import { DeleteWorkCenterDialog } from "./delete-work-center-dialog";
 import { WorkCenterColumn } from "@/types/admin/work-center";
 import { Decimal } from "@prisma/client/runtime/library";
 
-interface DataTableRowActionsProps {
-  row: Row<WorkCenterColumn>;
-  onSuccess?: () => Promise<void>;
-}
+interface DataTableRowActionsProps {  
+  row: Row<WorkCenterColumn>;  
+  onSuccess?: () => Promise<void>;  
+}  
 
-export function DataTableRowActions({
-  row,
-  onSuccess,
-}: DataTableRowActionsProps) {
-  const workCenterData = {
-    ...row.original,
-    createdAt: row.original.createdAt ?? new Date(),
-    efficiencyRate: new Decimal(row.original.efficiencyRate), // Convert string to Decimal
-  };
+export function DataTableRowActions({  
+  row,  
+  onSuccess,  
+}: DataTableRowActionsProps) {  
+  if (!row.original) {  
+    console.error("Row original data is undefined.", row);  
+    return null;
+  }  
+
+  const workCenterData = {  
+    ...row.original,  
+    createdAt: row.original.createdAt ?? new Date(),  
+    efficiencyRate: row.original.efficiencyRate, 
+  };  
+  
   
   return (
     <DropdownMenu>
