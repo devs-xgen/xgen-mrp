@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Operation" ALTER COLUMN "cost" SET DATA TYPE DECIMAL(10,2);

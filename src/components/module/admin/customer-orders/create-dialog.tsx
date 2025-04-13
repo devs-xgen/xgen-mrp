@@ -169,7 +169,7 @@ export function CreateCustomerOrderDialog({
 
   const submitOrder = async (values: FormValues) => {
     try {
-      await createCustomerOrder({
+      const result = await createCustomerOrder({
         ...values,
         orderDate: new Date(values.orderDate),
         requiredDate: new Date(values.requiredDate),
@@ -180,6 +180,14 @@ export function CreateCustomerOrderDialog({
         title: "Success",
         description: "Customer order created successfully",
       });
+
+      // If production orders were automatically created, show an additional message
+      if (result.productionOrders && result.productionOrders.length > 0) {
+        toast({
+          title: "Production Orders Created",
+          description: `${result.productionOrders.length} production orders were automatically generated`,
+        });
+      }
 
       setOpen(false);
       form.reset();
@@ -204,75 +212,42 @@ export function CreateCustomerOrderDialog({
     try {
       setIsSubmitting(true);
 
-      // First create the customer order
-      const orderResponse = await createCustomerOrder({
+      // Create the customer order, which now automatically creates production orders for low stock
+      const orderResult = await createCustomerOrder({
         ...form.getValues(),
         orderDate: new Date(form.getValues().orderDate),
         requiredDate: new Date(form.getValues().requiredDate),
         deliveryDate: undefined,
       });
 
-      // Now create production orders for low stock items
-      const productionPromises = lowStockProducts.map(async (product) => {
-        const orderLine = form
-          .getValues()
-          .orderLines.find((line) => line.productId === product.id);
-        if (!orderLine) return null;
-
-        const neededQuantity = Math.max(
-          orderLine.quantity - (product.currentStock || 0),
-          product.minimumStockLevel || 0
-        );
-
-        // Calculate dates with a two-week lead time
-        const startDate = new Date();
-        const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + 14);
-
-        // Create basic operations - assuming there is at least one work center
-        const operations =
-          workCenters.length > 0
-            ? [
-                {
-                  workCenterId: workCenters[0].id,
-                  startTime: startDate,
-                  endTime: dueDate,
-                  cost: 0,
-                },
-              ]
-            : [];
-
-        return createProductionOrder({
-          productId: product.id,
-          quantity: neededQuantity,
-          startDate,
-          dueDate,
-          priority: "MEDIUM",
-          customerOrderId: orderResponse?.id,
-          notes: `Automatically created for customer order`,
-          operations,
-        });
-      });
-
-      await Promise.all(productionPromises);
-
+      // Show success message
       toast({
         title: "Success",
-        description: "Order and production orders created successfully",
+        description: "Customer order created successfully",
       });
 
+      // If automatic production orders were created, show a message
+      const autoProductionOrderCount =
+        orderResult.productionOrders?.length || 0;
+      if (autoProductionOrderCount > 0) {
+        toast({
+          title: "Production Orders Created",
+          description: `${autoProductionOrderCount} production orders were automatically generated`,
+        });
+      }
+
       setOpen(false);
-      setShowProductionPrompt(false);
       form.reset();
       router.refresh();
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to create production orders",
+        description: "Failed to create customer order",
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
+      setShowProductionPrompt(false);
     }
   };
 

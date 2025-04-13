@@ -212,7 +212,7 @@ model Operation {
   modifiedBy        String?
   productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id])
   workCenter        WorkCenter      @relation(fields: [workCenterId], references: [id])
-  cost              Decimal         @db.Decimal(5, 2)
+  cost              Decimal         @db.Decimal(10, 2)
 }
 
 model QualityCheck {

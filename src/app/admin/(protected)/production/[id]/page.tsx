@@ -9,6 +9,7 @@ import { ProductionOrderDetails } from "@/components/module/admin/production/pro
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { getInspector } from "@/lib/actions/inspector";
 
 interface ProductionOrderPageProps {
   params: {
@@ -38,18 +39,52 @@ export default async function ProductionOrderPage({
 
   if (!orderData) notFound();
 
-  // Transform the qualityChecks to match the expected format
+  console.log(
+    "Original quality checks data:",
+    JSON.stringify(orderData.qualityChecks, null, 2)
+  );
+
+  // Fetch inspectors data
+  const inspectorsMap = new Map();
+
+  // Get inspector names for all checks
+  for (const check of orderData.qualityChecks) {
+    if (!inspectorsMap.has(check.inspectorId)) {
+      try {
+        const inspector = await getInspector(check.inspectorId);
+        inspectorsMap.set(
+          check.inspectorId,
+          `${inspector.firstName} ${inspector.lastName}`
+        );
+      } catch (error) {
+        console.error(`Error fetching inspector ${check.inspectorId}:`, error);
+        inspectorsMap.set(check.inspectorId, "Unknown Inspector");
+      }
+    }
+  }
+
+  // Transform the qualityChecks to include all required properties
   const order = {
     ...orderData,
-    qualityChecks: orderData.qualityChecks.map(check => ({
+    qualityChecks: orderData.qualityChecks.map((check) => ({
       id: check.id,
-      // Convert Date to ISO string to match the [x: string]: string index signature
+      productionOrderId: check.productionOrderId,
+      inspectorId: check.inspectorId,
+      inspectorName: inspectorsMap.get(check.inspectorId) || "Unknown",
       checkDate: check.checkDate.toISOString(),
       status: check.status,
       defectsFound: check.defectsFound,
-      actionTaken: check.actionTaken
-      // Only include the properties expected by ProductionOrderDetails
-    }))
+      actionTaken: check.actionTaken,
+      notes: check.notes,
+      createdAt: check.createdAt,
+      updatedAt: check.updatedAt,
+      productionOrder: {
+        product: {
+          name: orderData.product.name,
+          sku: orderData.product.sku,
+        },
+      },
+    })),
   };
 
   return (

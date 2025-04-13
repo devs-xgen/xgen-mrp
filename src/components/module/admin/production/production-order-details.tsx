@@ -20,6 +20,10 @@ import { useToast } from "@/hooks/use-toast";
 import { updateProductionOrder } from "@/lib/actions/production-order";
 // Import the QualityCheck type
 import { QualityCheck } from "@/types/admin/quality-checks";
+import { formatDate } from "@/lib/utils";
+
+// Add import for the LinkCustomerOrderDialog component
+import { LinkCustomerOrderDialog } from "./link-customer-order-dialog";
 
 interface WorkCenter {
   id: string;
@@ -77,7 +81,7 @@ export function ProductionOrderDetails({
       setTimeout(resolve, 100);
     });
   };
-  
+
   const getNextStatus = (currentStatus: Status): Status | null => {
     switch (currentStatus) {
       case "PENDING":
@@ -89,25 +93,27 @@ export function ProductionOrderDetails({
     }
   };
 
-  // NOTE: This uses type assertion to force TypeScript to accept the checks
-  // This is a last resort option when you're confident the runtime behavior will work
-  // even if TypeScript doesn't agree with the types
-  const qualityChecks = order.qualityChecks as unknown as QualityCheck[];
+  // Use type assertion to handle potential type mismatch between the database schema
+  // and our frontend type definition for QualityCheck
+  const qualityChecks = (order.qualityChecks ||
+    []) as unknown as QualityCheck[];
 
   const nextStatus = getNextStatus(order.status);
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
+      <Card className="border-2">
+        <CardHeader className="pb-3">
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle>Production Order Details</CardTitle>
-              <CardDescription>
-                Status and progress of production order
+              <CardTitle className="text-2xl font-bold">
+                Production Order: {order.product.sku}
+              </CardTitle>
+              <CardDescription className="text-base mt-1">
+                {order.product.name} - {order.quantity} units
               </CardDescription>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col items-end gap-2">
               <Badge
                 variant={
                   order.status === "COMPLETED"
@@ -116,18 +122,20 @@ export function ProductionOrderDetails({
                     ? "secondary"
                     : "outline"
                 }
-                className="text-base py-1 px-3"
+                className="text-lg py-1.5 px-4 uppercase font-medium"
               >
                 {order.status.toLowerCase().replace("_", " ")}
               </Badge>
               {nextStatus && (
                 <Button
                   variant="default"
+                  size="lg"
                   onClick={() => handleStatusUpdate(nextStatus)}
                   disabled={updating || isLoading}
+                  className="mt-2"
                 >
                   {updating && (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                   )}
                   {nextStatus === "IN_PROGRESS"
                     ? "Start Production"
@@ -137,8 +145,66 @@ export function ProductionOrderDetails({
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          {/* Card content remains the same */}
+        <Separator />
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <h3 className="font-medium text-muted-foreground mb-1">
+                Timeline
+              </h3>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">Start:</span>{" "}
+                {formatDate(order.startDate)}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">Due:</span>{" "}
+                {formatDate(order.dueDate)}
+              </div>
+            </div>
+            <div>
+              <h3 className="font-medium text-muted-foreground mb-1">
+                Priority
+              </h3>
+              <Badge
+                variant={
+                  order.priority === "HIGH" || order.priority === "URGENT"
+                    ? "destructive"
+                    : order.priority === "MEDIUM"
+                    ? "secondary"
+                    : "outline"
+                }
+              >
+                {order.priority.toLowerCase()}
+              </Badge>
+            </div>
+            <div>
+              <h3 className="font-medium text-muted-foreground mb-1">
+                Order Information
+              </h3>
+              {order.customerOrder ? (
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">Customer Order:</span>
+                  {order.customerOrder.orderNumber}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <div className="text-muted-foreground">
+                    No customer order linked
+                  </div>
+                  <LinkCustomerOrderDialog
+                    productionOrderId={order.id}
+                    onRefresh={handleRefresh}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+          {order.notes && (
+            <div className="mt-4">
+              <h3 className="font-medium text-muted-foreground mb-1">Notes</h3>
+              <p className="text-sm">{order.notes}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

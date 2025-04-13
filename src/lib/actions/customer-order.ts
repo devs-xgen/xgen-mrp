@@ -2,9 +2,12 @@
 
 import { prisma } from "@/lib/db"
 import { CustomerOrder, CreateCustomerOrderInput } from "@/types/admin/customer-order"
-import { Status } from "@prisma/client"
+import { Status, Priority } from "@prisma/client"
 import { Decimal } from "@prisma/client/runtime/library" 
 import { revalidatePath } from "next/cache"
+import { createProductionOrder } from "./production-order"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 
 export async function getCustomerOrders(): Promise<CustomerOrder[]> {
   try {
@@ -69,8 +72,90 @@ export async function getCustomerOrders(): Promise<CustomerOrder[]> {
   }
 }
 
+/**
+ * Checks inventory levels for ordered products and determines production needs
+ * @param orderLines Array of order lines with product IDs and quantities
+ * @returns Array of products needing production with required quantities
+ */
+export async function checkInventoryLevels(
+  orderLines: Array<{ productId: string; quantity: number }>
+) {
+  // Get product IDs from order lines
+  const productIds = orderLines.map(line => line.productId);
+  
+  // Fetch product details including inventory information
+  const products = await prisma.product.findMany({
+    where: {
+      id: {
+        in: productIds
+      }
+    },
+    select: {
+      id: true,
+      sku: true,
+      name: true,
+      currentStock: true,
+      minimumStockLevel: true,
+      leadTime: true,
+    }
+  });
+
+  // Convert any Decimal values to numbers to avoid serialization issues
+  const normalizedProducts = products.map(product => ({
+    ...product,
+    // Ensure any potential Decimal fields are converted to numbers
+    currentStock: typeof product.currentStock === 'object' && 'toNumber' in product.currentStock 
+      ? (product.currentStock as any).toNumber() 
+      : Number(product.currentStock),
+    minimumStockLevel: typeof product.minimumStockLevel === 'object' && 'toNumber' in product.minimumStockLevel 
+      ? (product.minimumStockLevel as any).toNumber() 
+      : Number(product.minimumStockLevel),
+    leadTime: typeof product.leadTime === 'object' && 'toNumber' in product.leadTime
+      ? (product.leadTime as any).toNumber()
+      : Number(product.leadTime)
+  }));
+  
+  // Determine which products need production orders
+  const productsNeedingProduction = [];
+  
+  for (const orderLine of orderLines) {
+    const product = normalizedProducts.find(p => p.id === orderLine.productId);
+    if (!product) continue;
+    
+    // Calculate required quantity based on:
+    // 1. How much of the order exceeds current stock
+    // 2. Whether fulfilling the order would drop below minimum stock level
+    const stockAfterOrder = product.currentStock - orderLine.quantity;
+    
+    // Case 1: Not enough stock to fulfill the order
+    if (stockAfterOrder < 0) {
+      productsNeedingProduction.push({
+        product,
+        requiredQuantity: Math.abs(stockAfterOrder),
+        reason: 'INSUFFICIENT_STOCK'
+      });
+      continue;
+    }
+    
+    // Case 2: Enough stock for order but would drop below minimum level
+    if (stockAfterOrder < product.minimumStockLevel) {
+      productsNeedingProduction.push({
+        product,
+        // Order enough to restore minimum stock level
+        requiredQuantity: product.minimumStockLevel - stockAfterOrder,
+        reason: 'BELOW_MINIMUM'
+      });
+    }
+  }
+  
+  return productsNeedingProduction;
+}
+
 export async function createCustomerOrder(data: CreateCustomerOrderInput) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) throw new Error('Unauthorized')
+
     const year = new Date().getFullYear()
     const lastOrder = await prisma.customerOrder.findFirst({
       where: {
@@ -106,6 +191,10 @@ export async function createCustomerOrder(data: CreateCustomerOrderInput) {
       throw new Error('Invalid required date format')
     }
 
+    // Use the checkInventoryLevels helper function to determine production needs
+    const productsNeedingProduction = await checkInventoryLevels(data.orderLines);
+
+    // Create the customer order
     const customerOrder = await prisma.customerOrder.create({
       data: {
         orderNumber,
@@ -147,8 +236,59 @@ export async function createCustomerOrder(data: CreateCustomerOrderInput) {
       }
     })
 
+    // Create production orders for products with insufficient inventory
+    const createdProductionOrders = []
+    
+    // Get default work center for operations
+    const defaultWorkCenter = await prisma.workCenter.findFirst({
+      where: {
+        status: Status.ACTIVE
+      }
+    })
+
+    if (!defaultWorkCenter) {
+      console.warn("No active work center found for production orders")
+    }
+    
+    for (const item of productsNeedingProduction) {
+      if (!defaultWorkCenter) continue // Skip if no default work center
+      
+      const startDate = new Date()
+      const dueDate = new Date(requiredDate)
+      dueDate.setDate(dueDate.getDate() - 1) // Set due date one day before required date
+      
+      try {
+        const productionOrder = await createProductionOrder({
+          productId: item.product.id,
+          quantity: item.requiredQuantity,
+          startDate,
+          dueDate,
+          priority: Priority.HIGH,
+          customerOrderId: customerOrder.id,
+          notes: `Auto-generated for Customer Order ${orderNumber} - Reason: ${item.reason}`,
+          operations: [
+            {
+              workCenterId: defaultWorkCenter.id,
+              startTime: startDate,
+              endTime: dueDate,
+              cost: 0 // Default cost, to be updated later
+            }
+          ]
+        })
+        
+        createdProductionOrders.push(productionOrder)
+      } catch (error) {
+        console.error(`Failed to create production order for product ${item.product.name}:`, error)
+      }
+    }
+
     revalidatePath('/admin/customer-orders')
-    return customerOrder
+    
+    // Return both the customer order and any created production orders
+    return {
+      customerOrder,
+      productionOrders: createdProductionOrders
+    }
   } catch (error) {
     console.error('Error creating customer order:', error)
     throw new Error('Failed to create customer order')

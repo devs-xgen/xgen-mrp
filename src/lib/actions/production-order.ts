@@ -201,7 +201,7 @@ export async function getAvailableProducts() {
     })
   } catch (error) {
     console.error('Error fetching available products:', error)
-    throw error
+    throw new Error('Failed to fetch available products')
   }
 }
 
@@ -264,31 +264,149 @@ export async function addOperation(
   }
 }
 
-  
+export async function deleteOperation(operationId: string) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) throw new Error('Unauthorized')
 
-  export async function updateOperationStatus(
-    operationId: string,
-    status: Status
-  ) {
-    try {
-      const session = await getServerSession(authOptions)
-      if (!session?.user) throw new Error('Unauthorized')
-  
-      const operation = await prisma.operation.update({
-        where: { id: operationId },
-        data: {
-          status,
-          modifiedBy: session.user.id
-        },
-        include: {
-          productionOrder: true
-        }
-      })
-  
-      revalidatePath(`/admin/production/${operation.productionOrderId}`)
-      return operation
-    } catch (error) {
-      console.error('Error updating operation status:', error)
-      throw error
+    // First get the operation to find its production order ID
+    const operation = await prisma.operation.findUnique({
+      where: { id: operationId },
+      select: { productionOrderId: true, status: true }
+    })
+
+    if (!operation) {
+      throw new Error('Operation not found')
     }
+
+    // Check if the operation is already in progress or completed
+    if (operation.status === 'IN_PROGRESS' || operation.status === 'COMPLETED') {
+      throw new Error('Cannot delete an operation that is in progress or completed')
+    }
+
+    // Delete the operation
+    await prisma.operation.delete({
+      where: { id: operationId }
+    })
+
+    // Revalidate the path for the production order
+    revalidatePath(`/admin/production/${operation.productionOrderId}`)
+    return { success: true, productionOrderId: operation.productionOrderId }
+  } catch (error) {
+    console.error('Error deleting operation:', error)
+    throw error
   }
+}
+
+export async function updateOperationStatus(
+  operationId: string,
+  status: Status
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) throw new Error('Unauthorized')
+
+    const operation = await prisma.operation.update({
+      where: { id: operationId },
+      data: {
+        status,
+        modifiedBy: session.user.id
+      },
+      include: {
+        productionOrder: true
+      }
+    })
+
+    revalidatePath(`/admin/production/${operation.productionOrderId}`)
+    return operation
+  } catch (error) {
+    console.error('Error updating operation status:', error)
+    throw error
+  }
+}
+
+/**
+ * Links a customer order to an existing production order
+ * @param productionOrderId The ID of the production order to update
+ * @param customerOrderId The ID of the customer order to link
+ * @returns The updated production order
+ */
+export async function linkCustomerOrderToProduction(
+  productionOrderId: string,
+  customerOrderId: string
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) throw new Error('Unauthorized')
+
+    // Verify that both the production order and customer order exist
+    const [productionOrder, customerOrder] = await Promise.all([
+      prisma.productionOrder.findUnique({ where: { id: productionOrderId } }),
+      prisma.customerOrder.findUnique({ where: { id: customerOrderId } })
+    ])
+
+    if (!productionOrder) {
+      throw new Error('Production order not found')
+    }
+
+    if (!customerOrder) {
+      throw new Error('Customer order not found')
+    }
+
+    // Check if the production order already has a customer order linked
+    if (productionOrder.customerOrderId) {
+      throw new Error('Production order is already linked to a customer order')
+    }
+
+    // Update the production order with the customer order ID
+    const updatedOrder = await prisma.productionOrder.update({
+      where: { id: productionOrderId },
+      data: {
+        customerOrderId,
+        modifiedBy: session.user.id
+      },
+      include: {
+        product: true,
+        customerOrder: true
+      }
+    })
+
+    revalidatePath('/admin/production')
+    revalidatePath(`/admin/production/${productionOrderId}`)
+    
+    return updatedOrder
+  } catch (error) {
+    console.error('Error linking customer order to production order:', error)
+    throw error
+  }
+}
+
+/**
+ * Gets available customer orders for linking to a production order
+ * @returns List of active customer orders that can be linked
+ */
+export async function getAvailableCustomerOrders() {
+  try {
+    return await prisma.customerOrder.findMany({
+      where: { 
+        status: {
+          in: ['PENDING', 'IN_PROGRESS', 'ACTIVE']
+        }
+      },
+      select: {
+        id: true,
+        orderNumber: true,
+        customer: {
+          select: {
+            name: true
+          }
+        },
+        requiredDate: true
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+  } catch (error) {
+    console.error('Error fetching available customer orders:', error)
+    throw new Error('Failed to fetch available customer orders')
+  }
+}

@@ -49,6 +49,10 @@ interface WorkCenter {
   capacityPerHour: number;
 }
 
+// Define maximum cost value based on database schema
+// Using 9999.99 instead of 999.99 since we updated the schema to Decimal(10,2)
+const MAX_COST = 9999.99;
+
 const formSchema = z
   .object({
     workCenterId: z.string({
@@ -66,7 +70,8 @@ const formSchema = z
       .number({
         required_error: "Cost is required",
       })
-      .min(0, "Cost must be a positive number"),
+      .min(0, "Cost must be a positive number")
+      .max(MAX_COST, `Cost must be less than ${MAX_COST}`),
     notes: z.string().optional(),
   })
   .refine((data) => data.endTime > data.startTime, {
@@ -99,8 +104,7 @@ export function AddOperationDialog({
   });
 
   const handleWorkCenterChange = (value: string) => {
-    // Optional: You could calculate an estimated cost based on the work center
-    // For example, using the capacity per hour and the time difference to estimate labor costs
+    // Calculate an estimated cost based on the work center
     const workCenter = workCenters.find((wc) => wc.id === value);
     if (workCenter) {
       const startTime = form.getValues("startTime");
@@ -109,8 +113,21 @@ export function AddOperationDialog({
       if (startTime && endTime) {
         const hoursDiff =
           (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-        // This is a very basic calculation - adjust based on your business logic
-        const estimatedCost = parseFloat((hoursDiff * 10).toFixed(2)); // Example: $10 per hour
+
+        // Calculate the cost but limit it to maximum allowed value
+        let estimatedCost = parseFloat((hoursDiff * 10).toFixed(2)); // $10 per hour
+
+        // Ensure the cost doesn't exceed the maximum allowed value
+        if (estimatedCost > MAX_COST) {
+          estimatedCost = MAX_COST;
+          // Optionally show a warning
+          toast({
+            title: "Cost Adjusted",
+            description: `The calculated cost exceeded the maximum allowed value and has been adjusted to ${MAX_COST}`,
+            variant: "warning",
+          });
+        }
+
         form.setValue("cost", estimatedCost);
       }
     }
@@ -290,14 +307,16 @@ export function AddOperationDialog({
                       type="number"
                       step="0.01"
                       min="0"
+                      max={MAX_COST}
                       {...field}
-                      onChange={(e) =>
-                        field.onChange(parseFloat(e.target.value) || 0)
-                      }
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value) || 0;
+                        field.onChange(Math.min(value, MAX_COST));
+                      }}
                     />
                   </FormControl>
                   <FormDescription>
-                    Estimated cost for this operation
+                    Cost must be between 0 and {MAX_COST}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -311,24 +330,21 @@ export function AddOperationDialog({
                 <FormItem>
                   <FormLabel>Notes (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea {...field} />
+                    <Textarea
+                      placeholder="Add any additional notes for this operation..."
+                      {...field}
+                      value={field.value || ""}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="flex justify-end space-x-4 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-              >
-                Cancel
-              </Button>
+            <div className="flex justify-end pt-4">
               <Button type="submit" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Add Operation
+                {loading ? "Adding..." : "Add Operation"}
               </Button>
             </div>
           </form>

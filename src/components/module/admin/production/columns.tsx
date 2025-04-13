@@ -1,13 +1,14 @@
 // src/components/module/admin/production/columns.tsx
-"use client"
+"use client";
 
-import { ColumnDef } from "@tanstack/react-table"
-import { ProductionOrderColumn } from "@/types/admin/production-order"
-import { Badge } from "@/components/ui/badge"
-import { DataTableColumnHeader } from "@/components/ui/data-table-column-header"
-import { DataTableRowActions } from "./data-table-row-actions"
-import { formatDate } from "@/lib/utils"
-import { Progress } from "@/components/ui/progress"
+import { ColumnDef } from "@tanstack/react-table";
+import { ProductionOrderColumn } from "@/types/admin/production-order";
+import { Badge } from "@/components/ui/badge";
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
+import { DataTableRowActions } from "./data-table-row-actions";
+import { formatDate } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
+import { ProgressIndicator } from "@/components/ui/progress-indicator";
 
 export const columns: ColumnDef<ProductionOrderColumn>[] = [
   {
@@ -19,9 +20,11 @@ export const columns: ColumnDef<ProductionOrderColumn>[] = [
       return (
         <div>
           <div className="font-medium">{row.getValue("productName")}</div>
-          <div className="text-xs text-muted-foreground">{row.original.productSku}</div>
+          <div className="text-xs text-muted-foreground">
+            {row.original.productSku}
+          </div>
         </div>
-      )
+      );
     },
   },
   {
@@ -49,12 +52,59 @@ export const columns: ColumnDef<ProductionOrderColumn>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Progress" />
     ),
-    cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <Progress value={row.getValue("progress")} className="w-[60px]" />
-        <span className="text-sm">{row.getValue("progress")}%</span>
-      </div>
-    ),
+    cell: ({ row }) => {
+      const progress = row.getValue("progress") as number;
+      const status = row.getValue("status") as string;
+      const productName = row.original.productName;
+      const dueDate = new Date(row.getValue("dueDate"));
+      const today = new Date();
+
+      // Calculate days remaining
+      const daysRemaining = Math.ceil(
+        (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      // Create tooltip text based on status and progress
+      const getTooltipText = () => {
+        if (status === "COMPLETED") {
+          return `✅ Production completed for ${productName}`;
+        }
+
+        if (status === "IN_PROGRESS") {
+          const remainingText =
+            daysRemaining > 0
+              ? `${daysRemaining} day${
+                  daysRemaining !== 1 ? "s" : ""
+                } remaining`
+              : "Due today!";
+
+          return `⏳ Production at ${Math.round(
+            progress
+          )}% for ${productName}. ${remainingText}`;
+        }
+
+        return `📝 Production planned for ${productName}. Not started yet.`;
+      };
+
+      // Determine variant based on status and days remaining
+      const getVariant = () => {
+        if (status === "COMPLETED") return "success";
+        if (status === "IN_PROGRESS") {
+          return daysRemaining < 3 ? "danger" : "warning";
+        }
+        return "default";
+      };
+
+      return (
+        <ProgressIndicator
+          value={progress}
+          size="sm"
+          variant={getVariant()}
+          tooltipText={getTooltipText()}
+          className="min-w-[80px]"
+        />
+      );
+    },
   },
   {
     accessorKey: "status",
@@ -62,23 +112,23 @@ export const columns: ColumnDef<ProductionOrderColumn>[] = [
       <DataTableColumnHeader column={column} title="Status" />
     ),
     cell: ({ row }) => {
-      const status = row.getValue("status") as string
+      const status = row.getValue("status") as string;
       return (
-        <Badge 
+        <Badge
           variant={
-            status === "COMPLETED" 
-              ? "default" 
-              : status === "IN_PROGRESS" 
-                ? "secondary"
-                : "outline"
+            status === "COMPLETED"
+              ? "default"
+              : status === "IN_PROGRESS"
+              ? "secondary"
+              : "outline"
           }
         >
           {status.toLowerCase().replace("_", " ")}
         </Badge>
-      )
+      );
     },
     filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id))
+      return value.includes(row.getValue(id));
     },
   },
   {
@@ -87,23 +137,23 @@ export const columns: ColumnDef<ProductionOrderColumn>[] = [
       <DataTableColumnHeader column={column} title="Priority" />
     ),
     cell: ({ row }) => {
-      const priority = row.getValue("priority") as string
+      const priority = row.getValue("priority") as string;
       return (
-        <Badge 
+        <Badge
           variant={
-            priority === "HIGH" 
-              ? "destructive" 
-              : priority === "MEDIUM" 
-                ? "default"
-                : "secondary"
+            priority === "HIGH"
+              ? "destructive"
+              : priority === "MEDIUM"
+              ? "default"
+              : "secondary"
           }
         >
           {priority.toLowerCase()}
         </Badge>
-      )
+      );
     },
     filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id))
+      return value.includes(row.getValue(id));
     },
   },
   {
@@ -117,4 +167,4 @@ export const columns: ColumnDef<ProductionOrderColumn>[] = [
     id: "actions",
     cell: ({ row }) => <DataTableRowActions row={row} />,
   },
-]
+];
