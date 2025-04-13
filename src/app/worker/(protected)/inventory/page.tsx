@@ -1,6 +1,6 @@
 // src/app/worker/(protected)/inventory/page.tsx
 import { Metadata } from "next";
-import { InventoryPage } from "@/components/operator/inventory";
+import { InventoryPage } from "@/components/module/operator/inventory";
 
 export const metadata: Metadata = {
   title: "Inventory Management",
