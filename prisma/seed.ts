@@ -8,6 +8,21 @@ const prisma = new PrismaClient()
 
 async function main() {
     try {
+        // First delete existing users if they exist (for clean seeding)
+        console.log('Cleaning up existing seed data...')
+        await prisma.emergencyContact.deleteMany({})
+        await prisma.userProfile.deleteMany({})
+        await prisma.user.deleteMany({
+            where: {
+                email: {
+                    in: ['admin@example.com', 'worker@example.com', 'inspector@example.com', 'delivery@example.com']
+                }
+            }
+        })
+        
+        console.log('Creating seed users...')
+        
+        // Create Admin user
         const admin = await prisma.user.create({
             data: {
               email: 'admin@example.com',
@@ -26,21 +41,21 @@ async function main() {
             include: {
               profile: true
             }
-          })
+        })
 
-        // Create worker/operator user with profile
+        // Create Worker user
         const worker = await prisma.user.create({
             data: {
                 email: 'worker@example.com',
                 password: await hash('worker123', 12),
-                role: Role.OPERATOR,
+                role: Role.WORKER,
                 profile: {
                     create: {
                         firstName: 'Worker',
                         lastName: 'User',
-                        department: 'Operations',
-                        position: 'Inventory Operator',
-                        employeeId: 'OPR001',
+                        department: 'Production',
+                        position: 'Production Worker',
+                        employeeId: 'WRK001',
                     }
                 }
             },
@@ -49,7 +64,49 @@ async function main() {
             }
         })
 
-        // Optional: Create emergency contact for the worker
+        // Create Inspector user
+        const inspector = await prisma.user.create({
+            data: {
+                email: 'inspector@example.com',
+                password: await hash('inspector123', 12),
+                role: Role.INSPECTOR,
+                profile: {
+                    create: {
+                        firstName: 'Quality',
+                        lastName: 'Inspector',
+                        department: 'Quality Control',
+                        position: 'Quality Inspector',
+                        employeeId: 'QC001',
+                    }
+                }
+            },
+            include: {
+                profile: true
+            }
+        })
+
+        // Create Delivery user
+        const delivery = await prisma.user.create({
+            data: {
+                email: 'delivery@example.com',
+                password: await hash('delivery123', 12),
+                role: Role.DELIVERY,
+                profile: {
+                    create: {
+                        firstName: 'Delivery',
+                        lastName: 'Personnel',
+                        department: 'Logistics',
+                        position: 'Delivery Driver',
+                        employeeId: 'DEL001',
+                    }
+                }
+            },
+            include: {
+                profile: true
+            }
+        })
+
+        // Create emergency contact for the worker
         if (worker.profile) {
             await prisma.emergencyContact.create({
                 data: {
@@ -65,7 +122,9 @@ async function main() {
         console.log('Seed completed successfully')
         console.log('Created users:', {
             admin: { email: admin.email, role: admin.role },
-            worker: { email: worker.email, role: worker.role }
+            worker: { email: worker.email, role: worker.role },
+            inspector: { email: inspector.email, role: inspector.role },
+            delivery: { email: delivery.email, role: delivery.role }
         })
     } catch (error: any) {
         console.error('Error seeding database:', error)

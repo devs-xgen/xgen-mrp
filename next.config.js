@@ -10,7 +10,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    domains: ['localhost'],
+    unoptimized: true,
   },
   // Remove the transpilePackages line since it conflicts
   webpack: (config, { isServer }) => {

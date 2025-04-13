@@ -12,7 +12,8 @@
     "prisma:generate": "prisma generate --no-engine",
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
-    "prisma:seed": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} prisma/seed.ts"
+    "prisma:seed": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} prisma/seed.ts",
+    "link:inspectors": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} scripts/link-inspectors.ts"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.17",

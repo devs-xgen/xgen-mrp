@@ -1,4 +1,3 @@
-
 export interface UserProfile {
     id: string
     userId: string
@@ -24,7 +23,7 @@ export interface UserProfile {
 export interface UserData {
     id: string
     email: string
-    role: 'ADMIN' | 'MANAGER' | 'OPERATOR'
+    role: 'ADMIN' | 'WORKER' | 'INSPECTOR' | 'DELIVERY'
     status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
     createdAt: Date
     updatedAt: Date

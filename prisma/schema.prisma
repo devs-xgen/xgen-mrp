@@ -8,18 +8,41 @@ datasource db {
 }
 
 model User {
-  id          String        @id @default(cuid())
-  email       String        @unique
-  password    String
-  role        Role          @default(OPERATOR)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  createdBy   String?
-  lastLoginAt DateTime?
-  modifiedBy  String?
-  status      UserStatus    @default(ACTIVE)
-  Transaction Transaction[]
-  profile     UserProfile?
+  id                       String                 @id @default(cuid())
+  email                    String                 @unique
+  password                 String
+  role                     Role                   @default(WORKER) // Updated default
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  createdBy                String?
+  lastLoginAt              DateTime?
+  modifiedBy               String?
+  status                   UserStatus             @default(ACTIVE)
+  Transaction              Transaction[]
+  profile                  UserProfile?
+  // New relationships
+  workCenterAssignments    WorkCenterAssignment[]
+  assignedOperations       Operation[]            @relation("AssignedOperations")
+  performedOperations      Operation[]            @relation("PerformedOperations")
+  inspections              QualityCheck[]         @relation("Inspections")
+  createdProductionOrders  ProductionOrder[]      @relation("CreatedBy")
+  modifiedProductionOrders ProductionOrder[]      @relation("ModifiedBy")
+  UserWorkCenter           UserWorkCenter[]
+  inspector                Inspector?
+}
+
+model WorkCenterAssignment {
+  id           String     @id @default(cuid())
+  userId       String
+  workCenterId String
+  isPrimary    Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  status       Status     @default(ACTIVE)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workCenter   WorkCenter @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workCenterId])
 }
 
 model UserProfile {
@@ -176,7 +199,9 @@ model ProductionOrder {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   createdBy       String?
+  createdByUser   User?          @relation("CreatedBy", fields: [createdBy], references: [id])
   modifiedBy      String?
+  modifiedByUser  User?          @relation("ModifiedBy", fields: [modifiedBy], references: [id])
   operations      Operation[]
   customerOrder   CustomerOrder? @relation(fields: [customerOrderId], references: [id])
   product         Product        @relation(fields: [productId], references: [id])
@@ -184,18 +209,21 @@ model ProductionOrder {
 }
 
 model WorkCenter {
-  id              String      @id @default(cuid())
+  id              String                 @id @default(cuid())
   name            String
   description     String?
   capacityPerHour Int
   operatingHours  Int
-  efficiencyRate  Decimal     @db.Decimal(5, 2)
-  status          Status      @default(ACTIVE)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  efficiencyRate  Decimal                @db.Decimal(5, 2)
+  status          Status                 @default(ACTIVE)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
   createdBy       String?
   modifiedBy      String?
   operations      Operation[]
+  // New relationship
+  userAssignments WorkCenterAssignment[]
+  UserWorkCenter  UserWorkCenter[]
 }
 
 model Operation {
@@ -210,8 +238,14 @@ model Operation {
   updatedAt         DateTime        @updatedAt
   createdBy         String?
   modifiedBy        String?
+  // New fields for worker assignments
+  assignedToId      String?
+  performedById     String?
+  // Relations
   productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id])
   workCenter        WorkCenter      @relation(fields: [workCenterId], references: [id])
+  assignedTo        User?           @relation("AssignedOperations", fields: [assignedToId], references: [id])
+  performedBy       User?           @relation("PerformedOperations", fields: [performedById], references: [id])
   cost              Decimal         @db.Decimal(10, 2)
 }
 
@@ -229,6 +263,8 @@ model QualityCheck {
   createdBy         String?
   modifiedBy        String?
   productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id])
+  // New relation to connect inspectors to quality checks
+  inspector         User            @relation("Inspections", fields: [inspectorId], references: [id])
 }
 
 model Supplier {
@@ -366,6 +402,7 @@ model Transaction {
 
 model Inspector {
   inspectorId        String   @id @default(cuid())
+  userId             String?  @unique
   firstName          String
   lastName           String
   email              String   @unique
@@ -380,6 +417,7 @@ model Inspector {
   updatedAt          DateTime @updatedAt
   createdBy          String?
   modifiedBy         String?
+  user               User?    @relation(fields: [userId], references: [id])
 
   @@index([email])
   @@index([isActive])
@@ -408,10 +446,10 @@ enum PaymentMethod {
 }
 
 enum Role {
-  ADMIN
-  MANAGER
-  OPERATOR
-  POS_OPERATOR
+  ADMIN // Administrators and managers
+  WORKER // Production workers
+  INSPECTOR // Quality control personnel
+  DELIVERY // Logistics and delivery personnel
 }
 
 enum UserStatus {
@@ -443,4 +481,17 @@ enum Priority {
   MEDIUM
   HIGH
   URGENT
+}
+
+model UserWorkCenter {
+  id            String     @id @default(cuid())
+  userId        String
+  workCenterId  String
+  isResponsible Boolean    @default(false)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workCenter    WorkCenter @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workCenterId])
 }
