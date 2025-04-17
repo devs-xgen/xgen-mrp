@@ -44,9 +44,10 @@ export const columns: ColumnDef<WorkCenterColumn>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Efficiency" />
     ),
-    cell: ({ row }) => (
-      <div className="font-medium">{row.getValue("efficiencyRate")}%</div>
-    ),
+    cell: ({ row }) => {
+      const efficiencyRate = row.getValue("efficiencyRate") as string;
+      return <div className="font-medium">{efficiencyRate}%</div>;
+    },
   },
   {
     accessorKey: "status",
