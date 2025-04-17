@@ -31,7 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { createColumns } from "./columns";
-import { ProductCategory } from "@prisma/client";
+import type { ProductCategory } from "@prisma/client";
 import {
   ExtendedProductForTable,
   adaptProductForTable,

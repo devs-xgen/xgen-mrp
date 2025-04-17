@@ -36,8 +36,8 @@ export function StatsCards() {
         const data = await getStats();
         // Convert Decimal to string for safe serialization
         setStats({
-          ...data,
-          totalRevenue: data.totalRevenue.toString(),
+          ...data
+          // totalRevenue: data.totalRevenue.toString(),
         });
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);

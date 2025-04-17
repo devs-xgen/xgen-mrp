@@ -46,7 +46,7 @@ export default async function ProductDetailPage({
   const enhancedProduct = {
     ...product,
     productionOrders:
-      productionOrders?.map((order) => ({
+      productionOrders?.map((order: { id: any; status: any; quantity: any; dueDate: any; }) => ({
         id: order.id,
         status: order.status,
         quantity: order.quantity,

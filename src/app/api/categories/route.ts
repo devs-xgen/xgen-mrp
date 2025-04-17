@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { convertDecimals } from "@/lib/convertDecimals"
+
 
 export async function POST(req: Request) {
     try {
@@ -11,7 +13,7 @@ export async function POST(req: Request) {
                 status: 'ACTIVE'
             }
         })
-        return NextResponse.json(category)
+        return NextResponse.json(convertDecimals(category))
     } catch (error: any) {
         if (error.code === 'P2002') {
             return NextResponse.json(
@@ -33,7 +35,7 @@ export async function GET() {
                 name: 'asc'
             }
         })
-        return NextResponse.json(categories)
+        return NextResponse.json(convertDecimals(categories))
     } catch (error) {
         return NextResponse.json(
             { error: "Error fetching categories" },

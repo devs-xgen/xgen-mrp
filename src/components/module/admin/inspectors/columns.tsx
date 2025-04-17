@@ -24,6 +24,17 @@ import {
   type Inspector,
 } from "@/lib/actions/inspector";
 import { formatPhoneNumber } from "@/lib/utils";
+import { SetStateAction, useState } from "react";
+import { EditInspectorDialog } from "./edit-inspection-dialog";
+
+interface EditInspectorDialogProps {
+  inspector: Inspector;
+  departments: string[];
+  specializations: string[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => Promise<void>;
+}
 
 export const columns: ColumnDef<Inspector>[] = [
   {
@@ -178,39 +189,54 @@ export const columns: ColumnDef<Inspector>[] = [
         }
       };
 
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => {
-                // Will be replaced with proper edit dialog trigger
-                alert(
-                  `Edit inspector: ${inspector.firstName} ${inspector.lastName}`
-                );
-              }}
-            >
-              Edit details
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleStatusToggle}>
-              {isActive ? "Deactivate" : "Activate"}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-red-600 focus:text-red-600"
-              onClick={handleDelete}
-            >
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
+      const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);  
+const [selectedInspector, setSelectedInspector] = useState(null);  
+
+const handleEditClick = (inspector) => {  
+  setSelectedInspector(inspector); // Set the selected inspector data  
+  setIsEditDialogOpen(true); // Open the edit dialog  
+};  
+
+const handleCloseDialog = () => {  
+  setIsEditDialogOpen(false); // Close the dialog  
+  setSelectedInspector(null); // Clear the selected inspector  
+};  
+
+return (  
+        <DropdownMenu>  
+          <DropdownMenuTrigger asChild>  
+            <Button variant="ghost" className="h-8 w-8 p-0">  
+              <span className="sr-only">Open menu</span>  
+              <MoreHorizontal className="h-4 w-4" />  
+            </Button>  
+          </DropdownMenuTrigger>  
+          <DropdownMenuContent align="end">  
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>  
+            <DropdownMenuItem  
+              onClick={() => handleEditClick(inspector)} // Use handleEditClick instead of alert  
+            >  
+              Edit details  
+            </DropdownMenuItem>  
+            <DropdownMenuItem onClick={handleStatusToggle}>  
+              {isActive ? "Deactivate" : "Activate"}  
+            </DropdownMenuItem>  
+            <DropdownMenuSeparator />  
+            <DropdownMenuItem  
+              className="text-red-600 focus:text-red-600"  
+              onClick={handleDelete}  
+            >  
+              Delete  
+            </DropdownMenuItem>  
+          </DropdownMenuContent>  
+          <EditInspectorDialog  
+            inspector={row.original}
+            departments={[]}
+            specializations={[]}
+            onOpenChange={handleCloseDialog} 
+            open={false}          
+            />  
+        </DropdownMenu>  
+      );  
     },
   },
 ];

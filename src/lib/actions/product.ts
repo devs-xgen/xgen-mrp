@@ -4,6 +4,7 @@
 import { prisma } from "@/lib/db";
 import { ProductForOrder } from "@/types/admin/product";
 import { Status } from "@prisma/client";
+import { convertDecimals } from "../convertDecimals";
 
 export async function getAllProducts() {
   try {
@@ -39,7 +40,7 @@ export async function getAllProducts() {
       },
     });
 
-    return products;
+    return convertDecimals(products);
   } catch (error) {
     console.error("❌ Error fetching products:", error);
     throw new Error("Failed to fetch products");
@@ -123,7 +124,7 @@ export async function getProductById(id: string) {
       return null;
     }
 
-    return product;
+    return convertDecimals(product);
   } catch (error) {
     console.error("❌ Error fetching product:", error);
     throw new Error("Failed to fetch product details");
@@ -157,7 +158,7 @@ export async function getProductionOrdersByProductId(productId: string) {
       }
     });
 
-    return orders;
+    return convertDecimals(orders);
   } catch (error) {
     console.error("❌ Error fetching production orders for product:", error);
     throw new Error("Failed to fetch production orders");

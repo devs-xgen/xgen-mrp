@@ -1,3 +1,4 @@
+import { convertDecimals } from "@/lib/convertDecimals"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
 
@@ -20,7 +21,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
                 updatedAt: new Date(),
             }
         })
-        return NextResponse.json(category)
+        return NextResponse.json(convertDecimals(category))
     } catch (error: any) {
         if (error.code === 'P2002') {
             return NextResponse.json(

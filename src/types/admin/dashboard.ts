@@ -1,6 +1,26 @@
 // src/types/admin/dashboard.ts
 import { Decimal } from "@prisma/client/runtime/library"
 
+export function convertDecimals(obj: any): any {
+  if (obj instanceof Decimal) {
+    return obj.toNumber()
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(convertDecimals)
+  }
+
+  if (typeof obj === 'object' && obj !== null) {
+    const newObj: Record<string, any> = {}
+    for (const key in obj) {
+      newObj[key] = convertDecimals(obj[key])
+    }
+    return newObj
+  }
+
+  return obj
+}
+
 export interface DashboardStats {
     totalRevenue: string;
     totalProducts: number;

@@ -428,8 +428,8 @@ export async function getTopPerformingProducts(limit: number = 5): Promise<Produ
 
     // Sort by revenue and return top products
     return productPerformance
-      .sort((a, b) => b.revenue.minus(a.revenue).toNumber())
-      .slice(0, limit)
+  .sort((a, b) => b.revenue.minus(a.revenue).toNumber())
+  .slice(0, limit)
   } catch (error) {
     console.error('Failed to fetch top performing products:', error)
     throw new Error('Failed to fetch top performing products')

@@ -38,6 +38,7 @@ import {
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { createProductionOrder } from "@/lib/actions/production-order";
 import { useRouter } from "next/navigation";
+import { convertDecimals } from "@/lib/convertDecimals";
 
 // Format currency utility function
 const formatCurrency = (amount: number): string => {
@@ -137,7 +138,7 @@ export function CreateCustomerOrderDialog({
       }
     });
 
-    return lowStock;
+    return convertDecimals(lowStock);
   };
 
   async function onSubmit(values: FormValues) {

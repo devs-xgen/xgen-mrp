@@ -1,3 +1,4 @@
+import { convertDecimals } from "@/lib/convertDecimals"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
 
@@ -31,7 +32,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
                 category: true,
             }
         })
-        return NextResponse.json(product)
+        return NextResponse.json(convertDecimals(product))
     } catch (error: any) {
         console.error('Product update error:', error)
         if (error.code === 'P2002') {
@@ -87,7 +88,7 @@ export async function GET(_: Request, { params }: RouteParams) {
             )
         }
 
-        return NextResponse.json(product)
+        return NextResponse.json(convertDecimals(product))
     } catch (error) {
         console.error('Error fetching product:', error)
         return NextResponse.json(
