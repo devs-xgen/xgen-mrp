@@ -5,18 +5,18 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 
 // Portal to roles mapping
 const PORTAL_ROLES = {
-    'ADMIN': ['ADMIN'],
-    'WORKER': ['WORKER'],
-    'INSPECTOR': ['INSPECTOR'],
-    'DELIVERY': ['DELIVERY']
+    'ADMIN_PORTAL': ['ADMIN'],
+    'WORKER_PORTAL': ['WORKER'],
+    'INSPECTOR_PORTAL': ['INSPECTOR'],
+    'DELIVERY_PORTAL': ['DELIVERY']
 }
 
 // Login pages for different portals
 const PORTAL_LOGIN_PAGES = {
-    'ADMIN': '/admin/login',
-    'WORKER': '/worker/login',
-    'INSPECTOR': '/inspector/login',
-    'DELIVERY': '/delivery/login'
+    'ADMIN_PORTAL': '/admin/login',
+    'WORKER_PORTAL': '/worker/login',
+    'INSPECTOR_PORTAL': '/inspector/login',
+    'DELIVERY_PORTAL': '/delivery/login'
 }
 
 // Extend the User and Session types
@@ -81,7 +81,8 @@ export const authOptions: NextAuthOptions = {
                     }
 
                     // Check if user role is allowed in the requested portal
-                    const requestedPortal = credentials.portal.toUpperCase()
+                    // Convert portal to match the format in PORTAL_ROLES
+                    const requestedPortal = credentials.portal.toUpperCase() + "_PORTAL"
                     const allowedRoles = PORTAL_ROLES[requestedPortal as keyof typeof PORTAL_ROLES] || []
 
                     if (!allowedRoles.includes(user.role)) {
@@ -126,9 +127,14 @@ export const authOptions: NextAuthOptions = {
         strategy: "jwt",
         maxAge: 30 * 24 * 60 * 60,
     },
+    // Use dynamic error handling based on the URL path
     pages: {
-        signIn: '/admin/login', // Default sign in page
-        error: '/admin/login', // Redirect to admin login on error
+        error: ({ url }) => {
+            // Extract the portal from the URL path
+            const portalMatch = url?.match(/\/(admin|worker|inspector|delivery)/);
+            const portal = portalMatch ? portalMatch[1] : 'admin';
+            return `/${portal}/login`;
+        }
     },
     secret: process.env.NEXTAUTH_SECRET,
 }

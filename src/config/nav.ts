@@ -60,7 +60,6 @@ export const adminNavItems: NavItem[] = [
       },
       {
         label: 'Work Centers',
-
         href: '/admin/work-centers',
         description: 'Manage work centers'
       }
@@ -118,16 +117,10 @@ export const adminNavItems: NavItem[] = [
     href: '/admin/settings',
     description: 'System configuration'
   }
-  // {
-  //   icon: Text,
-  //   label: 'Text',
-  //   href: '/admin/text',
-  //   description: 'text sample'
-  // }
 ]
 
-export const operatorNavItems = [
- {
+export const workerNavItems: NavItem[] = [
+  {
     icon: LayoutDashboard,
     label: 'Dashboard',
     href: '/worker/dashboard',
@@ -197,87 +190,120 @@ export const operatorNavItems = [
   }
 ]
 
-export const inspectorNavItems = [
+export const inspectorNavItems: NavItem[] = [
   {
-     icon: LayoutDashboard,
-     label: 'Dashboard',
-     href: '/inspector/dashboard',
-     description: 'Your inspector overview'
-   },
-   {
-     icon: Factory,
-     label: 'Production',
-     description: 'Production management',
-     items: [
-       {
-         icon: ClipboardList,
-         label: 'Tasks',
-         href: '/inspector/production',
-         description: 'View and manage production tasks'
-       },
-       {
-         icon: CheckSquare,
-         label: 'Quality Control',
-         href: '/inspector/production/quality',
-         description: 'Quality inspection tasks'
-       },
-       {
-         icon: Boxes,
-         label: 'Work in Progress',
-         href: '/inspector/production/wip',
-         description: 'Track work in progress'
-       }
-     ]
-   },
-   {
-     icon: Package,
-     label: 'Inventory',
-     href: '/inspector/inventory',
-     description: 'Check inventory levels'
-   },
-   {
-     icon: BadgeDollarSign,
-     label: 'Orders',
-     description: 'Orders management',
-     items: [
-       {
-         icon: ShoppingCart,
-         label: 'Customer Orders',
-         href: '/inspector/orders',
-         description: 'View customer order requirements'
-       },
-       {
-         icon: Truck,
-         label: 'Shipments',
-         href: '/inspector/orders/shipments',
-         description: 'Manage order shipments'
-       }
-     ]
-   },
-   {
-     icon: UserCircle,
-     label: 'Profile',
-     href: '/inspector/profile',
-     description: 'Manage your profile'
-   },
-   {
-     icon: Settings,
-     label: 'Settings',
-     href: '/inspector/settings',
-     description: 'Account settings and preferences'
-   }
- ]
+    icon: LayoutDashboard,
+    label: 'Dashboard',
+    href: '/inspector/dashboard',
+    description: 'Your inspector overview'
+  },
+  {
+    icon: Factory,
+    label: 'Production',
+    description: 'Production management',
+    items: [
+      {
+        icon: ClipboardList,
+        label: 'Tasks',
+        href: '/inspector/production',
+        description: 'View and manage production tasks'
+      },
+      {
+        icon: CheckSquare,
+        label: 'Quality Control',
+        href: '/inspector/production/quality',
+        description: 'Quality inspection tasks'
+      },
+      {
+        icon: Boxes,
+        label: 'Work in Progress',
+        href: '/inspector/production/wip',
+        description: 'Track work in progress'
+      }
+    ]
+  },
+  {
+    icon: Package,
+    label: 'Inventory',
+    href: '/inspector/inventory',
+    description: 'Check inventory levels'
+  },
+  {
+    icon: BadgeDollarSign,
+    label: 'Orders',
+    description: 'Orders management',
+    items: [
+      {
+        icon: ShoppingCart,
+        label: 'Customer Orders',
+        href: '/inspector/orders',
+        description: 'View customer order requirements'
+      },
+      {
+        icon: Truck,
+        label: 'Shipments',
+        href: '/inspector/orders/shipments',
+        description: 'Manage order shipments'
+      }
+    ]
+  },
+  {
+    icon: UserCircle,
+    label: 'Profile',
+    href: '/inspector/profile',
+    description: 'Manage your profile'
+  },
+  {
+    icon: Settings,
+    label: 'Settings',
+    href: '/inspector/settings',
+    description: 'Account settings and preferences'
+  }
+]
+
+export const deliveryNavItems: NavItem[] = [
+  {
+    icon: LayoutDashboard,
+    label: 'Dashboard',
+    href: '/delivery/dashboard',
+    description: 'Delivery overview'
+  },
+  {
+    icon: ShoppingCart,
+    label: 'Orders',
+    href: '/delivery/orders',
+    description: 'Delivery orders'
+  },
+  {
+    icon: Truck,
+    label: 'Deliveries',
+    href: '/delivery/deliveries',
+    description: 'Manage deliveries'
+  },
+  {
+    icon: UserCircle,
+    label: 'Profile',
+    href: '/delivery/profile',
+    description: 'Manage your profile'
+  },
+  {
+    icon: Settings,
+    label: 'Settings',
+    href: '/delivery/settings',
+    description: 'Account settings'
+  }
+]
 
 export const getNavItems = (role: string) => {
   switch (role) {
     case 'ADMIN':
-    // case 'MANAGER':
       return adminNavItems
-    // case 'OPERATOR': 
-    // case 'USER':
-    //   return operatorNavItems
+    case 'WORKER':
+      return workerNavItems
     case 'INSPECTOR':
       return inspectorNavItems
+    case 'DELIVERY':
+      return deliveryNavItems
     default:
       return []
   }
