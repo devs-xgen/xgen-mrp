@@ -4,10 +4,11 @@ import {
   getDepartments,
   getSpecializations,
 } from "@/lib/actions/inspector";
-import { DataTable } from "@/components/module/admin/inspectors/data-table";
-import { columns } from "@/components/module/admin/inspectors/columns";
+import { InspectorManagement } from "@/components/module/admin/inspectors/inspector-management";
 import { CreateInspectorDialog } from "@/components/module/admin/inspectors/create-inspector-dialog";
 import { revalidatePath } from "next/cache";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Inspectors Management",
@@ -26,17 +27,18 @@ export default async function InspectorsPage() {
   const specializations = await getSpecializations();
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto py-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
             Inspectors Management
           </h1>
           <p className="text-muted-foreground">
-            Manage and monitor your inspection personnel
+            Manage and monitor your quality inspection personnel
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Inspector-specific dialogs */}
           <CreateInspectorDialog
             departments={departments}
             specializations={specializations}
@@ -45,7 +47,7 @@ export default async function InspectorsPage() {
         </div>
       </div>
 
-      <DataTable columns={columns} data={inspectors} />
+      <InspectorManagement data={inspectors} />
     </div>
   );
 }

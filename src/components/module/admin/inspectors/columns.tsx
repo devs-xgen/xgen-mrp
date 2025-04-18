@@ -6,6 +6,13 @@ import {
   MoreHorizontal,
   CheckCircle,
   XCircle,
+  Link,
+  LinkOff,
+  Edit,
+  Eye,
+  Trash,
+  UserPlus,
+  UserMinus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,17 +31,20 @@ import {
   type Inspector,
 } from "@/lib/actions/inspector";
 import { formatPhoneNumber } from "@/lib/utils";
-import { SetStateAction, useState } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { EditInspectorDialog } from "./edit-inspection-dialog";
-
-interface EditInspectorDialogProps {
-  inspector: Inspector;
-  departments: string[];
-  specializations: string[];
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => Promise<void>;
-}
+import { DeleteInspectorDialog } from "./delete-inspection-dialog";
+import { ViewInspectorDialog } from "./view-inspector-dialog";
+import { LinkUserDialog } from "./link-user-dialog";
+import { unlinkUserFromInspector } from "@/lib/actions/user-inspector";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export const columns: ColumnDef<Inspector>[] = [
   {
@@ -74,14 +84,38 @@ export const columns: ColumnDef<Inspector>[] = [
     cell: ({ row }) => {
       const firstName = row.original.firstName;
       const lastName = row.original.lastName;
+
+      // Check if this inspector has a linked user
+      const hasUser = !!row.original.userId;
+
       return (
-        <div>
-          <div className="font-medium">
-            {firstName} {lastName}
+        <div className="flex items-center space-x-2">
+          <div>
+            <div className="font-medium">
+              {firstName} {lastName}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {row.original.email}
+            </div>
           </div>
-          <div className="text-sm text-muted-foreground">
-            {row.original.email}
-          </div>
+          {hasUser && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge
+                    variant="outline"
+                    className="bg-blue-50 text-blue-600 border-blue-200 ml-2"
+                  >
+                    <Link className="h-3 w-3 mr-1" />
+                    User Linked
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>This inspector is linked to a user account</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
       );
     },
@@ -164,79 +198,184 @@ export const columns: ColumnDef<Inspector>[] = [
     cell: ({ row }) => {
       const inspector = row.original;
       const isActive = inspector.isActive;
+      const hasUser = !!inspector.userId;
 
-      const handleStatusToggle = async () => {
-        try {
-          await toggleInspectorStatus(inspector.inspectorId, !isActive);
-        } catch (error) {
-          console.error("Error toggling inspector status:", error);
-          alert(`Failed to ${isActive ? "deactivate" : "activate"} inspector.`);
-        }
-      };
+      // Create stateful components using a function that returns a component
+      function ActionsCell() {
+        const router = useRouter();
+        const { toast } = useToast();
+        const [showViewDialog, setShowViewDialog] = useState(false);
+        const [showEditDialog, setShowEditDialog] = useState(false);
+        const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+        const [showLinkDialog, setShowLinkDialog] = useState(false);
+        const [isLoading, setIsLoading] = useState(false);
 
-      const handleDelete = async () => {
-        if (
-          window.confirm(
-            "Are you sure you want to permanently delete this inspector? This action cannot be undone."
-          )
-        ) {
+        const handleStatusToggle = async () => {
           try {
-            await deleteInspector(inspector.inspectorId);
+            setIsLoading(true);
+            await toggleInspectorStatus(inspector.inspectorId, !isActive);
+            toast({
+              title: "Success",
+              description: `Inspector ${
+                isActive ? "deactivated" : "activated"
+              } successfully`,
+            });
+            router.refresh();
           } catch (error) {
-            console.error("Error deleting inspector:", error);
-            alert("Failed to delete inspector.");
+            toast({
+              title: "Error",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : `Failed to ${
+                      isActive ? "deactivate" : "activate"
+                    } inspector`,
+              variant: "destructive",
+            });
+          } finally {
+            setIsLoading(false);
           }
-        }
-      };
+        };
 
-      const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);  
-const [selectedInspector, setSelectedInspector] = useState(null);  
+        const handleUnlinkUser = async () => {
+          if (!inspector.inspectorId) return;
 
-const handleEditClick = (inspector) => {  
-  setSelectedInspector(inspector); // Set the selected inspector data  
-  setIsEditDialogOpen(true); // Open the edit dialog  
-};  
+          if (
+            !confirm(
+              "Are you sure you want to unlink the user from this inspector?"
+            )
+          ) {
+            return;
+          }
 
-const handleCloseDialog = () => {  
-  setIsEditDialogOpen(false); // Close the dialog  
-  setSelectedInspector(null); // Clear the selected inspector  
-};  
+          try {
+            setIsLoading(true);
+            await unlinkUserFromInspector(inspector.inspectorId);
+            toast({
+              title: "Success",
+              description: "User unlinked from inspector successfully",
+            });
+            router.refresh();
+          } catch (error) {
+            toast({
+              title: "Error",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "Failed to unlink user",
+              variant: "destructive",
+            });
+          } finally {
+            setIsLoading(false);
+          }
+        };
 
-return (  
-        <DropdownMenu>  
-          <DropdownMenuTrigger asChild>  
-            <Button variant="ghost" className="h-8 w-8 p-0">  
-              <span className="sr-only">Open menu</span>  
-              <MoreHorizontal className="h-4 w-4" />  
-            </Button>  
-          </DropdownMenuTrigger>  
-          <DropdownMenuContent align="end">  
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>  
-            <DropdownMenuItem  
-              onClick={() => handleEditClick(inspector)} // Use handleEditClick instead of alert  
-            >  
-              Edit details  
-            </DropdownMenuItem>  
-            <DropdownMenuItem onClick={handleStatusToggle}>  
-              {isActive ? "Deactivate" : "Activate"}  
-            </DropdownMenuItem>  
-            <DropdownMenuSeparator />  
-            <DropdownMenuItem  
-              className="text-red-600 focus:text-red-600"  
-              onClick={handleDelete}  
-            >  
-              Delete  
-            </DropdownMenuItem>  
-          </DropdownMenuContent>  
-          <EditInspectorDialog  
-            inspector={row.original}
-            departments={[]}
-            specializations={[]}
-            onOpenChange={handleCloseDialog} 
-            open={false}          
-            />  
-        </DropdownMenu>  
-      );  
+        return (
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => setShowViewDialog(true)}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  View details
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleStatusToggle}
+                  disabled={isLoading}
+                >
+                  {isActive ? (
+                    <>
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Deactivate
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Activate
+                    </>
+                  )}
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                {hasUser ? (
+                  <DropdownMenuItem
+                    onClick={handleUnlinkUser}
+                    disabled={isLoading}
+                  >
+                    <UserMinus className="mr-2 h-4 w-4" />
+                    Unlink User
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={() => setShowLinkDialog(true)}>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Link User
+                  </DropdownMenuItem>
+                )}
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  <Trash className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <ViewInspectorDialog
+              inspector={inspector}
+              open={showViewDialog}
+              onOpenChange={setShowViewDialog}
+              onEdit={() => {
+                setShowViewDialog(false);
+                setShowEditDialog(true);
+              }}
+              onDelete={() => {
+                setShowViewDialog(false);
+                setShowDeleteDialog(true);
+              }}
+            />
+
+            <EditInspectorDialog
+              inspector={inspector}
+              departments={[]}
+              specializations={[]}
+              open={showEditDialog}
+              onOpenChange={setShowEditDialog}
+            />
+
+            <DeleteInspectorDialog
+              inspector={inspector}
+              open={showDeleteDialog}
+              onOpenChange={setShowDeleteDialog}
+            />
+
+            <LinkUserDialog
+              inspector={inspector}
+              open={showLinkDialog}
+              onOpenChange={setShowLinkDialog}
+              onSuccess={() => {
+                router.refresh();
+              }}
+            />
+          </>
+        );
+      }
+
+      return <ActionsCell />;
     },
   },
 ];
