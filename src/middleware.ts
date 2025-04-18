@@ -22,13 +22,13 @@ export default withAuth(
         const token = req.nextauth.token
         const pathname = req.nextUrl.pathname
 
+        // Home page redirect based on role
         if (pathname === '/') {
             if (token) {
-                // Get portal path based on role
+                // Find correct dashboard based on user role
                 const role = token.role as string
-                let redirectPath = '/admin/dashboard' // Default
-
-                // Find which portal the role belongs to
+                let redirectPath = '/admin/dashboard' // Default fallback
+                
                 for (const [portal, roles] of Object.entries(PORTAL_ROLES)) {
                     if (roles.includes(role)) {
                         const portalPath = PORTAL_PATHS[portal as keyof typeof PORTAL_PATHS]
@@ -48,7 +48,7 @@ export default withAuth(
             
             // Prevent accessing login pages when authenticated
             if (pathname.includes('/login')) {
-                // Determine correct portal based on role
+                // Redirect to appropriate dashboard based on role
                 let redirectPath = '/admin/dashboard' // Default
                 
                 for (const [portal, roles] of Object.entries(PORTAL_ROLES)) {
@@ -68,7 +68,7 @@ export default withAuth(
                     // If user is in this portal, check if they have permission
                     const portalRoles = PORTAL_ROLES[portal as keyof typeof PORTAL_ROLES]
                     if (!portalRoles.includes(userRole)) {
-                        // Redirect to appropriate portal
+                        // Redirect to appropriate portal dashboard
                         for (const [userPortal, roles] of Object.entries(PORTAL_ROLES)) {
                             if (roles.includes(userRole)) {
                                 const correctPath = PORTAL_PATHS[userPortal as keyof typeof PORTAL_PATHS]
@@ -80,9 +80,12 @@ export default withAuth(
             }
         }
 
-        // Handle unauthenticated users
+        // Handle unauthenticated users attempting to access protected routes
         if (!token && !pathname.includes('/login') && pathname !== '/') {
-            return NextResponse.redirect(new URL('/admin/login', req.url))
+            // Determine which login page to redirect to based on the URL path
+            const portalMatch = pathname.match(/^\/(admin|worker|inspector|delivery)/);
+            const portal = portalMatch ? portalMatch[1] : 'admin';
+            return NextResponse.redirect(new URL(`/${portal}/login`, req.url))
         }
 
         return NextResponse.next()
@@ -92,7 +95,7 @@ export default withAuth(
             authorized: ({ token, req }) => {
                 const pathname = req.nextUrl.pathname
 
-                // Public routes
+                // Public routes are always accessible
                 if (pathname === '/' || pathname.includes('/login')) {
                     return true
                 }
