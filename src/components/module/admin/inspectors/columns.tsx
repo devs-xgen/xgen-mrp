@@ -7,7 +7,7 @@ import {
   CheckCircle,
   XCircle,
   Link,
-  LinkOff,
+  Link2Off,
   Edit,
   Eye,
   Trash,
