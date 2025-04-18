@@ -45,6 +45,7 @@ function NavItem({
 }: NavItemProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+
   useEffect(() => {
     if (isCollapsed) {
       setIsOpen(false);
@@ -138,10 +139,18 @@ function NavItem({
 export default function AppSidebar({ theme: propTheme, toggleTheme: propToggleTheme }: AppSidebarProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const user = session?.user as {
+    id: string;
+    email?: string | null;
+    name?: string | null;
+    role: string;
+    portal: string;
+  } | undefined;
   // Type assertion to ensure navItems matches our NavItem interface
+  const portal = session?.user?.portal || "";
+  const role = session?.user?.role || "";
   const navItems = getNavItems(session?.user?.role || "") as NavItem[];
-  const isAdmin = ["ADMIN", "MANAGER"].includes(session?.user?.role || "");
-  const portalType = isAdmin ? "Admin" : "Worker";
+  const portalType = portal.charAt(0).toUpperCase() + portal.slice(1).toLowerCase(); // e.g., ADMIN -> Admin
   const [isCollapsed, setIsCollapsed] = useState(false);
   
   // Use context theme if prop theme is not provided
@@ -173,7 +182,8 @@ export default function AppSidebar({ theme: propTheme, toggleTheme: propToggleTh
           )}
         >
           <h1 className="text-xl font-bold">{portalType} Portal</h1>
-          <p className="text-sm text-slate-400 mt-1">{session?.user?.email}</p>
+          {/* session?. */}
+          <p className="text-sm text-slate-400 mt-1">{user?.email}</p>
         </div>
         <Button
           variant="ghost"
@@ -216,8 +226,9 @@ export default function AppSidebar({ theme: propTheme, toggleTheme: propToggleTh
       >
         {!isCollapsed && (
           <div className="mb-2 px-3 text-xs text-slate-400">
-            Signed in as: {session?.user?.role}
-          </div>
+            {/* session?. | session?.user?. | */}
+          {user?.email} | {role} in {portalType} Portal
+        </div>        
         )}
         <Button
           variant="ghost"
