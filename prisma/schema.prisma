@@ -29,6 +29,9 @@ model User {
   modifiedProductionOrders ProductionOrder[]      @relation("ModifiedBy")
   UserWorkCenter           UserWorkCenter[]
   inspector                Inspector?
+  requestedMaterials       MaterialRequest[]      @relation("RequestedMaterials")
+  approvedMaterials        MaterialRequest[]      @relation("ApprovedMaterials")
+  reportedIssues           InventoryIssueReport[]
 }
 
 model WorkCenterAssignment {
@@ -209,21 +212,22 @@ model ProductionOrder {
 }
 
 model WorkCenter {
-  id              String                 @id @default(cuid())
-  name            String
-  description     String?
-  capacityPerHour Int
-  operatingHours  Int
-  efficiencyRate  Decimal                @db.Decimal(5, 2)
-  status          Status                 @default(ACTIVE)
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
-  createdBy       String?
-  modifiedBy      String?
-  operations      Operation[]
-  // New relationship
-  userAssignments WorkCenterAssignment[]
-  UserWorkCenter  UserWorkCenter[]
+  id               String                 @id @default(cuid())
+  name             String
+  description      String?
+  capacityPerHour  Int
+  operatingHours   Int
+  efficiencyRate   Decimal                @db.Decimal(5, 2)
+  status           Status                 @default(ACTIVE)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  createdBy        String?
+  modifiedBy       String?
+  operations       Operation[]
+  UserWorkCenter   UserWorkCenter[]
+  userAssignments  WorkCenterAssignment[]
+  materialRequests MaterialRequest[]
+  locations        Location[]
 }
 
 model Operation {
@@ -494,4 +498,110 @@ model UserWorkCenter {
   workCenter    WorkCenter @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
 
   @@unique([userId, workCenterId])
+}
+
+model MaterialRequest {
+  id                String                @id @default(cuid())
+  requestDate       DateTime              @default(now())
+  requestedById     String
+  workCenterId      String
+  status            String                @default("PENDING")
+  priority          String                @default("MEDIUM")
+  requiredDate      DateTime
+  approvedById      String?
+  approvedDate      DateTime?
+  fulfilledDate     DateTime?
+  notes             String?
+  productionOrderId String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  requestedBy       User                  @relation("RequestedMaterials", fields: [requestedById], references: [id])
+  approvedBy        User?                 @relation("ApprovedMaterials", fields: [approvedById], references: [id])
+  workCenter        WorkCenter            @relation(fields: [workCenterId], references: [id])
+  items             MaterialRequestItem[]
+}
+
+model MaterialRequestItem {
+  id                String          @id @default(cuid())
+  materialRequestId String
+  inventoryItemId   String
+  quantityRequested Int
+  quantityApproved  Int?
+  quantityFulfilled Int?
+  unit              String
+  notes             String?
+  status            String          @default("PENDING")
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  materialRequest   MaterialRequest @relation(fields: [materialRequestId], references: [id], onDelete: Cascade)
+  inventoryItem     InventoryItem   @relation(fields: [inventoryItemId], references: [id])
+}
+
+model InventoryItem {
+  id                 String   @id @default(cuid())
+  sku                String   @unique
+  name               String
+  description        String?
+  materialType       String   @default("COMPONENT")
+  locationId         String
+  unit               String
+  currentStock       Int      @default(0)
+  minimumStockLevel  Int      @default(0)
+  criticalStockLevel Int      @default(0)
+  reorderQuantity    Int?
+  leadTime           Int?
+  cost               Decimal  @db.Decimal(10, 2)
+  qrCode             String?
+  barcode            String?
+  image              String?
+  notes              String?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  createdBy          String?
+  modifiedBy         String?
+
+  // Relations
+  materialRequestItems MaterialRequestItem[]
+  location             Location               @relation(fields: [locationId], references: [id])
+  issueReports         InventoryIssueReport[]
+}
+
+model Location {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  locationType String   @default("STORAGE")
+  isPublic     Boolean  @default(false)
+  workCenterId String?
+  capacity     Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdBy    String?
+  modifiedBy   String?
+
+  // Relation to WorkCenter
+  workCenter WorkCenter? @relation(fields: [workCenterId], references: [id])
+
+  // Relation to InventoryItem
+  inventoryItems InventoryItem[]
+}
+
+model InventoryIssueReport {
+  id              String    @id @default(cuid())
+  inventoryItemId String
+  reportType      String // "LOW_STOCK", "DISCREPANCY", "DAMAGE", "QUALITY", "OTHER"
+  reportDate      DateTime  @default(now())
+  reportedById    String
+  description     String
+  severity        String // "LOW", "MEDIUM", "HIGH"
+  status          String    @default("OPEN") // "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"
+  resolvedDate    DateTime?
+  resolution      String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  reportedBy    User          @relation(fields: [reportedById], references: [id])
 }

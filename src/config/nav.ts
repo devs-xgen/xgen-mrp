@@ -13,7 +13,13 @@ import {
   Box,
   Boxes,
   CheckSquare,
-  UserSquare
+  UserSquare,
+  Clock,
+  AlertTriangle,
+  Clipboard,
+  Timer,
+  Hammer,
+  LineChart
 } from 'lucide-react'
 
 interface NavItem {
@@ -124,7 +130,13 @@ export const workerNavItems: NavItem[] = [
     icon: LayoutDashboard,
     label: 'Dashboard',
     href: '/worker/dashboard',
-    description: 'Your work overview'
+    description: 'Your work overview and daily tasks'
+  },
+  {
+    icon: ClipboardList,
+    label: 'Tasks',
+    href: '/worker/tasks',
+    description: 'View and manage your assigned tasks'
   },
   {
     icon: Factory,
@@ -132,10 +144,10 @@ export const workerNavItems: NavItem[] = [
     description: 'Production management',
     items: [
       {
-        icon: ClipboardList,
-        label: 'Tasks',
+        icon: Hammer,
+        label: 'Operations',
         href: '/worker/production',
-        description: 'View and manage production tasks'
+        description: 'Production operations and processes'
       },
       {
         icon: CheckSquare,
@@ -148,14 +160,32 @@ export const workerNavItems: NavItem[] = [
         label: 'Work in Progress',
         href: '/worker/production/wip',
         description: 'Track work in progress'
+      },
+      {
+        icon: Timer,
+        label: 'Time Tracking',
+        href: '/worker/production/tracking',
+        description: 'Track time spent on tasks'
       }
     ]
   },
   {
     icon: Package,
     label: 'Inventory',
-    href: '/worker/inventory',
-    description: 'Check inventory levels'
+    items: [
+      {
+        icon: Warehouse,
+        label: 'Materials',
+        href: '/worker/inventory',
+        description: 'Check inventory levels'
+      },
+      {
+        icon: AlertTriangle,
+        label: 'Low Stock Alerts',
+        href: '/worker/inventory/alerts',
+        description: 'View materials requiring attention'
+      }
+    ]
   },
   {
     icon: BadgeDollarSign,
@@ -177,10 +207,16 @@ export const workerNavItems: NavItem[] = [
     ]
   },
   {
+    icon: LineChart,
+    label: 'Reports',
+    href: '/worker/reports',
+    description: 'View your productivity metrics'
+  },
+  {
     icon: UserCircle,
     label: 'Profile',
     href: '/worker/profile',
-    description: 'Manage your profile'
+    description: 'Manage your profile and skills'
   },
   {
     icon: Settings,
