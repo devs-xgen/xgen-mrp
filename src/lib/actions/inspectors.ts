@@ -249,6 +249,101 @@ export async function getLoggedInInspectorAverageQualityChecks() {
   }
 }
 
+// src/lib/actions/inspectors.ts (corrected)
+export async function updateInspector(id: string, updates: {
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string | null;
+  department?: string | null;
+  specialization?: string | null;
+  certificationLevel?: string | null;
+  yearsOfExperience?: number | null;
+  notes?: string | null;
+}) {
+  try {
+    const updatedInspector = await prisma.inspector.update({
+      where: { inspectorId: id },
+      data: updates,
+    });
+    return updatedInspector;
+  } catch (error) {
+    console.error('Error updating inspector:', error);
+    throw new Error('Failed to update inspector');
+  }
+}
+
+
+export async function getProductionOrdersForInspector() {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id) {
+    throw new Error("User not authenticated.");
+  }
+
+  // Find the Inspector related to the current User
+  const inspector = await prisma.inspector.findUnique({
+    where: { userId: session.user.id },
+    include: {
+      user: {
+        select: {
+          id: true,
+          createdProductionOrders: {
+            include: {
+              workCenter: true,
+            },
+          },
+          modifiedProductionOrders: {
+            include: {
+              workCenter: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!inspector || !inspector.user) {
+    return [];
+  }
+
+  const productionOrders = [
+    ...inspector.user.createdProductionOrders,
+    ...inspector.user.modifiedProductionOrders,
+  ];
+
+  return productionOrders;
+}
+// export async function getProductionOrdersByInspector(inspectorId: string) {
+//   try {
+//     const inspector = await prisma.inspector.findUnique({
+//       where: { inspectorId },
+//       include: {
+//         user: {
+//           select: {
+//             id: true,
+//             createdProductionOrders: true,
+//             modifiedProductionOrders: true,
+//           },
+//         },
+//       },
+//     });
+
+//     if (!inspector || !inspector.user) {
+//       throw new Error('Inspector or linked user not found.');
+//     }
+
+//     // Combine created and modified production orders
+//     const productionOrders = [
+//       ...inspector.user.createdProductionOrders,
+//       ...inspector.user.modifiedProductionOrders,
+//     ];
+
+//     return productionOrders;
+//   } catch (error) {
+//     console.error('Error fetching production orders for inspector:', error);
+//     throw error;
+//   }
+// }
 // export async function getLoggedInInspectorData() {
 //   try {
 //     const session = await getServerSession(authOptions);

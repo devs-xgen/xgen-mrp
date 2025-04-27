@@ -1,14 +1,18 @@
 // src/app/worker/(protected)/tasks/page.tsx
 import { Metadata } from "next";
+import { getProductionOrdersForInspector } from "@/lib/actions/inspectors"; // adjust the path!
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardList } from "lucide-react";
+import { Key } from "react";
 
 export const metadata: Metadata = {
   title: "Worker Tasks",
   description: "Manage your assigned tasks",
 };
 
-export default function TasksPage() {
+export default async function TasksPage() {
+  const productionOrders = await getProductionOrdersForInspector();
+
   return (
     <div className="space-y-6">
       <div>
@@ -24,44 +28,37 @@ export default function TasksPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div className="flex items-center space-x-4">
-                <ClipboardList className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <h4 className="font-medium">Inventory Verification</h4>
-                  <p className="text-sm text-muted-foreground">Due in 2 days</p>
-                </div>
-              </div>
-              <div className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
-                In Progress
-              </div>
-            </div>
+            {productionOrders.length === 0 ? (
+              <p className="text-muted-foreground">No tasks assigned yet.</p>
+            ) : (
+              productionOrders.map((order: { dueDate: string | number | Date; id: Key | null | undefined; orderNumber: any; status: any; }) => {
+                const dueDate = order.dueDate
+                  ? new Date(order.dueDate).toLocaleDateString()
+                  : "No due date";
 
-            <div className="flex items-center justify-between border-b pb-3">
-              <div className="flex items-center space-x-4">
-                <ClipboardList className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <h4 className="font-medium">Quality Check - Batch A123</h4>
-                  <p className="text-sm text-muted-foreground">Due today</p>
-                </div>
-              </div>
-              <div className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-                Urgent
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between border-b pb-3">
-              <div className="flex items-center space-x-4">
-                <ClipboardList className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <h4 className="font-medium">Material Restocking</h4>
-                  <p className="text-sm text-muted-foreground">Due in 5 days</p>
-                </div>
-              </div>
-              <div className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                Pending
-              </div>
-            </div>
+                return (
+                  <div
+                    key={order.id}
+                    className="flex items-center justify-between border-b pb-3"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <ClipboardList className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <h4 className="font-medium">
+                          {order.orderNumber ? `Order #${order.orderNumber}` : "Production Order"}
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          {dueDate}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                      {order.status || "Pending"}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </CardContent>
       </Card>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { getLoggedInInspectorData } from '@/lib/actions/inspectors';
+import { getLoggedInInspectorData, updateInspector } from '@/lib/actions/inspectors';
 import {
   Card,
   CardContent,
@@ -20,25 +20,12 @@ interface InspectorProfile {
   email: string;
   firstName: string;
   lastName: string;
-  phone?: string | null;
-  // Add other personal info fields
-}
-
-interface InspectorWorkDetails {
-  position?: string | null;
+  phoneNumber?: string | null;
   department?: string | null;
-  employeeId?: string | null;
-  joinedDate?: string | null;
-  // Add other work details fields
-}
-
-interface InspectorAddress {
-  address?: string | null;
-  city?: string | null;
-  state?: string | null;
-  postalCode?: string | null;
-  country?: string | null;
-  // Add other address fields
+  specialization?: string | null;
+  certificationLevel?: string | null;
+  yearsOfExperience?: number | null;
+  notes?: string | null;
 }
 
 interface PasswordForm {
@@ -47,50 +34,22 @@ interface PasswordForm {
   confirm: string;
 }
 
-interface InspectorWithRelations {
-  inspectorId: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  phone?: string | null;
-  position?: string | null;
-  department?: string | null;
-  employeeId?: string | null;
-  joinedDate?: string | null;
-  address?: string | null;
-  city?: string | null;
-  state?: string | null;
-  postalCode?: string | null;
-  country?: string | null;
-  // Include other relevant fields
-}
-
-// Profile Information Card Component
 export function ProfileInformationCard() {
   const { data: session, status } = useSession();
-  const [inspectorData, setInspectorData] = useState<InspectorWithRelations | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<InspectorProfile>({
     inspectorId: '',
     email: '',
     firstName: '',
     lastName: '',
-    phone: null,
-  });
-  const [workDetails, setWorkDetails] = useState<InspectorWorkDetails>({
-    position: null,
+    phoneNumber: null,
     department: null,
-    employeeId: null,
-    joinedDate: null,
+    specialization: null,
+    certificationLevel: null,
+    yearsOfExperience: null,
+    notes: null,
   });
-  const [address, setAddress] = useState<InspectorAddress>({
-    address: null,
-    city: null,
-    state: null,
-    postalCode: null,
-    country: null,
-  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [password, setPassword] = useState<PasswordForm>({
     current: '',
     new: '',
@@ -105,32 +64,20 @@ export function ProfileInformationCard() {
     }
 
     const fetchInspectorProfile = async () => {
-      setLoading(true);
-      setError(null);
-
       try {
         const data = await getLoggedInInspectorData();
         if (data) {
-          setInspectorData(data);
           setUserProfile({
             inspectorId: data.inspectorId,
             email: data.email,
             firstName: data.firstName,
             lastName: data.lastName,
-            phone: data.phone || null,
-          });
-          setWorkDetails({
-            position: data.position || null,
+            phoneNumber: data.phoneNumber || null,
             department: data.department || null,
-            employeeId: data.employeeId || null,
-            joinedDate: data.joinedDate || null,
-          });
-          setAddress({
-            address: data.address || null,
-            city: data.city || null,
-            state: data.state || null,
-            postalCode: data.postalCode || null,
-            country: data.country || null,
+            specialization: data.specialization || null,
+            certificationLevel: data.certificationLevel || null,
+            yearsOfExperience: data.yearsOfExperience || null,
+            notes: data.notes || null,
           });
         } else {
           setError('Could not load inspector information.');
@@ -145,10 +92,31 @@ export function ProfileInformationCard() {
     fetchInspectorProfile();
   }, [status, session?.user?.id]);
 
-  const handleProfileUpdate = () => {
-    // Implement your logic to update personal info
-    console.log('Personal Info Updated:', userProfile);
-    toast({ title: 'Personal Info Updated', description: 'Your personal information has been updated.' });
+  const handleProfileUpdate = async () => {
+    try {
+      await updateInspector(userProfile.inspectorId, {
+        firstName: userProfile.firstName,
+        lastName: userProfile.lastName,
+        phoneNumber: userProfile.phoneNumber,
+        department: userProfile.department,
+        specialization: userProfile.specialization,
+        certificationLevel: userProfile.certificationLevel,
+        yearsOfExperience: userProfile.yearsOfExperience,
+        notes: userProfile.notes,
+      });
+
+      toast({
+        title: "Profile Updated",
+        description: "Your profile information has been saved successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update profile",
+      });
+    }
   };
 
   const handlePasswordChange = async () => {
@@ -164,7 +132,6 @@ export function ProfileInformationCard() {
 
   if (loading) return <div>Loading profile information...</div>;
   if (error) return <div className="text-red-500">Error: {error}</div>;
-  if (!inspectorData) return <div>Could not load profile information.</div>;
 
   return (
     <Card className="md:col-span-4">
@@ -175,8 +142,6 @@ export function ProfileInformationCard() {
         <Tabs defaultValue="personal">
           <TabsList className="mb-4">
             <TabsTrigger value="personal">Personal Info</TabsTrigger>
-            <TabsTrigger value="work">Work Details</TabsTrigger>
-            <TabsTrigger value="address">Address</TabsTrigger>
             <TabsTrigger value="password">Password</TabsTrigger>
           </TabsList>
 
@@ -203,68 +168,53 @@ export function ProfileInformationCard() {
                 <Input id="email" type="email" value={userProfile.email} disabled />
               </div>
               <div>
-                <Label htmlFor="phone">Phone Number</Label>
+                <Label htmlFor="phoneNumber">Phone Number</Label>
                 <Input
-                  id="phone"
-                  value={userProfile.phone || ''}
-                  onChange={(e) => setUserProfile({ ...userProfile, phone: e.target.value })}
+                  id="phoneNumber"
+                  value={userProfile.phoneNumber || ''}
+                  onChange={(e) => setUserProfile({ ...userProfile, phoneNumber: e.target.value })}
                 />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <Button onClick={handleProfileUpdate}>Save Changes</Button>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="work" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="position">Position</Label>
-                <Input id="position" value={workDetails.position || ''} disabled />
               </div>
               <div>
                 <Label htmlFor="department">Department</Label>
-                <Input id="department" value={workDetails.department || ''} disabled />
-              </div>
-              <div>
-                <Label htmlFor="employeeId">Employee ID</Label>
-                <Input id="employeeId" value={workDetails.employeeId || ''} disabled />
-              </div>
-              <div>
-                <Label htmlFor="joinedDate">Joined Date</Label>
-                <Input id="joinedDate" value={workDetails.joinedDate || ''} disabled />
-              </div>
-            </div>
-            <div className="pt-2 text-sm text-muted-foreground">
-              Work details can only be modified by administrators.
-            </div>
-          </TabsContent>
-
-          <TabsContent value="address" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <Label htmlFor="address">Street Address</Label>
                 <Input
-                  id="address"
-                  value={address.address || ''}
-                  onChange={(e) => setAddress({ ...address, address: e.target.value })}
+                  id="department"
+                  value={userProfile.department || ''}
+                  onChange={(e) => setUserProfile({ ...userProfile, department: e.target.value })}
                 />
               </div>
               <div>
-                <Label htmlFor="city">City</Label>
-                <Input id="city" value={address.city || ''} onChange={(e) => setAddress({ ...address, city: e.target.value })} />
+                <Label htmlFor="specialization">Specialization</Label>
+                <Input
+                  id="specialization"
+                  value={userProfile.specialization || ''}
+                  onChange={(e) => setUserProfile({ ...userProfile, specialization: e.target.value })}
+                />
               </div>
               <div>
-                <Label htmlFor="state">State / Province</Label>
-                <Input id="state" value={address.state || ''} onChange={(e) => setAddress({ ...address, state: e.target.value })} />
+                <Label htmlFor="certificationLevel">Certification Level</Label>
+                <Input
+                  id="certificationLevel"
+                  value={userProfile.certificationLevel || ''}
+                  onChange={(e) => setUserProfile({ ...userProfile, certificationLevel: e.target.value })}
+                />
               </div>
               <div>
-                <Label htmlFor="postalCode">Postal Code</Label>
-                <Input id="postalCode" value={address.postalCode || ''} onChange={(e) => setAddress({ ...address, postalCode: e.target.value })} />
+                <Label htmlFor="yearsOfExperience">Years of Experience</Label>
+                <Input
+                  id="yearsOfExperience"
+                  type="number"
+                  value={userProfile.yearsOfExperience || ''}
+                  onChange={(e) => setUserProfile({ ...userProfile, yearsOfExperience: parseInt(e.target.value) })}
+                />
               </div>
-              <div>
-                <Label htmlFor="country">Country</Label>
-                <Input id="country" value={address.country || ''} onChange={(e) => setAddress({ ...address, country: e.target.value })} />
+              <div className="md:col-span-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Input
+                  id="notes"
+                  value={userProfile.notes || ''}
+                  onChange={(e) => setUserProfile({ ...userProfile, notes: e.target.value })}
+                />
               </div>
             </div>
             <div className="flex justify-end">
@@ -303,8 +253,7 @@ export function ProfileInformationCard() {
               </div>
             </div>
             <div className="pt-2 text-sm text-muted-foreground">
-              Password must be at least 8 characters long and include
-              uppercase, lowercase, numbers, and special characters.
+              Password must be at least 8 characters long and include uppercase, lowercase, numbers, and special characters.
             </div>
             <div className="flex justify-end">
               <Button onClick={handlePasswordChange}>Change Password</Button>
@@ -315,4 +264,3 @@ export function ProfileInformationCard() {
     </Card>
   );
 }
-
