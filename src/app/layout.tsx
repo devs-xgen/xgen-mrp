@@ -1,23 +1,23 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
-import { Toaster } from "@/components/ui/toaster"
-import AuthProvider from '@/components/providers/auth-provider'
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "@/styles/globals.css";
+import "@/styles/date-picker.css";
+import { Toaster } from "@/components/ui/toaster";
+import AuthProvider from "@/components/providers/auth-provider";
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Inventory Management System',
-  description: 'A comprehensive inventory management system',
-}
+  title: "Inventory Management System",
+  description: "A comprehensive inventory management system",
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    
     <html lang="en">
       <body className={inter.className}>
         <AuthProvider>
@@ -26,5 +26,5 @@ export default function RootLayout({
         </AuthProvider>
       </body>
     </html>
-  )
+  );
 }

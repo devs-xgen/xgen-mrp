@@ -269,6 +269,12 @@ export const deliveryNavItems: NavItem[] = [
     description: 'Delivery overview'
   },
   {
+    icon: ClipboardList,
+    label: 'Tasks',
+    href: '/delivery/tasks',
+    description: 'View and update delivery tasks'
+  },
+  {
     icon: ShoppingCart,
     label: 'Orders',
     href: '/delivery/orders',

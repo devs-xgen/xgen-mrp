@@ -10,6 +10,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { getInspector } from "@/lib/actions/inspector";
+import {
+  getDeliveryUsers,
+  getDeliveryAssignment,
+} from "@/lib/actions/delivery/delivery-assignment";
 
 interface ProductionOrderPageProps {
   params: {
@@ -32,10 +36,13 @@ export async function generateMetadata({
 export default async function ProductionOrderPage({
   params,
 }: ProductionOrderPageProps) {
-  const [orderData, workCenters] = await Promise.all([
-    getProductionOrder(params.id),
-    getAvailableWorkCenters(),
-  ]);
+  const [orderData, workCenters, deliveryUsers, deliveryAssignment] =
+    await Promise.all([
+      getProductionOrder(params.id),
+      getAvailableWorkCenters(),
+      getDeliveryUsers(),
+      getDeliveryAssignment(params.id),
+    ]);
 
   if (!orderData) notFound();
 
@@ -85,6 +92,7 @@ export default async function ProductionOrderPage({
         },
       },
     })),
+    deliveryAssignment: deliveryAssignment,
   };
 
   return (
@@ -98,7 +106,11 @@ export default async function ProductionOrderPage({
         </Link>
       </div>
 
-      <ProductionOrderDetails order={order as any} workCenters={workCenters} />
+      <ProductionOrderDetails
+        order={order as any}
+        workCenters={workCenters}
+        deliveryUsers={deliveryUsers}
+      />
     </div>
   );
 }

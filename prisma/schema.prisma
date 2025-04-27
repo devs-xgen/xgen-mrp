@@ -29,6 +29,7 @@ model User {
   modifiedProductionOrders ProductionOrder[]      @relation("ModifiedBy")
   UserWorkCenter           UserWorkCenter[]
   inspector                Inspector?
+  deliveryAssignments      DeliveryAssignment[]
 }
 
 model WorkCenterAssignment {
@@ -187,25 +188,26 @@ model BOM {
 }
 
 model ProductionOrder {
-  id              String         @id @default(cuid())
+  id              String              @id @default(cuid())
   productId       String
   quantity        Int
   startDate       DateTime
   dueDate         DateTime
-  status          Status         @default(ACTIVE)
-  priority        Priority       @default(MEDIUM)
+  status          Status              @default(ACTIVE)
+  priority        Priority            @default(MEDIUM)
   customerOrderId String?
   notes           String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
   createdBy       String?
-  createdByUser   User?          @relation("CreatedBy", fields: [createdBy], references: [id])
+  createdByUser   User?               @relation("CreatedBy", fields: [createdBy], references: [id])
   modifiedBy      String?
-  modifiedByUser  User?          @relation("ModifiedBy", fields: [modifiedBy], references: [id])
+  modifiedByUser  User?               @relation("ModifiedBy", fields: [modifiedBy], references: [id])
   operations      Operation[]
-  customerOrder   CustomerOrder? @relation(fields: [customerOrderId], references: [id])
-  product         Product        @relation(fields: [productId], references: [id])
+  customerOrder   CustomerOrder?      @relation(fields: [customerOrderId], references: [id])
+  product         Product             @relation(fields: [productId], references: [id])
   qualityChecks   QualityCheck[]
+  delivery        DeliveryAssignment?
 }
 
 model WorkCenter {
@@ -494,4 +496,22 @@ model UserWorkCenter {
   workCenter    WorkCenter @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
 
   @@unique([userId, workCenterId])
+}
+
+// New model for delivery assignments
+model DeliveryAssignment {
+  id                String          @id @default(cuid())
+  productionOrderId String          @unique
+  userId            String
+  scheduledDate     DateTime?
+  status            Status          @default(PENDING)
+  notes             String?
+  deliveryAddress   String? // Add specific delivery address
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  createdBy         String?
+  modifiedBy        String?
+  // Relations
+  productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id])
+  user              User            @relation(fields: [userId], references: [id])
 }

@@ -5,6 +5,7 @@ import { Status, Priority } from "@prisma/client";
 import { ProductionOrder } from "@/types/admin/production-order";
 import { OperationsManagement } from "./operations-management";
 import { QualityChecks } from "./quality-checks";
+import { DeliveryAssignment } from "./delivery-assignment";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -25,15 +26,45 @@ import { formatDate } from "@/lib/utils";
 // Add import for the LinkCustomerOrderDialog component
 import { LinkCustomerOrderDialog } from "./link-customer-order-dialog";
 
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+
 interface WorkCenter {
   id: string;
   name: string;
   capacityPerHour: number;
 }
 
+// Add DeliveryUser type
+interface DeliveryUser {
+  id: string;
+  email: string;
+  name?: string;
+}
+
 interface ProductionOrderDetailsProps {
   order: ProductionOrder;
   workCenters: WorkCenter[];
+  deliveryUsers?: DeliveryUser[]; // Add prop for delivery users
   onUpdateStatus?: (status: Status) => Promise<void>;
   onUpdateOperation?: (operationId: string, status: Status) => Promise<void>;
   onAddOperation?: () => void;
@@ -41,9 +72,19 @@ interface ProductionOrderDetailsProps {
   isLoading?: boolean;
 }
 
+const deliveryAssignmentFormSchema = z.object({
+  userId: z.string().min(1, "Please select a delivery personnel"),
+  scheduledDate: z
+    .date()
+    .min(new Date(), "Scheduled date must be in the future"),
+  deliveryAddress: z.string().min(1, "Delivery address is required"),
+  notes: z.string().optional(),
+});
+
 export function ProductionOrderDetails({
   order,
   workCenters,
+  deliveryUsers = [], // Default to empty array if not provided
   isLoading = false,
 }: ProductionOrderDetailsProps) {
   const [updating, setUpdating] = useState(false);
@@ -222,6 +263,118 @@ export function ProductionOrderDetails({
         onRefresh={handleRefresh}
         isLoading={isLoading}
       />
+
+      {/* Add Delivery Assignment Component */}
+      <DeliveryAssignment
+        productionOrderId={order.id}
+        deliveryAssignment={order.deliveryAssignment}
+        deliveryUsers={deliveryUsers}
+        onRefresh={handleRefresh}
+        isLoading={isLoading}
+      />
     </div>
+  );
+}
+
+export function DeliveryAssignmentForm({
+  onSubmit,
+  deliveryUsers,
+  defaultValues,
+  customerAddress,
+}: DeliveryAssignmentFormProps) {
+  const form = useForm<z.infer<typeof deliveryAssignmentFormSchema>>({
+    resolver: zodResolver(deliveryAssignmentFormSchema),
+    defaultValues: {
+      userId: defaultValues?.userId || "",
+      scheduledDate: defaultValues?.scheduledDate
+        ? new Date(defaultValues.scheduledDate)
+        : new Date(),
+      deliveryAddress: defaultValues?.deliveryAddress || customerAddress || "",
+      notes: defaultValues?.notes || "",
+    },
+  });
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="userId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Delivery Personnel</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select delivery personnel" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {deliveryUsers.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="scheduledDate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Scheduled Date</FormLabel>
+              <FormControl>
+                <DateTimePicker value={field.value} onChange={field.onChange} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="deliveryAddress"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Delivery Address</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Enter delivery address" {...field} />
+              </FormControl>
+              <FormDescription>
+                Default is customer's shipping address. You can specify a
+                different address if needed.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="notes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Notes</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Add any delivery notes or instructions"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit">
+          {defaultValues ? "Update Assignment" : "Create Assignment"}
+        </Button>
+      </form>
+    </Form>
   );
 }
