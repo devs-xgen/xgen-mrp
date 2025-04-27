@@ -2,7 +2,7 @@
 
 # dependencies
 /node_modules
-/.cursor
+/.cursorrules
 /.pnp
 .pnp.*
 .yarn/*
@@ -39,3 +39,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+mrp-knowledge.mdc
+cursorrules.mdc
