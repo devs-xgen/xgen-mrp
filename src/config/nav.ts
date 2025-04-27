@@ -213,12 +213,6 @@ export const inspectorNavItems: NavItem[] = [
         label: 'Quality Control',
         href: '/inspector/production/quality',
         description: 'Quality inspection tasks'
-      },
-      {
-        icon: Boxes,
-        label: 'Work in Progress',
-        href: '/inspector/production/wip',
-        description: 'Track work in progress'
       }
     ]
   },
