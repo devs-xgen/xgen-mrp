@@ -5,12 +5,26 @@ import { columns } from "@/components/module/admin/work-centers/columns";
 import { DataTable } from "@/components/module/admin/work-centers/data-table";
 import { WorkCenterDialog } from "@/components/module/admin/work-centers/create-work-center-dialog";
 import { WorkCenterUserCard } from "@/components/module/admin/work-centers/work-center-user-card";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Decimal } from "@prisma/client/runtime/library";
 import { getUsersInWorkCenter } from "@/lib/actions/work-center-users";
 import Link from "next/link";
-import { LucideLayoutGrid, LucideList } from "lucide-react";
+import {
+  LucideLayoutGrid,
+  LucideList,
+  LucideActivity,
+  LucideUsers,
+  LucideSettings,
+} from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
   title: "Work Centers",
@@ -42,12 +56,21 @@ export default async function WorkCentersPage() {
       // Fetch users for each work center
       const workCenterUsers = await getUsersInWorkCenter(wc.id);
 
+      // Calculate utilization (random for demo purposes)
+      // In a real app, this would come from actual operation data
+      const utilization = Math.floor(Math.random() * 100);
+
+      // Calculate daily capacity
+      const dailyCapacity = wc.capacityPerHour * wc.operatingHours;
+
       return {
         id: wc.id,
         name: wc.name,
         description: wc.description,
         capacityPerHour: wc.capacityPerHour,
         operatingHours: wc.operatingHours,
+        dailyCapacity,
+        utilization,
         efficiencyRate: +(wc.efficiencyRate instanceof Decimal
           ? wc.efficiencyRate.toNumber()
           : wc.efficiencyRate),
@@ -57,6 +80,19 @@ export default async function WorkCentersPage() {
         users: workCenterUsers,
       };
     })
+  );
+
+  // Calculate statistics
+  const totalWorkCenters = workCenters.length;
+  const activeWorkCenters = workCenters.filter(
+    (wc) => wc.status === "ACTIVE"
+  ).length;
+  const inactiveWorkCenters = workCenters.filter(
+    (wc) => wc.status === "INACTIVE"
+  ).length;
+  const totalWorkers = formattedWorkCentersForCards.reduce(
+    (acc, wc) => acc + wc.users.length,
+    0
   );
 
   return (
@@ -69,6 +105,43 @@ export default async function WorkCentersPage() {
           </p>
         </div>
         <WorkCenterDialog />
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="flex items-center py-6">
+            <LucideSettings className="w-8 h-8 mr-4 text-blue-500" />
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">
+                Total Work Centers
+              </p>
+              <h3 className="text-2xl font-bold">{totalWorkCenters}</h3>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center py-6">
+            <LucideActivity className="w-8 h-8 mr-4 text-green-500" />
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">
+                Active Centers
+              </p>
+              <h3 className="text-2xl font-bold">{activeWorkCenters}</h3>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center py-6">
+            <LucideUsers className="w-8 h-8 mr-4 text-amber-500" />
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">
+                Assigned Workers
+              </p>
+              <h3 className="text-2xl font-bold">{totalWorkers}</h3>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="table" className="w-full">
@@ -145,15 +218,68 @@ export default async function WorkCentersPage() {
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">
-                        Efficiency
+                        Daily Capacity
                       </p>
                       <p className="font-medium">
-                        {typeof workCenter.efficiencyRate === "number"
-                          ? workCenter.efficiencyRate
-                          : 0}
-                        %
+                        {workCenter.dailyCapacity} units
                       </p>
                     </div>
+                  </div>
+
+                  {/* Efficiency Rate */}
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <p className="text-muted-foreground text-xs">
+                        Efficiency
+                      </p>
+                      <p className="text-xs font-medium">
+                        {workCenter.efficiencyRate}%
+                      </p>
+                    </div>
+                    {workCenter.efficiencyRate > 80 ? (
+                      <Progress
+                        value={workCenter.efficiencyRate}
+                        className="h-2 [&>div]:bg-green-500"
+                      />
+                    ) : workCenter.efficiencyRate > 60 ? (
+                      <Progress
+                        value={workCenter.efficiencyRate}
+                        className="h-2 [&>div]:bg-amber-500"
+                      />
+                    ) : (
+                      <Progress
+                        value={workCenter.efficiencyRate}
+                        className="h-2 [&>div]:bg-red-500"
+                      />
+                    )}
+                  </div>
+
+                  {/* Utilization Rate */}
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <p className="text-muted-foreground text-xs">
+                        Current Utilization
+                      </p>
+                      <p className="text-xs font-medium">
+                        {workCenter.utilization}%
+                      </p>
+                    </div>
+                    {workCenter.utilization > 90 ? (
+                      <Progress
+                        value={workCenter.utilization}
+                        className="h-2 [&>div]:bg-red-500"
+                      />
+                    ) : workCenter.utilization > 70 ? (
+                      <Progress
+                        value={workCenter.utilization}
+                        className="h-2 [&>div]:bg-green-500"
+                      />
+                    ) : (
+                      <Progress
+                        value={workCenter.utilization}
+                        className="h-2 [&>div]:bg-amber-500"
+                      />
+                    )}
                   </div>
 
                   <WorkCenterUserCard

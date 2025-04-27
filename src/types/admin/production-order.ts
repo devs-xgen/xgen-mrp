@@ -42,6 +42,17 @@ export interface ProductionOrder {
     defectsFound?: string | null
     actionTaken?: string | null
   }[]
+  // New field for delivery assignment
+  deliveryAssignment?: {
+    id: string
+    userId: string
+    userName?: string
+    scheduledDate?: Date
+    status: Status
+    notes?: string | null
+    createdAt: Date
+    updatedAt: Date
+  } | null
 }
 
 
@@ -78,4 +89,19 @@ export interface ProductionOrderColumn {
   customerOrderNumber?: string | undefined
   progress: number // Calculated from operations
   lastUpdated: Date
+}
+
+// New interface for delivery assignment
+export interface DeliveryAssignmentInput {
+  productionOrderId: string
+  userId: string
+  scheduledDate?: Date
+  notes?: string
+}
+
+export interface UpdateDeliveryAssignmentInput {
+  id: string
+  status?: Status
+  scheduledDate?: Date
+  notes?: string
 }

@@ -1,0 +1,63 @@
+.react-datepicker {
+  @apply bg-background border border-border rounded-md shadow-lg !important;
+}
+
+.react-datepicker__header {
+  @apply bg-muted border-b border-border !important;
+}
+
+.react-datepicker__current-month,
+.react-datepicker__day-name,
+.react-datepicker__day,
+.react-datepicker__time-name {
+  @apply text-foreground !important;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--in-selecting-range,
+.react-datepicker__day--in-range,
+.react-datepicker__month-text--selected,
+.react-datepicker__month-text--in-selecting-range,
+.react-datepicker__month-text--in-range,
+.react-datepicker__quarter-text--selected,
+.react-datepicker__quarter-text--in-selecting-range,
+.react-datepicker__quarter-text--in-range,
+.react-datepicker__year-text--selected,
+.react-datepicker__year-text--in-selecting-range,
+.react-datepicker__year-text--in-range {
+  @apply bg-primary text-primary-foreground !important;
+}
+
+.react-datepicker__day--keyboard-selected,
+.react-datepicker__month-text--keyboard-selected,
+.react-datepicker__quarter-text--keyboard-selected,
+.react-datepicker__year-text--keyboard-selected {
+  @apply bg-accent text-accent-foreground !important;
+}
+
+.react-datepicker__day:hover,
+.react-datepicker__month-text:hover,
+.react-datepicker__quarter-text:hover,
+.react-datepicker__year-text:hover {
+  @apply bg-accent text-accent-foreground !important;
+}
+
+.react-datepicker__time-container {
+  @apply border-l border-border !important;
+}
+
+.react-datepicker__time-container .react-datepicker__time {
+  @apply bg-background !important;
+}
+
+.react-datepicker__time-container .react-datepicker__time .react-datepicker__time-box ul.react-datepicker__time-list li.react-datepicker__time-list-item {
+  @apply text-foreground hover:bg-accent hover:text-accent-foreground !important;
+}
+
+.react-datepicker__time-container .react-datepicker__time .react-datepicker__time-box ul.react-datepicker__time-list li.react-datepicker__time-list-item--selected {
+  @apply bg-primary text-primary-foreground !important;
+}
+
+.datepicker-wrapper {
+  @apply w-full;
+} 

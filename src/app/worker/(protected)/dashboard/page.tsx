@@ -16,10 +16,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { WorkerDashboard } from "@/components/worker/dashboard";
 
 export const metadata: Metadata = {
   title: "Worker Dashboard",
   description: "Your work overview and daily tasks",
+  description: "View and manage your production tasks",
 };
 
 export default async function WorkerDashboard() {
@@ -38,6 +43,18 @@ export default async function WorkerDashboard() {
         <p className="text-muted-foreground">
           Your work overview and assigned tasks
         </p>
+export default async function WorkerDashboardPage() {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    redirect("/worker/login");
+  }
+
+  try {
+    return (
+      <div className="container mx-auto py-6">
+        <h1 className="text-3xl font-bold mb-6">Worker Dashboard</h1>
+        <WorkerDashboard userId={session.user.id} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -259,4 +276,16 @@ export default async function WorkerDashboard() {
       </Card>
     </div>
   );
+    );
+  } catch (error) {
+    console.error("Error loading worker dashboard:", error);
+    return (
+      <div className="container mx-auto py-6">
+        <h1 className="text-3xl font-bold mb-6">Worker Dashboard</h1>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          <p>Error loading dashboard. Please try again later.</p>
+        </div>
+      </div>
+    );
+  }
 }

@@ -45,6 +45,7 @@
     "@tiptap/pm": "^2.11.5",
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
+    "@types/react-datepicker": "^6.2.0",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
