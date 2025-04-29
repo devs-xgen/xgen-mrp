@@ -11,10 +11,23 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    domains: ['images.unsplash.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      },
+    ],
   },
-  // Remove the transpilePackages line since it conflicts
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
+  
+  webpack(config) {
+    config.module.rules.push({
+      test: /\.(png|jpe?g|gif|svg)$/i,
+      type: 'asset/resource',
+    });
+
+    if (!config.isServer) {
       config.resolve.fallback = {
         fs: false,
         dns: false,
