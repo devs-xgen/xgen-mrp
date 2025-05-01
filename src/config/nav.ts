@@ -200,27 +200,15 @@ export const inspectorNavItems: NavItem[] = [
   {
     icon: Factory,
     label: 'Production',
-    description: 'Production management',
+    description: 'Production Inspector',
     items: [
       {
         icon: ClipboardList,
         label: 'Tasks',
         href: '/inspector/production',
         description: 'View and manage production tasks'
-      },
-      {
-        icon: CheckSquare,
-        label: 'Quality Control',
-        href: '/inspector/production/quality',
-        description: 'Quality inspection tasks'
       }
     ]
-  },
-  {
-    icon: Package,
-    label: 'Inventory',
-    href: '/inspector/inventory',
-    description: 'Check inventory levels'
   },
   {
     icon: BadgeDollarSign,
@@ -232,12 +220,6 @@ export const inspectorNavItems: NavItem[] = [
         label: 'Customer Orders',
         href: '/inspector/orders',
         description: 'View customer order requirements'
-      },
-      {
-        icon: Truck,
-        label: 'Shipments',
-        href: '/inspector/orders/shipments',
-        description: 'Manage order shipments'
       }
     ]
   },
