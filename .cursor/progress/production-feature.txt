@@ -14,4 +14,4 @@ ADMIN:
 features to add in production:
 
  - QR generation having mostly the information of the production the id, the production
- - 
+ - Downloadable file with the created QR with the details of the production
