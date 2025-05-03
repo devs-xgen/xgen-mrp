@@ -1,0 +1,17 @@
+folders to find:
+ADMIN:
+ - /src/app/admin/(protected)/production
+ - /src/components/module/admin
+ - src/types/admin
+ - src/lib/actions
+
+ WORKER:
+ - src/app/worker 
+ - /src/components/module/worker
+ - src/types/worker
+ - src/lib/actions/worker
+
+features to add in production:
+
+ - QR generation having mostly the information of the production the id, the production
+ - 
