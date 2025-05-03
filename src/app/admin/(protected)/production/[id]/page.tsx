@@ -1,19 +1,15 @@
 // src/app/admin/(protected)/production/[id]/page.tsx
-import { notFound } from "next/navigation";
-import { Metadata } from "next";
-import {
-  getProductionOrder,
-  getAvailableWorkCenters,
-} from "@/lib/actions/production-order";
-import { ProductionOrderDetails } from "@/components/module/admin/production/production-order-details";
-import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { ProductionOrderDetails } from "@/components/module/admin/production/production-order-details";
+import { ProductionQRGenerator } from "@/components/module/admin/production/production-qr-generator";
+import { Button } from "@/components/ui/button";
+import { getDeliveryUsers, getDeliveryAssignment } from "@/lib/actions/delivery/delivery-assignment";
 import { getInspector } from "@/lib/actions/inspector";
-import {
-  getDeliveryUsers,
-  getDeliveryAssignment,
-} from "@/lib/actions/delivery/delivery-assignment";
+import { getProductionOrder, getAvailableWorkCenters } from "@/lib/actions/production-order";
 
 interface ProductionOrderPageProps {
   params: {
@@ -104,9 +100,24 @@ export default async function ProductionOrderPage({
             Back to Production Orders
           </Button>
         </Link>
+        <ProductionQRGenerator
+          order={{
+            id: orderData.id,
+            product: {
+              name: orderData.product.name,
+              sku: orderData.product.sku,
+            },
+            quantity: orderData.quantity,
+            startDate: orderData.startDate,
+            dueDate: orderData.dueDate,
+            status: orderData.status,
+            priority: orderData.priority,
+          }}
+        />
       </div>
 
       <ProductionOrderDetails
+        // TODO: Replace 'as any' with the correct type for order if available
         order={order as any}
         workCenters={workCenters}
         deliveryUsers={deliveryUsers}

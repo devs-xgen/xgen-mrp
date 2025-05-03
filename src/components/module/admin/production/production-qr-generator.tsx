@@ -1,7 +1,5 @@
-import { useState } from "react";
-import { format } from "date-fns";
-import { FileText } from "lucide-react";
-import QRCode from "react-qr-code";
+"use client";
+
 import {
   Document,
   Font,
@@ -12,6 +10,11 @@ import {
   View,
   pdf,
 } from "@react-pdf/renderer";
+import { format } from "date-fns";
+import { FileText } from "lucide-react";
+import { useState } from "react";
+import QRCode from "react-qr-code";
+
 import { Button } from "@/components/ui/button";
 
 // Fallback toast if useToast is not found
@@ -47,10 +50,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 700,
     marginBottom: 4,
+    color: "#000",
   },
   headerSubtitle: {
     fontSize: 12,
-    color: "#6b7280",
+    color: "#000",
   },
   section: {
     flexDirection: "row",
@@ -68,6 +72,7 @@ const styles = StyleSheet.create({
     fontWeight: 700,
     marginBottom: 10,
     textAlign: "center",
+    color: "#000",
   },
   qrImage: {
     width: 150,
@@ -82,6 +87,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 700,
     marginBottom: 10,
+    color: "#000",
   },
   detailsRow: {
     flexDirection: "row",
@@ -91,10 +97,12 @@ const styles = StyleSheet.create({
     width: "40%",
     fontSize: 10,
     fontWeight: 700,
+    color: "#000",
   },
   detailsValue: {
     width: "60%",
     fontSize: 10,
+    color: "#000",
   },
   footer: {
     position: "absolute",
@@ -104,7 +112,7 @@ const styles = StyleSheet.create({
     borderTop: "1px solid #e5e7eb",
     paddingTop: 10,
     fontSize: 8,
-    color: "#9ca3af",
+    color: "#000",
     textAlign: "center",
   },
 });
@@ -173,7 +181,7 @@ export function ProductionQRGenerator({ order }: ProductionQRGeneratorProps): JS
       root.render(React.createElement(QRCode, { value: qrData, size: 150 }));
       await new Promise((resolve) => setTimeout(resolve, 100));
     } else {
-      // @ts-expect-error: fallback to legacy react-dom for QR rendering
+      // fallback to legacy react-dom for QR rendering
       const legacyReactDOM = await import("react-dom");
       legacyReactDOM.render(React.createElement(QRCode, { value: qrData, size: 150 }), svgElement);
       await new Promise((resolve) => setTimeout(resolve, 100));
