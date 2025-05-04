@@ -9,7 +9,6 @@ export default function AuthProvider({
 }) {
     return (
         <SessionProvider
-            session={null}
             refetchInterval={5 * 60}
         >
             {children}

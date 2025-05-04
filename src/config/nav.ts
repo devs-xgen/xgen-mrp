@@ -145,37 +145,37 @@ export const workerNavItems: NavItem[] = [
     href: '/worker/qr-scanner',
     description: 'Scan production QR codes to update status'
   },
-  {
-    icon: Factory,
-    label: 'Production',
-    description: 'Production management',
-    items: [
-      {
-        icon: Hammer,
-        label: 'Operations',
-        href: '/worker/production',
-        description: 'Production operations and processes'
-      },
-      {
-        icon: CheckSquare,
-        label: 'Quality Control',
-        href: '/worker/production/quality',
-        description: 'Quality inspection tasks'
-      },
-      {
-        icon: Boxes,
-        label: 'Work in Progress',
-        href: '/worker/production/wip',
-        description: 'Track work in progress'
-      },
-      {
-        icon: Timer,
-        label: 'Time Tracking',
-        href: '/worker/production/tracking',
-        description: 'Track time spent on tasks'
-      }
-    ]
-  },
+  // {
+  //   icon: Factory,
+  //   label: 'Production',
+  //   description: 'Production management',
+  //   items: [
+  //     {
+  //       icon: Hammer,
+  //       label: 'Operations',
+  //       href: '/worker/production',
+  //       description: 'Production operations and processes'
+  //     },
+  //     {
+  //       icon: CheckSquare,
+  //       label: 'Quality Control',
+  //       href: '/worker/production/quality',
+  //       description: 'Quality inspection tasks'
+  //     },
+  //     {
+  //       icon: Boxes,
+  //       label: 'Work in Progress',
+  //       href: '/worker/production/wip',
+  //       description: 'Track work in progress'
+  //     },
+  //     {
+  //       icon: Timer,
+  //       label: 'Time Tracking',
+  //       href: '/worker/production/tracking',
+  //       description: 'Track time spent on tasks'
+  //     }
+  //   ]
+  // },
   {
     icon: Package,
     label: 'Inventory',
@@ -194,25 +194,25 @@ export const workerNavItems: NavItem[] = [
       }
     ]
   },
-  {
-    icon: BadgeDollarSign,
-    label: 'Orders',
-    description: 'Orders management',
-    items: [
-      {
-        icon: ShoppingCart,
-        label: 'Customer Orders',
-        href: '/worker/orders',
-        description: 'View customer order requirements'
-      },
-      {
-        icon: Truck,
-        label: 'Shipments',
-        href: '/worker/orders/shipments',
-        description: 'Manage order shipments'
-      }
-    ]
-  },
+  // {
+  //   icon: BadgeDollarSign,
+  //   label: 'Orders',
+  //   description: 'Orders management',
+  //   items: [
+  //     {
+  //       icon: ShoppingCart,
+  //       label: 'Customer Orders',
+  //       href: '/worker/orders',
+  //       description: 'View customer order requirements'
+  //     },
+  //     {
+  //       icon: Truck,
+  //       label: 'Shipments',
+  //       href: '/worker/orders/shipments',
+  //       description: 'Manage order shipments'
+  //     }
+  //   ]
+  // },
   {
     icon: LineChart,
     label: 'Reports',
