@@ -4,7 +4,7 @@ const nextConfig = {
   output: 'standalone',
   experimental: {
     // We'll keep this one and remove transpilePackages
-    serverComponentsExternalPackages: ['@prisma/client', 'bcrypt'],
+    serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs'],
     scrollRestoration: true,
   },
   eslint: {
@@ -12,11 +12,32 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
-    domains: ['localhost'],
+    domains: ['images.unsplash.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      },
+    ],
   },
-  // Remove the transpilePackages line since it conflicts
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
+  
+  webpack(config) {
+    // Add rule to handle HTML files
+    config.module.rules.push({
+      test: /\.html$/,
+      type: 'asset/resource',
+    });
+    
+    config.module.rules.push({
+      test: /\.(png|jpe?g|gif|svg)$/i,
+      type: 'asset/resource',
+    });
+
+    if (!config.isServer) {
+      // Add bcrypt to client-side externals
+      config.externals = [...(config.externals || []), 'bcryptjs'];
+      
       config.resolve.fallback = {
         fs: false,
         dns: false,

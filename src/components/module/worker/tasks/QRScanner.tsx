@@ -20,10 +20,25 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Camera, StopCircle, RefreshCw, CheckCircle, Scan, Upload, Image } from "lucide-react";
+import { 
+  Camera, 
+  StopCircle, 
+  RefreshCw, 
+  CheckCircle, 
+  Scan, 
+  Upload, 
+  Image, 
+  MoreVertical 
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { updateTaskStatus } from "@/lib/actions/worker/tasks";
 import { Status } from "@prisma/client";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 interface QRScannerProps {
   onScanSuccess?: (data: ProductionOrderData) => void;
@@ -53,16 +68,54 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
   useEffect(() => {
     const getCameras = async () => {
       try {
+        // First check if we have media devices API available
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+          setPermissionError("Media Devices API not supported in your browser. Try the image upload option instead.");
+          console.error("Media Devices API not available");
+          return;
+        }
+
+        // Try to access cameras directly via getUserMedia first to trigger permission prompt
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          // Stop all tracks immediately to release the camera
+          stream.getTracks().forEach(track => track.stop());
+          console.log("Camera permission granted");
+        } catch (permissionErr) {
+          console.error("Camera permission error:", permissionErr);
+          // We'll continue trying to enumerate devices anyway
+        }
+
+        // Try Html5Qrcode's camera access method
         const devices = await Html5Qrcode.getCameras();
+        console.log("Detected cameras:", devices);
+        
         if (devices && devices.length) {
           setCameras(devices);
           setCameraId(devices[0].id); // Select first camera by default
         } else {
-          setPermissionError("No cameras found. Please ensure your device has a camera.");
+          // Fallback to manual enumeration if Html5Qrcode failed
+          const allDevices = await navigator.mediaDevices.enumerateDevices();
+          console.log("All media devices:", allDevices);
+          
+          const videoDevices = allDevices.filter(device => device.kind === 'videoinput');
+          
+          if (videoDevices.length > 0) {
+            const formattedDevices = videoDevices.map(device => ({
+              id: device.deviceId,
+              label: device.label || `Camera ${device.deviceId.slice(0, 5)}`
+            }));
+            
+            console.log("Manually detected cameras:", formattedDevices);
+            setCameras(formattedDevices);
+            setCameraId(formattedDevices[0].id);
+          } else {
+            setPermissionError("No cameras found. Please ensure your device has a camera and you've granted permission.");
+          }
         }
       } catch (err) {
         console.error("Error getting cameras:", err);
-        setPermissionError("Unable to access cameras. Please check your camera permissions in browser settings.");
+        setPermissionError("Unable to access cameras. Please check your camera permissions in browser settings or try the image upload option.");
       }
     };
     
@@ -131,47 +184,109 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
       };
       
       const qrCodeErrorCallback = (errorMessage: string) => {
-        // Ignore general scanning errors
+        // Ignore general scanning errors but log them for debugging
         console.log("QR scanning error:", errorMessage);
       };
       
-      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+      // More flexible config with lower frame rate for better compatibility
+      const config = { 
+        fps: 5, 
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0,
+        disableFlip: false,
+        verbose: true // Enable verbose logging
+      };
       
-      // Use selected camera or environment camera if no selection
-      const cameraConfig = cameraId 
-        ? { deviceId: cameraId }
-        : { facingMode: "environment" };
-      
-      try {
-        await scanner.start(
-          cameraConfig,
-          config,
-          qrCodeSuccessCallback,
-          qrCodeErrorCallback
-        );
-      } catch (cameraError: any) {
-        console.error("Camera start error:", cameraError);
+      // Try multiple camera access methods
+      const tryCamera = async () => {
+        console.log("Attempting to start camera:", cameraId || "environment");
         
-        // If specific camera failed, try falling back to environment camera
-        if (cameraId) {
-          setPermissionError("Selected camera access failed. Trying default camera...");
-          setTimeout(async () => {
+        // Use selected camera or environment camera if no selection
+        const cameraConfig = cameraId 
+          ? { deviceId: cameraId }
+          : { facingMode: "environment" };
+        
+        try {
+          await scanner.start(
+            cameraConfig,
+            config,
+            qrCodeSuccessCallback,
+            qrCodeErrorCallback
+          );
+          console.log("Camera started successfully");
+          setPermissionError("");
+        } catch (cameraError: any) {
+          console.error("Camera start error:", cameraError);
+          
+          // First fallback - try user facing camera
+          if (!cameraId || cameraConfig.facingMode === "environment") {
             try {
+              console.log("Trying user-facing camera instead");
+              setPermissionError("Trying front camera instead...");
               await scanner.start(
-                { facingMode: "environment" },
+                { facingMode: "user" },
                 config,
                 qrCodeSuccessCallback,
                 qrCodeErrorCallback
               );
+              console.log("Front camera started successfully");
               setPermissionError("");
-            } catch (fallbackError) {
-              handleCameraError(fallbackError);
+              return;
+            } catch (frontError) {
+              console.error("Front camera error:", frontError);
             }
-          }, 1000);
-        } else {
-          handleCameraError(cameraError);
+          }
+          
+          // Second fallback - try with a different camera if we have multiple
+          if (cameras.length > 1) {
+            try {
+              // Try a different camera than the current one
+              const backupCameraId = cameras.find(cam => cam.id !== cameraId)?.id;
+              if (backupCameraId) {
+                console.log("Trying alternative camera:", backupCameraId);
+                setPermissionError("Trying alternative camera...");
+                await scanner.start(
+                  { deviceId: backupCameraId },
+                  config,
+                  qrCodeSuccessCallback,
+                  qrCodeErrorCallback
+                );
+                console.log("Alternative camera started successfully");
+                setPermissionError("");
+                return;
+              }
+            } catch (altCameraError) {
+              console.error("Alternative camera error:", altCameraError);
+            }
+          }
+          
+          // Final fallback - try with minimal config
+          try {
+            console.log("Trying with minimal constraints as final fallback");
+            setPermissionError("Trying final camera configuration...");
+            
+            // Use a simplified config for the final attempt
+            const simpleConfig = {
+              fps: 2,
+              qrbox: { width: 200, height: 200 },
+            };
+            
+            await scanner.start(
+              { facingMode: "environment" },
+              simpleConfig,
+              qrCodeSuccessCallback,
+              qrCodeErrorCallback
+            );
+            console.log("Camera started with minimal constraints");
+            setPermissionError("");
+          } catch (finalError) {
+            console.error("All camera fallbacks failed:", finalError);
+            handleCameraError(finalError);
+          }
         }
-      }
+      };
+      
+      await tryCamera();
     } catch (error: unknown) {
       console.error("Error starting scanner:", error);
       setIsScanning(false);
@@ -315,12 +430,19 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
 
     setIsUpdating(true);
     try {
-      await updateTaskStatus({
-        id: scannedData.id,
-        status: newStatus as Status,
-        notes: `Status updated via QR scan by worker at ${new Date().toLocaleString()}`
+      // This is a production order ID, not an operation ID
+      // We need to update operations related to this production order
+      await fetch(`/api/worker/production-order/${scannedData.id}/update-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: newStatus as Status,
+          notes: `Status updated via QR scan by worker at ${new Date().toLocaleString()}`
+        })
       });
-      
+
       toast({
         title: "Status Updated",
         description: `Production order status updated to ${newStatus}`,
@@ -440,11 +562,62 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
                           Start Camera
                         </Button>
                         
-                        {process.env.NODE_ENV === 'development' && (
-                          <Button variant="outline" onClick={simulateScan}>
-                            <Scan className="mr-2 h-4 w-4" />
-                            Simulate Scan
-                          </Button>
+                        {(process.env.NODE_ENV === 'development' || permissionError) && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={simulateScan}>
+                                <Scan className="mr-2 h-4 w-4" />
+                                Simulate Scan
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={async () => {
+                                  try {
+                                    // Display current permissions state
+                                    const permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
+                                    
+                                    // Get all media devices
+                                    const devices = await navigator.mediaDevices.enumerateDevices();
+                                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                                    
+                                    // Create debug message
+                                    const debugInfo = {
+                                      browserUserAgent: navigator.userAgent,
+                                      cameraPermission: permissionStatus.state,
+                                      detectedCameras: videoDevices.length,
+                                      cameraDetails: videoDevices.map(d => ({
+                                        id: d.deviceId.substring(0, 8) + '...',
+                                        label: d.label || 'Unnamed camera'
+                                      })),
+                                      secureContext: window.isSecureContext,
+                                      https: window.location.protocol === 'https:'
+                                    };
+                                    
+                                    console.log('Camera debug info:', debugInfo);
+                                    
+                                    toast({
+                                      title: "Camera Debug Info",
+                                      description: `Cameras: ${videoDevices.length}, Permission: ${permissionStatus.state}, HTTPS: ${window.location.protocol === 'https:'}`,
+                                    });
+                                  } catch (error) {
+                                    console.error('Error getting debug info:', error);
+                                    toast({
+                                      title: "Debug Error",
+                                      description: "Failed to get camera debug information.",
+                                      variant: "destructive"
+                                    });
+                                  }
+                                }}
+                              >
+                                <span className="mr-2">🔍</span>
+                                Debug Camera
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                       </div>
                     </div>

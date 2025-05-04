@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Inspector } from "@prisma/client";
+import { Inspector } from "@/lib/actions/inspector";
 import {
   Dialog,
   DialogContent,
@@ -184,7 +184,7 @@ export function ViewInspectorDialog({
                   Created
                 </p>
                 <p className="text-base">
-                  {inspector.createdAt.toLocaleDateString()}
+                  {inspector.createdAt?.toLocaleDateString() || 'N/A'}
                 </p>
               </div>
               <div>
@@ -192,7 +192,7 @@ export function ViewInspectorDialog({
                   Last Updated
                 </p>
                 <p className="text-base">
-                  {inspector.updatedAt.toLocaleDateString()}
+                  {inspector.updatedAt?.toLocaleDateString() || 'N/A'}
                 </p>
               </div>
             </div>

@@ -18,16 +18,19 @@ interface StockStatusDashboardProps {
 export function StockStatusDashboard({
   stockStatus,
 }: StockStatusDashboardProps) {
+  // Extract values from stockStatus with fallbacks for missing properties 
   const {
-    total,
-    normal,
-    low,
-    critical,
-    outOfStock,
-    percentageLow,
-    percentageCritical,
-    materialsRequiringAction,
+    totalItems: total = 0,
+    normalStock: normal = 0,
+    lowStock: low = 0, 
+    criticalStock: critical = 0,
+    outOfStock = 0,
   } = stockStatus;
+  
+  // Calculate percentages if they're not provided
+  const percentageLow = (low / total) * 100 || 0;
+  const percentageCritical = (critical / total) * 100 || 0;
+  const materialsRequiringAction = low + critical + outOfStock;
 
   return (
     <div className="space-y-4">

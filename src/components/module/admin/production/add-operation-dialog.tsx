@@ -124,7 +124,7 @@ export function AddOperationDialog({
           toast({
             title: "Cost Adjusted",
             description: `The calculated cost exceeded the maximum allowed value and has been adjusted to ${MAX_COST}`,
-            variant: "warning",
+            variant: "default",
           });
         }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User, UserStatus } from "@prisma/client";
+import { UserStatus } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,6 +60,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+// Create a custom user type that includes profile
+interface User {
+  id: string;
+  email: string;
+  role: string;
+  status: UserStatus;
+  profile?: {
+    firstName: string;
+    lastName: string;
+    employeeId?: string | null;
+    department?: string | null;
+    position?: string | null;
+  } | null;
+}
 
 interface WorkCenterUser {
   id: string;

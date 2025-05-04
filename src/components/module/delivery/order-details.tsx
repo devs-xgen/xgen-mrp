@@ -29,7 +29,7 @@ interface DeliveryOrderDetailsProps {
   assignment: {
     id: string;
     status: Status;
-    scheduledDate: string | null;
+    scheduledDate: Date | string | null;
     notes: string | null;
     deliveryAddress: string | null;
     createdAt: Date;
@@ -39,15 +39,15 @@ interface DeliveryOrderDetailsProps {
       product: {
         name: string;
       };
-      customerOrder?: {
+      customerOrder: {
         id: string;
         customer: {
           name: string;
           email: string;
           phone: string;
         };
-        shippingAddress: string;
-      };
+        shippingAddress: string | null;
+      } | null;
     };
   };
 }
@@ -190,7 +190,7 @@ export function DeliveryOrderDetails({
                   assignment.productionOrder.customerOrder?.shippingAddress && (
                     <p className="text-xs text-muted-foreground mt-1 italic">
                       Note: This is a custom delivery address different from the
-                      customer's shipping address.
+                      customer&apos;s shipping address.
                     </p>
                   )}
               </div>

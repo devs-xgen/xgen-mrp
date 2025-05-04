@@ -2,14 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Status,
-  DeliveryAssignment as PrismaDeliveryAssignment,
-  ProductionOrder,
-  Product,
-  CustomerOrder,
-  Customer,
-} from "@prisma/client";
+import { Status } from "@prisma/client";
 import {
   Card,
   CardContent,
@@ -36,12 +29,32 @@ import {
 import { updateDeliveryAssignmentStatus } from "@/lib/actions/delivery/delivery-assignment";
 import { toast } from "@/hooks/use-toast";
 
-type DeliveryAssignment = PrismaDeliveryAssignment & {
-  productionOrder: ProductionOrder & {
-    product: Product;
-    customerOrder?: CustomerOrder & {
-      customer: Customer;
+type DeliveryAssignment = {
+  id: string;
+  status: Status;
+  scheduledDate: Date | string | null;
+  notes: string | null;
+  deliveryAddress: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string;
+  productionOrder: {
+    id: string;
+    quantity: number;
+    product: {
+      id: string;
+      name: string;
     };
+    customerOrder: {
+      id: string;
+      customer: {
+        id: string;
+        name: string;
+        email: string;
+        phone: string;
+      };
+      shippingAddress: string | null;
+    } | null;
   };
 };
 
