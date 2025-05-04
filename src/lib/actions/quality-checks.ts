@@ -89,7 +89,11 @@ export async function createQualityCheck(data: CreateQualityCheckInput) {
             id: data.productionOrderId 
           },
         },
-        inspectorId: data.inspectorId,
+        inspector: {
+          connect: {
+            id: data.inspectorId
+          }
+        },
         checkDate: data.checkDate,
         status: Status.PENDING,
         defectsFound: data.defectsFound || null,

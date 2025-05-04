@@ -50,7 +50,7 @@ const formSchema = z.object({
 });
 
 interface WorkCenterDialogProps {
-  workCenter?: WorkCenter;
+  workCenter?: Omit<WorkCenter, 'efficiencyRate'> & { efficiencyRate: string | number };
   children?: React.ReactNode;
   onSuccess?: () => Promise<void>;
 }

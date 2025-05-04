@@ -1,4 +1,4 @@
-// src/app/worker/(protected)/inventory/page.tsx
+// src/app/inspector/(protected)/inventory/page.tsx
 import { Metadata } from "next";
 import { InventoryPage } from "@/components/module/operator/inventory";
 
@@ -10,7 +10,17 @@ export const metadata: Metadata = {
 export default function Page({
   searchParams,
 }: {
-  searchParams?: { search?: string };
+  searchParams?: { 
+    search?: string;
+    materialType?: string;
+    stockLevel?: string;
+    locationType?: string;
+    page?: string;
+    sort?: string;
+    direction?: string;
+    export_success?: string;
+    export_error?: string;
+  };
 }) {
   return <InventoryPage searchParams={searchParams} />;
 }

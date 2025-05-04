@@ -14,7 +14,6 @@ import {
 import { WorkCenterDialog } from "./create-work-center-dialog";
 import { DeleteWorkCenterDialog } from "./delete-work-center-dialog";
 import { WorkCenterColumn } from "@/types/admin/work-center";
-import { Decimal } from "@prisma/client/runtime/library";
 import Link from "next/link";
 import { Eye, Users, Edit, Trash } from "lucide-react";
 
@@ -32,10 +31,10 @@ export function DataTableRowActions({
     return null;
   }
 
+  // For UI purposes only - not using the actual Decimal type
   const workCenterData = {
     ...row.original,
     createdAt: row.original.createdAt ?? new Date(),
-    efficiencyRate: row.original.efficiencyRate,
   };
 
   return (

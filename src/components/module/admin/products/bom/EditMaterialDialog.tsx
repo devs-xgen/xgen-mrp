@@ -115,6 +115,9 @@ export function EditMaterialDialog({
       const timeout = setTimeout(checkAvailability, 500);
       return () => clearTimeout(timeout);
     }
+    
+    // Return empty cleanup function for paths where we don't set a timeout
+    return () => {};
   }, [
     form.watch("quantityNeeded"),
     form.watch("wastePercentage"),

@@ -367,7 +367,7 @@ export const columns: ColumnDef<Inspector>[] = [
               inspector={inspector}
               open={showLinkDialog}
               onOpenChange={setShowLinkDialog}
-              onSuccess={() => {
+              onSuccess={async () => {
                 router.refresh();
               }}
             />

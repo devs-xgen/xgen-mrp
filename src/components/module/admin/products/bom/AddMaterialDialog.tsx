@@ -129,6 +129,9 @@ export function AddMaterialDialog({
       const timeout = setTimeout(checkAvailability, 500);
       return () => clearTimeout(timeout);
     }
+    
+    // Return empty cleanup function for paths where we don't set a timeout
+    return () => {};
   }, [
     form.watch("materialId"),
     form.watch("quantityNeeded"),

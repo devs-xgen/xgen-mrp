@@ -11,7 +11,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toast } from "@/hooks/use-toast"
-import { Inspector } from "@prisma/client"
+import { Inspector } from "@/lib/actions/inspector"
 
 interface DeleteInspectorDialogProps {
     inspector: Inspector
