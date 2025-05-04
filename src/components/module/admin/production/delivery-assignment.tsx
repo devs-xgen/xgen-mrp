@@ -414,7 +414,7 @@ export function DeliveryAssignmentForm({
                 <Textarea placeholder="Enter delivery address" {...field} />
               </FormControl>
               <FormDescription>
-                Default is customer's shipping address. You can specify a
+                Default is customer&apos;s shipping address. You can specify a
                 different address if needed.
               </FormDescription>
               <FormMessage />

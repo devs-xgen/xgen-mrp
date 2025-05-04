@@ -19,7 +19,8 @@ import {
   Clipboard,
   Timer,
   Hammer,
-  LineChart
+  LineChart,
+  QrCode
 } from 'lucide-react'
 
 interface NavItem {
@@ -137,6 +138,12 @@ export const workerNavItems: NavItem[] = [
     label: 'Tasks',
     href: '/worker/tasks',
     description: 'View and manage your assigned tasks'
+  },
+  {
+    icon: QrCode,
+    label: 'QR Scanner',
+    href: '/worker/qr-scanner',
+    description: 'Scan production QR codes to update status'
   },
   {
     icon: Factory,

@@ -19,13 +19,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { updateProductionOrder } from "@/lib/actions/production-order";
-// Import the QualityCheck type
 import { QualityCheck } from "@/types/admin/quality-checks";
 import { formatDate } from "@/lib/utils";
-
-// Add import for the LinkCustomerOrderDialog component
 import { LinkCustomerOrderDialog } from "./link-customer-order-dialog";
-
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -54,7 +50,6 @@ interface WorkCenter {
   capacityPerHour: number;
 }
 
-// Add DeliveryUser type
 interface DeliveryUser {
   id: string;
   email: string;
@@ -64,7 +59,7 @@ interface DeliveryUser {
 interface ProductionOrderDetailsProps {
   order: ProductionOrder;
   workCenters: WorkCenter[];
-  deliveryUsers?: DeliveryUser[]; // Add prop for delivery users
+  deliveryUsers?: DeliveryUser[];
   onUpdateStatus?: (status: Status) => Promise<void>;
   onUpdateOperation?: (operationId: string, status: Status) => Promise<void>;
   onAddOperation?: () => void;
@@ -81,10 +76,28 @@ const deliveryAssignmentFormSchema = z.object({
   notes: z.string().optional(),
 });
 
+function ensureDeliveryAssignmentHasProductionOrder(
+  assignment: any,
+  order: any
+) {
+  if (!assignment) return null;
+  if ('productionOrder' in assignment && assignment.productionOrder) {
+    return assignment;
+  }
+  return {
+    ...assignment,
+    productionOrder: {
+      id: order.id,
+      product: order.product,
+      customerOrder: order.customerOrder || null,
+    },
+  };
+}
+
 export function ProductionOrderDetails({
   order,
   workCenters,
-  deliveryUsers = [], // Default to empty array if not provided
+  deliveryUsers = [],
   isLoading = false,
 }: ProductionOrderDetailsProps) {
   const [updating, setUpdating] = useState(false);
@@ -134,11 +147,7 @@ export function ProductionOrderDetails({
     }
   };
 
-  // Use type assertion to handle potential type mismatch between the database schema
-  // and our frontend type definition for QualityCheck
-  const qualityChecks = (order.qualityChecks ||
-    []) as unknown as QualityCheck[];
-
+  const qualityChecks = (order.qualityChecks || []) as unknown as QualityCheck[];
   const nextStatus = getNextStatus(order.status);
 
   return (
@@ -264,10 +273,9 @@ export function ProductionOrderDetails({
         isLoading={isLoading}
       />
 
-      {/* Add Delivery Assignment Component */}
       <DeliveryAssignment
         productionOrderId={order.id}
-        deliveryAssignment={order.deliveryAssignment}
+        deliveryAssignment={ensureDeliveryAssignmentHasProductionOrder(order.deliveryAssignment, order)}
         deliveryUsers={deliveryUsers}
         onRefresh={handleRefresh}
         isLoading={isLoading}
@@ -281,7 +289,7 @@ export function DeliveryAssignmentForm({
   deliveryUsers,
   defaultValues,
   customerAddress,
-}: DeliveryAssignmentFormProps) {
+}: any) {
   const form = useForm<z.infer<typeof deliveryAssignmentFormSchema>>({
     resolver: zodResolver(deliveryAssignmentFormSchema),
     defaultValues: {
@@ -310,7 +318,7 @@ export function DeliveryAssignmentForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {deliveryUsers.map((user) => (
+                  {deliveryUsers.map((user: any) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.name}
                     </SelectItem>
@@ -329,7 +337,7 @@ export function DeliveryAssignmentForm({
             <FormItem>
               <FormLabel>Scheduled Date</FormLabel>
               <FormControl>
-                <DateTimePicker value={field.value} onChange={field.onChange} />
+                <DateTimePicker date={field.value} setDate={field.onChange} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -346,7 +354,7 @@ export function DeliveryAssignmentForm({
                 <Textarea placeholder="Enter delivery address" {...field} />
               </FormControl>
               <FormDescription>
-                Default is customer's shipping address. You can specify a
+                Default is customer&apos;s shipping address. You can specify a
                 different address if needed.
               </FormDescription>
               <FormMessage />
