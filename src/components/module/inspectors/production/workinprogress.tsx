@@ -1,13 +1,11 @@
-// src/app/inspector/(protected)/tasks/page.tsx
 'use client';
 
-// src/app/inspector/(protected)/tasks/page.tsx
 import { Metadata } from "next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardList } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth"; // adjust the path if needed
-import { getProductionOrders } from "@/lib/actions/production-order"; // assume this fetches all production orders
+import { getProductionOrders } from "@/lib/actions/production-order"; // fetches production orders
 import { Key } from "react";
 
 export const metadata: Metadata = {
@@ -17,8 +15,7 @@ export const metadata: Metadata = {
 
 export default async function InspectorTasksPage() {
   const session = await getServerSession(authOptions);
-  
-  // Optional: Handle if not signed in
+
   if (!session || !session.user) {
     return (
       <div className="space-y-6">
@@ -32,17 +29,18 @@ export default async function InspectorTasksPage() {
 
   const allProductionOrders = await getProductionOrders();
 
-  // Filter production orders that DO NOT belong to the inspector
-  const inspectorId = session.user.id; // assuming session.user.id is the inspector's user id
-  const productionOrders = allProductionOrders.filter((order: { inspectorId: string; }) => order.inspectorId !== inspectorId);
+  const inspectorId = session.user.id;
+
+  // Correct filtering: only orders assigned to this inspector
+  const productionOrders = allProductionOrders.filter(
+    (order: { inspectorId: string }) => order.inspectorId === inspectorId
+  );
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Tasks</h2>
-        <p className="text-muted-foreground">
-          View and manage your assigned tasks
-        </p>
+        <p className="text-muted-foreground">View and manage your assigned tasks</p>
       </div>
 
       <Card className="mt-6">
@@ -54,7 +52,8 @@ export default async function InspectorTasksPage() {
             {productionOrders.length === 0 ? (
               <p className="text-muted-foreground">No tasks assigned yet.</p>
             ) : (
-              productionOrders.map((order: { dueDate: string | number | Date; id: Key | null | undefined; orderNumber: any; status: any; }) => {
+              // Make sure to type order correctly
+              productionOrders.map((order: { id: Key; orderNumber?: string; dueDate?: string | number | Date; status?: string; }) => {
                 const dueDate = order.dueDate
                   ? new Date(order.dueDate).toLocaleDateString()
                   : "No due date";
@@ -70,9 +69,7 @@ export default async function InspectorTasksPage() {
                         <h4 className="font-medium">
                           {order.orderNumber ? `Order #${order.orderNumber}` : "Production Order"}
                         </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {dueDate}
-                        </p>
+                        <p className="text-sm text-muted-foreground">{dueDate}</p>
                       </div>
                     </div>
                     <div className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">

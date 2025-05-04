@@ -130,83 +130,142 @@ export async function getLoggedInInspectorData() {
 }
 
 
-export async function getLoggedInInspectorProductionOrderIds(): Promise<string[]> {
+export async function getLoggedInInspectorProductionOrderIds() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return []; // Or handle unauthorized case as needed
     }
 
-    const inspector = await prisma.user.findUnique({ // Assuming Inspector is linked via the User model
+    const inspector = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true }, // Select the user ID
+      select: { id: true },
     });
 
     if (!inspector) {
       return [];
     }
 
-    // Fetch ProductionOrder IDs where the logged-in user is associated as an inspector
-    const productionOrderIdsFromQualityChecks = await prisma.qualityCheck.findMany({
+    // Fetch production order IDs from quality checks
+    const qcChecks = await prisma.qualityCheck.findMany({
       where: {
-        inspectorId: inspector.id, // Use the user ID as inspectorId
+        inspectorId: inspector.id,
       },
-      select: {
-        productionOrderId: true,
+      select: { productionOrderId: true },
+    });
+
+    // Fetch production order IDs from operations
+    const operations = await prisma.operation.findMany({
+      where: {
+        assignedToId: inspector.id,
+      },
+      select: { productionOrderId: true },
+    });
+
+    // Extract unique productionOrderIds
+    const orderIds = Array.from(
+      new Set([
+        ...qcChecks.map(qc => qc.productionOrderId),
+        ...operations.map(op => op.productionOrderId),
+      ])
+    );
+
+    // Fetch full production order data for these IDs
+    const productionOrders = await prisma.productionOrder.findMany({
+      where: { id: { in: orderIds } },
+      include: {
+        customerOrder: {
+          select: {
+            orderNumber: true,
+          },
+        },
+        product: {
+          select: {
+            name: true,
+            sku: true,
+          },
+        },
+        operations: {
+          select: {
+            workCenter: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        qualityChecks: {
+          select: {
+            id: true,
+            checkDate: true,
+            status: true,
+            defectsFound: true,
+          },
+        },
       },
     });
 
-    // Fetch ProductionOrder IDs from Operations where the logged-in user is assigned
-    const productionOrderIdsFromOperations = await prisma.operation.findMany({
-      where: {
-        assignedToId: inspector.id, // Use the user ID as assignedToId
-      },
-      select: {
-        productionOrderId: true,
-      },
-    });
+    // Log production orders to check data structure
+    console.log('Fetched production orders:', JSON.stringify(productionOrders, null, 2));
 
-    // Extract the IDs from the result arrays
-    const qcOrderIds = productionOrderIdsFromQualityChecks.map(qc => qc.productionOrderId);
-    const opOrderIds = productionOrderIdsFromOperations.map(op => op.productionOrderId);
-
-    // Combine and remove duplicates
-    const allProductionOrderIds = [...new Set([...qcOrderIds, ...opOrderIds])];
-
-    return allProductionOrderIds;
+    return productionOrders;
   } catch (error) {
-    console.error('Error fetching production order IDs for inspector:', error);
+    console.error('Error fetching production orders:', error);
     throw error;
   }
 }
 
-export async function markTaskAsComplete(taskId: string): Promise<{ success: boolean; error?: string }> {
+
+export async function markQualityCheckAsComplete(
+productionId: string, defectsFound: string, actionTaken: string, notes: string, p0: string): Promise<{ success: boolean; error?: string }> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return { success: false, error: 'Unauthorized' };
     }
 
-    const task = await prisma.user.update({
-      where: { id: taskId },
+    // Find the existing quality check record for this production ID
+    const existingQualityCheck = await prisma.qualityCheck.findFirst({
+      where: { productionOrderId: productionId },
+    });
+
+    if (!existingQualityCheck) {
+      return {
+        success: false,
+        error: `Quality check not found for productionId: ${productionId}`,
+      };
+    }
+
+    // Update the quality check record
+    const qualityCheck = await prisma.qualityCheck.update({
+      where: { id: existingQualityCheck.id },
       data: {
         status: 'COMPLETED',
-        completedAt: new Date(),
-        completedByUserId: session.user.id, // Optional: Record who completed the task
+        checkDate: new Date(),
+        inspectorId: session.user.id,
+        productionOrderId: productionId,
+        defectsFound: defectsFound,
+        actionTaken: actionTaken,
+        notes: notes,
       },
     });
 
-    if (task) {
-      revalidatePath('/worker/profile'); // Adjust path as needed
+    if (qualityCheck) {
+      // Optional: Trigger revalidation or other actions
+      revalidatePath('/worker/profile');
       return { success: true };
     } else {
-      return { success: false, error: 'Task not found or could not be updated.' };
+      return {
+        success: false,
+        error: 'Quality Check not found or could not be updated.',
+      };
     }
   } catch (error) {
-    console.error('Error marking task as complete:', error);
-    return { success: false, error: 'Failed to mark task as complete.' };
+    console.error('Error marking quality check as complete:', error);
+    return { success: false, error: 'Failed to mark quality check as complete.' };
   }
 }
+
 
 
 export async function getLoggedInInspectorAverageQualityChecks() {

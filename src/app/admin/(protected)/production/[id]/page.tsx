@@ -9,7 +9,7 @@ import { ProductionOrderDetails } from "@/components/module/admin/production/pro
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { getInspector } from "@/lib/actions/inspector";
+import { getActiveInspectors } from "@/lib/actions/inspector";
 
 interface ProductionOrderPageProps {
   params: {
@@ -44,23 +44,11 @@ export default async function ProductionOrderPage({
     JSON.stringify(orderData.qualityChecks, null, 2)
   );
 
-  // Fetch inspectors data
+  const allInspectors = await getActiveInspectors(); // fetch once
   const inspectorsMap = new Map();
 
-  // Get inspector names for all checks
-  for (const check of orderData.qualityChecks) {
-    if (!inspectorsMap.has(check.inspectorId)) {
-      try {
-        const inspector = await getInspector(check.inspectorId);
-        inspectorsMap.set(
-          check.inspectorId,
-          `${inspector.firstName} ${inspector.lastName}`
-        );
-      } catch (error) {
-        console.error(`Error fetching inspector ${check.inspectorId}:`, error);
-        inspectorsMap.set(check.inspectorId, "Unknown Inspector");
-      }
-    }
+  for (const inspector of allInspectors) {
+    inspectorsMap.set(inspector.inspectorId, `${inspector.firstName} ${inspector.lastName}`);
   }
 
   // Transform the qualityChecks to include all required properties

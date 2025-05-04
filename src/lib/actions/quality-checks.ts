@@ -9,7 +9,7 @@ import {
   CreateQualityCheckInput, 
   UpdateQualityCheckInput 
 } from "@/types/admin/quality-checks"
-import { getInspector, getActiveInspectors } from "./inspector"
+import { getInspectorById } from "./inspector"
 
 export async function getQualityChecks() {
   try {
@@ -62,34 +62,28 @@ export async function getQualityCheck(id: string) {
 
 export async function createQualityCheck(data: CreateQualityCheckInput) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) throw new Error('Unauthorized')
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error('Unauthorized');
 
-    // Check if productionOrderId exists in data
     if (!data || !data.productionOrderId) {
       throw new Error('Production order ID is required');
     }
-    
-    // Check if inspectorId exists in data
+
     if (!data || !data.inspectorId) {
       throw new Error('Inspector ID is required');
     }
-    
-    // Verify that the inspector exists - using our simplified function
-    try {
-      await getInspector(data.inspectorId);
-    } catch (err) {
+
+    // Verify inspector exists
+    const inspector = await getInspectorById(data.inspectorId);
+    if (!inspector) {
       throw new Error('Selected inspector does not exist');
     }
 
+    // Proceed with creation
     const check = await prisma.qualityCheck.create({
       data: {
-        productionOrder: {
-          connect: { 
-            id: data.productionOrderId 
-          },
-        },
-        inspectorId: data.inspectorId,
+        productionOrder: { connect: { id: data.productionOrderId } },
+        inspector: { connect: { id: data.inspectorId } },
         checkDate: data.checkDate,
         status: Status.PENDING,
         defectsFound: data.defectsFound || null,
@@ -100,18 +94,20 @@ export async function createQualityCheck(data: CreateQualityCheckInput) {
       include: {
         productionOrder: {
           include: {
-            product: true
-          }
-        }
-      }
-    })
+            product: true,
+          },
+        },
+      },
+    });
 
-    revalidatePath('/admin/quality-checks')
-    revalidatePath(`/admin/production/${data.productionOrderId}`)
-    return check
+    // Optional: refresh cache/pathing
+    revalidatePath('/admin/quality-checks');
+    revalidatePath(`/admin/production/${data.productionOrderId}`);
+    return check;
+
   } catch (error) {
-    console.error('Error creating quality check:', error)
-    throw error
+    console.error('Error creating quality check:', error);
+    throw error;
   }
 }
 
