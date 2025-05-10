@@ -60,6 +60,7 @@ import * as z from "zod";
 import {
   assignDeliveryToProductionOrder,
   updateDeliveryAssignment,
+  updateDeliveryAssignmentStatus,
 } from "@/lib/actions/delivery/delivery-assignment";
 import { format } from "date-fns";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
@@ -127,6 +128,7 @@ export function DeliveryAssignment({
 }: DeliveryAssignmentProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const { toast } = useToast();
 
   const handleAssignDelivery = async (data: FormData) => {
@@ -166,6 +168,29 @@ export function DeliveryAssignment({
     }
   };
 
+  const handleStatusChange = async (newStatus: string) => {
+    if (!deliveryAssignment) return;
+    
+    try {
+      setIsUpdatingStatus(true);
+      await updateDeliveryAssignmentStatus(deliveryAssignment.id, newStatus as Status);
+      toast({
+        title: "Status updated",
+        description: `Delivery status changed to ${newStatus}`,
+      });
+      onRefresh();
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update status",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   const getStatusBadge = (status: Status) => {
     switch (status) {
       case "PENDING":
@@ -193,6 +218,55 @@ export function DeliveryAssignment({
       default:
         return <Badge>{status}</Badge>;
     }
+  };
+
+  const renderStatusSelect = () => {
+    if (!deliveryAssignment) return null;
+    
+    return (
+      <Select 
+        defaultValue={deliveryAssignment.status} 
+        onValueChange={handleStatusChange}
+        disabled={isUpdatingStatus}
+      >
+        <SelectTrigger className="w-[140px]">
+          <SelectValue>
+            {isUpdatingStatus ? (
+              <div className="flex items-center">
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Updating...
+              </div>
+            ) : (
+              getStatusBadge(deliveryAssignment.status as Status)
+            )}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="PENDING">
+            <Badge variant="secondary" className="mr-2">Pending</Badge>
+          </SelectItem>
+          <SelectItem value="IN_PROGRESS">
+            <Badge variant="default" className="mr-2">In Progress</Badge>
+          </SelectItem>
+          <SelectItem value="COMPLETED">
+            <Badge 
+              variant="outline" 
+              className="bg-green-50 text-green-700 border-green-200 mr-2"
+            >
+              Completed
+            </Badge>
+          </SelectItem>
+          <SelectItem value="CANCELLED">
+            <Badge 
+              variant="outline" 
+              className="bg-red-50 text-red-700 border-red-200 mr-2"
+            >
+              Cancelled
+            </Badge>
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    );
   };
 
   return (
@@ -239,7 +313,7 @@ export function DeliveryAssignment({
                 <h3 className="font-medium text-muted-foreground mb-1">
                   Status
                 </h3>
-                {getStatusBadge(deliveryAssignment.status)}
+                {renderStatusSelect()}
               </div>
               <div>
                 <h3 className="font-medium text-muted-foreground mb-1">

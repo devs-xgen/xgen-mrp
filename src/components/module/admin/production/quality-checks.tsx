@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Status } from "@prisma/client";
 import { formatDate } from "@/lib/utils";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, ChevronDown, Pencil, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   updateQualityCheck,
@@ -29,6 +29,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CreateQualityCheckDialog } from "./create-quality-check-dialog";
+import { EditQualityCheckDialog } from "./edit-quality-check-dialog";
 import { QualityCheck } from "@/types/admin/quality-checks";
 import { useParams } from "next/navigation";
 import {
@@ -42,6 +43,73 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+
+// View rich text content dialog component
+interface ViewRichTextDialogProps {
+  title: string;
+  content: string;
+  children: React.ReactNode;
+}
+
+function ViewRichTextDialog({ title, content, children }: ViewRichTextDialogProps) {
+  const [open, setOpen] = useState(false);
+  
+  // Function to determine if content is empty or contains only HTML tags
+  const hasContent = content && content.replace(/<[^>]*>/g, '').trim() !== '';
+  
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent className="max-w-[95vw] sm:max-w-[600px] p-0 border-2">
+        <DialogHeader className="px-6 pt-6 pb-2 sticky top-0 bg-background z-10 border-b">
+          <DialogTitle className="text-xl font-semibold">{title}</DialogTitle>
+        </DialogHeader>
+        <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
+          {hasContent ? (
+            <div 
+              className="prose prose-sm max-w-none dark:prose-invert bg-muted/10 p-4 rounded-lg border animate-in fade-in duration-300"
+              dangerouslySetInnerHTML={{ __html: content }}
+            />
+          ) : (
+            <div className="text-center p-8 text-muted-foreground italic">
+              No content available
+            </div>
+          )}
+        </div>
+        <div className="p-4 bg-muted/10 border-t flex justify-end">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setOpen(false)}
+          >
+            Close
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Valid statuses for quality checks
+const QUALITY_CHECK_STATUSES: Status[] = [
+  "PENDING",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED"
+];
 
 interface QualityChecksProps {
   productionOrderId: string;
@@ -107,9 +175,7 @@ export function QualityChecks({
 
       toast({
         title: "Quality Check Updated",
-        description: `Quality check status updated to ${newStatus
-          .toLowerCase()
-          .replace("_", " ")}`,
+        description: `Quality check status updated to ${formatStatus(newStatus)}`,
       });
     } catch (error) {
       toast({
@@ -156,39 +222,52 @@ export function QualityChecks({
     }
   };
 
-  const getNextStatus = (currentStatus: Status): Status | null => {
-    switch (currentStatus) {
-      case "PENDING":
-        return "IN_PROGRESS";
-      case "IN_PROGRESS":
-        return "COMPLETED";
-      default:
-        return null;
-    }
-  };
-
   const getStatusBadgeVariant = (
     status: Status
-  ): "default" | "secondary" | "outline" => {
+  ): "default" | "secondary" | "outline" | "destructive" => {
     switch (status) {
       case "COMPLETED":
         return "default";
       case "IN_PROGRESS":
         return "secondary";
+      case "CANCELLED":
+        return "destructive";
       default:
         return "outline";
     }
   };
 
-  const getActionButtonText = (nextStatus: Status) => {
-    switch (nextStatus) {
-      case "IN_PROGRESS":
-        return "Start";
+  // Function to format status for display
+  const formatStatus = (status: Status): string => {
+    return status.toLowerCase().replace("_", " ");
+  };
+
+  // Status indicator dot color
+  const getStatusDotColor = (status: Status): string => {
+    switch (status) {
       case "COMPLETED":
-        return "Complete";
+        return "bg-green-500";
+      case "IN_PROGRESS":
+        return "bg-blue-500";
+      case "CANCELLED":
+        return "bg-red-500";
       default:
-        return "Update";
+        return "bg-gray-400";
     }
+  };
+
+  // Row background color based on status and defects
+  const getRowBackgroundClass = (status: Status, hasDefects: boolean): string => {
+    if (status === "COMPLETED" && hasDefects) {
+      return "bg-red-50";
+    } else if (status === "COMPLETED") {
+      return "bg-green-50";
+    } else if (status === "IN_PROGRESS") {
+      return "bg-secondary/10";
+    } else if (status === "CANCELLED") {
+      return "bg-destructive/10";
+    }
+    return "";
   };
 
   const handleQualityCheckCreated = async () => {
@@ -239,37 +318,34 @@ export function QualityChecks({
                 <TableHead>Date</TableHead>
                 <TableHead>Inspector</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Defects Found</TableHead>
-                <TableHead>Action Taken</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-center">Defects</TableHead>
+                <TableHead className="text-center">Action</TableHead>
+                <TableHead className="text-center">Notes</TableHead>
+                <TableHead className="text-right font-bold bg-muted/30">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredChecks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
-                    No quality checks recorded for this production order.
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <div className="flex flex-col items-center justify-center text-muted-foreground">
+                      <div className="h-12 w-12 rounded-full border-2 border-dashed flex items-center justify-center mb-2">
+                        <Eye className="h-6 w-6 opacity-50" />
+                      </div>
+                      <p>No quality checks recorded for this production order.</p>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredChecks.map((check) => {
-                  const nextStatus = getNextStatus(check.status);
-                  const canDelete = check.status === "PENDING"; // Only allow deleting pending checks
-                  const hasDefects =
-                    check.defectsFound && check.defectsFound.trim() !== "";
+                  const hasDefects = Boolean(
+                    check.defectsFound && check.defectsFound.trim() !== ""
+                  );
 
                   return (
                     <TableRow
                       key={check.id}
-                      className={
-                        check.status === "COMPLETED"
-                          ? hasDefects
-                            ? "bg-red-50"
-                            : "bg-green-50"
-                          : check.status === "IN_PROGRESS"
-                          ? "bg-secondary/10"
-                          : ""
-                      }
+                      className={getRowBackgroundClass(check.status, hasDefects)}
                     >
                       <TableCell>{formatDate(check.checkDate)}</TableCell>
                       <TableCell className="font-medium">
@@ -278,109 +354,171 @@ export function QualityChecks({
                       <TableCell>
                         <div className="flex items-center">
                           <div
-                            className={`w-2 h-2 rounded-full mr-2 ${
-                              check.status === "COMPLETED"
-                                ? hasDefects
-                                  ? "bg-red-500"
-                                  : "bg-green-500"
-                                : check.status === "IN_PROGRESS"
-                                ? "bg-blue-500"
-                                : "bg-gray-400"
-                            }`}
+                            className={`w-2 h-2 rounded-full mr-2 ${getStatusDotColor(check.status)}`}
                           />
-                          <Badge variant={getStatusBadgeVariant(check.status)}>
-                            {check.status.toLowerCase().replace("_", " ")}
-                          </Badge>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="h-8 p-0 font-normal"
+                              >
+                                <Badge
+                                  variant={getStatusBadgeVariant(check.status)}
+                                  className="mr-1"
+                                >
+                                  {updatingId === check.id ? (
+                                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                  ) : null}
+                                  {formatStatus(check.status)}
+                                </Badge>
+                                <ChevronDown className="h-3 w-3 opacity-70" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="center">
+                              {QUALITY_CHECK_STATUSES.map((status) => (
+                                <DropdownMenuItem
+                                  key={status}
+                                  onClick={() => handleStatusUpdate(
+                                    check.id,
+                                    status,
+                                    check.defectsFound || null,
+                                    check.actionTaken || null,
+                                    check.notes || null
+                                  )}
+                                  disabled={check.status === status}
+                                  className={check.status === status ? "bg-muted" : ""}
+                                >
+                                  {formatStatus(status)}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                       <TableCell>
-                        {hasDefects ? (
-                          <span className="text-sm text-red-700">
-                            {check.defectsFound}
-                          </span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            None found
-                          </span>
-                        )}
+                        <div className="flex items-center justify-center">
+                          {hasDefects ? (
+                            <ViewRichTextDialog 
+                              title="Defects Found" 
+                              content={check.defectsFound || ''}
+                            >
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="rounded-full h-8 w-8 p-0 flex items-center justify-center"
+                                title="View defects found"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </ViewRichTextDialog>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              None
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        {check.actionTaken ? (
-                          <span className="text-sm">{check.actionTaken}</span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            No action required
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-2">
-                          {nextStatus && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                handleStatusUpdate(
-                                  check.id,
-                                  nextStatus,
-                                  check.defectsFound || null,
-                                  check.actionTaken || null,
-                                  check.notes || null
-                                )
-                              }
-                              disabled={updatingId === check.id || isLoading}
-                              className={
-                                nextStatus === "COMPLETED"
-                                  ? "border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700"
-                                  : "border-blue-500 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                              }
+                        <div className="flex items-center justify-center">
+                          {check.actionTaken ? (
+                            <ViewRichTextDialog 
+                              title="Action Taken" 
+                              content={check.actionTaken}
                             >
-                              {updatingId === check.id && (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              )}
-                              {getActionButtonText(nextStatus)}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="rounded-full h-8 w-8 p-0 flex items-center justify-center"
+                                title="View action taken"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </ViewRichTextDialog>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              None
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-center">
+                          {check.notes ? (
+                            <ViewRichTextDialog 
+                              title="Notes" 
+                              content={check.notes}
+                            >
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="rounded-full h-8 w-8 p-0 flex items-center justify-center"
+                                title="View notes"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </ViewRichTextDialog>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              None
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right border border-dashed border-gray-200 p-2">
+                        <div className="flex flex-col space-y-2">
+                          <EditQualityCheckDialog
+                            qualityCheck={check}
+                            onRefresh={onRefresh}
+                          >
+                            <Button 
+                              variant="outline" 
+                              className="w-full h-9 px-3"
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
                             </Button>
-                          )}
+                          </EditQualityCheckDialog>
 
-                          {canDelete && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  disabled={deletingId === check.id}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="destructive"
+                                className="w-full h-9 px-3"
+                                disabled={deletingId === check.id || isLoading}
+                              >
+                                {deletingId === check.id ? (
+                                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                )}
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Delete Quality Check
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this quality
+                                  check? This will remove the task assigned to the inspector.
+                                  This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() =>
+                                    handleDeleteQualityCheck(check.id)
+                                  }
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 >
-                                  {deletingId === check.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>
-                                    Delete Quality Check
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete this quality
-                                    check? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() =>
-                                      handleDeleteQualityCheck(check.id)
-                                    }
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>

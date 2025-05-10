@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Status, Priority } from "@prisma/client";
 import { ProductionOrder } from "@/types/admin/production-order";
 import { OperationsManagement } from "./operations-management";
@@ -18,7 +18,13 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { updateProductionOrder } from "@/lib/actions/production-order";
+import { 
+  updateProductionOrder, 
+  getProductionOrder,
+  getAvailableWorkCenters 
+} from "@/lib/actions/production-order";
+import { getActiveInspectors } from "@/lib/actions/inspector";
+import { getDeliveryUsers, getDeliveryAssignment } from "@/lib/actions/delivery/delivery-assignment";
 import { QualityCheck } from "@/types/admin/quality-checks";
 import { formatDate } from "@/lib/utils";
 import { LinkCustomerOrderDialog } from "./link-customer-order-dialog";
@@ -60,10 +66,6 @@ interface ProductionOrderDetailsProps {
   order: ProductionOrder;
   workCenters: WorkCenter[];
   deliveryUsers?: DeliveryUser[];
-  onUpdateStatus?: (status: Status) => Promise<void>;
-  onUpdateOperation?: (operationId: string, status: Status) => Promise<void>;
-  onAddOperation?: () => void;
-  onAddQualityCheck?: () => void;
   isLoading?: boolean;
 }
 
@@ -95,14 +97,27 @@ function ensureDeliveryAssignmentHasProductionOrder(
 }
 
 export function ProductionOrderDetails({
-  order,
-  workCenters,
-  deliveryUsers = [],
-  isLoading = false,
+  order: initialOrder,
+  workCenters: initialWorkCenters,
+  deliveryUsers: initialDeliveryUsers = [],
+  isLoading: initialLoading = false,
 }: ProductionOrderDetailsProps) {
+  // State for the main order data and loading state
+  const [order, setOrder] = useState(initialOrder);
   const [updating, setUpdating] = useState(false);
+  
+  // Separate loading states for each section
+  const [loadingOperations, setLoadingOperations] = useState(false);
+  const [loadingQualityChecks, setLoadingQualityChecks] = useState(false);
+  const [loadingDelivery, setLoadingDelivery] = useState(false);
+  
+  // Resources needed by components
+  const [workCenters, setWorkCenters] = useState(initialWorkCenters);
+  const [deliveryUsers, setDeliveryUsers] = useState(initialDeliveryUsers);
+  
   const { toast } = useToast();
 
+  // Function to refresh the main order status without page reload
   const handleStatusUpdate = async (newStatus: Status) => {
     try {
       setUpdating(true);
@@ -110,6 +125,12 @@ export function ProductionOrderDetails({
         id: order.id,
         status: newStatus,
       });
+      
+      // Fetch the updated order
+      const updatedOrder = await getProductionOrder(order.id);
+      if (updatedOrder) {
+        setOrder(updatedOrder);
+      }
 
       toast({
         title: "Status Updated",
@@ -129,12 +150,132 @@ export function ProductionOrderDetails({
     }
   };
 
-  const handleRefresh = async (): Promise<void> => {
-    return new Promise<void>((resolve) => {
-      window.location.reload();
-      setTimeout(resolve, 100);
-    });
-  };
+  // Section-specific refresh functions
+  const refreshOperations = useCallback(async () => {
+    try {
+      setLoadingOperations(true);
+      const updatedOrder = await getProductionOrder(order.id);
+      const updatedWorkCenters = await getAvailableWorkCenters();
+      
+      if (updatedOrder) {
+        // Only update the operations part of the order with proper typing
+        setOrder((prev: ProductionOrder) => ({
+          ...prev,
+          operations: updatedOrder.operations as typeof prev.operations,
+          status: updatedOrder.status as typeof prev.status
+        }));
+      }
+      
+      if (updatedWorkCenters) {
+        setWorkCenters(updatedWorkCenters);
+      }
+      
+      toast({
+        title: "Operations Updated",
+        description: "The operations section has been refreshed",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to refresh operations",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingOperations(false);
+    }
+  }, [order.id, toast]);
+
+  const refreshQualityChecks = useCallback(async () => {
+    try {
+      setLoadingQualityChecks(true);
+      const updatedOrder = await getProductionOrder(order.id);
+      const allInspectors = await getActiveInspectors();
+      
+      if (updatedOrder && allInspectors) {
+        // Create a map of inspector names
+        const inspectorsMap = new Map();
+        for (const inspector of allInspectors) {
+          inspectorsMap.set(inspector.inspectorId, `${inspector.firstName} ${inspector.lastName}`);
+        }
+        
+        // Transform the quality checks with inspector names
+        const transformedQualityChecks = updatedOrder.qualityChecks.map((check: any) => ({
+          id: check.id,
+          productionOrderId: check.productionOrderId,
+          inspectorId: check.inspectorId,
+          inspectorName: inspectorsMap.get(check.inspectorId) || "Unknown",
+          checkDate: check.checkDate.toISOString(),
+          status: check.status,
+          defectsFound: check.defectsFound,
+          actionTaken: check.actionTaken,
+          notes: check.notes,
+          createdAt: check.createdAt,
+          updatedAt: check.updatedAt,
+          productionOrder: {
+            product: {
+              name: updatedOrder.product.name,
+              sku: updatedOrder.product.sku,
+            },
+          },
+        }));
+        
+        // Update only the quality checks part of the order
+        setOrder((prev: ProductionOrder) => ({
+          ...prev,
+          qualityChecks: transformedQualityChecks as unknown as typeof prev.qualityChecks
+        }));
+      }
+      
+      toast({
+        title: "Quality Checks Updated",
+        description: "The quality checks section has been refreshed",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to refresh quality checks",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingQualityChecks(false);
+    }
+  }, [order.id, toast]);
+
+  const refreshDelivery = useCallback(async () => {
+    try {
+      setLoadingDelivery(true);
+      const updatedDeliveryUsers = await getDeliveryUsers();
+      const updatedDeliveryAssignment = await getDeliveryAssignment(order.id);
+      
+      if (updatedDeliveryUsers) {
+        setDeliveryUsers(updatedDeliveryUsers);
+      }
+      
+      if (updatedDeliveryAssignment) {
+        // Type-safe update by creating a properly transformed assignment
+        const processedAssignment = ensureDeliveryAssignmentHasProductionOrder(updatedDeliveryAssignment, order);
+        
+        // Update only the delivery assignment part of the order
+        setOrder((prev: ProductionOrder) => ({
+          ...prev,
+          deliveryAssignment: processedAssignment as typeof prev.deliveryAssignment
+        }));
+      }
+      
+      toast({
+        title: "Delivery Assignment Updated",
+        description: "The delivery assignment section has been refreshed",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to refresh delivery assignment",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingDelivery(false);
+    }
+  }, [order, toast]);
 
   const getNextStatus = (currentStatus: Status): Status | null => {
     switch (currentStatus) {
@@ -181,7 +322,7 @@ export function ProductionOrderDetails({
                   variant="default"
                   size="lg"
                   onClick={() => handleStatusUpdate(nextStatus)}
-                  disabled={updating || isLoading}
+                  disabled={updating}
                   className="mt-2"
                 >
                   {updating && (
@@ -243,7 +384,7 @@ export function ProductionOrderDetails({
                   </div>
                   <LinkCustomerOrderDialog
                     productionOrderId={order.id}
-                    onRefresh={handleRefresh}
+                    onRefresh={refreshOperations}
                   />
                 </div>
               )}
@@ -262,23 +403,23 @@ export function ProductionOrderDetails({
         productionOrderId={order.id}
         operations={order.operations}
         workCenters={workCenters}
-        onRefresh={handleRefresh}
-        isLoading={isLoading}
+        onRefresh={refreshOperations}
+        isLoading={loadingOperations}
       />
 
       <QualityChecks
         productionOrderId={order.id}
         checks={qualityChecks}
-        onRefresh={handleRefresh}
-        isLoading={isLoading}
+        onRefresh={refreshQualityChecks}
+        isLoading={loadingQualityChecks}
       />
 
       <DeliveryAssignment
         productionOrderId={order.id}
         deliveryAssignment={ensureDeliveryAssignmentHasProductionOrder(order.deliveryAssignment, order)}
         deliveryUsers={deliveryUsers}
-        onRefresh={handleRefresh}
-        isLoading={isLoading}
+        onRefresh={refreshDelivery}
+        isLoading={loadingDelivery}
       />
     </div>
   );

@@ -1,10 +1,10 @@
 // src/components/module/admin/production/operations-management.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Status } from "@prisma/client";
 import { formatDate } from "@/lib/utils";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   updateOperationStatus,
@@ -40,6 +40,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface WorkCenter {
   id: string;
@@ -67,6 +73,14 @@ interface OperationsManagementProps {
   isLoading?: boolean;
 }
 
+// Valid statuses for operations
+const OPERATION_STATUSES: Status[] = [
+  "PENDING",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED"
+];
+
 export function OperationsManagement({
   productionOrderId,
   operations,
@@ -77,6 +91,15 @@ export function OperationsManagement({
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Debug logging
+  useEffect(() => {
+    console.log("Operations:", operations);
+    operations.forEach(operation => {
+      const canDelete = operation.status === "PENDING";
+      console.log("Operation:", operation.id, "canDelete:", canDelete);
+    });
+  }, [operations]);
 
   const handleStatusUpdate = async (id: string, newStatus: Status) => {
     try {
@@ -124,38 +147,51 @@ export function OperationsManagement({
     }
   };
 
-  const getNextStatus = (currentStatus: Status): Status | null => {
-    switch (currentStatus) {
-      case "PENDING":
-        return "IN_PROGRESS";
-      case "IN_PROGRESS":
-        return "COMPLETED";
-      default:
-        return null;
-    }
-  };
-
   const getStatusBadgeVariant = (
     status: Status
-  ): "default" | "secondary" | "outline" => {
+  ): "default" | "secondary" | "outline" | "destructive" => {
     switch (status) {
       case "COMPLETED":
         return "default";
       case "IN_PROGRESS":
         return "secondary";
+      case "CANCELLED":
+        return "destructive";
       default:
         return "outline";
     }
   };
 
-  const getActionButtonText = (nextStatus: Status) => {
-    switch (nextStatus) {
-      case "IN_PROGRESS":
-        return "Start";
+  // Function to format status for display
+  const formatStatus = (status: Status): string => {
+    return status.toLowerCase().replace("_", " ");
+  };
+
+  // Status indicator dot color
+  const getStatusDotColor = (status: Status): string => {
+    switch (status) {
       case "COMPLETED":
-        return "Complete";
+        return "bg-green-500";
+      case "IN_PROGRESS":
+        return "bg-blue-500";
+      case "CANCELLED":
+        return "bg-red-500";
       default:
-        return "Update";
+        return "bg-gray-400";
+    }
+  };
+
+  // Row background color
+  const getRowBackgroundClass = (status: Status): string => {
+    switch (status) {
+      case "COMPLETED":
+        return "bg-muted/30";
+      case "IN_PROGRESS":
+        return "bg-secondary/10";
+      case "CANCELLED":
+        return "bg-destructive/10";
+      default:
+        return "";
     }
   };
 
@@ -187,7 +223,7 @@ export function OperationsManagement({
               <TableHead>End Time</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Notes</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="text-right font-bold bg-muted/30">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -199,18 +235,11 @@ export function OperationsManagement({
               </TableRow>
             ) : (
               operations.map((operation) => {
-                const nextStatus = getNextStatus(operation.status);
                 const canDelete = operation.status === "PENDING";
                 return (
                   <TableRow
                     key={operation.id}
-                    className={
-                      operation.status === "COMPLETED"
-                        ? "bg-muted/30"
-                        : operation.status === "IN_PROGRESS"
-                        ? "bg-secondary/10"
-                        : ""
-                    }
+                    className={getRowBackgroundClass(operation.status)}
                   >
                     <TableCell className="font-medium">
                       {operation.workCenter.name}
@@ -220,19 +249,40 @@ export function OperationsManagement({
                     <TableCell>
                       <div className="flex items-center">
                         <div
-                          className={`w-2 h-2 rounded-full mr-2 ${
-                            operation.status === "COMPLETED"
-                              ? "bg-green-500"
-                              : operation.status === "IN_PROGRESS"
-                              ? "bg-blue-500"
-                              : "bg-gray-400"
-                          }`}
+                          className={`w-2 h-2 rounded-full mr-2 ${getStatusDotColor(operation.status)}`}
                         />
-                        <Badge
-                          variant={getStatusBadgeVariant(operation.status)}
-                        >
-                          {operation.status.toLowerCase().replace("_", " ")}
-                        </Badge>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-8 p-0 font-normal"
+                            >
+                              <Badge
+                                variant={getStatusBadgeVariant(operation.status)}
+                                className="mr-1"
+                              >
+                                {updatingId === operation.id ? (
+                                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                ) : null}
+                                {formatStatus(operation.status)}
+                              </Badge>
+                              <ChevronDown className="h-3 w-3 opacity-70" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="center">
+                            {OPERATION_STATUSES.map((status) => (
+                              <DropdownMenuItem
+                                key={status}
+                                onClick={() => handleStatusUpdate(operation.id, status)}
+                                disabled={operation.status === status}
+                                className={operation.status === status ? "bg-muted" : ""}
+                              >
+                                {formatStatus(status)}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -244,71 +294,49 @@ export function OperationsManagement({
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end space-x-2">
-                        {nextStatus && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              handleStatusUpdate(operation.id, nextStatus)
-                            }
-                            disabled={updatingId === operation.id || isLoading}
-                            className={
-                              nextStatus === "COMPLETED"
-                                ? "border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700"
-                                : "border-blue-500 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                            }
-                          >
-                            {updatingId === operation.id && (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            {getActionButtonText(nextStatus)}
-                          </Button>
-                        )}
-
-                        {canDelete && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                disabled={
-                                  deletingId === operation.id || isLoading
+                    <TableCell className="text-right border border-dashed border-gray-200 p-2">
+                      {canDelete ? (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              className="w-full h-9 px-3"
+                              disabled={deletingId === operation.id || isLoading}
+                            >
+                              {deletingId === operation.id ? (
+                                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                              ) : (
+                                <Trash2 className="h-4 w-4 mr-2" />
+                              )}
+                              Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Delete Operation
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this
+                                operation? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() =>
+                                  handleDeleteOperation(operation.id)
                                 }
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               >
-                                {deletingId === operation.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Trash2 className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Delete Operation
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete this
-                                  operation? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() =>
-                                    handleDeleteOperation(operation.id)
-                                  }
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">On Going Task</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

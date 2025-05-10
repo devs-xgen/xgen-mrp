@@ -269,7 +269,6 @@ model QualityCheck {
   createdBy         String?
   modifiedBy        String?
   productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id])
-  // New relation to connect inspectors to quality checks
   inspector         User            @relation("Inspections", fields: [inspectorId], references: [id])
 }
 

@@ -105,7 +105,6 @@ export default async function ProductionOrderPage({
       </div>
 
       <ProductionOrderDetails
-        // TODO: Replace 'as any' with the correct type for order if available
         order={order as any}
         workCenters={workCenters}
         deliveryUsers={deliveryUsers}
