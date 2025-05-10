@@ -13,7 +13,14 @@ import {
   Box,
   Boxes,
   CheckSquare,
-  UserSquare
+  UserSquare,
+  Clock,
+  AlertTriangle,
+  Clipboard,
+  Timer,
+  Hammer,
+  LineChart,
+  QrCode
 } from 'lucide-react'
 
 interface NavItem {
@@ -124,63 +131,99 @@ export const workerNavItems: NavItem[] = [
     icon: LayoutDashboard,
     label: 'Dashboard',
     href: '/worker/dashboard',
-    description: 'Your work overview'
+    description: 'Your work overview and daily tasks'
   },
   {
-    icon: Factory,
-    label: 'Production',
-    description: 'Production management',
-    items: [
-      {
-        icon: ClipboardList,
-        label: 'Tasks',
-        href: '/worker/production',
-        description: 'View and manage production tasks'
-      },
-      {
-        icon: CheckSquare,
-        label: 'Quality Control',
-        href: '/worker/production/quality',
-        description: 'Quality inspection tasks'
-      },
-      {
-        icon: Boxes,
-        label: 'Work in Progress',
-        href: '/worker/production/wip',
-        description: 'Track work in progress'
-      }
-    ]
+    icon: ClipboardList,
+    label: 'Tasks',
+    href: '/worker/tasks',
+    description: 'View and manage your assigned tasks'
   },
+  {
+    icon: QrCode,
+    label: 'QR Scanner',
+    href: '/worker/qr-scanner',
+    description: 'Scan production QR codes to update status'
+  },
+  // {
+  //   icon: Factory,
+  //   label: 'Production',
+  //   description: 'Production management',
+  //   items: [
+  //     {
+  //       icon: Hammer,
+  //       label: 'Operations',
+  //       href: '/worker/production',
+  //       description: 'Production operations and processes'
+  //     },
+  //     {
+  //       icon: CheckSquare,
+  //       label: 'Quality Control',
+  //       href: '/worker/production/quality',
+  //       description: 'Quality inspection tasks'
+  //     },
+  //     {
+  //       icon: Boxes,
+  //       label: 'Work in Progress',
+  //       href: '/worker/production/wip',
+  //       description: 'Track work in progress'
+  //     },
+  //     {
+  //       icon: Timer,
+  //       label: 'Time Tracking',
+  //       href: '/worker/production/tracking',
+  //       description: 'Track time spent on tasks'
+  //     }
+  //   ]
+  // },
   {
     icon: Package,
     label: 'Inventory',
-    href: '/worker/inventory',
-    description: 'Check inventory levels'
-  },
-  {
-    icon: BadgeDollarSign,
-    label: 'Orders',
-    description: 'Orders management',
     items: [
       {
-        icon: ShoppingCart,
-        label: 'Customer Orders',
-        href: '/worker/orders',
-        description: 'View customer order requirements'
+        icon: Warehouse,
+        label: 'Materials',
+        href: '/worker/inventory',
+        description: 'Check inventory levels'
       },
       {
-        icon: Truck,
-        label: 'Shipments',
-        href: '/worker/orders/shipments',
-        description: 'Manage order shipments'
+        icon: AlertTriangle,
+        label: 'Low Stock Alerts',
+        href: '/worker/inventory/alerts',
+        description: 'View materials requiring attention'
       }
     ]
+  },
+  // {
+  //   icon: BadgeDollarSign,
+  //   label: 'Orders',
+  //   description: 'Orders management',
+  //   items: [
+  //     {
+  //       icon: ShoppingCart,
+  //       label: 'Customer Orders',
+  //       href: '/worker/orders',
+  //       description: 'View customer order requirements'
+  //     },
+  //     {
+  //       icon: Truck,
+  //       label: 'Shipments',
+  //       href: '/worker/orders/shipments',
+  //       description: 'Manage order shipments'
+  //     }
+  //   ]
+  // },
+  {
+    icon: LineChart,
+    label: 'Reports',
+    href: '/worker/reports',
+    description: 'View your productivity metrics'
   },
   {
     icon: UserCircle,
     label: 'Profile',
     href: '/worker/profile',
-    description: 'Manage your profile'
+    description: 'Manage your profile and skills'
   },
   {
     icon: Settings,
@@ -243,6 +286,12 @@ export const deliveryNavItems: NavItem[] = [
     label: 'Dashboard',
     href: '/delivery/dashboard',
     description: 'Delivery overview'
+  },
+  {
+    icon: ClipboardList,
+    label: 'Tasks',
+    href: '/delivery/tasks',
+    description: 'View and update delivery tasks'
   },
   {
     icon: ShoppingCart,

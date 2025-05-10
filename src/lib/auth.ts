@@ -128,14 +128,10 @@ export const authOptions: NextAuthOptions = {
         strategy: "jwt",
         maxAge: 30 * 24 * 60 * 60,
     },
-    // Use dynamic error handling based on the URL path
+    // Use fixed error paths since dynamic ones aren't supported in this version
     pages: {
-        error: ({ url }) => {
-            // Extract the portal from the URL path
-            const portalMatch = url?.match(/\/(admin|worker|inspector|delivery)/);
-            const portal = portalMatch ? portalMatch[1] : 'admin';
-            return `/${portal}/login`;
-        }
+        error: '/admin/login',
+        signIn: '/admin/login'
     },
     secret: process.env.NEXTAUTH_SECRET,
 }

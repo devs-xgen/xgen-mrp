@@ -21,6 +21,7 @@ export type Inspector = {
   updatedAt?: Date;
   createdBy?: string | null;
   modifiedBy?: string | null;
+  userId?: string | null;
 }
 
 export type InspectorFormData = Omit<Inspector, 'inspectorId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'modifiedBy'>;

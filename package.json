@@ -5,9 +5,15 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "next dev -p 3001",
+    "dev:https": "NODE_ENV=development HTTPS=true next dev -p 3001",
     "build": "prisma generate --no-engine && next build --no-lint",
     "start": "next start",
     "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "format": "prettier --write \"**/*.{js,ts,tsx,md}\"",
+    "type-check": "tsc --noEmit",
+    "prepare": "husky install",
+    "pre-commit": "lint-staged",
     "electron-dev": "electron .",
     "prisma:generate": "prisma generate --no-engine",
     "prisma:push": "prisma db push",
@@ -19,7 +25,7 @@
     "@headlessui/react": "^1.7.17",
     "@heroicons/react": "^2.0.18",
     "@hookform/resolvers": "^3.10.0",
-    "@prisma/client": "^6.5.0",
+    "@prisma/client": "^6.7.0",
     "@prisma/extension-accelerate": "^1.3.0",
     "@radix-ui/react-alert-dialog": "^1.1.3",
     "@radix-ui/react-avatar": "^1.1.3",
@@ -37,20 +43,24 @@
     "@radix-ui/react-slot": "^1.1.2",
     "@radix-ui/react-switch": "^1.1.4",
     "@radix-ui/react-tabs": "^1.1.2",
-    "@radix-ui/react-toast": "^1.2.3",
+    "@radix-ui/react-toast": "^1.2.11",
     "@radix-ui/react-toggle": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.6",
+    "@react-pdf/renderer": "^4.3.0",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/react-table": "^8.20.6",
     "@tiptap/pm": "^2.11.5",
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
+    "@types/react-datepicker": "^6.2.0",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "dotenv": "^16.4.7",
+    "html2pdf.js": "^0.10.3",
+    "html5-qrcode": "^2.3.8",
     "libphonenumber-js": "^1.11.17",
     "lodash": "^4.17.21",
     "lucide-react": "^0.468.0",
@@ -62,6 +72,7 @@
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.54.2",
     "react-input-mask": "^2.0.4",
+    "react-qr-code": "^2.0.15",
     "react-to-print": "^3.0.5",
     "recharts": "^2.15.1",
     "sonner": "^1.7.1",
@@ -85,13 +96,26 @@
     "electron-builder": "^24.9.1",
     "eslint": "^8",
     "eslint-config-next": "^14.0.4",
+    "eslint-plugin-import": "^2.29.1",
+    "husky": "^9.0.7",
+    "lint-staged": "^15.2.0",
     "postcss": "^8",
-    "prisma": "^6.5.0",
+    "prettier": "^3.1.1",
+    "prisma": "^6.7.0",
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
   }
 }
