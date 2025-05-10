@@ -1,4 +1,3 @@
-// src/app/worker/(protected)/production/page.tsx
 import { Metadata } from "next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +10,7 @@ import {
   Pause,
   Check,
 } from "lucide-react";
+import { TaskActions } from "@/components/module/inspectors/task/taskbydepartment"; // Adjust the import path
 
 export const metadata: Metadata = {
   title: "Production Tasks",
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 export default function ProductionTasksPage() {
-  // Sample data for production tasks
+  // Sample data for production tasks (you can remove this or integrate with it)
   const productionTasks = [
     {
       id: "PT-001",
@@ -101,7 +101,16 @@ export default function ProductionTasksPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Assigned Tasks</CardTitle>
+          <CardTitle>Your Department Tasks</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TaskActions />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>All Production Tasks (Sample Data)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">

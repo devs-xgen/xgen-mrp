@@ -45,19 +45,66 @@ export async function getInspectors() {
 export async function getActiveInspectors() {
   try {
     const inspectors = await prisma.inspector.findMany({
-      where: { 
-        isActive: true 
-      },
+      where: { isActive: true },
+      include: { user: true },
       orderBy: [
         { lastName: 'asc' },
         { firstName: 'asc' }
       ]
     });
-    
-    return inspectors;
+    return inspectors
+      .filter((inspector) => inspector.user !== null)
+      .map((inspector) => ({
+        inspectorId: inspector.user!.id,
+        firstName: inspector.firstName,
+        lastName: inspector.lastName,
+        email: inspector.email,
+        department: inspector.department,
+      }));
   } catch (error) {
     console.error('Error fetching active inspectors:', error);
     return [];
+  }
+}
+
+
+
+// export async function getActiveInspectors() {
+//   try {
+//     const inspectors = await prisma.inspector.findMany({
+//       where: { 
+//         isActive: true 
+//       },
+//       orderBy: [
+//         { lastName: 'asc' },
+//         { firstName: 'asc' }
+//       ]
+//     });
+    
+//     return inspectors;
+//   } catch (error) {
+//     console.error('Error fetching active inspectors:', error);
+//     return [];
+//   }
+// }
+
+export async function getInspectorById(inspectorId: string) {
+  try {
+    const inspector = await prisma.inspector.findFirst({
+      where: { isActive: true, user: { id: inspectorId } },
+      include: { user: true },
+    });
+    if (!inspector || !inspector.user) return null;
+    return {
+      inspectorId: inspector.user.id,
+      firstName: inspector.firstName,
+      lastName: inspector.lastName,
+      email: inspector.email,
+      department: inspector.department,
+    };
+  } catch (error) {
+    console.error('Error fetching inspector by ID:', error);
+    return null;
   }
 }
 

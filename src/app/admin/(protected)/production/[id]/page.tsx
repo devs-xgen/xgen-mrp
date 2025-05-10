@@ -8,7 +8,7 @@ import { ProductionOrderDetails } from "@/components/module/admin/production/pro
 import { ProductionQRGenerator } from "@/components/module/admin/production/production-qr-generator";
 import { Button } from "@/components/ui/button";
 import { getDeliveryUsers, getDeliveryAssignment } from "@/lib/actions/delivery/delivery-assignment";
-import { getInspector } from "@/lib/actions/inspector";
+import { getActiveInspectors } from "@/lib/actions/inspector";
 import { getProductionOrder, getAvailableWorkCenters } from "@/lib/actions/production-order";
 
 interface ProductionOrderPageProps {
@@ -47,23 +47,11 @@ export default async function ProductionOrderPage({
     JSON.stringify(orderData.qualityChecks, null, 2)
   );
 
-  // Fetch inspectors data
+  const allInspectors = await getActiveInspectors(); // fetch once
   const inspectorsMap = new Map();
 
-  // Get inspector names for all checks
-  for (const check of orderData.qualityChecks) {
-    if (!inspectorsMap.has(check.inspectorId)) {
-      try {
-        const inspector = await getInspector(check.inspectorId);
-        inspectorsMap.set(
-          check.inspectorId,
-          `${inspector.firstName} ${inspector.lastName}`
-        );
-      } catch (error) {
-        console.error(`Error fetching inspector ${check.inspectorId}:`, error);
-        inspectorsMap.set(check.inspectorId, "Unknown Inspector");
-      }
-    }
+  for (const inspector of allInspectors) {
+    inspectorsMap.set(inspector.inspectorId, `${inspector.firstName} ${inspector.lastName}`);
   }
 
   // Transform the qualityChecks to include all required properties

@@ -403,6 +403,9 @@ export async function createQualityCheck(data: CreateQualityCheckInput) {
             id: data.productionOrderId 
           },
         },
+        inspector: {
+          connect: { id: data.inspectorId }
+        },   
         inspectorId: data.inspectorId,
         checkDate: data.checkDate,
         status: Status.PENDING,
