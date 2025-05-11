@@ -15,8 +15,8 @@ import {
 
 const customStyles = `
   .ProseMirror {
-    min-height: 120px;
-    max-height: 170px; /* Fixed height */
+    min-height: 100px;
+    max-height: 140px; /* Reduced fixed height for smaller screens */
     overflow-y: auto; /* Add scrollbar when content overflows */
     padding: 0.5rem;
     border-radius: 0 0 var(--radius) var(--radius);
@@ -26,9 +26,17 @@ const customStyles = `
     font-size: 0.875rem;
   }
 
+  /* Responsive adjustments */
+  @media (min-width: 640px) {
+    .ProseMirror {
+      min-height: 120px;
+      max-height: 170px; /* Larger height for desktop */
+    }
+  }
+
   /* Custom scrollbar styling */
   .ProseMirror::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
   }
 
   .ProseMirror::-webkit-scrollbar-track {
@@ -78,6 +86,24 @@ const customStyles = `
     padding-left: 1rem;
     font-style: italic;
   }
+
+  /* Mobile responsive toolbar */
+  .editor-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .toolbar-group {
+    display: flex;
+    align-items: center;
+  }
+
+  @media (max-width: 500px) {
+    .toolbar-group {
+      flex-wrap: wrap;
+    }
+  }
 `
 
 interface RichTextEditorProps {
@@ -102,6 +128,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class: 'prose-sm focus:outline-none max-w-none',
+        placeholder: placeholder || 'Start typing...'
       },
     }
   })
@@ -114,110 +141,118 @@ export function RichTextEditor({
     <div className={`flex flex-col w-full ${className}`}>
       <style>{customStyles}</style>
       <TooltipProvider>
-        <div className="flex items-center gap-1 bg-muted p-1 rounded-t-md border border-input">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Toggle
-                size="sm"
-                pressed={editor.isActive('bold')}
-                onPressedChange={() => editor.chain().focus().toggleBold().run()}
-                className="h-8 w-8"
-              >
-                <Bold className="h-4 w-4" />
-              </Toggle>
-            </TooltipTrigger>
-            <TooltipContent>Bold</TooltipContent>
-          </Tooltip>
+        <div className="editor-toolbar bg-muted p-1 rounded-t-md border border-input overflow-x-auto">
+          <div className="toolbar-group">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle
+                  size="sm"
+                  pressed={editor.isActive('bold')}
+                  onPressedChange={() => editor.chain().focus().toggleBold().run()}
+                  className="h-8 w-8"
+                >
+                  <Bold className="h-4 w-4" />
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>Bold</TooltipContent>
+            </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Toggle
-                size="sm"
-                pressed={editor.isActive('italic')}
-                onPressedChange={() => editor.chain().focus().toggleItalic().run()}
-                className="h-8 w-8"
-              >
-                <Italic className="h-4 w-4" />
-              </Toggle>
-            </TooltipTrigger>
-            <TooltipContent>Italic</TooltipContent>
-          </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle
+                  size="sm"
+                  pressed={editor.isActive('italic')}
+                  onPressedChange={() => editor.chain().focus().toggleItalic().run()}
+                  className="h-8 w-8"
+                >
+                  <Italic className="h-4 w-4" />
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>Italic</TooltipContent>
+            </Tooltip>
 
-          <Separator orientation="vertical" className="mx-1 h-6" />
+            <Separator orientation="vertical" className="mx-1 h-6" />
+          </div>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Toggle
-                size="sm"
-                pressed={editor.isActive('heading', { level: 1 })}
-                onPressedChange={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-                className="h-8 px-2 text-sm font-semibold"
-              >
-                H1
-              </Toggle>
-            </TooltipTrigger>
-            <TooltipContent>Heading 1</TooltipContent>
-          </Tooltip>
+          <div className="toolbar-group">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle
+                  size="sm"
+                  pressed={editor.isActive('heading', { level: 1 })}
+                  onPressedChange={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+                  className="h-8 px-2 text-sm font-semibold"
+                >
+                  H1
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>Heading 1</TooltipContent>
+            </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Toggle
-                size="sm"
-                pressed={editor.isActive('heading', { level: 2 })}
-                onPressedChange={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-                className="h-8 px-2 text-sm font-semibold"
-              >
-                H2
-              </Toggle>
-            </TooltipTrigger>
-            <TooltipContent>Heading 2</TooltipContent>
-          </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle
+                  size="sm"
+                  pressed={editor.isActive('heading', { level: 2 })}
+                  onPressedChange={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                  className="h-8 px-2 text-sm font-semibold"
+                >
+                  H2
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>Heading 2</TooltipContent>
+            </Tooltip>
 
-          <Separator orientation="vertical" className="mx-1 h-6" />
+            <Separator orientation="vertical" className="mx-1 h-6" />
+          </div>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Toggle
-                size="sm"
-                pressed={editor.isActive('bulletList')}
-                onPressedChange={() => editor.chain().focus().toggleBulletList().run()}
-                className="h-8 w-8"
-              >
-                <List className="h-4 w-4" />
-              </Toggle>
-            </TooltipTrigger>
-            <TooltipContent>Bullet List</TooltipContent>
-          </Tooltip>
+          <div className="toolbar-group">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle
+                  size="sm"
+                  pressed={editor.isActive('bulletList')}
+                  onPressedChange={() => editor.chain().focus().toggleBulletList().run()}
+                  className="h-8 w-8"
+                >
+                  <List className="h-4 w-4" />
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>Bullet List</TooltipContent>
+            </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Toggle
-                size="sm"
-                pressed={editor.isActive('orderedList')}
-                onPressedChange={() => editor.chain().focus().toggleOrderedList().run()}
-                className="h-8 w-8"
-              >
-                <ListOrdered className="h-4 w-4" />
-              </Toggle>
-            </TooltipTrigger>
-            <TooltipContent>Numbered List</TooltipContent>
-          </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle
+                  size="sm"
+                  pressed={editor.isActive('orderedList')}
+                  onPressedChange={() => editor.chain().focus().toggleOrderedList().run()}
+                  className="h-8 w-8"
+                >
+                  <ListOrdered className="h-4 w-4" />
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>Numbered List</TooltipContent>
+            </Tooltip>
 
-          <Separator orientation="vertical" className="mx-1 h-6" />
+            <Separator orientation="vertical" className="mx-1 h-6" />
+          </div>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Toggle
-                size="sm"
-                pressed={editor.isActive('blockquote')}
-                onPressedChange={() => editor.chain().focus().toggleBlockquote().run()}
-                className="h-8 w-8"
-              >
-                <Quote className="h-4 w-4" />
-              </Toggle>
-            </TooltipTrigger>
-            <TooltipContent>Quote</TooltipContent>
-          </Tooltip>
+          <div className="toolbar-group">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle
+                  size="sm"
+                  pressed={editor.isActive('blockquote')}
+                  onPressedChange={() => editor.chain().focus().toggleBlockquote().run()}
+                  className="h-8 w-8"
+                >
+                  <Quote className="h-4 w-4" />
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>Quote</TooltipContent>
+            </Tooltip>
+          </div>
         </div>
       </TooltipProvider>
 

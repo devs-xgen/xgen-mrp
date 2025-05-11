@@ -42,6 +42,7 @@ import { createQualityCheck } from "@/lib/actions/quality-checks";
 import { Status } from "@prisma/client";
 import { useParams } from "next/dist/client/components/navigation";
 import { getActiveInspectors } from "@/lib/actions/inspector";
+import { RichTextEditor } from "@/components/global/rich-text-editor";
 
 // Form schema for basic quality check details
 const qualityCheckSchema = z.object({
@@ -49,7 +50,7 @@ const qualityCheckSchema = z.object({
   checkDate: z.date({
     required_error: "Check date is required",
   }),
-  status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED"]),
+  status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"]),
   defectsFound: z.string().optional(),
   actionTaken: z.string().optional(),
   notes: z.string().optional(),
@@ -119,6 +120,9 @@ export function CreateQualityCheckDialog({
     resolver: zodResolver(qualityCheckSchema),
     defaultValues: {
       status: "PENDING",
+      defectsFound: "",
+      actionTaken: "",
+      notes: "",
     },
   });
 
@@ -171,195 +175,215 @@ export function CreateQualityCheckDialog({
       <DialogTrigger asChild>
         {children || <Button variant="default">Create Quality Check</Button>}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
+      <DialogContent className="max-w-[95vw] sm:max-w-[600px] h-[95vh] sm:h-auto max-h-[95vh] p-0 flex flex-col">
+        <DialogHeader className="px-6 pt-6 pb-2 sticky top-0 bg-background z-10">
           <DialogTitle>Create New Quality Check</DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="inspectorId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Inspector</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    disabled={fetchingInspectors}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            fetchingInspectors
-                              ? "Loading inspectors..."
-                              : "Select an inspector"
-                          }
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {fetchingInspectors ? (
-                        <div className="flex items-center justify-center p-2">
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Loading...
-                        </div>
-                      ) : inspectors.length > 0 ? (
-                        inspectors.map((inspector) => (
-                          <SelectItem
-                            key={inspector.inspectorId}
-                            value={inspector.inspectorId}
-                          >
-                            <div className="flex flex-col">
-                              <span>
-                                {inspector.firstName} {inspector.lastName}
-                              </span>
-                              {inspector.department && (
-                                <span className="text-xs text-muted-foreground">
-                                  {inspector.department}
-                                </span>
-                              )}
+        <div className="overflow-y-auto px-6 pb-6 flex-1">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="inspectorId"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>Inspector</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        disabled={fetchingInspectors}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={
+                                fetchingInspectors
+                                  ? "Loading inspectors..."
+                                  : "Select an inspector"
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-[200px]">
+                          {fetchingInspectors ? (
+                            <div className="flex items-center justify-center p-2">
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              Loading...
                             </div>
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <div className="text-center p-2">
-                          No inspectors available. Please add inspectors first.
-                        </div>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="checkDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Check Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
+                          ) : inspectors.length > 0 ? (
+                            inspectors.map((inspector) => (
+                              <SelectItem
+                                key={inspector.inspectorId}
+                                value={inspector.inspectorId}
+                              >
+                                <div className="flex flex-col">
+                                  <span>
+                                    {inspector.firstName} {inspector.lastName}
+                                  </span>
+                                  {inspector.department && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {inspector.department}
+                                    </span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))
                           ) : (
-                            <span>Pick a date</span>
+                            <div className="text-center p-2">
+                              No inspectors available. Please add inspectors first.
+                            </div>
                           )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="checkDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col flex-1">
+                      <FormLabel>Check Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date > new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
                       </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                      <SelectContent>
+                        <SelectItem value="PENDING">Pending</SelectItem>
+                        <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                        <SelectItem value="COMPLETED">Completed</SelectItem>
+                        <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+              <FormField
+                control={form.control}
+                name="defectsFound"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Defects Found (Optional)</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
+                      <RichTextEditor
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        placeholder="Describe any defects or issues found..."
+                      />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="PENDING">Pending</SelectItem>
-                      <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                      <SelectItem value="COMPLETED">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="defectsFound"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Defects Found (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} value={field.value || ""} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="actionTaken"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Action Taken (Optional)</FormLabel>
+                    <FormControl>
+                      <RichTextEditor
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        placeholder="Describe any actions taken to address issues..."
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="actionTaken"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Action Taken (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} value={field.value || ""} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes (Optional)</FormLabel>
+                    <FormControl>
+                      <RichTextEditor
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        placeholder="Add any additional notes about the quality check..."
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} value={field.value || ""} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex justify-end space-x-4 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={loading || inspectors.length === 0}
-              >
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Quality Check
-              </Button>
-            </div>
-          </form>
-        </Form>
+              <div className="flex justify-end space-x-4 pt-4 sticky bottom-0 bg-background pb-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading || inspectors.length === 0}
+                >
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Create Quality Check
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </div>
       </DialogContent>
     </Dialog>
   );
