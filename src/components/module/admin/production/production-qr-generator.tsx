@@ -8,10 +8,13 @@ import {
   Text,
   View,
   pdf,
+  Svg,
+  Rect
 } from "@react-pdf/renderer";
 import { format } from "date-fns";
 import { FileText } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { getMatrix } from "qr-code-generator-lib";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -49,7 +52,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 10,
     borderRight: "1px solid #000000",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f0f0f0",
   },
   qrSectionTitle: {
     fontSize: 12,
@@ -61,8 +64,6 @@ const styles = StyleSheet.create({
   qrImage: {
     width: 150,
     height: 150,
-    backgroundColor: "#ffffff",
-    padding: 10,
   },
   detailsSection: {
     width: "60%",
@@ -122,8 +123,40 @@ export function ProductionQRGenerator({ order }: ProductionQRGeneratorProps): JS
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
-  // Pre-generated high-contrast QR code for reliable rendering in PDF
-  const qrCodeImage = "data:image/png;base64,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";
+  // Create a JSON string with all the data we want to encode in the QR code
+  const qrData = useMemo(() => {
+    // Format the dates for better readability when scanned
+    const formattedStartDate = format(new Date(order.startDate), "MMM dd, yyyy");
+    const formattedDueDate = format(new Date(order.dueDate), "MMM dd, yyyy");
+    
+    // Create a structured data object
+    const data = {
+      id: order.id,
+      product: {
+        name: order.product.name,
+        sku: order.product.sku
+      },
+      quantity: order.quantity,
+      dates: {
+        start: formattedStartDate,
+        due: formattedDueDate
+      },
+      status: order.status,
+      priority: order.priority
+    };
+    
+    // Return JSON string of the data
+    return JSON.stringify(data);
+  }, [order]);
+
+  // Use qr-code-generator-lib to create a proper QR code matrix
+  // The library returns a 2D array of booleans where true represents a black pixel
+  const qrMatrix = useMemo(() => {
+    // Generate QR code with the expanded data
+    // Second parameter is error correction level: 0=L, 1=M, 2=Q, 3=H (H is highest)
+    // Using level H (3) since we're storing more data and want maximum error correction
+    return getMatrix(qrData, 3);
+  }, [qrData]);
 
   const handleGeneratePDF = async (): Promise<void> => {
     try {
@@ -143,7 +176,21 @@ export function ProductionQRGenerator({ order }: ProductionQRGeneratorProps): JS
             <View style={styles.section}>
               <View style={styles.qrSection}>
                 <Text style={styles.qrSectionTitle}>Scan QR Code</Text>
-                <Image src={qrCodeImage} style={styles.qrImage} />
+                {/* Render QR code with correct row/column orientation */}
+                <Svg width={150} height={150} viewBox={`0 0 ${qrMatrix.length} ${qrMatrix.length}`}>
+                  {qrMatrix.map((row, y) =>
+                    row.map((cell, x) => (
+                      <Rect
+                        key={`${x}-${y}`}
+                        x={x}
+                        y={y}
+                        width={1}
+                        height={1}
+                        fill={cell ? "#000000" : "#ffffff"}
+                      />
+                    ))
+                  )}
+                </Svg>
               </View>
               <View style={styles.detailsSection}>
                 <Text style={styles.detailsTitle}>Production Order Details</Text>
