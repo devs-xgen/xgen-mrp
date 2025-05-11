@@ -91,6 +91,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#000000",
   },
+  deliverySection: {
+    marginTop: 10,
+    borderTop: "1px solid #cccccc",
+    paddingTop: 10,
+  },
+  assignmentSection: {
+    marginTop: 10,
+    borderTop: "1px solid #cccccc",
+    paddingTop: 10,
+  },
   footer: {
     position: "absolute",
     bottom: 30,
@@ -116,6 +126,17 @@ interface ProductionQRGeneratorProps {
     dueDate: string | Date;
     status: string;
     priority: string;
+    delivery?: {
+      address?: string;
+      contactName?: string;
+      contactPhone?: string;
+      estimatedDelivery?: string | Date;
+      instructions?: string;
+    };
+    assignments?: {
+      qualityInspector?: string;
+      logisticsCoordinator?: string;
+    };
   };
 }
 
@@ -129,8 +150,34 @@ export function ProductionQRGenerator({ order }: ProductionQRGeneratorProps): JS
     const formattedStartDate = format(new Date(order.startDate), "MMM dd, yyyy");
     const formattedDueDate = format(new Date(order.dueDate), "MMM dd, yyyy");
     
-    // Create a structured data object
-    const data = {
+    // Create a structured data object with the correct interface
+    interface QRDataType {
+      id: string;
+      product: {
+        name: string;
+        sku: string;
+      };
+      quantity: number;
+      dates: {
+        start: string;
+        due: string;
+      };
+      status: string;
+      priority: string;
+      delivery?: {
+        address?: string;
+        contactName?: string;
+        contactPhone?: string;
+        estimatedDelivery?: string;
+        instructions?: string;
+      };
+      assignments?: {
+        qualityInspector?: string;
+        logisticsCoordinator?: string;
+      };
+    }
+    
+    const data: QRDataType = {
       id: order.id,
       product: {
         name: order.product.name,
@@ -145,6 +192,27 @@ export function ProductionQRGenerator({ order }: ProductionQRGeneratorProps): JS
       priority: order.priority
     };
     
+    // Add delivery information if available
+    if (order.delivery) {
+      data.delivery = {
+        address: order.delivery.address,
+        contactName: order.delivery.contactName,
+        contactPhone: order.delivery.contactPhone,
+        estimatedDelivery: order.delivery.estimatedDelivery 
+          ? format(new Date(order.delivery.estimatedDelivery), "MMM dd, yyyy") 
+          : "Not Scheduled",
+        instructions: order.delivery.instructions
+      };
+    }
+    
+    // Add assignments information if available
+    if (order.assignments) {
+      data.assignments = {
+        qualityInspector: order.assignments.qualityInspector,
+        logisticsCoordinator: order.assignments.logisticsCoordinator
+      };
+    }
+    
     // Return JSON string of the data
     return JSON.stringify(data);
   }, [order]);
@@ -157,6 +225,18 @@ export function ProductionQRGenerator({ order }: ProductionQRGeneratorProps): JS
     // Using level H (3) since we're storing more data and want maximum error correction
     return getMatrix(qrData, 3);
   }, [qrData]);
+
+  // Add a helper function to visually indicate missing information
+  const renderDetailValue = (value: string | null | undefined): JSX.Element => {
+    if (!value || value === "Not Assigned") {
+      return (
+        <Text style={{ ...styles.detailsValue, fontStyle: 'italic', color: '#888888' }}>
+          {value || "Not Assigned"}
+        </Text>
+      );
+    }
+    return <Text style={styles.detailsValue}>{value}</Text>;
+  };
 
   const handleGeneratePDF = async (): Promise<void> => {
     try {
@@ -225,6 +305,59 @@ export function ProductionQRGenerator({ order }: ProductionQRGeneratorProps): JS
                 <View style={styles.detailsRow}>
                   <Text style={styles.detailsLabel}>Priority:</Text>
                   <Text style={styles.detailsValue}>{order.priority}</Text>
+                </View>
+
+                {/* Delivery Details Section - always shown, but values may be "Not Assigned" */}
+                <View style={styles.deliverySection}>
+                  <Text style={styles.detailsTitle}>Delivery Details</Text>
+                  
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Delivery Address:</Text>
+                    {renderDetailValue(order.delivery?.address)}
+                  </View>
+                  
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Contact Person:</Text>
+                    {renderDetailValue(order.delivery?.contactName)}
+                  </View>
+                  
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Contact Phone:</Text>
+                    {renderDetailValue(order.delivery?.contactPhone)}
+                  </View>
+                  
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Estimated Delivery:</Text>
+                    {order.delivery?.estimatedDelivery ? (
+                      <Text style={styles.detailsValue}>
+                        {format(new Date(order.delivery.estimatedDelivery), "MMM dd, yyyy")}
+                      </Text>
+                    ) : (
+                      <Text style={{ ...styles.detailsValue, fontStyle: 'italic', color: '#888888' }}>
+                        Not Scheduled
+                      </Text>
+                    )}
+                  </View>
+                  
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Special Instructions:</Text>
+                    {renderDetailValue(order.delivery?.instructions)}
+                  </View>
+                </View>
+
+                {/* Assignment Section - always shown */}
+                <View style={styles.assignmentSection}>
+                  <Text style={styles.detailsTitle}>Assigned Personnel</Text>
+                  
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Quality Inspector:</Text>
+                    {renderDetailValue(order.assignments?.qualityInspector)}
+                  </View>
+                  
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Logistics Coordinator:</Text>
+                    {renderDetailValue(order.assignments?.logisticsCoordinator)}
+                  </View>
                 </View>
               </View>
             </View>

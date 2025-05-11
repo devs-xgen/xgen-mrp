@@ -42,6 +42,7 @@ export default async function ProductionOrderPage({
 
   if (!orderData) notFound();
 
+  // Remove debug logs
   console.log(
     "Original quality checks data:",
     JSON.stringify(orderData.qualityChecks, null, 2)
@@ -100,6 +101,17 @@ export default async function ProductionOrderPage({
             dueDate: orderData.dueDate,
             status: orderData.status,
             priority: orderData.priority,
+            delivery: {
+              address: deliveryAssignment?.deliveryAddress || "Not Assigned",
+              contactName: deliveryAssignment?.userName || "Not Assigned",
+              contactPhone: "Not Assigned",
+              estimatedDelivery: deliveryAssignment?.scheduledDate || new Date(),
+              instructions: deliveryAssignment?.notes || "Not Assigned"
+            },
+            assignments: {
+              qualityInspector: order.qualityChecks?.[0]?.inspectorName || "Not Assigned",
+              logisticsCoordinator: deliveryAssignment?.userName || "Not Assigned"
+            }
           }}
         />
       </div>
