@@ -43,6 +43,9 @@ interface NavItemProps {
   isCollapsed: boolean;
   isActive: boolean;
   isChild?: boolean;
+  onToggle?: (itemId: string) => void;
+  openItemId?: string;
+  itemId: string;
 }
 
 function NavItem({
@@ -50,6 +53,9 @@ function NavItem({
   isCollapsed,
   isActive,
   isChild = false,
+  onToggle,
+  openItemId,
+  itemId,
 }: NavItemProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
@@ -60,9 +66,25 @@ function NavItem({
     }
   }, [isCollapsed]);
 
+  // Control open state based on parent's control
+  useEffect(() => {
+    if (openItemId !== itemId && openItemId !== undefined) {
+      setIsOpen(false);
+    }
+  }, [openItemId, itemId]);
+
+  const handleToggle = (state: boolean) => {
+    setIsOpen(state);
+    if (onToggle && state) {
+      onToggle(itemId);
+    } else if (onToggle && !state) {
+      onToggle("");
+    }
+  };
+
   if (item.items) {
     return (
-      <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
+      <Collapsible open={isOpen} onOpenChange={handleToggle} className="w-full">
         <CollapsibleTrigger
           className={cn(
             "flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group",
@@ -103,6 +125,8 @@ function NavItem({
               isCollapsed={isCollapsed}
               isActive={pathname === subItem.href}
               isChild
+              itemId={`${itemId}-${subItem.label}`}
+              openItemId={openItemId}
             />
           ))}
         </CollapsibleContent>
@@ -163,6 +187,7 @@ export default function AppSidebar({
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [openItemId, setOpenItemId] = useState<string>("");
 
   // Use context theme if prop theme is not provided
   const themeContext = useTheme();
@@ -201,6 +226,11 @@ export default function AppSidebar({
     }
   };
 
+  // Handle open/close of nav items to ensure only one is open at a time
+  const handleNavItemToggle = (itemId: string) => {
+    setOpenItemId(itemId);
+  };
+
   // Loading state - true when session is loading
   const isLoading = status === "loading";
 
@@ -211,8 +241,8 @@ export default function AppSidebar({
         isCollapsed ? "w-20" : "w-64"
       )}
     >
-      {/* Header section */}
-      <div className="relative p-4 border-b border-slate-700">
+      {/* Header section - Fixed at top */}
+      <div className="relative p-4 border-b border-slate-700 flex-shrink-0">
         <div
           className={cn(
             "transition-opacity duration-300",
@@ -259,8 +289,8 @@ export default function AppSidebar({
         </Button>
       </div>
 
-      {/* Navigation section */}
-      <nav className="flex-1 space-y-2 p-4">
+      {/* Navigation section - Scrollable */}
+      <nav className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800 space-y-2 p-4">
         {isLoading ? (
           // Show skeleton UI while loading
           <>
@@ -272,12 +302,15 @@ export default function AppSidebar({
           </>
         ) : navItems.length > 0 ? (
           // Show actual navigation items when loaded
-          navItems.map((item) => (
+          navItems.map((item, index) => (
             <NavItem
               key={item.href || item.label}
               item={item}
               isCollapsed={isCollapsed}
               isActive={pathname === item.href}
+              onToggle={handleNavItemToggle}
+              openItemId={openItemId}
+              itemId={`nav-${index}`}
             />
           ))
         ) : (
@@ -294,10 +327,10 @@ export default function AppSidebar({
         )}
       </nav>
 
-      {/* Footer section */}
+      {/* Footer section - Fixed at bottom */}
       <div
         className={cn(
-          "p-4 border-t border-slate-700",
+          "p-4 border-t border-slate-700 flex-shrink-0",
           isCollapsed ? "items-center" : ""
         )}
       >

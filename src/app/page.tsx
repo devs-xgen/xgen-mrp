@@ -7,9 +7,10 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
-import { User, Shield, Truck, Clipboard } from "lucide-react";
+import { User, Shield, Truck, Clipboard, Maximize } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
+import { GlobalFullscreenButton } from "@/components/ui/global-fullscreen-button";
 
 const XgenLogo = ({
   className,
@@ -61,7 +62,10 @@ export default function Home() {
       <div className="w-1/2 p-12 flex flex-col justify-center bg-white">
         <div className="max-w-md mx-auto">
           <div className="text-center mb-10">
-            <XgenLogo className="mx-auto mb-6" />
+            <div className="flex justify-between items-center mb-6">
+              <XgenLogo />
+              <GlobalFullscreenButton showText />
+            </div>
             <h2 className="text-3xl font-bold mb-4">Welcome to XGEN MRP</h2>
             <p className="text-gray-500">
               Please select your login type to continue

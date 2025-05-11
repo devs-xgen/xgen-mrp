@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
+import { FullscreenButton } from "@/components/ui/fullscreen-button";
 
 export const metadata: Metadata = {
   title: "Worker Dashboard",
@@ -32,12 +33,21 @@ export default async function WorkerDashboard() {
   const urgentTasks = todaysTasks.filter((task) => task.priority === "URGENT");
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Worker Dashboard</h2>
-        <p className="text-muted-foreground">
-          Your work overview and assigned tasks
-        </p>
+    <div id="worker-dashboard" className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Worker Dashboard</h2>
+          <p className="text-muted-foreground">
+            Your work overview and assigned tasks
+          </p>
+        </div>
+        <div>
+          <FullscreenButton 
+            containerId="worker-dashboard" 
+            variant="outline"
+            showText
+          />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
