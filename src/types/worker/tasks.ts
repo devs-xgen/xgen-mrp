@@ -23,6 +23,9 @@ export interface WorkerTask {
     startTime?: Date;
     duration?: number;
   };
+  // New fields for production status
+  productionStatus?: Status; // Status of the parent production order
+  isActive?: boolean; // Whether the task is active or paused/pending
 }
 
 export interface TaskUpdateInput {
@@ -57,4 +60,6 @@ export interface TaskStatistics {
   total: number;
   urgentTasks: number;
   completionRate: number; // Percentage
+  activeTasks?: number;    // Tasks from active production orders
+  inactiveTasks?: number;  // Tasks from inactive production orders
 } 

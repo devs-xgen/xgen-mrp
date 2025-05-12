@@ -410,3 +410,184 @@ export async function getAvailableCustomerOrders() {
     throw new Error('Failed to fetch available customer orders')
   }
 }
+
+// Update the updateProductionOrderStatus function to handle errors when creating ActivityLog entries
+export async function updateProductionOrderStatus(
+  productionOrderId: string,
+  status: Status,
+  notes?: string
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) throw new Error('Unauthorized')
+
+    // Get current status before update
+    const currentOrder = await prisma.productionOrder.findUnique({
+      where: { id: productionOrderId },
+      select: { status: true }
+    })
+
+    if (!currentOrder) throw new Error('Production order not found')
+    const oldStatus = currentOrder.status
+
+    // Update the production order
+    const order = await prisma.productionOrder.update({
+      where: { id: productionOrderId },
+      data: {
+        status,
+        modifiedBy: session.user.id,
+        notes: notes || undefined
+      }
+    })
+
+    // Log the status change using the ActivityLog model
+    try {
+      // Check if ActivityLog model exists in prisma client
+      if (prisma.activityLog) {
+        await prisma.activityLog.create({
+          data: {
+            type: 'PRODUCTION_STATUS_CHANGE',
+            userId: session.user.id,
+            details: {
+              productionOrderId,
+              oldStatus,
+              newStatus: status,
+              notes: notes || null
+            }
+          }
+        })
+      } else {
+        // Fallback to manual logging if ActivityLog model is not available
+        console.log('ActivityLog model not available in Prisma client, logging to console instead:',
+          {
+            type: 'PRODUCTION_STATUS_CHANGE',
+            userId: session.user.id,
+            productionOrderId,
+            oldStatus,
+            newStatus: status,
+            notes: notes || null
+          }
+        )
+      }
+    } catch (logError) {
+      console.error("Failed to create activity log:", logError)
+      // Continue execution even if logging fails
+    }
+
+    revalidatePath('/admin/production')
+    revalidatePath(`/admin/production/${productionOrderId}`)
+    revalidatePath('/worker/tasks')
+    revalidatePath('/worker/dashboard')
+    
+    return order
+  } catch (error) {
+    console.error('Error updating production order status:', error)
+    throw error
+  }
+}
+
+// Update the getProductionLogs function to handle errors
+export async function getProductionLogs(productionOrderId: string) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) throw new Error('Unauthorized')
+
+    // Check if ActivityLog model exists in prisma client
+    if (!prisma.activityLog) {
+      console.log('ActivityLog model not available in Prisma client')
+      return [] // Return empty array if model is not available
+    }
+
+    // Fetch the activity logs related to this production order using Prisma
+    const logs = await prisma.activityLog.findMany({
+      where: {
+        type: 'PRODUCTION_STATUS_CHANGE',
+        details: {
+          path: ['productionOrderId'],
+          equals: productionOrderId
+        }
+      },
+      include: {
+        user: {
+          select: {
+            email: true,
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+
+    // Format the logs for display
+    const formattedLogs = logs.map(log => {
+      const details = log.details as any
+      
+      // Get user name if available
+      const userName = log.user.profile 
+        ? `${log.user.profile.firstName} ${log.user.profile.lastName}`
+        : log.user.email;
+      
+      return {
+        id: log.id,
+        action: `Status changed from ${details.oldStatus} to ${details.newStatus}`,
+        details: details.notes || '',
+        timestamp: log.createdAt,
+        userId: log.userId,
+        userName
+      }
+    })
+
+    return formattedLogs
+  } catch (error) {
+    console.error('Error fetching production logs:', error)
+    return [] // Return empty array on error
+  }
+}
+
+// Update the createInitialProductionLog function to handle errors
+export async function createInitialProductionLog(productionOrderId: string) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) throw new Error('Unauthorized')
+
+    // Get the production order
+    const order = await prisma.productionOrder.findUnique({
+      where: { id: productionOrderId }
+    })
+
+    if (!order) throw new Error('Production order not found')
+
+    // Check if ActivityLog model exists in prisma client
+    if (!prisma.activityLog) {
+      console.log('ActivityLog model not available in Prisma client')
+      return { success: false, error: 'ActivityLog model not available' }
+    }
+
+    // Create an initial log entry
+    await prisma.activityLog.create({
+      data: {
+        type: 'PRODUCTION_STATUS_CHANGE',
+        userId: session.user.id,
+        details: {
+          productionOrderId,
+          oldStatus: 'PENDING',
+          newStatus: order.status,
+          notes: 'Initial production order status'
+        }
+      }
+    })
+
+    revalidatePath(`/admin/production/${productionOrderId}`)
+    return { success: true }
+  } catch (error) {
+    console.error('Error creating initial production log:', error)
+    return { success: false, error: String(error) }
+  }
+}

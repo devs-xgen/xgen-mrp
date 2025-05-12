@@ -3,7 +3,7 @@ import { getMyTasks, getTaskStatistics } from "@/lib/actions/worker/tasks";
 import { TasksList } from "@/components/module/worker/tasks";
 import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, CheckCircle, AlertTriangle, ClipboardList } from "lucide-react";
+import { Clock, CheckCircle, AlertTriangle, ClipboardList, AlertCircle } from "lucide-react";
 import { Status } from "@prisma/client";
 
 export const metadata: Metadata = {
@@ -14,13 +14,17 @@ export const metadata: Metadata = {
 export default async function TasksPage() {
   const [tasks, stats] = await Promise.all([getMyTasks(), getTaskStatistics()]);
 
-  // Group tasks by status for summary
+  // Group tasks by status
   const notStarted = tasks.filter((task) => task.status === Status.PENDING);
   const inProgress = tasks.filter((task) => task.status === Status.IN_PROGRESS);
   const completed = tasks.filter((task) => task.status === Status.COMPLETED);
 
   // Get urgent tasks
   const urgentTasks = tasks.filter((task) => task.priority === "URGENT");
+  
+  // Count active vs inactive tasks
+  const activeTasks = tasks.filter(task => task.isActive === true);
+  const inactiveTasks = tasks.filter(task => task.isActive === false);
 
   return (
     <div className="space-y-6">
@@ -30,6 +34,21 @@ export default async function TasksPage() {
           View and manage your assigned production tasks
         </p>
       </div>
+
+      {inactiveTasks.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="pt-6 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
+            <div>
+              <p className="font-medium text-amber-800">Some tasks are not active</p>
+              <p className="text-sm text-amber-700 mt-1">
+                {stats.inactiveTasks || inactiveTasks.length} task(s) are from production orders that have not been started by admin.
+                These tasks will be available once the admin starts the production process.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>

@@ -25,7 +25,11 @@ export async function getMyTasks() {
     const operations = await prisma.operation.findMany({
       where: {
         workCenterId: { in: workCenterIds },
-        status: { in: [Status.PENDING, Status.IN_PROGRESS, Status.COMPLETED] }
+        status: { in: [Status.PENDING, Status.IN_PROGRESS, Status.COMPLETED] },
+        // Only include operations from production orders that are IN_PROGRESS or COMPLETED
+        productionOrder: {
+          status: { in: [Status.IN_PROGRESS, Status.COMPLETED] }
+        }
       },
       include: {
         productionOrder: {
@@ -50,7 +54,41 @@ export async function getMyTasks() {
       ]
     });
 
-    return operations.map(op => ({
+    // Also get operations from PENDING/PAUSED production orders to show them as disabled
+    const pausedOperations = await prisma.operation.findMany({
+      where: {
+        workCenterId: { in: workCenterIds },
+        status: { in: [Status.PENDING, Status.IN_PROGRESS] },
+        // Only include operations from production orders that are PENDING (not started yet) or PAUSED
+        productionOrder: {
+          status: { in: [Status.PENDING] }
+        }
+      },
+      include: {
+        productionOrder: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                sku: true
+              }
+            }
+          }
+        },
+        workCenter: {
+          select: {
+            name: true
+          }
+        }
+      },
+      orderBy: [
+        { status: 'asc' },
+        { startTime: 'asc' }
+      ]
+    });
+
+    // Transform active operations
+    const activeTasks = operations.map(op => ({
       id: op.id,
       description: `${op.productionOrder.product.name} (${op.productionOrder.product.sku})`,
       startDate: op.startTime,
@@ -61,8 +99,30 @@ export async function getMyTasks() {
       productionOrderId: op.productionOrderId,
       workCenterId: op.workCenterId,
       workCenterName: op.workCenter.name,
-      quantity: op.productionOrder.quantity
+      quantity: op.productionOrder.quantity,
+      productionStatus: op.productionOrder.status,
+      isActive: true
     }));
+
+    // Transform paused/pending operations
+    const pausedTasks = pausedOperations.map(op => ({
+      id: op.id,
+      description: `${op.productionOrder.product.name} (${op.productionOrder.product.sku})`,
+      startDate: op.startTime,
+      dueDate: op.endTime,
+      status: op.status,
+      priority: op.productionOrder.priority,
+      notes: op.notes,
+      productionOrderId: op.productionOrderId,
+      workCenterId: op.workCenterId,
+      workCenterName: op.workCenter.name,
+      quantity: op.productionOrder.quantity,
+      productionStatus: op.productionOrder.status,
+      isActive: false
+    }));
+
+    // Return both active and paused tasks
+    return [...activeTasks, ...pausedTasks];
   } catch (error) {
     console.error("Error fetching worker tasks:", error);
     throw new Error("Failed to fetch tasks");
@@ -230,6 +290,28 @@ export async function getTaskStatistics(): Promise<TaskStatistics> {
         }
       }
     });
+    
+    // Count active tasks (from IN_PROGRESS production orders)
+    const activeTasks = await prisma.operation.count({
+      where: {
+        workCenterId: { in: workCenterIds },
+        status: { in: [Status.PENDING, Status.IN_PROGRESS] },
+        productionOrder: {
+          status: Status.IN_PROGRESS
+        }
+      }
+    });
+    
+    // Count inactive tasks (from PENDING production orders)
+    const inactiveTasks = await prisma.operation.count({
+      where: {
+        workCenterId: { in: workCenterIds },
+        status: { in: [Status.PENDING, Status.IN_PROGRESS] },
+        productionOrder: {
+          status: Status.PENDING
+        }
+      }
+    });
 
     const total = pending + inProgress;
     const completionRate = total > 0 ? (completed / (total + completed)) * 100 : 0;
@@ -240,7 +322,9 @@ export async function getTaskStatistics(): Promise<TaskStatistics> {
       completed,
       total: total + completed,
       urgentTasks,
-      completionRate
+      completionRate,
+      activeTasks,
+      inactiveTasks
     };
   } catch (error) {
     console.error("Error getting task statistics:", error);
@@ -250,7 +334,9 @@ export async function getTaskStatistics(): Promise<TaskStatistics> {
       completed: 0,
       total: 0,
       urgentTasks: 0,
-      completionRate: 0
+      completionRate: 0,
+      activeTasks: 0,
+      inactiveTasks: 0
     };
   }
 }

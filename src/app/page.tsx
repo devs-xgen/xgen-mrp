@@ -64,7 +64,7 @@ export default function Home() {
           <div className="text-center mb-10">
             <div className="flex justify-between items-center mb-6">
               <XgenLogo />
-              <GlobalFullscreenButton showText />
+              {/* <GlobalFullscreenButton showText /> */}
             </div>
             <h2 className="text-3xl font-bold mb-4">Welcome to XGEN MRP</h2>
             <p className="text-gray-500">

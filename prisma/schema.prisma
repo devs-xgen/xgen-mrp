@@ -33,6 +33,7 @@ model User {
   approvedMaterials        MaterialRequest[]      @relation("ApprovedMaterials")
   reportedIssues           InventoryIssueReport[]
   deliveryAssignments      DeliveryAssignment[]
+  activityLogs             ActivityLog[]          // Add relation to ActivityLog
 }
 
 model WorkCenterAssignment {
@@ -623,4 +624,18 @@ model DeliveryAssignment {
   // Relations
   productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id])
   user              User            @relation(fields: [userId], references: [id])
+}
+
+// Activity log for tracking system events
+model ActivityLog {
+  id        String   @id @default(cuid())
+  type      String   // Type of activity (e.g., PRODUCTION_STATUS_CHANGE, TASK_UPDATE)
+  userId    String   // User who performed the action
+  details   Json     // JSON details of the activity
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  
+  @@index([type])
+  @@index([userId])
+  @@index([createdAt])
 }

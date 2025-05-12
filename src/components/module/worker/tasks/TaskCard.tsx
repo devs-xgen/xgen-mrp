@@ -20,6 +20,7 @@ import {
   Timer,
   ChevronDown,
   ChevronUp,
+  AlertCircle,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -61,6 +62,9 @@ export function TaskCard({ task }: TaskCardProps) {
   const [issueType, setIssueType] = useState<string>("QUALITY");
   const [issueSeverity, setIssueSeverity] = useState<string>("MEDIUM");
   const [issueDescription, setIssueDescription] = useState<string>("");
+
+  const isTaskInactive = task.isActive === false;
+  const productionStatus = task.productionStatus || Status.PENDING;
 
   const getStatusBadgeVariant = (status: Status) => {
     switch (status) {
@@ -212,6 +216,7 @@ export function TaskCard({ task }: TaskCardProps) {
       ${task.priority === "URGENT" ? "border-red-500" : ""}
       ${task.priority === "HIGH" ? "border-orange-400" : ""}
       ${isOverdue ? "bg-red-50" : ""}
+      ${isTaskInactive ? "opacity-70 border-dashed" : ""}
     `}
     >
       <CardHeader className="pb-2">
@@ -226,6 +231,12 @@ export function TaskCard({ task }: TaskCardProps) {
               <Badge variant={getPriorityBadgeVariant(task.priority)}>
                 {task.priority}
               </Badge>
+
+              {isTaskInactive && (
+                <Badge variant="outline" className="border-amber-500 text-amber-500">
+                  {productionStatus === Status.PENDING ? "NOT STARTED" : "PAUSED"}
+                </Badge>
+              )}
 
               <span
                 className={`text-xs ${
@@ -257,7 +268,17 @@ export function TaskCard({ task }: TaskCardProps) {
       </CardHeader>
 
       {expanded && (
-        <CardContent className="pb-3">
+        <CardContent className="pb-2">
+          {isTaskInactive && (
+            <div className="flex items-center gap-2 p-2 mb-4 bg-amber-50 border border-amber-200 rounded-md">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              <div className="text-sm text-amber-700">
+                <p>This task is not active because the production order has not been started by admin.</p>
+                <p className="text-xs mt-1">You will be able to work on this task once the production order is started.</p>
+              </div>
+            </div>
+          )}
+          
           <div className="grid grid-cols-2 gap-4 text-sm mb-3">
             <div>
               <span className="text-muted-foreground">Work Center:</span>
@@ -304,55 +325,75 @@ export function TaskCard({ task }: TaskCardProps) {
         </CardContent>
       )}
 
-      <CardFooter className="flex justify-between pt-3">
-        <div className="flex space-x-2">
-          {task.status !== Status.COMPLETED && (
-            <>
-              {isTimerActive ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8"
-                  onClick={handleTimerStop}
-                  disabled={loading}
-                >
-                  <Pause className="h-4 w-4 mr-2" />
-                  Stop Timer
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8"
-                  onClick={handleTimerStart}
-                  disabled={loading}
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  Start Timer
-                </Button>
-              )}
-            </>
+      <CardFooter className="flex justify-between pt-2">
+        <div className="flex items-center gap-2">
+          {task.workCenterName && (
+            <Badge variant="outline" className="text-xs">
+              {task.workCenterName}
+            </Badge>
+          )}
+          {task.quantity && (
+            <Badge variant="outline" className="text-xs">
+              Qty: {task.quantity}
+            </Badge>
           )}
         </div>
 
-        <div className="flex space-x-2">
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={isTimerActive ? handleTimerStop : handleTimerStart}
+            disabled={loading || isTaskInactive || task.status === Status.COMPLETED}
+          >
+            {isTimerActive ? (
+              <>
+                <Pause className="h-4 w-4 mr-1" /> Stop Timer
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4 mr-1" /> Start Timer
+              </>
+            )}
+          </Button>
+
+          {task.status === Status.PENDING && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleStatusChange(Status.IN_PROGRESS)}
+              disabled={loading || isTaskInactive}
+            >
+              <Play className="h-4 w-4 mr-1" /> Start
+            </Button>
+          )}
+
+          {task.status === Status.IN_PROGRESS && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => handleStatusChange(Status.COMPLETED)}
+              disabled={loading || isTaskInactive}
+            >
+              <CheckCircle className="h-4 w-4 mr-1" /> Complete
+            </Button>
+          )}
+
           <Sheet>
             <SheetTrigger asChild>
               <Button
-                size="sm"
                 variant="outline"
-                className="h-8"
-                disabled={loading}
+                size="sm"
+                disabled={loading || isTaskInactive || task.status === Status.COMPLETED}
               >
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                Report Issue
+                <AlertTriangle className="h-4 w-4 mr-1" /> Report Issue
               </Button>
             </SheetTrigger>
             <SheetContent>
               <SheetHeader>
                 <SheetTitle>Report an Issue</SheetTitle>
                 <SheetDescription>
-                  Describe any problems you're experiencing with this task.
+                  Describe any problems you&apos;re experiencing with this task.
                 </SheetDescription>
               </SheetHeader>
               <div className="py-4 space-y-4">
@@ -406,39 +447,13 @@ export function TaskCard({ task }: TaskCardProps) {
                 </SheetClose>
                 <Button
                   onClick={handleReportIssue}
-                  disabled={loading || !issueDescription.trim()}
+                  disabled={loading || !issueDescription.trim() || isTaskInactive || task.status === Status.COMPLETED}
                 >
                   Submit Report
                 </Button>
               </SheetFooter>
             </SheetContent>
           </Sheet>
-
-          {task.status === Status.PENDING && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8"
-              onClick={() => handleStatusChange(Status.IN_PROGRESS)}
-              disabled={loading}
-            >
-              <Play className="h-4 w-4 mr-2" />
-              Start
-            </Button>
-          )}
-
-          {task.status === Status.IN_PROGRESS && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8"
-              onClick={() => handleStatusChange(Status.COMPLETED)}
-              disabled={loading}
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Complete
-            </Button>
-          )}
         </div>
       </CardFooter>
     </Card>
