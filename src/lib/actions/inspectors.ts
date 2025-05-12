@@ -170,7 +170,7 @@ export async function getLoggedInInspectorProductionOrderIds() {
       ])
     );
 
-    // Fetch full production order data for these IDs
+    // Fetch full production order data for these IDs, including quality checks and operations
     const productionOrders = await prisma.productionOrder.findMany({
       where: { id: { in: orderIds } },
       include: {
@@ -192,6 +192,7 @@ export async function getLoggedInInspectorProductionOrderIds() {
                 name: true,
               },
             },
+            status: true, // Ensure to include status for operations as well
           },
         },
         qualityChecks: {
@@ -200,20 +201,33 @@ export async function getLoggedInInspectorProductionOrderIds() {
             checkDate: true,
             status: true,
             defectsFound: true,
+            notes: true, // Include any additional fields from quality checks
           },
         },
       },
     });
 
-    // Log production orders to check data structure
-    console.log('Fetched production orders:', JSON.stringify(productionOrders, null, 2));
+    // Check if the production order is complete (both quality checks and operations)
+    const updatedOrders = productionOrders.map((order) => {
+      const allQualityChecksCompleted = order.qualityChecks.every(qc => qc.status === 'COMPLETED');
+      const allOperationsCompleted = order.operations.every(op => op.status === 'COMPLETED'); // Assuming there's a status on operations
 
-    return productionOrders;
+      // Determine if the production order is complete
+      const isCompleted = allQualityChecksCompleted && allOperationsCompleted;
+
+      return {
+        ...order,
+        status: isCompleted ? 'COMPLETED' : 'IN_PROGRESS',
+      };
+    });
+
+    return updatedOrders;
   } catch (error) {
     console.error('Error fetching production orders:', error);
     throw error;
   }
 }
+
 
 
 export async function markQualityCheckAsComplete(

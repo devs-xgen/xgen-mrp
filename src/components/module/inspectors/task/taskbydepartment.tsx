@@ -32,12 +32,16 @@ interface Task {
   };
   qualityChecks?: {
     id: string;
+    defectsFound?: string;
+    actionTaken?: string;
+    notes?: string;
+    status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
   }[];
 }
 
 export function TaskActions() {
   const { status } = useSession();
-  const [tasks, setTasks] = useState<any[]>([]); // Use 'any' for flexible data
+  const [tasks, setTasks] = useState<Task[]>([]); // Updated with correct type
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -154,22 +158,18 @@ export function TaskActions() {
           <TableBody>
             {tasks.map((task) => (
               <TableRow key={task.id}>
-                <TableCell>
-                  {task.id || 'No Task ID'}
-                </TableCell>
-                <TableCell>
-                  {task.qualityChecks?.[0]?.id || 'No Quality Check'}
-                </TableCell>
+                <TableCell>{task.productionOrder?.orderNumber || 'N/A'}</TableCell>
+                <TableCell>{task.qualityChecks?.[0]?.id || 'N/A'}</TableCell>
                 <TableCell>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}</TableCell>
                 <TableCell>{task.status}</TableCell>
                 <TableCell>
-                  {task.status !== 'COMPLETED' && (
+                  {task.status !== 'COMPLETED' ? (
                     <div>
                       {/* Defects Found Input */}
                       <input
                         type="text"
                         placeholder="Defects Found"
-                        value={taskDetails[task.id]?.defectsFound || ''}
+                        value={taskDetails[task.id]?.defectsFound || task.qualityChecks?.[0]?.defectsFound || ''}
                         onChange={(e) => handleFieldChange(task.id, 'defectsFound', e.target.value)}
                         className="border p-1 rounded mt-2 w-full"
                       />
@@ -177,7 +177,7 @@ export function TaskActions() {
                       <input
                         type="text"
                         placeholder="Action Taken"
-                        value={taskDetails[task.id]?.actionTaken || ''}
+                        value={taskDetails[task.id]?.actionTaken || task.qualityChecks?.[0]?.actionTaken || ''}
                         onChange={(e) => handleFieldChange(task.id, 'actionTaken', e.target.value)}
                         className="border p-1 rounded mt-2 w-full"
                       />
@@ -185,20 +185,25 @@ export function TaskActions() {
                       <input
                         type="text"
                         placeholder="Notes"
-                        value={taskDetails[task.id]?.notes || ''}
+                        value={taskDetails[task.id]?.notes || task.qualityChecks?.[0]?.notes || ''}
                         onChange={(e) => handleFieldChange(task.id, 'notes', e.target.value)}
                         className="border p-1 rounded mt-2 w-full"
                       />
                       <Button
-                        onClick={() => handleMarkComplete(task.qualityChecks?.[0]?.id,
+                       onClick={() => handleMarkComplete(task.qualityChecks?.[0]?.id,
                         task.id)}
                         className="bg-green-500 text-white hover:bg-green-600 mt-2"
                       >
                         Mark Complete
                       </Button>
                     </div>
+                  ) : (
+                    <div>
+                      <span className="text-green-500">Completed</span>
+                      <span className="ml-2 text-gray-500">Action: {task.qualityChecks?.[0]?.actionTaken || 'N/A'}</span>
+                      <span className="ml-2 text-gray-500">Notes: {task.qualityChecks?.[0]?.notes || 'N/A'}</span>
+                    </div>
                   )}
-                  {task.status === 'COMPLETED' && <span className="text-green-500">Completed</span>}
                 </TableCell>
               </TableRow>
             ))}
