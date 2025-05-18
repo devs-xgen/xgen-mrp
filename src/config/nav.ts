@@ -241,16 +241,28 @@ export const inspectorNavItems: NavItem[] = [
     description: 'Your inspector overview'
   },
   {
+    icon: ClipboardList, //check
+    label: 'Task List',
+    href: '/inspector/tasks',
+    description: 'View and manage your assigned tasks'
+  },
+  {
     icon: Factory,
     label: 'Production',
     description: 'Production Inspector',
     items: [
       {
-        icon: ClipboardList,
-        label: 'Tasks',
+        icon: ClipboardList, //check
+        label: 'Own Tasks',
         href: '/inspector/production',
         description: 'View and manage production tasks'
-      }
+      },
+      {
+        icon: QrCode,
+        label: 'QR Scanner',
+        href: '/inspector/qr-scanner',
+        description: 'Scan production QR codes to update status'
+      },
     ]
   },
   {
@@ -258,11 +270,23 @@ export const inspectorNavItems: NavItem[] = [
     label: 'Orders',
     description: 'Orders management',
     items: [
+      // {
+      //   icon: ShoppingCart,
+      //   label: 'Customer Orders',
+      //   href: '/inspector/orders',
+      //   description: 'View customer order requirements'
+      // },
       {
-        icon: ShoppingCart,
-        label: 'Customer Orders',
-        href: '/inspector/orders',
-        description: 'View customer order requirements'
+        icon: Warehouse,
+        label: 'Materials',
+        href: '/inspector/inventory',
+        description: 'Check inventory levels'
+      },
+      {
+        icon: AlertTriangle,
+        label: 'Low Stock Alerts',
+        href: '/inspector/inventory/alerts',
+        description: 'View materials requiring attention'
       }
     ]
   },

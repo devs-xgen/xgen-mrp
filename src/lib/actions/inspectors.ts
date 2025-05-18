@@ -8,7 +8,7 @@ import { authOptions } from "@/lib/auth";
 import { Task } from "@/types/inspector/task"; // Assuming you have a Task type defined
 import { revalidatePath } from "next/dist/server/web/spec-extension/revalidate";
 
-import { Inspector } from "@prisma/client";
+import { Inspector, Status } from "@prisma/client";
 
 // Re-export your Inspector type for convenience if needed elsewhere
 export type InspectorType = Inspector;
@@ -459,3 +459,60 @@ export async function getProductionOrdersForInspector() {
 //     throw error;
 //   }
 // }
+export interface Task {
+  id: string;
+  notes: string | null;
+  status: Status;
+  startTime: Date;
+  endTime: Date;
+  productionOrder: {
+    id: string;
+    status: Status;
+  } | null;
+}
+
+export async function updateTask(
+taskId: string, workerId: string, data: {
+  status?: Status;
+  notes?: string;
+  startTime?: Date;
+  endTime?: Date;
+}): Promise<Task> {
+  // Find the task by ID (no assignment check)
+  const task = await prisma.operation.findUnique({
+    where: { id: taskId },
+  });
+
+  if (!task) {
+    throw new Error("Task not found");
+  }
+
+  // Update the task
+  const updatedTask = await prisma.operation.update({
+    where: { id: taskId },
+    data: {
+      status: data.status,
+      notes: data.notes,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      updatedAt: new Date(),
+    },
+    include: {
+      productionOrder: true,
+    },
+  });
+
+  return {
+    id: updatedTask.id,
+    notes: updatedTask.notes,
+    status: updatedTask.status,
+    startTime: updatedTask.startTime,
+    endTime: updatedTask.endTime,
+    productionOrder: updatedTask.productionOrder
+      ? {
+          id: updatedTask.productionOrder.id,
+          status: updatedTask.productionOrder.status,
+        }
+      : null,
+  };
+}
