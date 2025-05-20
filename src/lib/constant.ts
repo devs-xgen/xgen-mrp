@@ -13,3 +13,12 @@ export const CURRENCY_SYMBOLS = {
       currency: 'PHP'
     }
   };
+
+export function formatCurrencyPHP(value: number) {
+  return value.toLocaleString('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}

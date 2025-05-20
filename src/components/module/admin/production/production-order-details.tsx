@@ -65,6 +65,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ProductBOM } from '@/types/admin/bom';
+import { ProductionOrderControlButtons } from './ProductionOrderControlButtons';
+import { formatCurrencyPHP } from '@/lib/constant';
 
 interface WorkCenter {
   id: string;
@@ -84,6 +87,10 @@ interface ProductionOrderDetailsProps {
   deliveryUsers?: DeliveryUser[];
   isLoading?: boolean;
 }
+
+// Allow the order prop to have a 'bom' property
+// This type is used for the details page where BOM is included
+export type ProductionOrderWithBOM = ProductionOrder & { bom?: ProductBOM };
 
 const deliveryAssignmentFormSchema = z.object({
   userId: z.string().min(1, "Please select a delivery personnel"),
@@ -119,7 +126,7 @@ export function ProductionOrderDetails({
   isLoading: initialLoading = false,
 }: ProductionOrderDetailsProps) {
   // State for the main order data and loading state
-  const [order, setOrder] = useState(initialOrder);
+  const [order, setOrder] = useState(initialOrder as ProductionOrderWithBOM);
   const [updating, setUpdating] = useState(false);
   
   // Separate loading states for each section
@@ -367,7 +374,8 @@ export function ProductionOrderDetails({
   const nextStatus = getNextStatus(order.status);
 
   // Determine if the production can be started or paused
-  const canStartProduction = order.status === Status.PENDING;
+  const hasBOM = order.bom && order.bom.entries && order.bom.entries.length > 0;
+  const canStartProduction = order.status === Status.PENDING && hasBOM;
   const canPauseProduction = order.status === Status.IN_PROGRESS;
 
   // Add a function to handle creating initial logs
@@ -572,134 +580,53 @@ export function ProductionOrderDetails({
             </div>
           </div>
 
-          {/* Production Control Buttons */}
-          <div className="mt-6">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-medium text-muted-foreground">Production Control</h3>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <HelpCircle className="h-4 w-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-80 p-4">
-                        <div className="space-y-2">
-                          <h4 className="font-medium">Production Status Guide</h4>
-                          <ul className="text-sm space-y-1">
-                            <li className="flex gap-2">
-                              <span className="font-medium">Pending</span>: Production order is created but not active. Workers cannot see tasks.
-                            </li>
-                            <li className="flex gap-2">
-                              <span className="font-medium">In Progress</span>: Production is active. All tasks are visible to workers.
-                            </li>
-                            <li className="flex gap-2">
-                              <span className="font-medium">Completed</span>: All production work is finished. No further changes allowed.
-                            </li>
-                          </ul>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Click for production status guide</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-
-            <div className="flex gap-4 justify-center">
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <Button
-                        onClick={() => handleProductionControl('start')}
-                        disabled={updating || !canStartProduction}
-                        className="bg-green-600 hover:bg-green-700 h-14 w-14 rounded-full"
-                        size="icon"
-                      >
-                        {updating && canStartProduction ? (
-                          <Loader2 className="h-6 w-6 animate-spin" />
-                        ) : (
-                          <Play className="h-6 w-6" />
-                        )}
-                      </Button>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="w-64 p-3">
-                    <div className="space-y-2">
-                      <p className="font-medium">Start Production</p>
-                      <p className="text-sm">Activates the production order and makes all tasks visible to workers.</p>
-                      {!canStartProduction && (
-                        <p className="text-xs text-amber-600">This order cannot be started in its current state.</p>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <Button
-                        onClick={() => handleProductionControl('pause')}
-                        disabled={updating || !canPauseProduction}
-                        variant="outline"
-                        className="border-amber-500 text-amber-500 hover:bg-amber-50 h-14 w-14 rounded-full"
-                        size="icon"
-                      >
-                        {updating && canPauseProduction ? (
-                          <Loader2 className="h-6 w-6 animate-spin" />
-                        ) : (
-                          <Pause className="h-6 w-6" />
-                        )}
-                      </Button>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="w-64 p-3">
-                    <div className="space-y-2">
-                      <p className="font-medium">Pause Production</p>
-                      <p className="text-sm">Temporarily pauses the production order and hides tasks from workers.</p>
-                      {!canPauseProduction && (
-                        <p className="text-xs text-amber-600">This order cannot be paused in its current state.</p>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <Button
-                        variant="default"
-                        onClick={() => handleStatusUpdate("COMPLETED")}
-                        disabled={updating || nextStatus !== "COMPLETED"}
-                        className={`h-14 w-14 rounded-full ${nextStatus === "COMPLETED" ? "bg-blue-600 hover:bg-blue-700" : "opacity-50"}`}
-                        size="icon"
-                      >
-                        {updating ? (
-                          <Loader2 className="h-6 w-6 animate-spin" />
-                        ) : (
-                          <CheckCircle className="h-6 w-6" />
-                        )}
-                      </Button>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="w-64 p-3">
-                    <div className="space-y-2">
-                      <p className="font-medium">Complete Production</p>
-                      <p className="text-sm">Marks the production order as completed and finalizes all tasks.</p>
-                      {nextStatus !== "COMPLETED" && (
-                        <p className="text-xs text-amber-600">Production must be in progress before it can be completed.</p>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+          {/* BOM/Material Requirements Section */}
+          <div className="mt-8">
+            <h3 className="font-medium text-muted-foreground mb-2 text-lg">Material Requirements (BOM)</h3>
+            {order.bom && order.bom.entries && order.bom.entries.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full border text-sm">
+                  <thead>
+                    <tr className="bg-muted">
+                      <th className="px-3 py-2 text-left font-semibold">Material Name</th>
+                      <th className="px-3 py-2 text-left font-semibold">SKU</th>
+                      <th className="px-3 py-2 text-right font-semibold">Required Qty</th>
+                      <th className="px-3 py-2 text-left font-semibold">Unit</th>
+                      <th className="px-3 py-2 text-right font-semibold">Cost/Unit</th>
+                      <th className="px-3 py-2 text-right font-semibold">Total Cost</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {order.bom.entries.map((entry: any) => (
+                      <tr key={entry.id} className="border-b">
+                        <td className="px-3 py-2">{entry.materialName}</td>
+                        <td className="px-3 py-2">{entry.materialSku}</td>
+                        <td className="px-3 py-2 text-right">{entry.quantityNeeded}</td>
+                        <td className="px-3 py-2">{entry.unitOfMeasure}</td>
+                        <td className="px-3 py-2 text-right">{formatCurrencyPHP(entry.costPerUnit)}</td>
+                        <td className="px-3 py-2 text-right">{formatCurrencyPHP(entry.totalCost)}</td>
+                      </tr>
+                    ))}
+                    <tr className="font-semibold bg-muted/50">
+                      <td className="px-3 py-2" colSpan={5}>Total Material Cost</td>
+                      <td className="px-3 py-2 text-right">{formatCurrencyPHP(order.bom.totalMaterialCost)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-muted-foreground italic">No bill of materials defined for this product.</div>
+            )}
           </div>
+
+          {/* Production Control Buttons */}
+          <ProductionOrderControlButtons
+            order={order}
+            updating={updating}
+            onStart={() => handleProductionControl('start')}
+            onPause={() => handleProductionControl('pause')}
+            onComplete={() => handleStatusUpdate(Status.COMPLETED)}
+          />
 
           {order.notes && (
             <div className="mt-4">
