@@ -29,8 +29,9 @@ export default async function InspectorTasksPage() {
   const allProductionOrders = await getProductionOrders();
 
   // Filter production orders that DO NOT belong to the inspector
-  const inspectorId = session.user.id; // assuming session.user.id is the inspector's user id
-  const productionOrders = allProductionOrders.filter(order => order.inspectorId !== inspectorId);
+  // const inspectorId = session.user.id; // assuming session.user.id is the inspector's user id
+  // const productionOrders = allProductionOrders.filter(order => order.inspectorId !== inspectorId);
+  const productionOrders = allProductionOrders;
 
   return (
     <div className="space-y-6">
@@ -64,7 +65,7 @@ export default async function InspectorTasksPage() {
                       <ClipboardList className="h-5 w-5 text-muted-foreground" />
                       <div>
                         <h4 className="font-medium">
-                          {order.orderNumber ? `Order #${order.orderNumber}` : "Production Order"}
+                          {order.customerOrder?.orderNumber ? `Order #${order.customerOrder.orderNumber}` : "Production Order"}
                         </h4>
                         <p className="text-sm text-muted-foreground">
                           {dueDate}

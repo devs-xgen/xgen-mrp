@@ -31,10 +31,10 @@ export default async function InspectorTasksPage() {
 
   const inspectorId = session.user.id;
 
-  // Correct filtering: only orders assigned to this inspector
-  const productionOrders = allProductionOrders.filter(
-    (order: { inspectorId: string }) => order.inspectorId === inspectorId
-  );
+  // const productionOrders = allProductionOrders.filter(
+  //   (order: { inspectorId: string }) => order.inspectorId === inspectorId
+  // );
+  const productionOrders = allProductionOrders;
 
   return (
     <div className="space-y-6">
@@ -53,7 +53,7 @@ export default async function InspectorTasksPage() {
               <p className="text-muted-foreground">No tasks assigned yet.</p>
             ) : (
               // Make sure to type order correctly
-              productionOrders.map((order: { id: Key; orderNumber?: string; dueDate?: string | number | Date; status?: string; }) => {
+              productionOrders.map((order: { id: Key; customerOrder?: { orderNumber?: string } | null; dueDate?: string | number | Date; status?: string; }) => {
                 const dueDate = order.dueDate
                   ? new Date(order.dueDate).toLocaleDateString()
                   : "No due date";
@@ -67,7 +67,7 @@ export default async function InspectorTasksPage() {
                       <ClipboardList className="h-5 w-5 text-muted-foreground" />
                       <div>
                         <h4 className="font-medium">
-                          {order.orderNumber ? `Order #${order.orderNumber}` : "Production Order"}
+                          {order.customerOrder?.orderNumber ? `Order #${order.customerOrder.orderNumber}` : "Production Order"}
                         </h4>
                         <p className="text-sm text-muted-foreground">{dueDate}</p>
                       </div>
