@@ -81,14 +81,25 @@ export default async function ProductionOrderPage({
   };
 
   return (
-    <div className="flex flex-col gap-6 p-8">
-      <div className="flex items-center gap-4 justify-between">
-        <Link href="/admin/production">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Production Orders
-          </Button>
-        </Link>
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center">
+          <Link href="/admin/production" className="mr-4">
+            <Button variant="ghost" size="sm" className="h-9 w-9 rounded-full p-0 mr-2">
+              <ArrowLeft className="h-5 w-5" />
+              <span className="sr-only">Back</span>
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {order.product.name}
+            </h1>
+            <p className="text-muted-foreground">
+              Production Order #{order.id.substring(0, 8)}
+            </p>
+          </div>
+        </div>
+        
         <ProductionQRGenerator
           order={{
             id: orderData.id,
@@ -116,11 +127,13 @@ export default async function ProductionOrderPage({
         />
       </div>
 
-      <ProductionOrderDetails
-        order={order as any}
-        workCenters={workCenters}
-        deliveryUsers={deliveryUsers}
-      />
+      <div className="grid grid-cols-1 gap-6">
+        <ProductionOrderDetails
+          order={order as any}
+          workCenters={workCenters}
+          deliveryUsers={deliveryUsers}
+        />
+      </div>
     </div>
   );
 }
