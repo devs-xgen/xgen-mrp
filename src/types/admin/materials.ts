@@ -20,6 +20,10 @@ export interface Material {
   createdBy?: string | null;
   modifiedBy?: string | null;
   
+  // MRP Enhancement Fields
+  committedStock: number;
+  availableStock: number; // currentStock - committedStock
+  
   // Relations
   type?: {
     id: string;
@@ -41,7 +45,6 @@ export interface Material {
   // Additional stock-related fields for inventory management
   calculatedStock?: number;
   expectedStock?: number;
-  committedStock?: number;
 }
 
 // Represents a BOM entry in the material type
@@ -96,6 +99,7 @@ export interface MaterialUpdateInput {
   calculatedStock?: number;
   expectedStock?: number;
   committedStock?: number;
+  availableStock?: number;
 }
 
 // Material usage in products

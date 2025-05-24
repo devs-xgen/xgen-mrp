@@ -15,6 +15,14 @@ export interface ProductionOrder {
   updatedAt: Date
   createdBy?: string | null
   modifiedBy?: string | null
+  
+  // MRP Enhancement Fields
+  plannedMaterialCost: number
+  actualMaterialCost: number
+  materialVariance: number
+  completedQuantity: number
+  completedAt?: Date | null
+  
   // Relations
   product: {
     id: string
@@ -75,6 +83,9 @@ export interface CreateProductionOrderInput {
 export interface UpdateProductionOrderInput extends Partial<CreateProductionOrderInput> {
   id: string
   status?: Status
+  plannedMaterialCost?: number
+  actualMaterialCost?: number
+  completedQuantity?: number
 }
 
 export interface ProductionOrderColumn {
@@ -89,6 +100,12 @@ export interface ProductionOrderColumn {
   customerOrderNumber?: string | undefined
   progress: number // Calculated from operations
   lastUpdated: Date
+  
+  // MRP Enhancement Fields
+  plannedMaterialCost: number
+  actualMaterialCost: number
+  materialVariance: number
+  completedQuantity: number
 }
 
 // New interface for delivery assignment
