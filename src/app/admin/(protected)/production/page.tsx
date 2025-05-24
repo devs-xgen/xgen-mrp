@@ -47,6 +47,12 @@ export default async function ProductionOrdersPage() {
       return acc;
     }, 0),
     lastUpdated: order.updatedAt,
+    
+    // MRP Enhancement Fields
+    plannedMaterialCost: Number(order.plannedMaterialCost),
+    actualMaterialCost: Number(order.actualMaterialCost),
+    materialVariance: Number(order.materialVariance),
+    completedQuantity: order.completedQuantity,
   }));
 
   // Calculate statistics

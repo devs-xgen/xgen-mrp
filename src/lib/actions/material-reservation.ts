@@ -310,7 +310,7 @@ export async function releaseMaterialReservations(
       const releasedReservations = []
 
       for (const reservation of reservations) {
-        const quantityToRelease = reservation.quantityReserved - reservation.quantityConsumed
+        const quantityToRelease = Number(reservation.quantityReserved) - Number(reservation.quantityConsumed)
 
         if (quantityToRelease > 0) {
           // Update reservation status

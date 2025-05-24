@@ -132,6 +132,27 @@ function ensureDeliveryAssignmentHasProductionOrder(
   };
 }
 
+// Utility function to convert Prisma result to TypeScript-compatible format
+function convertPrismaOrderToTypescript(prismaOrder: any): ProductionOrderWithBOM {
+  return {
+    ...prismaOrder,
+    plannedMaterialCost: Number(prismaOrder.plannedMaterialCost || 0),
+    actualMaterialCost: Number(prismaOrder.actualMaterialCost || 0),
+    materialVariance: Number(prismaOrder.materialVariance || 0),
+    // Convert any nested Decimal fields in operations if they exist
+    operations: prismaOrder.operations?.map((op: any) => ({
+      ...op,
+      cost: Number(op.cost || 0),
+      workCenter: {
+        ...op.workCenter,
+        capacityPerHour: Number(op.workCenter?.capacityPerHour || 0),
+        costPerHour: Number(op.workCenter?.costPerHour || 0),
+        efficiencyRate: Number(op.workCenter?.efficiencyRate || 1),
+      }
+    })) || [],
+  };
+}
+
 export function ProductionOrderDetails({
   order: initialOrder,
   workCenters: initialWorkCenters,
@@ -189,7 +210,9 @@ export function ProductionOrderDetails({
       // Fetch the updated order
       const updatedOrder = await getProductionOrder(order.id);
       if (updatedOrder) {
-        setOrder(updatedOrder);
+        // Convert Decimal fields to numbers to match ProductionOrder interface
+        const processedOrder = convertPrismaOrderToTypescript(updatedOrder);
+        setOrder(processedOrder);
       }
 
       toast({
@@ -226,7 +249,8 @@ export function ProductionOrderDetails({
       // Fetch the updated order
       const updatedOrder = await getProductionOrder(order.id);
       if (updatedOrder) {
-        setOrder(updatedOrder);
+        const processedOrder = convertPrismaOrderToTypescript(updatedOrder);
+        setOrder(processedOrder);
       }
 
       toast({
@@ -253,11 +277,12 @@ export function ProductionOrderDetails({
       const updatedWorkCenters = await getAvailableWorkCenters();
       
       if (updatedOrder) {
-        // Only update the operations part of the order with proper typing
+        // Convert Decimal fields to numbers and only update the operations part of the order with proper typing
+        const processedOrder = convertPrismaOrderToTypescript(updatedOrder);
         setOrder((prev: ProductionOrder) => ({
           ...prev,
-          operations: updatedOrder.operations as typeof prev.operations,
-          status: updatedOrder.status as typeof prev.status
+          operations: processedOrder.operations as typeof prev.operations,
+          status: processedOrder.status as typeof prev.status
         }));
       }
       
