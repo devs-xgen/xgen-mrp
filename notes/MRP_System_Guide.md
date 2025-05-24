@@ -1,5 +1,7 @@
 # XGen MRP System Guide
 
+**Last Updated:** 2024-06-07
+
 ## Overview
 
 XGen MRP is a comprehensive Material Requirements Planning system designed specifically for clothing manufacturers. The system integrates all aspects of the manufacturing process, from material procurement to production planning, inventory management, and customer order fulfillment.
@@ -226,6 +228,10 @@ The system supports multiple user roles with different permissions:
 - Knowledge base development
 - Issue tracking system
 - Regular maintenance schedule
+
+## Recent Updates
+
+No major updates since initial creation.
 
 ## Conclusion
 

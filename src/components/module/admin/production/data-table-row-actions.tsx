@@ -17,6 +17,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { updateProductionOrder } from "@/lib/actions/production-order"
 import { ProductionOrderColumn } from "@/types/admin/production-order"
+import { ProductionOrderActionDialog } from './production-order-action-dialog'
 
 interface DataTableRowActionsProps {
   row: Row<ProductionOrderColumn>
@@ -27,89 +28,44 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
-
-  // Get the current status and determine the next possible status
-  const currentStatus = row.original.status
-  const nextStatus = currentStatus === "PENDING" 
-    ? "IN_PROGRESS" 
-    : currentStatus === "IN_PROGRESS" 
-      ? "COMPLETED" 
-      : null
-
-  // Get the button text based on the next status
-  const getActionText = (status: Status) => {
-    switch (status) {
-      case "IN_PROGRESS":
-        return "Start Production"
-      case "COMPLETED":
-        return "Complete Production"
-      default:
-        return "Update Status"
-    }
-  }
-
-  const handleStatusUpdate = async (newStatus: Status) => {
-    try {
-      setIsLoading(true)
-      await updateProductionOrder({
-        id: row.original.id,
-        status: newStatus
-      })
-
-      if (onSuccess) {
-        await onSuccess()
-      }
-
-      toast({
-        title: "Status Updated",
-        description: `Production order status updated to ${newStatus.toLowerCase().replace("_", " ")}`
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update status",
-        variant: "destructive"
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   const handleView = () => {
     router.push(`/admin/production/${row.original.id}`)
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
-          <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={handleView}>
-          <EyeIcon className="mr-2 h-4 w-4" />
-          View Details
-        </DropdownMenuItem>
-        
-        {nextStatus && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              disabled={isLoading}
-              onClick={() => handleStatusUpdate(nextStatus)}
-            >
-              {nextStatus === "IN_PROGRESS" ? (
-                <PlayCircle className="mr-2 h-4 w-4" />
-              ) : (
-                <CheckCircle className="mr-2 h-4 w-4" />
-              )}
-              {getActionText(nextStatus)}
-            </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Open menu</span>
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={handleView}>
+            <EyeIcon className="mr-2 h-4 w-4" />
+            View Details
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            disabled={isLoading}
+            onClick={() => {
+              setDialogOpen(true)
+            }}
+          >
+            <PlayCircle className="mr-2 h-4 w-4" />
+            Manage
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <ProductionOrderActionDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        productionOrderId={row.original.id}
+        onSuccess={onSuccess}
+      />
+    </>
   )
 }

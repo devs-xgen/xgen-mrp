@@ -10,6 +10,13 @@ import {
   CreateProductionOrderInput, 
   UpdateProductionOrderInput 
 } from "@/types/admin/production-order"
+import { getBOMForProduct } from "@/lib/actions/bom"
+import { updateMaterial, getMaterialById } from "@/lib/actions/materials"
+import { 
+  checkProductionOrderMaterialRequirements,
+  reserveMaterialsForProduction,
+  releaseMaterialReservations 
+} from "@/lib/actions/material-reservation"
 
 export async function getProductionOrders() {
   try {
@@ -78,8 +85,10 @@ export async function getProductionOrder(id: string) {
     if (!order) {
       throw new Error('Production order not found')
     }
-    
-    return order
+
+    // Fetch BOM/materials for the product
+    const bom = await getBOMForProduct(order.productId)
+    return { ...order, bom }
   } catch (error) {
     console.error('Error fetching production order:', error)
     throw error
@@ -92,6 +101,21 @@ export async function createProductionOrder(data: CreateProductionOrderInput) {
     const session = await getServerSession(authOptions)
     if (!session?.user) throw new Error('Unauthorized')
 
+    // First, check material availability for the production order
+    const materialRequirements = await checkProductionOrderMaterialRequirements(
+      data.productId,
+      data.quantity
+    )
+
+    if (!materialRequirements.allMaterialsAvailable) {
+      const shortageDetails = materialRequirements.materials
+        .filter(m => !m.isAvailable)
+        .map(m => `${m.materialName}: need ${m.quantityNeeded}, available ${m.quantityAvailable}`)
+        .join('; ')
+      
+      throw new Error(`Cannot create production order due to insufficient materials: ${shortageDetails}`)
+    }
+
     const order = await prisma.productionOrder.create({
       data: {
         productId: data.productId,
@@ -103,6 +127,8 @@ export async function createProductionOrder(data: CreateProductionOrderInput) {
         notes: data.notes || null,
         status: Status.PENDING,
         createdBy: session.user.id,
+        // Include planned material cost from requirements check
+        plannedMaterialCost: materialRequirements.totalMaterialCost,
         operations: {
           create: data.operations.map(op => ({
             workCenterId: op.workCenterId,
@@ -123,8 +149,26 @@ export async function createProductionOrder(data: CreateProductionOrderInput) {
       }
     })
 
+    // Automatically reserve materials for the production order
+    const reservationResult = await reserveMaterialsForProduction(order.id)
+    
+    if (!reservationResult.success) {
+      // If material reservation fails, we should clean up the production order
+      await prisma.productionOrder.delete({ where: { id: order.id } })
+      throw new Error(`Production order created but material reservation failed: ${reservationResult.error}`)
+    }
+
     revalidatePath('/admin/production')
-    return order
+    revalidatePath('/admin/materials')
+    
+    return {
+      ...order,
+      materialReservation: {
+        success: true,
+        message: reservationResult.message,
+        totalMaterialCost: materialRequirements.totalMaterialCost
+      }
+    }
   } catch (error) {
     console.error('Error creating production order:', error)
     throw error
@@ -166,6 +210,16 @@ export async function deleteProductionOrder(id: string) {
     const session = await getServerSession(authOptions)
     if (!session?.user) throw new Error('Unauthorized')
 
+    // First, release any material reservations for this production order
+    const releaseResult = await releaseMaterialReservations(id, 'Production order deleted')
+    
+    if (releaseResult.success) {
+      console.log(`Released material reservations for production order ${id}: ${releaseResult.message}`)
+    } else {
+      console.warn(`Failed to release material reservations for production order ${id}: ${releaseResult.error}`)
+      // Continue with deletion even if release fails
+    }
+
     // Delete related operations and quality checks first
     await prisma.operation.deleteMany({
       where: { productionOrderId: id }
@@ -175,11 +229,41 @@ export async function deleteProductionOrder(id: string) {
       where: { productionOrderId: id }
     })
 
+    // Delete material reservations (if any remain)
+    await prisma.materialReservation.deleteMany({
+      where: { productionOrderId: id }
+    })
+
+    // Delete material consumptions (if any)
+    await prisma.productionMaterialConsumption.deleteMany({
+      where: { productionOrderId: id }
+    })
+
+    // Delete production batches (if any)
+    await prisma.productionBatch.deleteMany({
+      where: { productionOrderId: id }
+    })
+
+    // Delete cost variances (if any)
+    await prisma.costVariance.deleteMany({
+      where: { productionOrderId: id }
+    })
+
+    // Delete inventory movements related to this production order
+    await prisma.inventoryMovement.deleteMany({
+      where: { 
+        referenceId: id,
+        referenceType: 'ProductionOrder'
+      }
+    })
+
+    // Finally, delete the production order
     await prisma.productionOrder.delete({
       where: { id }
     })
 
     revalidatePath('/admin/production')
+    revalidatePath('/admin/materials')
   } catch (error) {
     console.error('Error deleting production order:', error)
     throw error
@@ -421,16 +505,111 @@ export async function updateProductionOrderStatus(
     const session = await getServerSession(authOptions)
     if (!session?.user) throw new Error('Unauthorized')
 
-    // Get current status before update
+    // Get current status and order details before update
     const currentOrder = await prisma.productionOrder.findUnique({
       where: { id: productionOrderId },
-      select: { status: true }
+      include: { product: true }
     })
-
     if (!currentOrder) throw new Error('Production order not found')
     const oldStatus = currentOrder.status
 
-    // Update the production order
+    // Handle material release if production is being cancelled
+    if (status === 'CANCELLED' && oldStatus !== 'CANCELLED') {
+      const releaseResult = await releaseMaterialReservations(
+        productionOrderId, 
+        notes || 'Production order cancelled'
+      )
+      
+      if (releaseResult.success) {
+        console.log(`Released material reservations for cancelled production order ${productionOrderId}: ${releaseResult.message}`)
+      } else {
+        console.warn(`Failed to release material reservations for cancelled production order ${productionOrderId}: ${releaseResult.error}`)
+        // Continue with status update even if release fails
+      }
+    }
+
+    // Fetch BOM/materials for the product
+    const bom = await getBOMForProduct(currentOrder.productId)
+    const productionQty = currentOrder.quantity
+
+    // If starting or progressing production, check and deduct materials
+    if (status === 'IN_PROGRESS' && oldStatus !== 'IN_PROGRESS') {
+      // Block if no BOM/material requirements
+      if (!bom.entries || bom.entries.length === 0) {
+        throw new Error('Cannot start production: No Bill of Materials (BOM) is defined for this product.');
+      }
+      // Check all materials
+      for (const entry of bom.entries) {
+        const requiredQty = Number(entry.quantityNeeded) * productionQty
+        const material = await getMaterialById(entry.materialId)
+        if (!material) throw new Error(`Material not found: ${entry.materialName}`)
+        if (material.currentStock < requiredQty) {
+          throw new Error(`Insufficient stock for material: ${entry.materialName}`)
+        }
+      }
+      // Deduct materials
+      for (const entry of bom.entries) {
+        const requiredQty = Number(entry.quantityNeeded) * productionQty
+        const material = await getMaterialById(entry.materialId)
+        if (!material) throw new Error(`Material not found: ${entry.materialName}`)
+        await updateMaterial({
+          id: entry.materialId,
+          currentStock: material.currentStock - requiredQty
+        })
+        // Log material deduction
+        if (prisma.activityLog) {
+          await prisma.activityLog.create({
+            data: {
+              type: 'MATERIAL_STOCK_DEDUCT',
+              userId: session.user.id,
+              details: {
+                materialId: entry.materialId,
+                materialName: entry.materialName,
+                change: -requiredQty,
+                reason: `Production order ${productionOrderId} started`
+              }
+            }
+          })
+        }
+      }
+    }
+
+    // If completing production, increase product stock and update completion fields
+    if (status === 'COMPLETED' && oldStatus !== 'COMPLETED') {
+      await prisma.product.update({
+        where: { id: currentOrder.productId },
+        data: {
+          currentStock: currentOrder.product.currentStock + productionQty
+        }
+      })
+      
+      // Update production order completion fields
+      await prisma.productionOrder.update({
+        where: { id: productionOrderId },
+        data: {
+          completedQuantity: productionQty,
+          completedAt: new Date()
+        }
+      })
+      
+      // Log product stock increment
+      if (prisma.activityLog) {
+        await prisma.activityLog.create({
+          data: {
+            type: 'PRODUCT_STOCK_INCREMENT',
+            userId: session.user.id,
+            details: {
+              productId: currentOrder.productId,
+              productName: currentOrder.product.name,
+              change: productionQty,
+              reason: `Production order ${productionOrderId} completed`
+            }
+          }
+        })
+      }
+    }
+
+    // Update the production order status
     const order = await prisma.productionOrder.update({
       where: { id: productionOrderId },
       data: {
@@ -442,7 +621,6 @@ export async function updateProductionOrderStatus(
 
     // Log the status change using the ActivityLog model
     try {
-      // Check if ActivityLog model exists in prisma client
       if (prisma.activityLog) {
         await prisma.activityLog.create({
           data: {
@@ -456,28 +634,14 @@ export async function updateProductionOrderStatus(
             }
           }
         })
-      } else {
-        // Fallback to manual logging if ActivityLog model is not available
-        console.log('ActivityLog model not available in Prisma client, logging to console instead:',
-          {
-            type: 'PRODUCTION_STATUS_CHANGE',
-            userId: session.user.id,
-            productionOrderId,
-            oldStatus,
-            newStatus: status,
-            notes: notes || null
-          }
-        )
       }
     } catch (logError) {
       console.error("Failed to create activity log:", logError)
-      // Continue execution even if logging fails
     }
 
     revalidatePath('/admin/production')
     revalidatePath(`/admin/production/${productionOrderId}`)
-    revalidatePath('/worker/tasks')
-    revalidatePath('/worker/dashboard')
+    revalidatePath('/admin/materials')
     
     return order
   } catch (error) {

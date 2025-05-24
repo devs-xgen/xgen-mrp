@@ -31,18 +31,6 @@ export async function getLoggedInInspectorWithProductionOrders() {
       where: {
         userId: session.user.id,
       },
-      include: {
-        checks: {
-          include: {
-            productionOrder: true,
-          },
-        },
-        assignedOperations: {
-          include: {
-            productionOrder: true,
-          },
-        },
-      },
     });
 
     if (!inspector) {
@@ -293,21 +281,14 @@ export async function getLoggedInInspectorAverageQualityChecks() {
       where: {
         userId: session.user.id,
       },
-      include: {
-        qualityChecks: true, // Assuming the relation from Inspector to QualityCheck is named 'qualityChecks'
-      },
     });
 
     if (!inspector) {
       return null;
     }
 
-    const numberOfQualityChecks = inspector.qualityChecks.length;
-
-    // You might want to calculate the average based on a specific criteria
-    // (e.g., average number of defects found, average time spent, etc.).
-    // Since the prompt is generic, we'll just return the number of checks.
-    // Adapt this part based on what "average quality checks work" means in your context.
+    // To get the number of quality checks, you need to query qualityCheck table separately
+    const numberOfQualityChecks = await prisma.qualityCheck.count({ where: { inspectorId: inspector.inspectorId } });
 
     return {
       inspectorId: inspector.inspectorId,
@@ -360,16 +341,8 @@ export async function getProductionOrdersForInspector() {
       user: {
         select: {
           id: true,
-          createdProductionOrders: {
-            include: {
-              workCenter: true,
-            },
-          },
-          modifiedProductionOrders: {
-            include: {
-              workCenter: true,
-            },
-          },
+          createdProductionOrders: true,
+          modifiedProductionOrders: true,
         },
       },
     },

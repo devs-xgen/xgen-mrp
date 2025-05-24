@@ -1,6 +1,7 @@
 // inspector/utils/updateStatus.ts
 import { prisma } from "@/lib/db"; // Adjust path
 import { revalidatePath } from "next/cache"; // Optional, for ISR pages
+import type { NextApiRequest, NextApiResponse } from "next";
 
 type UpdateInput = {
   qualityCheckId: string;
@@ -39,7 +40,7 @@ export async function updateStatus(input: UpdateInput) {
 }
 
 
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "POST") return res.status(405).end();
   
     try {

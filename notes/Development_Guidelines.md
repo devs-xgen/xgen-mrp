@@ -1,5 +1,9 @@
 # Development Guidelines for XGen MRP System
 
+**Last Updated:** 2024-06-07
+
+> Note: This document now incorporates all relevant standards and rules from .cursor/rules/cursorrules.md. Please refer here for all project conventions, component structure, naming, and workflow guidelines.
+
 This document outlines the development standards and architectural decisions for the XGen MRP system to ensure consistency, maintainability, and optimal performance.
 
 ## Project Structure
@@ -349,3 +353,44 @@ This document outlines the development standards and architectural decisions for
 ## Conclusion
 
 Following these guidelines will ensure a consistent, maintainable, and performant codebase for the XGen MRP system. The role-based component organization combined with direct server actions provides a clean architecture that aligns with the business domain while leveraging the latest Next.js features. 
+
+## Component and Type Organization (Merged from cursorrules.md)
+
+- All role-specific components must be placed in the appropriate module directory:
+  - `components/module/admin/` for Admin components
+  - `components/module/worker/` for Worker components
+  - `components/module/inspector/` for Inspector components
+  - `components/module/delivery/` for Delivery components
+- Within each module directory, organize components by feature or page (e.g., `dashboard/`, `products/`, `materials/`).
+- Use PascalCase for component files, kebab-case for directories.
+- Name files based on their function plus the component type (e.g., `ProductTable.tsx`, `UserForm.tsx`).
+- Place shared types in `/types/index.ts`, role-specific types in `/types/{role}`.
+- Use interfaces for objects with methods or that you might want to extend; use type aliases for unions, intersections, or simple object types.
+- Add `Props` suffix for component props, `Response` for API responses, `Request` for API requests.
+
+## State Management (Merged)
+- Use React's built-in state for simple component state.
+- Use React Context for shared state across a feature.
+- Use Zustand for global application state (stores in `/lib/stores/`).
+
+## API and Data Fetching (Merged)
+- Place API route handlers in `/app/api/`, grouped by entity.
+- Place API client functions in `/lib/api/`.
+- Prefer React Server Components for initial data loading; use SWR/React Query for client-side data fetching with caching.
+
+## Styling (Merged)
+- Use Tailwind CSS for styling, shadcn/UI components as base building blocks.
+- Custom styles should be minimal and placed in component-specific CSS modules when necessary.
+
+## Error Handling, Testing, and Workflow (Merged)
+- Implement proper error boundaries at the page/feature level.
+- Use try/catch for async operations, provide user-friendly error messages, log errors appropriately.
+- Write unit/component tests for critical or complex code, place tests adjacent to the code they test.
+- Follow ESLint and Prettier rules strictly.
+- Use feature branches from `main`, descriptive branch names, and pull requests for review.
+
+## Change History
+
+| Date | Description of Change |
+|------|------------------------|
+| 2024-06-07 | Merged .cursor/rules/cursorrules.md into this document | 

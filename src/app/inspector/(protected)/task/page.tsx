@@ -91,9 +91,9 @@ export default async function ProductionTasksPage() {
   const tasks = await getInspectorTasks();
 
   const counts = {
-    "Not Started": tasks.filter(t => t.status === "Not Started").length,
-    "In Progress": tasks.filter(t => t.status === "In Progress").length,
-    Completed: tasks.filter(t => t.status === "Completed").length,
+    Pending: tasks.filter(t => t.status === "PENDING").length,
+    "In Progress": tasks.filter(t => t.status === "IN_PROGRESS").length,
+    Completed: tasks.filter(t => t.status === "COMPLETED").length,
   };
 
   return (
@@ -108,11 +108,11 @@ export default async function ProductionTasksPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Not Started</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{counts["Not Started"]}</div>
+            <div className="text-2xl font-bold">{counts.Pending}</div>
           </CardContent>
         </Card>
         <Card>
@@ -152,7 +152,7 @@ export default async function ProductionTasksPage() {
               <tbody>
                 {tasks.map((task) => (
                   <tr key={task.id} className="border-b">
-                    <td className="py-3">{task.orderNumber || "N/A"}</td>
+                    <td className="py-3">{task.customerOrder?.orderNumber || "N/A"}</td>
                     <td className="py-3">
                       {task.dueDate
                         ? new Date(task.dueDate).toLocaleDateString()

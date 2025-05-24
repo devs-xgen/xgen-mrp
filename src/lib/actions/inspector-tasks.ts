@@ -9,6 +9,7 @@ export async function getInspectorTasks() {
   if (!session || !session.user) return [];
 
   const allOrders = await getProductionOrders();
-  const inspectorId = session.user.id;
-  return allOrders.filter(order => order.inspectorId === inspectorId);
+  // const inspectorId = session.user.id;
+  // return allOrders.filter(order => order.inspectorId === inspectorId);
+  return allOrders;
 }
