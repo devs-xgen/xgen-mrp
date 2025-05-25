@@ -18,10 +18,10 @@ import { Task } from "@/lib/actions/inspectors";
 
 interface TaskUpdateFormProps {
   task: Task;
-  workerId: string;
+  inspectorId: string; // Changed from workerId to inspectorId
 }
 
-export function TaskUpdateForm({ task, workerId }: TaskUpdateFormProps) {
+export function TaskUpdateForm({ task, inspectorId }: TaskUpdateFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<Status>(task.status);
@@ -32,7 +32,8 @@ export function TaskUpdateForm({ task, workerId }: TaskUpdateFormProps) {
     setIsSubmitting(true);
 
     try {
-      await updateTask(task.id, workerId, {
+      // Pass inspectorId instead of workerId
+      await updateTask(task.id, inspectorId, {
         status,
         notes: notes || undefined,
         startTime:

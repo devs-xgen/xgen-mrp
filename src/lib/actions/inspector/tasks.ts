@@ -5,15 +5,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { Status } from "@prisma/client";
-import { TaskUpdateInput, TaskStatistics, TaskTimeTracking, TaskReport, WorkerTask } from "@/types/worker/tasks";
+import { TaskUpdateInput, TaskStatistics, TaskTimeTracking, TaskReport, InspectorsTask } from "@/types/inspector/task";
 
-// Get tasks assigned to the current worker
+// Get tasks assigned to the current inspector
 export async function getMyTasks() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) throw new Error("Unauthorized");
 
-    // Find the worker's work centers
+    // Find the inspector's work centers
     const userWorkCenters = await prisma.userWorkCenter.findMany({
       where: { userId: session.user.id },
       select: { workCenterId: true }
@@ -124,7 +124,7 @@ export async function getMyTasks() {
     // Return both active and paused tasks
     return [...activeTasks, ...pausedTasks];
   } catch (error) {
-    console.error("Error fetching worker tasks:", error);
+    console.error("Error fetching inspector tasks:", error);
     throw new Error("Failed to fetch tasks");
   }
 }
@@ -140,7 +140,7 @@ export async function getTodaysTasks() {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Find the worker's work centers
+    // Find the inspector's work centers
     const userWorkCenters = await prisma.userWorkCenter.findMany({
       where: { userId: session.user.id },
       select: { workCenterId: true }
@@ -231,8 +231,8 @@ export async function updateTaskStatus(data: TaskUpdateInput) {
       console.error("Failed to log activity but task was updated:", logError);
     }
 
-    revalidatePath("/worker/tasks");
-    revalidatePath("/worker/dashboard");
+    revalidatePath("/inspector/tasks");
+    revalidatePath("/inspector/dashboard");
     return { success: true };
   } catch (error) {
     console.error("Error updating task status:", error);
@@ -246,7 +246,7 @@ export async function getTaskStatistics(): Promise<TaskStatistics> {
     const session = await getServerSession(authOptions);
     if (!session?.user) throw new Error("Unauthorized");
 
-    // Find the worker's work centers
+    // Find the inspector's work centers
     const userWorkCenters = await prisma.userWorkCenter.findMany({
       where: { userId: session.user.id },
       select: { workCenterId: true }
@@ -361,9 +361,9 @@ export async function startTaskTimer(taskId: string): Promise<TaskTimeTracking> 
       }
     });
 
-    revalidatePath("/worker/tasks");
-    revalidatePath("/worker/dashboard");
-    revalidatePath("/worker/production/tracking");
+    revalidatePath("/inspector/tasks");
+    revalidatePath("/inspector/dashboard");
+    revalidatePath("/inspector/production/tracking");
 
     return {
       taskId,
@@ -395,9 +395,9 @@ export async function stopTaskTimer(taskId: string): Promise<TaskTimeTracking> {
       }
     });
 
-    revalidatePath("/worker/tasks");
-    revalidatePath("/worker/dashboard");
-    revalidatePath("/worker/production/tracking");
+    revalidatePath("/inspector/tasks");
+    revalidatePath("/inspector/dashboard");
+    revalidatePath("/inspector/production/tracking");
 
     return {
       taskId,
@@ -440,8 +440,8 @@ export async function reportTaskIssue(
       }
     });
 
-    revalidatePath("/worker/tasks");
-    revalidatePath("/worker/dashboard");
+    revalidatePath("/inspector/tasks");
+    revalidatePath("/inspector/dashboard");
 
     return {
       taskId,
@@ -456,3 +456,174 @@ export async function reportTaskIssue(
     throw new Error("Failed to report issue");
   }
 } 
+
+
+
+
+// Get all production tasks
+export async function getProductionTasks(): Promise<InspectorsTask[]> {
+  try {
+    const operations = await prisma.operation.findMany({
+      where: {
+        status: { in: [Status.PENDING, Status.IN_PROGRESS, Status.COMPLETED] },
+        productionOrder: {
+          status: { in: [Status.IN_PROGRESS, Status.COMPLETED, Status.PENDING] }
+        }
+      },
+      include: {
+        productionOrder: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                sku: true
+              }
+            }
+          }
+        },
+        workCenter: {
+          select: {
+            name: true
+          }
+        }
+      },
+      orderBy: [
+        { status: 'asc' },
+        { startTime: 'asc' }
+      ]
+    });
+
+    return operations.map(op => ({
+      id: op.id,
+      title: op.productionOrder.product.name,
+      description: `${op.productionOrder.product.name} (${op.productionOrder.product.sku})`,
+      startDate: op.startTime,
+      dueDate: op.endTime,
+      status: op.status,
+      priority: op.productionOrder.priority,
+      notes: op.notes,
+      productionOrderId: op.productionOrderId,
+      workCenterId: op.workCenterId,
+      workCenterName: op.workCenter.name,
+      quantity: op.productionOrder.quantity,
+      productionStatus: op.productionOrder.status,
+      isActive: op.productionOrder.status !== Status.PENDING
+    }));
+  } catch (error) {
+    console.error("Error fetching production tasks:", error);
+    throw new Error("Failed to fetch production tasks");
+  }
+}
+
+// Get production task statistics
+export async function getProductionTaskStatistics(): Promise<TaskStatistics> {
+  try {
+    const pending = await prisma.operation.count({
+      where: { status: Status.PENDING }
+    });
+
+    const inProgress = await prisma.operation.count({
+      where: { status: Status.IN_PROGRESS }
+    });
+
+    const completed = await prisma.operation.count({
+      where: { 
+        status: Status.COMPLETED,
+        updatedAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+      }
+    });
+
+    const urgentTasks = await prisma.operation.count({
+      where: {
+        status: { in: [Status.PENDING, Status.IN_PROGRESS] },
+        productionOrder: { priority: "URGENT" }
+      }
+    });
+
+    const activeTasks = await prisma.operation.count({
+      where: {
+        productionOrder: { status: Status.IN_PROGRESS }
+      }
+    });
+
+    const inactiveTasks = await prisma.operation.count({
+      where: {
+        productionOrder: { status: Status.PENDING }
+      }
+    });
+
+    const total = pending + inProgress;
+    const completionRate = total > 0 ? (completed / (total + completed)) * 100 : 0;
+
+    return {
+      pending,
+      inProgress,
+      completed,
+      total: total + completed,
+      urgentTasks,
+      completionRate,
+      activeTasks,
+      inactiveTasks
+    };
+  } catch (error) {
+    console.error("Error getting production task statistics:", error);
+    return {
+      pending: 0,
+      inProgress: 0,
+      completed: 0,
+      total: 0,
+      urgentTasks: 0,
+      completionRate: 0,
+      activeTasks: 0,
+      inactiveTasks: 0
+    };
+  }
+}
+
+// Get single production task by ID
+export async function getProductionTaskById(id: string): Promise<InspectorsTask> {
+  try {
+    const operation = await prisma.operation.findUnique({
+      where: { id },
+      include: {
+        productionOrder: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                sku: true
+              }
+            }
+          }
+        },
+        workCenter: {
+          select: {
+            name: true
+          }
+        }
+      }
+    });
+
+    if (!operation) throw new Error("Task not found");
+
+    return {
+      id: operation.id,
+      title: operation.productionOrder.product.name,
+      description: `${operation.productionOrder.product.name} (${operation.productionOrder.product.sku})`,
+      startDate: operation.startTime,
+      dueDate: operation.endTime,
+      status: operation.status,
+      priority: operation.productionOrder.priority,
+      notes: operation.notes,
+      productionOrderId: operation.productionOrderId,
+      workCenterId: operation.workCenterId,
+      workCenterName: operation.workCenter.name,
+      quantity: operation.productionOrder.quantity,
+      productionStatus: operation.productionOrder.status,
+      isActive: operation.productionOrder.status !== Status.PENDING
+    };
+  } catch (error) {
+    console.error("Error fetching production task:", error);
+    throw new Error("Failed to fetch production task");
+  }
+}

@@ -1,86 +1,10 @@
-// // src/app/worker/(protected)/tasks/page.tsx
-// import { Metadata } from "next";
-// import { getProductionOrdersForInspector } from "@/lib/actions/inspectors"; // adjust the path!
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// import { ClipboardList } from "lucide-react";
-// import { Key } from "react";
-
-// export const metadata: Metadata = {
-//   title: "Worker Tasks",
-//   description: "Manage your assigned tasks",
-// };
-
-// export default async function TasksPage() {
-//   const productionOrders = await getProductionOrdersForInspector();
-
-//   return (
-//     <div className="space-y-6">
-//       <div>
-//         <h2 className="text-3xl font-bold tracking-tight">Tasks</h2>
-//         <p className="text-muted-foreground">
-//           View and manage your assigned tasks
-//         </p>
-//       </div>
-
-//       <Card className="mt-6">
-//         <CardHeader>
-//           <CardTitle>My Tasks</CardTitle>
-//         </CardHeader>
-//         <CardContent>
-//           <div className="space-y-4">
-//             {productionOrders.length === 0 ? (
-//               <p className="text-muted-foreground">No tasks assigned yet.</p>
-//             ) : (
-//               productionOrders.map((order: { dueDate: string | number | Date; id: Key | null | undefined; orderNumber: any; status: any; }) => {
-//                 const dueDate = order.dueDate
-//                   ? new Date(order.dueDate).toLocaleDateString()
-//                   : "No due date";
-
-//                 return (
-//                   <div
-//                     key={order.id}
-//                     className="flex items-center justify-between border-b pb-3"
-//                   >
-//                     <div className="flex items-center space-x-4">
-//                       <ClipboardList className="h-5 w-5 text-muted-foreground" />
-//                       <div>
-//                         <h4 className="font-medium">
-//                           {order.orderNumber ? `Order #${order.orderNumber}` : "Production Order"}
-//                         </h4>
-//                         <p className="text-sm text-muted-foreground">
-//                           {dueDate}
-//                         </p>
-//                       </div>
-//                     </div>
-//                     <div className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-//                       {order.status || "Pending"}
-//                     </div>
-//                   </div>
-//                 );
-//               })
-//             )}
-//           </div>
-//         </CardContent>
-//       </Card>
-//     </div>
-//   );
-// }
-
-
-// src/app/inspector/(protected)/production/page.tsx
 import { Metadata } from "next";
-import { getInspectorTasks } from "@/lib/actions/inspector-tasks";
+import { getProductionTasks, getProductionTaskStatistics } from "@/lib/actions/inspector/tasks";
+import { TasksList } from "@/components/module/inspectors/tasks";
+import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  Play,
-  Pause,
-  Check,
-} from "lucide-react";
+import { Clock, CheckCircle, AlertTriangle, ClipboardList, AlertCircle } from "lucide-react";
+import { Status } from "@prisma/client";
 
 export const metadata: Metadata = {
   title: "Production Tasks",
@@ -88,87 +12,102 @@ export const metadata: Metadata = {
 };
 
 export default async function ProductionTasksPage() {
-  const tasks = await getInspectorTasks();
+  const [tasks, stats] = await Promise.all([getProductionTasks(), getProductionTaskStatistics()]);
 
-  const counts = {
-    Pending: tasks.filter(t => t.status === "PENDING").length,
-    "In Progress": tasks.filter(t => t.status === "IN_PROGRESS").length,
-    Completed: tasks.filter(t => t.status === "COMPLETED").length,
-  };
+  // Group tasks by status
+  const notStarted = tasks.filter((task) => task.status === Status.PENDING);
+  const inProgress = tasks.filter((task) => task.status === Status.IN_PROGRESS);
+  const completed = tasks.filter((task) => task.status === Status.COMPLETED);
+
+  // Get urgent tasks
+  const urgentTasks = tasks.filter((task) => task.priority === "URGENT");
+  
+  // Count active vs inactive tasks
+  const activeTasks = tasks.filter(task => task.isActive === true);
+  const inactiveTasks = tasks.filter(task => task.isActive === false);
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Production Tasks</h2>
         <p className="text-muted-foreground">
-          View and manage your assigned production tasks
+          View and manage all production tasks
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{counts.Pending}</div>
+      {inactiveTasks.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="pt-6 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
+            <div>
+              <p className="font-medium text-amber-800">Inactive Production Tasks</p>
+              <p className="text-sm text-amber-700 mt-1">
+                {stats.inactiveTasks || inactiveTasks.length} task(s) are paused or awaiting materials.
+              </p>
+            </div>
           </CardContent>
         </Card>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Not Started</CardTitle>
+            <ClipboardList className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.pending}</div>
+            <p className="text-xs text-muted-foreground">
+              {notStarted.length} tasks to start
+            </p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <Clock className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{counts["In Progress"]}</div>
+            <div className="text-2xl font-bold">{stats.inProgress}</div>
+            <p className="text-xs text-muted-foreground">
+              {inProgress.length} active tasks
+            </p>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Completed Today
+            </CardTitle>
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{counts.Completed}</div>
+            <div className="text-2xl font-bold">{stats.completed}</div>
+            <p className="text-xs text-muted-foreground">
+              {completed.length} tasks finished
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Urgent</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.urgentTasks}</div>
+            <p className="text-xs text-muted-foreground">
+              {urgentTasks.length} high priority tasks
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>My Assigned Production Tasks</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left border-b">
-                  <th className="pb-3 font-medium">Order #</th>
-                  <th className="pb-3 font-medium">Due Date</th>
-                  <th className="pb-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tasks.map((task) => (
-                  <tr key={task.id} className="border-b">
-                    <td className="py-3">{task.customerOrder?.orderNumber || "N/A"}</td>
-                    <td className="py-3">
-                      {task.dueDate
-                        ? new Date(task.dueDate).toLocaleDateString()
-                        : "No due date"}
-                    </td>
-                    <td className="py-3">
-                      <Badge>{task.status}</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      <Suspense fallback={<div>Loading tasks...</div>}>
+        <TasksList tasks={tasks} />
+      </Suspense>
     </div>
   );
 }
-

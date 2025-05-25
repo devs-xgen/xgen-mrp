@@ -132,7 +132,7 @@ export default async function TaskDetailsPage({
                     }
                   : null,
               }}
-              workerId={session.user.id}
+              inspectorId={session.user.id}
             />
           </CardContent>
         </Card>

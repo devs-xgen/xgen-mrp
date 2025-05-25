@@ -20,7 +20,7 @@ export interface Task {
 
 export interface InspectorsTask {
     id: string;
-    title: string;              // Short title or summary of the task
+    title?: string;              // Short title or summary of the task
     description?: string;       // Optional detailed description
     startDate?: Date;           // Optional planned start date
     dueDate: Date;              // Deadline for task completion

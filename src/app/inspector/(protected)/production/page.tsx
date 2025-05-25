@@ -1,208 +1,114 @@
 import { Metadata } from "next";
+import { getProductionTasks, getProductionTaskStatistics } from "@/lib/actions/inspector/tasks";
+import { TasksList } from "@/components/module/inspectors/tasks";
+import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  Play,
-  Pause,
-  Check,
-} from "lucide-react";
-import { TaskActions } from "@/components/module/inspectors/task/taskbydepartment"; // Adjust the import path
+import { Clock, CheckCircle, AlertTriangle, ClipboardList, AlertCircle } from "lucide-react";
+import { Status } from "@prisma/client";
 
 export const metadata: Metadata = {
   title: "Production Tasks",
   description: "View and manage production tasks",
 };
 
-export default function ProductionTasksPage() {
-  // Sample data for production tasks (you can remove this or integrate with it)
-  const productionTasks = [
-    {
-      id: "PT-001",
-      description: "Assemble Product X23",
-      status: "Not Started",
-      priority: "High",
-      dueDate: "Today, 4:00 PM",
-      quantity: 50,
-      workCenter: "Assembly Line 2",
-    },
-    {
-      id: "PT-002",
-      description: "Quality Check - Batch B789",
-      status: "In Progress",
-      priority: "Medium",
-      dueDate: "Today, 5:30 PM",
-      quantity: 100,
-      workCenter: "QC Station 1",
-    },
-    {
-      id: "PT-003",
-      description: "Prepare Materials for Tomorrow",
-      status: "Not Started",
-      priority: "Low",
-      dueDate: "Today, 6:00 PM",
-      quantity: null,
-      workCenter: "Prep Area",
-    },
-    {
-      id: "PT-004",
-      description: "Pack Finished Goods",
-      status: "In Progress",
-      priority: "High",
-      dueDate: "Today, 3:30 PM",
-      quantity: 75,
-      workCenter: "Packaging Line 1",
-    },
-  ];
+export default async function ProductionTasksPage() {
+  const [tasks, stats] = await Promise.all([getProductionTasks(), getProductionTaskStatistics()]);
+
+  // Group tasks by status
+  const notStarted = tasks.filter((task) => task.status === Status.PENDING);
+  const inProgress = tasks.filter((task) => task.status === Status.IN_PROGRESS);
+  const completed = tasks.filter((task) => task.status === Status.COMPLETED);
+
+  // Get urgent tasks
+  const urgentTasks = tasks.filter((task) => task.priority === "URGENT");
+  
+  // Count active vs inactive tasks
+  const activeTasks = tasks.filter(task => task.isActive === true);
+  const inactiveTasks = tasks.filter(task => task.isActive === false);
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Production Tasks</h2>
         <p className="text-muted-foreground">
-          View and manage your assigned production tasks
+          View and manage all production tasks
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      {inactiveTasks.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="pt-6 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
+            <div>
+              <p className="font-medium text-amber-800">Inactive Production Tasks</p>
+              <p className="text-sm text-amber-700 mt-1">
+                {stats.inactiveTasks || inactiveTasks.length} task(s) are paused or awaiting materials.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Not Started</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <ClipboardList className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2</div>
+            <div className="text-2xl font-bold">{stats.pending}</div>
+            <p className="text-xs text-muted-foreground">
+              {notStarted.length} tasks to start
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <Clock className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2</div>
+            <div className="text-2xl font-bold">{stats.inProgress}</div>
+            <p className="text-xs text-muted-foreground">
+              {inProgress.length} active tasks
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Completed Today
+            </CardTitle>
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
+            <div className="text-2xl font-bold">{stats.completed}</div>
+            <p className="text-xs text-muted-foreground">
+              {completed.length} tasks finished
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Urgent</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.urgentTasks}</div>
+            <p className="text-xs text-muted-foreground">
+              {urgentTasks.length} high priority tasks
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Department Tasks</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TaskActions />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>All Production Tasks (Sample Data)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left border-b">
-                  <th className="pb-3 font-medium">ID</th>
-                  <th className="pb-3 font-medium">Description</th>
-                  <th className="pb-3 font-medium">Status</th>
-                  <th className="pb-3 font-medium">Priority</th>
-                  <th className="pb-3 font-medium">Due</th>
-                  <th className="pb-3 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {productionTasks.map((task) => (
-                  <tr key={task.id} className="border-b">
-                    <td className="py-3">{task.id}</td>
-                    <td className="py-3">
-                      <div>
-                        <p className="font-medium">{task.description}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {task.quantity && `Qty: ${task.quantity}`}{" "}
-                          {task.workCenter && `• ${task.workCenter}`}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="py-3">
-                      <Badge
-                        variant={
-                          task.status === "In Progress"
-                            ? "outline"
-                            : task.status === "Completed"
-                            ? "default"
-                            : "secondary"
-                        }
-                      >
-                        {task.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3">
-                      <Badge
-                        variant={
-                          task.priority === "High"
-                            ? "destructive"
-                            : task.priority === "Medium"
-                            ? "outline"
-                            : "secondary"
-                        }
-                      >
-                        {task.priority}
-                      </Badge>
-                    </td>
-                    <td className="py-3">{task.dueDate}</td>
-                    <td className="py-3">
-                      <div className="flex space-x-2">
-                        {task.status === "Not Started" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 w-8 p-0"
-                          >
-                            <Play className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {task.status === "In Progress" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 w-8 p-0"
-                            >
-                              <Pause className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 w-8 p-0"
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      <Suspense fallback={<div>Loading tasks...</div>}>
+        <TasksList tasks={tasks} />
+      </Suspense>
     </div>
   );
 }
+ 
