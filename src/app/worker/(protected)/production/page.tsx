@@ -15,6 +15,9 @@ import {
 import { getMyTasks, getTaskStatistics } from "@/lib/actions/worker/tasks";
 import { WorkerProductionTasks } from "@/components/module/worker/production-tasks";
 
+// Force dynamic rendering since this page uses authentication
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: "Production Tasks",
   description: "View and manage production tasks",

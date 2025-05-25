@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, CheckCircle, AlertTriangle, ClipboardList, AlertCircle } from "lucide-react";
 import { Status } from "@prisma/client";
 
+// Force dynamic rendering since this page uses authentication
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: "My Tasks",
   description: "View and manage your assigned tasks",

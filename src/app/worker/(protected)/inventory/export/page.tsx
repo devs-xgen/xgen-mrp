@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import { ExportTrigger } from "@/components/module/worker/inventory/ExportTrigger";
 
+// Force dynamic rendering since this page uses authentication
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: "Exporting Inventory Data",
   description: "Exporting inventory data as CSV",

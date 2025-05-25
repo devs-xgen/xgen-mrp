@@ -109,14 +109,6 @@ export async function consumeMaterialForProduction(
       return { success: false, error: 'Material not found' }
     }
 
-    // Check if there's sufficient material stock
-    if (material.currentStock < data.actualQuantity) {
-      return { 
-        success: false, 
-        error: `Insufficient material stock. Available: ${material.currentStock}, Required: ${data.actualQuantity}` 
-      }
-    }
-
     // Find the material reservation for this production order
     const reservation = await prisma.materialReservation.findFirst({
       where: {
@@ -151,7 +143,7 @@ export async function consumeMaterialForProduction(
     // Calculate costs
     const totalCost = totalQuantityUsed * data.unitCost
     
-    // Start transaction to record consumption
+    // Start transaction to record consumption (no stock deduction since already deducted during reservation)
     const result = await prisma.$transaction(async (tx) => {
       // Create material consumption record
       const consumption = await tx.productionMaterialConsumption.create({
@@ -184,16 +176,7 @@ export async function consumeMaterialForProduction(
         }
       })
 
-      // Update material stock
-      const newStock = material.currentStock - totalQuantityUsed
-      await tx.material.update({
-        where: { id: data.materialId },
-        data: {
-          currentStock: newStock
-        }
-      })
-
-      // Update material reservation
+      // Update material reservation (no stock changes needed)
       const newReservationStatus = totalConsumedQuantity >= Number(reservation.quantityReserved) 
         ? ReservationStatus.CONSUMED 
         : ReservationStatus.PARTIAL
@@ -208,42 +191,42 @@ export async function consumeMaterialForProduction(
         }
       })
 
-      // Create inventory movement record for material consumption
+      // Create inventory movement record for material consumption tracking (no stock change)
       await tx.inventoryMovement.create({
         data: {
           materialId: data.materialId,
           movementType: MovementType.MATERIAL_CONSUMPTION,
           quantity: totalQuantityUsed,
           previousStock: material.currentStock,
-          newStock: newStock,
+          newStock: material.currentStock, // No stock change - already deducted during reservation
           unitCost: data.unitCost,
           totalValue: totalCost,
           referenceId: data.productionOrderId,
           referenceType: 'ProductionOrder',
           performedBy: session.user.id,
           transactionDate: new Date(),
-          notes: `Material consumed for production. Actual: ${data.actualQuantity}, Waste: ${totalWasteQuantity}`,
+          notes: `Material consumption tracked for production. Actual: ${data.actualQuantity}, Waste: ${totalWasteQuantity}. Stock already deducted during reservation.`,
           batchNumber: data.batchNumber,
           lotNumber: data.lotNumber
         }
       })
 
-      // Create waste inventory movement if there's waste
+      // Create waste inventory movement if there's waste (tracking only)
       if (totalWasteQuantity > 0) {
         await tx.inventoryMovement.create({
           data: {
             materialId: data.materialId,
             movementType: MovementType.MATERIAL_WASTE,
             quantity: totalWasteQuantity,
-            previousStock: newStock + totalWasteQuantity,
-            newStock: newStock,
+            previousStock: material.currentStock,
+            newStock: material.currentStock, // No stock change - waste is part of already deducted material
             unitCost: data.unitCost,
             totalValue: totalWasteQuantity * data.unitCost,
             referenceId: data.productionOrderId,
             referenceType: 'ProductionOrder',
             performedBy: session.user.id,
             transactionDate: new Date(),
-            notes: `Material waste recorded during production. Reason: ${data.notes || 'Production waste'}`,
+            notes: `Material waste tracked during production. Reason: ${data.notes || 'Production waste'}. Stock already deducted during reservation.`,
             batchNumber: data.batchNumber,
             lotNumber: data.lotNumber
           }
@@ -296,7 +279,7 @@ export async function consumeMaterialForProduction(
     return {
       success: true,
       data: result,
-      message: `Successfully recorded material consumption. Used: ${data.actualQuantity}, Waste: ${totalWasteQuantity}, Cost: $${totalCost.toFixed(2)}`
+      message: `Successfully tracked material consumption. Used: ${data.actualQuantity}, Waste: ${totalWasteQuantity}, Cost: $${totalCost.toFixed(2)}`
     }
 
   } catch (error) {
@@ -628,14 +611,7 @@ export async function batchConsumeMaterials(
           }
         })
 
-        // Update material stock
-        const newStock = material.currentStock - totalUsage
-        await tx.material.update({
-          where: { id: consumption.materialId },
-          data: { currentStock: newStock }
-        })
-
-        // Update reservation
+        // Update reservation (no stock changes needed)
         const totalConsumed = Number(reservation.quantityConsumed) + consumption.actualQuantity
         const newReservationStatus = totalConsumed >= Number(reservation.quantityReserved) 
           ? ReservationStatus.CONSUMED 
@@ -651,21 +627,21 @@ export async function batchConsumeMaterials(
           }
         })
 
-        // Create inventory movement
+        // Create inventory movement for tracking (no stock change)
         await tx.inventoryMovement.create({
           data: {
             materialId: consumption.materialId,
             movementType: MovementType.MATERIAL_CONSUMPTION,
             quantity: totalUsage,
             previousStock: material.currentStock,
-            newStock: newStock,
+            newStock: material.currentStock, // No stock change - already deducted during reservation
             unitCost: consumption.unitCost,
             totalValue: totalCost,
             referenceId: productionOrderId,
             referenceType: 'ProductionOrder',
             performedBy: session.user.id,
             transactionDate: new Date(),
-            notes: `Batch material consumption. Actual: ${consumption.actualQuantity}, Waste: ${consumption.wasteQuantity || 0}`,
+            notes: `Batch material consumption tracked. Actual: ${consumption.actualQuantity}, Waste: ${consumption.wasteQuantity || 0}. Stock already deducted during reservation.`,
             batchNumber: consumption.batchNumber,
             lotNumber: consumption.lotNumber
           }
@@ -698,7 +674,7 @@ export async function batchConsumeMaterials(
     return {
       success: true,
       data: results.consumptions,
-      message: `Successfully recorded ${results.consumptions.length} material consumptions. Total cost: $${results.totalCost.toFixed(2)}`
+      message: `Successfully tracked ${results.consumptions.length} material consumptions. Total cost: $${results.totalCost.toFixed(2)}`
     }
 
   } catch (error) {

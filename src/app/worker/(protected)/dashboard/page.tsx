@@ -18,6 +18,9 @@ import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { FullscreenButton } from "@/components/ui/fullscreen-button";
 
+// Force dynamic rendering since this page uses authentication
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: "Worker Dashboard",
   description: "Your work overview and daily tasks",
