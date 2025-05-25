@@ -5,7 +5,9 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Status } from "@prisma/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EnhancedTaskCard } from "./EnhancedTaskCard";
 import { TaskCard } from "./TaskCard";
+
 
 interface TasksListProps {
   tasks: InspectorsTask[];
@@ -159,7 +161,8 @@ export function TasksList({ tasks }: TasksListProps) {
                     </p>
                   </div>
                   {filteredTasks.map((task) => (
-                    <TaskCard key={task.id} task={task} />
+                    // <TaskCard key={task.id} task={task} />
+                    <EnhancedTaskCard key={task.id} task={task} />
                   ))}
                 </>
               )}

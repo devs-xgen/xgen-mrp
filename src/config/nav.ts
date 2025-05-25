@@ -242,9 +242,9 @@ export const inspectorNavItems: NavItem[] = [
   },
   {
     icon: ClipboardList, //check
-    label: 'Task List',
-    href: '/inspector/tasks',
-    description: 'View and manage your assigned tasks'
+    label: 'Request materials',
+    href: '/inspector/request',
+    description: 'View and report assigned tasks'
   },
   {
     icon: Factory,

@@ -1,8 +1,10 @@
 import { Metadata } from "next";
+import Link from "next/link";
 import { getMyTasks, getTaskStatistics } from "@/lib/actions/inspector/tasks";
 import { TasksList } from "@/components/module/inspectors/tasks";
 import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Clock, CheckCircle, AlertTriangle, ClipboardList, AlertCircle } from "lucide-react";
 import { Status } from "@prisma/client";
 
@@ -28,11 +30,19 @@ export default async function TasksPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">My Tasks</h2>
-        <p className="text-muted-foreground">
-          View and manage your assigned production tasks
-        </p>
+      {/* Add the button here */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">My Tasks</h2>
+          <p className="text-muted-foreground">
+            View and manage your assigned production tasks
+          </p>
+        </div>
+        <Link href="/inspector/report-issue">
+          <Button variant="default">
+            Report Inventory Issue
+          </Button>
+        </Link>
       </div>
 
       {inactiveTasks.length > 0 && (

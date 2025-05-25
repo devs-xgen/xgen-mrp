@@ -1162,3 +1162,9 @@ export async function generateMaterialRequestPdf({
     filename: `material-request-${new Date().toISOString().split('T')[0]}.pdf`
   };
 } 
+
+export async function getInventoryItems() {
+  return await prisma.inventoryItem.findMany({
+    select: { id: true, name: true }
+  });
+}
