@@ -535,8 +535,9 @@ export function ProductionOrderDetails({
   }
 
   return (
-    <div className="space-y-8">
-      <Card className="overflow-hidden border-2 shadow-sm">
+    <div className="space-y-6">
+      {/* Main Production Order Header Card */}
+      <Card className="overflow-hidden border shadow-sm">
         <CardHeader className="bg-muted/20 pb-4">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
@@ -578,195 +579,217 @@ export function ProductionOrderDetails({
         </CardHeader>
         <Separator />
         <CardContent className="pt-6">
+          {/* Information Grid - Simple Card Containers */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-4 bg-muted/10 rounded-lg">
-              <h3 className="font-medium text-primary mb-2 text-sm flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4 text-primary" />
-                  Timeline
-                </span>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 rounded-full p-0"
-                    >
-                      <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                      <span className="sr-only">View Calendar</span>
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                      <DialogTitle>Production Timeline</DialogTitle>
-                    </DialogHeader>
-                    <div className="py-4">
-                      <div className="mb-4">
-                        <div className="text-sm text-muted-foreground mb-1">Production Duration</div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                            <span className="font-medium">Start: {formatDate(order.startDate)}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 rounded-full bg-red-500"></div>
-                            <span className="font-medium">Due: {formatDate(order.dueDate)}</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="border rounded-md p-4 bg-muted/10">
-                        <CalendarView startDate={order.startDate} dueDate={order.dueDate} />
-                      </div>
-                      
-                      <div className="mt-4 space-y-3">
-                        <div className="flex flex-wrap gap-x-4 gap-y-2">
-                          <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                            <span className="text-xs">Start date</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 rounded-full bg-red-500"></div>
-                            <span className="text-xs">Due date</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 rounded-full bg-blue-500"></div>
-                            <span className="text-xs">Today</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 rounded-full bg-amber-100"></div>
-                            <span className="text-xs">Production period</span>
+            {/* Timeline Card */}
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-primary flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Timeline
+                  </span>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 rounded-full p-0"
+                      >
+                        <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                        <span className="sr-only">View Calendar</span>
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>Production Timeline</DialogTitle>
+                      </DialogHeader>
+                      <div className="py-4">
+                        <div className="mb-4">
+                          <div className="text-sm text-muted-foreground mb-1">Production Duration</div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                              <span className="font-medium">Start: {formatDate(order.startDate)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="h-3 w-3 rounded-full bg-red-500"></div>
+                              <span className="font-medium">Due: {formatDate(order.dueDate)}</span>
+                            </div>
                           </div>
                         </div>
+                        
+                        <div className="border rounded-md p-4 bg-muted/10">
+                          <CalendarView startDate={order.startDate} dueDate={order.dueDate} />
+                        </div>
+                        
+                        <div className="mt-4 space-y-3">
+                          <div className="flex flex-wrap gap-x-4 gap-y-2">
+                            <div className="flex items-center gap-2">
+                              <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                              <span className="text-xs">Start date</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="h-3 w-3 rounded-full bg-red-500"></div>
+                              <span className="text-xs">Due date</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="h-3 w-3 rounded-full bg-blue-500"></div>
+                              <span className="text-xs">Today</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="h-3 w-3 rounded-full bg-amber-100"></div>
+                              <span className="text-xs">Production period</span>
+                            </div>
+                          </div>
 
-                        <div className="text-xs text-muted-foreground">
-                          <div>Total production time: {calculateDuration(order.startDate, order.dueDate)}</div>
-                          {(() => {
-                            // Calculate month difference inline
-                            const start = new Date(order.startDate);
-                            const due = new Date(order.dueDate);
-                            const monthDiff = (due.getFullYear() - start.getFullYear()) * 12 + 
-                                             (due.getMonth() - start.getMonth()) + 1;
-                            
-                            return monthDiff > 1 ? (
-                              <div className="mt-1 text-xs font-medium">
-                                Use the month navigation to view different months in the production timeline.
-                              </div>
-                            ) : null;
-                          })()}
+                          <div className="text-xs text-muted-foreground">
+                            <div>Total production time: {calculateDuration(order.startDate, order.dueDate)}</div>
+                            {(() => {
+                              // Calculate month difference inline
+                              const start = new Date(order.startDate);
+                              const due = new Date(order.dueDate);
+                              const monthDiff = (due.getFullYear() - start.getFullYear()) * 12 + 
+                                               (due.getMonth() - start.getMonth()) + 1;
+                              
+                              return monthDiff > 1 ? (
+                                <div className="mt-1 text-xs font-medium">
+                                  Use the month navigation to view different months in the production timeline.
+                                </div>
+                              ) : null;
+                            })()}
+                          </div>
                         </div>
                       </div>
+                    </DialogContent>
+                  </Dialog>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <CalendarClock className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-semibold">Start:</span>{" "}
+                    {formatDate(order.startDate)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CalendarClock className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-semibold">Due:</span>{" "}
+                    {formatDate(order.dueDate)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Order Information Card */}
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-primary">
+                  Order Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {order.customerOrder ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-semibold">Order Details:</span>
+                      Customer Order
                     </div>
-                  </DialogContent>
-                </Dialog>
-              </h3>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <CalendarClock className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-semibold">Start:</span>{" "}
-                  {formatDate(order.startDate)}
-                </div>
-                <div className="flex items-center gap-2">
-                  <CalendarClock className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-semibold">Due:</span>{" "}
-                  {formatDate(order.dueDate)}
-                </div>
-              </div>
-            </div>
-            <div className="p-4 bg-muted/10 rounded-lg">
-              <h3 className="font-medium text-primary mb-2 text-sm">
-                Order Information
-              </h3>
-              {order.customerOrder ? (
-                <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-semibold">Order #:</span>
+                      {order.customerOrder.orderNumber}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="text-muted-foreground flex items-center">
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      No customer order linked
+                    </div>
+                    <LinkCustomerOrderDialog
+                      productionOrderId={order.id}
+                      onRefresh={refreshOperations}
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Status Information Card */}
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-primary">
+                  Status Info
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-semibold">Order Details:</span>
-                    Customer Order
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-semibold">Created:</span>
+                    {formatDate(order.createdAt)}
                   </div>
                   <div className="flex items-center gap-2">
-                    <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-semibold">Order #:</span>
-                    {order.customerOrder.orderNumber}
+                    <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-semibold">Updated:</span>
+                    {formatDate(order.updatedAt)}
                   </div>
                 </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <div className="text-muted-foreground flex items-center">
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                    No customer order linked
-                  </div>
-                  <LinkCustomerOrderDialog
-                    productionOrderId={order.id}
-                    onRefresh={refreshOperations}
-                  />
-                </div>
-              )}
-            </div>
-            <div className="p-4 bg-muted/10 rounded-lg">
-              <h3 className="font-medium text-primary mb-2 text-sm">
-                Status Info
-              </h3>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-semibold">Created:</span>
-                  {formatDate(order.createdAt)}
-                </div>
-                <div className="flex items-center gap-2">
-                  <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-semibold">Updated:</span>
-                  {formatDate(order.updatedAt)}
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* BOM/Material Requirements Section */}
           <div className="mt-8">
-            <div className="flex items-center mb-3">
-              <PackageOpen className="h-5 w-5 mr-2 text-muted-foreground" />
-              <h3 className="font-medium text-lg">Material Requirements (BOM)</h3>
-            </div>
-            <div className="bg-muted/10 p-4 rounded-lg">
-              {order.bom && order.bom.entries && order.bom.entries.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="px-3 py-2 text-left font-semibold">Material Name</th>
-                        <th className="px-3 py-2 text-left font-semibold">SKU</th>
-                        <th className="px-3 py-2 text-right font-semibold">Required Qty</th>
-                        <th className="px-3 py-2 text-left font-semibold">Unit</th>
-                        <th className="px-3 py-2 text-right font-semibold">Cost/Unit</th>
-                        <th className="px-3 py-2 text-right font-semibold">Total Cost</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {order.bom.entries.map((entry: any) => (
-                        <tr key={entry.id} className="border-b last:border-0 hover:bg-muted/20">
-                          <td className="px-3 py-2">{entry.materialName}</td>
-                          <td className="px-3 py-2">{entry.materialSku}</td>
-                          <td className="px-3 py-2 text-right">{entry.quantityNeeded}</td>
-                          <td className="px-3 py-2">{entry.unitOfMeasure}</td>
-                          <td className="px-3 py-2 text-right">{formatCurrencyPHP(entry.costPerUnit)}</td>
-                          <td className="px-3 py-2 text-right">{formatCurrencyPHP(entry.totalCost)}</td>
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-medium flex items-center gap-2">
+                  <PackageOpen className="h-5 w-5 text-muted-foreground" />
+                  Material Requirements (BOM)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {order.bom && order.bom.entries && order.bom.entries.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="px-3 py-2 text-left font-semibold">Material Name</th>
+                          <th className="px-3 py-2 text-left font-semibold">SKU</th>
+                          <th className="px-3 py-2 text-right font-semibold">Required Qty</th>
+                          <th className="px-3 py-2 text-left font-semibold">Unit</th>
+                          <th className="px-3 py-2 text-right font-semibold">Cost/Unit</th>
+                          <th className="px-3 py-2 text-right font-semibold">Total Cost</th>
                         </tr>
-                      ))}
-                      <tr className="font-semibold bg-muted/30">
-                        <td className="px-3 py-2" colSpan={5}>Total Material Cost</td>
-                        <td className="px-3 py-2 text-right">{formatCurrencyPHP(order.bom.totalMaterialCost)}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-muted-foreground italic p-4 flex items-center justify-center">
-                  <PackageX className="h-5 w-5 mr-2" />
-                  No bill of materials defined for this product.
-                </div>
-              )}
-            </div>
+                      </thead>
+                      <tbody>
+                        {order.bom.entries.map((entry: any) => (
+                          <tr key={entry.id} className="border-b last:border-0 hover:bg-muted/20">
+                            <td className="px-3 py-2">{entry.materialName}</td>
+                            <td className="px-3 py-2">{entry.materialSku}</td>
+                            <td className="px-3 py-2 text-right">{entry.quantityNeeded}</td>
+                            <td className="px-3 py-2">{entry.unitOfMeasure}</td>
+                            <td className="px-3 py-2 text-right">{formatCurrencyPHP(entry.costPerUnit)}</td>
+                            <td className="px-3 py-2 text-right">{formatCurrencyPHP(entry.totalCost)}</td>
+                          </tr>
+                        ))}
+                        <tr className="font-semibold bg-muted/30">
+                          <td className="px-3 py-2" colSpan={5}>Total Material Cost</td>
+                          <td className="px-3 py-2 text-right">{formatCurrencyPHP(order.bom.totalMaterialCost)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground italic p-4 flex items-center justify-center">
+                    <PackageX className="h-5 w-5 mr-2" />
+                    No bill of materials defined for this product.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Production Control Buttons */}
@@ -781,12 +804,18 @@ export function ProductionOrderDetails({
           </div>
 
           {order.notes && (
-            <div className="mt-6 p-4 bg-muted/10 rounded-lg">
-              <h3 className="font-medium text-primary mb-2 text-sm flex items-center">
-                <StickyNote className="h-4 w-4 mr-2" />
-                Notes
-              </h3>
-              <p className="text-sm whitespace-pre-wrap">{order.notes}</p>
+            <div className="mt-6">
+              <Card className="border shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-primary flex items-center gap-2">
+                    <StickyNote className="h-4 w-4" />
+                    Notes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm whitespace-pre-wrap">{order.notes}</p>
+                </CardContent>
+              </Card>
             </div>
           )}
         </CardContent>
