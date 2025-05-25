@@ -505,72 +505,31 @@ export async function updateProductionOrderStatus(
     const session = await getServerSession(authOptions)
     if (!session?.user) throw new Error('Unauthorized')
 
-    // Get current status and order details before update
+    // Get current production order
     const currentOrder = await prisma.productionOrder.findUnique({
       where: { id: productionOrderId },
-      include: { product: true }
+      include: {
+        product: true
+      }
     })
-    if (!currentOrder) throw new Error('Production order not found')
-    const oldStatus = currentOrder.status
 
-    // Handle material release if production is being cancelled
+    if (!currentOrder) {
+      throw new Error('Production order not found')
+    }
+
+    const oldStatus = currentOrder.status
+    const productionQty = currentOrder.quantity
+
+    // If cancelling production, release material reservations
     if (status === 'CANCELLED' && oldStatus !== 'CANCELLED') {
       const releaseResult = await releaseMaterialReservations(
         productionOrderId, 
-        notes || 'Production order cancelled'
+        'Production order cancelled'
       )
       
-      if (releaseResult.success) {
-        console.log(`Released material reservations for cancelled production order ${productionOrderId}: ${releaseResult.message}`)
-      } else {
-        console.warn(`Failed to release material reservations for cancelled production order ${productionOrderId}: ${releaseResult.error}`)
+      if (!releaseResult.success) {
+        console.error('Failed to release material reservations:', releaseResult.error)
         // Continue with status update even if release fails
-      }
-    }
-
-    // Fetch BOM/materials for the product
-    const bom = await getBOMForProduct(currentOrder.productId)
-    const productionQty = currentOrder.quantity
-
-    // If starting or progressing production, check and deduct materials
-    if (status === 'IN_PROGRESS' && oldStatus !== 'IN_PROGRESS') {
-      // Block if no BOM/material requirements
-      if (!bom.entries || bom.entries.length === 0) {
-        throw new Error('Cannot start production: No Bill of Materials (BOM) is defined for this product.');
-      }
-      // Check all materials
-      for (const entry of bom.entries) {
-        const requiredQty = Number(entry.quantityNeeded) * productionQty
-        const material = await getMaterialById(entry.materialId)
-        if (!material) throw new Error(`Material not found: ${entry.materialName}`)
-        if (material.currentStock < requiredQty) {
-          throw new Error(`Insufficient stock for material: ${entry.materialName}`)
-        }
-      }
-      // Deduct materials
-      for (const entry of bom.entries) {
-        const requiredQty = Number(entry.quantityNeeded) * productionQty
-        const material = await getMaterialById(entry.materialId)
-        if (!material) throw new Error(`Material not found: ${entry.materialName}`)
-        await updateMaterial({
-          id: entry.materialId,
-          currentStock: material.currentStock - requiredQty
-        })
-        // Log material deduction
-        if (prisma.activityLog) {
-          await prisma.activityLog.create({
-            data: {
-              type: 'MATERIAL_STOCK_DEDUCT',
-              userId: session.user.id,
-              details: {
-                materialId: entry.materialId,
-                materialName: entry.materialName,
-                change: -requiredQty,
-                reason: `Production order ${productionOrderId} started`
-              }
-            }
-          })
-        }
       }
     }
 

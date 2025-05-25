@@ -186,7 +186,7 @@ export async function reserveMaterialsForProduction(
       }
     }
 
-    // Start transaction to reserve materials
+    // Start transaction to reserve and deduct materials
     const result = await prisma.$transaction(async (tx) => {
       const reservations = []
       
@@ -200,44 +200,48 @@ export async function reserveMaterialsForProduction(
             status: ReservationStatus.RESERVED,
             reservedAt: new Date(),
             createdBy: session.user.id,
-            notes: `Automatic reservation for production order ${productionOrderId}`
+            notes: `Material reserved and deducted for production order ${productionOrderId}`
           }
         })
 
-        // Update material committed stock
-        await tx.material.update({
-          where: { id: material.materialId },
-          data: {
-            committedStock: {
-              increment: material.quantityNeeded
-            },
-            availableStock: {
-              decrement: material.quantityNeeded
-            }
-          }
-        })
-
-        // Create inventory movement record
+        // Get current material data
         const currentMaterial = await tx.material.findUnique({
           where: { id: material.materialId }
         })
 
-        if (currentMaterial) {
-          await tx.inventoryMovement.create({
-            data: {
-              materialId: material.materialId,
-              movementType: MovementType.MATERIAL_RESERVATION,
-              quantity: material.quantityNeeded,
-              previousStock: currentMaterial.currentStock,
-              newStock: currentMaterial.currentStock, // Stock level doesn't change, just committed
-              referenceId: productionOrderId,
-              referenceType: 'ProductionOrder',
-              performedBy: session.user.id,
-              transactionDate: new Date(),
-              notes: `Material reserved for production order ${productionOrderId}`
-            }
-          })
+        if (!currentMaterial) {
+          throw new Error(`Material not found: ${material.materialId}`)
         }
+
+        // Actually deduct materials from current stock (not just commit)
+        const newCurrentStock = currentMaterial.currentStock - material.quantityNeeded
+        const newAvailableStock = newCurrentStock - currentMaterial.committedStock
+
+        await tx.material.update({
+          where: { id: material.materialId },
+          data: {
+            currentStock: newCurrentStock,
+            availableStock: newAvailableStock
+          }
+        })
+
+        // Create inventory movement record for material deduction
+        await tx.inventoryMovement.create({
+          data: {
+            materialId: material.materialId,
+            movementType: MovementType.MATERIAL_RESERVATION,
+            quantity: material.quantityNeeded,
+            previousStock: currentMaterial.currentStock,
+            newStock: newCurrentStock,
+            unitCost: material.unitCost,
+            totalValue: material.totalCost,
+            referenceId: productionOrderId,
+            referenceType: 'ProductionOrder',
+            performedBy: session.user.id,
+            transactionDate: new Date(),
+            notes: `Material deducted for production order ${productionOrderId}`
+          }
+        })
 
         reservations.push(reservation)
       }
@@ -260,7 +264,7 @@ export async function reserveMaterialsForProduction(
     return {
       success: true,
       data: result,
-      message: `Successfully reserved materials for production order. Total cost: $${requirements.totalMaterialCost.toFixed(2)}`
+      message: `Successfully reserved and deducted materials for production order. Total cost: $${requirements.totalMaterialCost.toFixed(2)}`
     }
 
   } catch (error) {
@@ -327,40 +331,42 @@ export async function releaseMaterialReservations(
             }
           })
 
-          // Update material committed stock
-          await tx.material.update({
-            where: { id: reservation.materialId },
-            data: {
-              committedStock: {
-                decrement: quantityToRelease
-              },
-              availableStock: {
-                increment: quantityToRelease
-              }
-            }
-          })
-
-          // Create inventory movement record
+          // Get current material data
           const currentMaterial = await tx.material.findUnique({
             where: { id: reservation.materialId }
           })
 
-          if (currentMaterial) {
-            await tx.inventoryMovement.create({
-              data: {
-                materialId: reservation.materialId,
-                movementType: MovementType.MATERIAL_RETURN,
-                quantity: quantityToRelease,
-                previousStock: currentMaterial.currentStock,
-                newStock: currentMaterial.currentStock, // Stock level doesn't change, just committed
-                referenceId: productionOrderId,
-                referenceType: 'ProductionOrder',
-                performedBy: session.user.id,
-                transactionDate: new Date(),
-                notes: `Material reservation released: ${reason || 'Production cancelled'}`
-              }
-            })
+          if (!currentMaterial) {
+            throw new Error(`Material not found: ${reservation.materialId}`)
           }
+
+          // Return materials to current stock
+          const newCurrentStock = currentMaterial.currentStock + quantityToRelease
+          const newAvailableStock = newCurrentStock - currentMaterial.committedStock
+
+          await tx.material.update({
+            where: { id: reservation.materialId },
+            data: {
+              currentStock: newCurrentStock,
+              availableStock: newAvailableStock
+            }
+          })
+
+          // Create inventory movement record for material return
+          await tx.inventoryMovement.create({
+            data: {
+              materialId: reservation.materialId,
+              movementType: MovementType.MATERIAL_RETURN,
+              quantity: quantityToRelease,
+              previousStock: currentMaterial.currentStock,
+              newStock: newCurrentStock,
+              referenceId: productionOrderId,
+              referenceType: 'ProductionOrder',
+              performedBy: session.user.id,
+              transactionDate: new Date(),
+              notes: `Material returned to stock: ${reason || 'Production cancelled'}`
+            }
+          })
 
           releasedReservations.push(updatedReservation)
         }
@@ -375,7 +381,7 @@ export async function releaseMaterialReservations(
     return {
       success: true,
       data: result,
-      message: `Successfully released ${result.length} material reservations`
+      message: `Successfully returned ${result.length} materials to stock`
     }
 
   } catch (error) {
