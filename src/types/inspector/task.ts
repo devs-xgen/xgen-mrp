@@ -19,39 +19,47 @@ export interface Task {
 
 
 export interface InspectorsTask {
+  id: string;
+  title?: string;
+  description?: string;
+  startDate?: Date;
+  dueDate: Date;
+  status?: string;
+  priority: TaskPriority;
+
+  assignedToInspector?: {
+    inspectorId: string;
+    firstName: string;
+    lastName: string;
+  };
+
+  notes?: string | null;
+  productionOrderId?: string;
+  productionOrder?: {
     id: string;
-    title?: string;              // Short title or summary of the task
-    description?: string;       // Optional detailed description
-    startDate?: Date;           // Optional planned start date
-    dueDate: Date;              // Deadline for task completion
-    status: string;             // Current status (consider using an enum or union type)
-    priority: TaskPriority;     // Task priority level
-  
-    assignedToInspector?: {     // Optional inspector assignment info
-      inspectorId: string;
-      firstName: string;
-      lastName: string;
+    product?: {
+      id: string;
+      name: string;
     };
-  
-    notes?: string | null;      // Optional additional notes
-    productionOrderId?: string; // Optional related production order ID
-    workCenterId?: string;      // Optional work center identifier
-    workCenterName?: string;    // Optional work center name
-  
-    quantity?: number;          // Optional quantity involved
-    completedQuantity?: number; // Optional quantity completed
-    estimatedDuration?: number; // Optional estimated duration in minutes
-  
-    timeTracking?: {            // Optional time tracking info
-      isActive: boolean;
-      startTime?: Date;
-      duration?: number;        // Duration tracked in minutes
-    };
-  
-    productionStatus?: string;  // Optional status of the parent production order
-    isActive?: boolean;         // Whether the task is currently active or paused/pending
+    status: Status;
+  };
+  workCenterId?: string;
+  workCenterName?: string;
+
+  quantity?: number;
+  completedQuantity?: number;
+  estimatedDuration?: number;
+
+  timeTracking?: {
+    isActive: boolean;
+    startTime?: Date;
+    duration?: number;
+  };
+
+  productionStatus?: string;
+  isActive?: boolean;
 }
-  
+
 
 
   export interface TaskUpdateInput {

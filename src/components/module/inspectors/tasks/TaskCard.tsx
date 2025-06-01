@@ -49,6 +49,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import Link from "next/link";
 
 interface TaskCardProps {
   task: InspectorsTask;
@@ -222,7 +223,18 @@ export function TaskCard({ task }: TaskCardProps) {
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
-            <h3 className="font-medium">{task.description}</h3>
+            <h3 className="font-medium">
+              {/* Make product name clickable if productionOrder exists */}
+              {task.productionOrder?.id ? (
+                <Link href={`/inspector/production-orders/${task.productionOrder.id}`}>
+                  <a className="text-blue-600 hover:underline">
+                    {task.productionOrder?.product?.name || "No Product"}
+                  </a>
+                </Link>
+              ) : (
+                task.description
+              )}
+            </h3>
             <div className="flex items-center gap-2 mt-1">
               <Badge variant={getStatusBadgeVariant(task.status)}>
                 {task.status}
