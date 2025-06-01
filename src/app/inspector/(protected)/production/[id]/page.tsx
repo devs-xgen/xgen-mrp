@@ -1,141 +1,138 @@
+// src/app/admin/(protected)/production/[id]/page.tsx
+import { ArrowLeft } from "lucide-react";
 import { Metadata } from "next";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { TaskUpdateForm } from "@/components/module/inspectors/task-update-form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Task Details",
-  description: "View and update task details",
-};
+import { ProductionOrderDetails } from "@/components/module/admin/production/production-order-details";
+import { ProductionQRGenerator } from "@/components/module/admin/production/production-qr-generator";
+import { Button } from "@/components/ui/button";
+import { getDeliveryUsers, getDeliveryAssignment } from "@/lib/actions/delivery/delivery-assignment";
+import { getActiveInspectors } from "@/lib/actions/inspector";
+import { getProductionOrder, getAvailableWorkCenters } from "@/lib/actions/production-order";
 
-interface TaskDetailsPageProps {
+interface ProductionOrderPageProps {
   params: {
     id: string;
   };
 }
 
-export default async function TaskDetailsPage({
+export async function generateMetadata({
   params,
-}: TaskDetailsPageProps) {
-  const session = await getServerSession(authOptions);
+}: ProductionOrderPageProps): Promise<Metadata> {
+  const order = await getProductionOrder(params.id);
+  if (!order) return { title: "Production Order Not Found" };
 
-  if (!session?.user) {
-    redirect("/inspector/login");
+  return {
+    title: `Production Order - ${order.product.name}`,
+    description: `Details for production order of ${order.quantity} units of ${order.product.name}`,
+  };
+}
+
+export default async function ProductionOrderPage({
+  params,
+}: ProductionOrderPageProps) {
+  const [orderData, workCenters, deliveryUsers, deliveryAssignment] =
+    await Promise.all([
+      getProductionOrder(params.id),
+      getAvailableWorkCenters(),
+      getDeliveryUsers(),
+      getDeliveryAssignment(params.id),
+    ]);
+
+  if (!orderData) notFound();
+
+  // Remove debug logs
+  console.log(
+    "Original quality checks data:",
+    JSON.stringify(orderData.qualityChecks, null, 2)
+  );
+
+  const allInspectors = await getActiveInspectors(); // fetch once
+  const inspectorsMap = new Map();
+
+  for (const inspector of allInspectors) {
+    inspectorsMap.set(inspector.inspectorId, `${inspector.firstName} ${inspector.lastName}`);
   }
 
-  const task = await prisma.operation.findFirst({
-    where: {
-      id: params.id,
-      assignedToId: session.user.id,
-    },
-    include: {
+  // Transform the qualityChecks to include all required properties
+  const order = {
+    ...orderData,
+    qualityChecks: orderData.qualityChecks.map((check) => ({
+      id: check.id,
+      productionOrderId: check.productionOrderId,
+      inspectorId: check.inspectorId,
+      inspectorName: inspectorsMap.get(check.inspectorId) || "Unknown",
+      checkDate: check.checkDate.toISOString(),
+      status: check.status,
+      defectsFound: check.defectsFound,
+      actionTaken: check.actionTaken,
+      notes: check.notes,
+      createdAt: check.createdAt,
+      updatedAt: check.updatedAt,
       productionOrder: {
-        include: {
-          product: true,
+        product: {
+          name: orderData.product.name,
+          sku: orderData.product.sku,
         },
       },
-    },
-  });
-
-  if (!task) {
-    redirect("/inspector/dashboard");
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "PENDING":
-        return <Badge variant="outline">Pending</Badge>;
-      case "IN_PROGRESS":
-        return <Badge variant="secondary">In Progress</Badge>;
-      case "COMPLETED":
-        return <Badge variant="success">Completed</Badge>;
-      case "CANCELLED":
-        return <Badge variant="destructive">Cancelled</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+    })),
+    deliveryAssignment: deliveryAssignment,
   };
 
   return (
-    <div className="container mx-auto py-6">
-      <h1 className="text-3xl font-bold mb-6">Task Details</h1>
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center">
+          <Link href="/admin/production" className="mr-4">
+            <Button variant="ghost" size="sm" className="h-9 w-9 rounded-full p-0 mr-2">
+              <ArrowLeft className="h-5 w-5" />
+              <span className="sr-only">Back</span>
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {order.product.name}
+            </h1>
+            <p className="text-muted-foreground">
+              Production Order #{order.id.substring(0, 8)}
+            </p>
+          </div>
+        </div>
+        
+        <ProductionQRGenerator
+          order={{
+            id: orderData.id,
+            product: {
+              name: orderData.product.name,
+              sku: orderData.product.sku,
+            },
+            quantity: orderData.quantity,
+            startDate: orderData.startDate,
+            dueDate: orderData.dueDate,
+            status: orderData.status,
+            priority: orderData.priority,
+            delivery: {
+              address: deliveryAssignment?.deliveryAddress || "Not Assigned",
+              contactName: deliveryAssignment?.userName || "Not Assigned",
+              contactPhone: "Not Assigned",
+              estimatedDelivery: deliveryAssignment?.scheduledDate || new Date(),
+              instructions: deliveryAssignment?.notes || "Not Assigned"
+            },
+            assignments: {
+              qualityInspector: order.qualityChecks?.[0]?.inspectorName || "Not Assigned",
+              logisticsCoordinator: deliveryAssignment?.userName || "Not Assigned"
+            }
+          }}
+        />
+      </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Task Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h3 className="font-medium">Status</h3>
-              <div className="mt-1">{getStatusBadge(task.status)}</div>
-            </div>
-
-            <div>
-              <h3 className="font-medium">Product</h3>
-              <div className="mt-1">
-                {task.productionOrder?.product.name || "N/A"}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-medium">Production Order</h3>
-              <div className="mt-1">{task.productionOrder?.id || "N/A"}</div>
-            </div>
-
-            <div>
-              <h3 className="font-medium">Start Time</h3>
-              <div className="mt-1">
-                {task.startTime
-                  ? format(new Date(task.startTime), "PPP p")
-                  : "Not started"}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-medium">End Time</h3>
-              <div className="mt-1">
-                {task.endTime
-                  ? format(new Date(task.endTime), "PPP p")
-                  : "Not completed"}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-medium">Notes</h3>
-              <div className="mt-1">{task.notes || "No notes"}</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Update Task</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TaskUpdateForm
-              task={{
-                id: task.id,
-                notes: task.notes,
-                status: task.status,
-                startTime: task.startTime,
-                endTime: task.endTime,
-                productionOrder: task.productionOrder
-                  ? {
-                      id: task.productionOrder.id,
-                      status: task.productionOrder.status,
-                    }
-                  : null,
-              }}
-              inspectorId={session.user.id}
-            />
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-6">
+        <ProductionOrderDetails
+          order={order as any}
+          workCenters={workCenters}
+          deliveryUsers={deliveryUsers}
+        />
       </div>
     </div>
   );
