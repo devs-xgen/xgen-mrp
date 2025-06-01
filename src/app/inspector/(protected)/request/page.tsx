@@ -16,6 +16,7 @@ import {
   LucideClipboardList,
   LucideTimerOff,
 } from "lucide-react";
+import { prisma } from "@/lib/db"; // Ensure you have access to Prisma instance
 
 export const metadata: Metadata = {
   title: "Production Orders",
@@ -29,8 +30,22 @@ export default async function ProductionOrdersPage() {
     getAvailableWorkCenters(),
   ]);
 
-  // Transform orders data for the table
-  const tableData = orders.map((order) => ({
+  // Extend with material request info
+  const ordersWithMaterialFlags = await Promise.all(
+    orders.map(async (order) => {
+      const hasMaterialRequest = await prisma.materialRequest.count({
+        where: { productionOrderId: order.id },
+      });
+
+      return {
+        ...order,
+        hasMaterialRequest: hasMaterialRequest > 0,
+      };
+    })
+  );
+
+  // Transform data for table
+  const tableData = ordersWithMaterialFlags.map((order) => ({
     id: order.id,
     productName: order.product.name,
     productSku: order.product.sku,
@@ -47,43 +62,38 @@ export default async function ProductionOrdersPage() {
       return acc;
     }, 0),
     lastUpdated: order.updatedAt,
-    
-    // MRP Enhancement Fields
     plannedMaterialCost: Number(order.plannedMaterialCost),
     actualMaterialCost: Number(order.actualMaterialCost),
     materialVariance: Number(order.materialVariance),
     completedQuantity: order.completedQuantity,
+    hasMaterialRequest: order.hasMaterialRequest,
   }));
 
-  // Calculate statistics
   const totalOrders = orders.length;
 
-  // Use type-safe string comparisons
   const statusCounts = {
     COMPLETED: 0,
     IN_PROGRESS: 0,
     PENDING: 0,
   };
 
-  // Count the different statuses
   orders.forEach((order) => {
     if (order.status in statusCounts) {
       statusCounts[order.status as keyof typeof statusCounts]++;
     }
   });
 
-  // Calculate overdue orders
   const overdueOrders = orders.filter((order) => {
     return order.status !== "COMPLETED" && new Date(order.dueDate) < new Date();
   }).length;
+
+  const withMaterialRequestCount = ordersWithMaterialFlags.filter((o) => o.hasMaterialRequest).length;
 
   return (
     <div className="flex flex-col gap-6 p-8">
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">
-            Request Material 
-          </h2>
+          <h2 className="text-3xl font-bold tracking-tight">Request Material</h2>
           <p className="text-muted-foreground">
             Manage and track production orders across your manufacturing process and also the request item it need
           </p>
@@ -97,9 +107,7 @@ export default async function ProductionOrdersPage() {
           <CardContent className="flex items-center py-6">
             <LucideClipboardList className="w-8 h-8 mr-4 text-blue-500" />
             <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Total Orders
-              </p>
+              <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
               <h3 className="text-2xl font-bold">{totalOrders}</h3>
             </div>
           </CardContent>
@@ -108,12 +116,8 @@ export default async function ProductionOrdersPage() {
           <CardContent className="flex items-center py-6">
             <LucideCheckCircle className="w-8 h-8 mr-4 text-green-500" />
             <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Completed
-              </p>
-              <h3 className="text-2xl font-bold">
-                {statusCounts["COMPLETED"]}
-              </h3>
+              <p className="text-sm font-medium text-muted-foreground">Completed</p>
+              <h3 className="text-2xl font-bold">{statusCounts["COMPLETED"]}</h3>
             </div>
           </CardContent>
         </Card>
@@ -121,12 +125,8 @@ export default async function ProductionOrdersPage() {
           <CardContent className="flex items-center py-6">
             <LucideAlertCircle className="w-8 h-8 mr-4 text-amber-500" />
             <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                In Progress
-              </p>
-              <h3 className="text-2xl font-bold">
-                {statusCounts["IN_PROGRESS"]}
-              </h3>
+              <p className="text-sm font-medium text-muted-foreground">In Progress</p>
+              <h3 className="text-2xl font-bold">{statusCounts["IN_PROGRESS"]}</h3>
             </div>
           </CardContent>
         </Card>
@@ -134,9 +134,7 @@ export default async function ProductionOrdersPage() {
           <CardContent className="flex items-center py-6">
             <LucideTimerOff className="w-8 h-8 mr-4 text-red-500" />
             <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Overdue
-              </p>
+              <p className="text-sm font-medium text-muted-foreground">Overdue</p>
               <h3 className="text-2xl font-bold">{overdueOrders}</h3>
             </div>
           </CardContent>
@@ -148,10 +146,7 @@ export default async function ProductionOrdersPage() {
         <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
           All ({totalOrders})
         </Badge>
-        <Badge
-          variant="secondary"
-          className="cursor-pointer hover:bg-secondary"
-        >
+        <Badge variant="secondary" className="cursor-pointer hover:bg-secondary">
           In Progress ({statusCounts["IN_PROGRESS"]})
         </Badge>
         <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
@@ -160,11 +155,11 @@ export default async function ProductionOrdersPage() {
         <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
           Completed ({statusCounts["COMPLETED"]})
         </Badge>
-        <Badge
-          variant="destructive"
-          className="cursor-pointer hover:bg-destructive/90"
-        >
+        <Badge variant="destructive" className="cursor-pointer hover:bg-destructive/90">
           Overdue ({overdueOrders})
+        </Badge>
+        <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
+          With Materials ({withMaterialRequestCount})
         </Badge>
       </div>
 

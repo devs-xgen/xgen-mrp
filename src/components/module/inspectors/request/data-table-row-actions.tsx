@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast"
 import { updateProductionOrder } from "@/lib/actions/production-order"
 import { ProductionOrderColumn } from "@/types/inspector/production-order"
 import { ProductionOrderActionDialog } from "./production-order-action-dialog"
+import { RequestMaterialDialog } from "./request-material-dialog"
 
 
 interface DataTableRowActionsProps {
@@ -30,11 +31,12 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
+
 
   const handleView = () => {
     router.push(`/inspector/request/${row.original.id}`)
   }
-
   return (
     <>
       <DropdownMenu>
@@ -59,6 +61,15 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
             <PlayCircle className="mr-2 h-4 w-4" />
             Manage
           </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={isLoading}
+            onClick={() => {
+              setMaterialDialogOpen(true)
+            }}
+          >
+            <CheckCircle className="mr-2 h-4 w-4" />
+            Request Material
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <ProductionOrderActionDialog
@@ -66,6 +77,11 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
         onOpenChange={setDialogOpen}
         productionOrderId={row.original.id}
         onSuccess={onSuccess}
+      />
+      <RequestMaterialDialog
+        open={materialDialogOpen} // ✅ boolean state value
+        onOpenChange={setMaterialDialogOpen} // ✅ function to update state
+        productionOrderId={row.original.id}
       />
     </>
   )
