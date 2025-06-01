@@ -1,4 +1,4 @@
-// src/types/admin/production-order.ts
+// src/types/inspector/production-order.ts
 import { Status, Priority } from "@prisma/client"
 
 export interface MaterialRequestItem {
@@ -162,4 +162,49 @@ export interface UpdateDeliveryAssignmentInput {
   status?: Status
   scheduledDate?: Date
   notes?: string
+}
+
+export interface ProductionOrderColumnPerRequest {
+  id: string;
+  productName: string;
+  productSku: string;
+  quantity: number;
+  startDate: Date;
+  dueDate: Date;
+  status: Status;
+  priority: Priority;
+  customerOrderNumber?: string;
+  progress: number; // Calculated from operations
+  lastUpdated: Date;
+
+  // MRP Enhancement Fields
+  plannedMaterialCost: number;
+  actualMaterialCost: number;
+  materialVariance: number;
+  completedQuantity: number;
+
+  // ✅ New: Associated material requests
+  materialRequests?: {
+    id: string;
+    requestDate: Date;
+    requiredDate: Date;
+    status: string;
+    priority: string;
+    notes?: string;
+
+    items: {
+      id: string;
+      inventoryItemId: string;
+      quantityRequested: number;
+      unit: string;
+      status: string;
+      notes?: string;
+
+      // ✅ Embedded inventory item name for display
+      inventoryItem: {
+        id: string;
+        name: string;
+      };
+    }[];
+  }[];
 }
