@@ -24,6 +24,7 @@ This directory contains the essential documentation for the XGen MRP system, org
 - **`Material_Deduction_Fix_Implementation.md`** - Documentation of the material deduction fix
 - **`Next_JS_Dynamic_Server_Fix.md`** - Next.js dynamic server usage fix documentation
 - **`MRP_Material_Tracking_Implementation.md`** - Detailed MRP system implementation guide
+- **`ProductionBOM_Implementation_Guide.md`** - 🆕 Production-specific BOM working copy system
 
 ### **Feature-Specific Guides**
 - **`QR_Scanner_Testing_Guide.md`** - QR code scanning functionality testing and implementation

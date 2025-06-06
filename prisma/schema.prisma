@@ -192,20 +192,54 @@ model Material {
   consumptions       ProductionMaterialConsumption[]
   inventoryMovements InventoryMovement[]
   costVariances      CostVariance[]
+  ProductionBOM      ProductionBOM[]
 }
 
 model BOM {
-  id              String   @id @default(cuid())
+  id              String          @id @default(cuid())
   productId       String
   materialId      String
-  quantityNeeded  Decimal  @db.Decimal(10, 3)
-  wastePercentage Decimal  @db.Decimal(5, 2)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  quantityNeeded  Decimal         @db.Decimal(10, 3)
+  wastePercentage Decimal         @db.Decimal(5, 2)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
   createdBy       String?
   modifiedBy      String?
-  material        Material @relation(fields: [materialId], references: [id])
-  product         Product  @relation(fields: [productId], references: [id])
+  material        Material        @relation(fields: [materialId], references: [id])
+  product         Product         @relation(fields: [productId], references: [id])
+  ProductionBOM   ProductionBOM[]
+
+  @@index([productId])
+  @@index([materialId])
+}
+
+// Production-specific BOM (Working Copy)
+model ProductionBOM {
+  id                String   @id @default(cuid())
+  productionOrderId String
+  materialId        String
+  originalBOMId     String? // Reference to the original BOM entry
+  quantityNeeded    Decimal  @db.Decimal(10, 3)
+  wastePercentage   Decimal  @db.Decimal(5, 2)
+  adjustedQuantity  Decimal? @db.Decimal(10, 3) // Adjusted quantity for this production
+  adjustmentReason  String? // Reason for quantity adjustment
+  isAdjusted        Boolean  @default(false) // Flag to track if quantity was modified
+  unitCost          Decimal  @db.Decimal(10, 4) // Cost at time of production
+  totalCost         Decimal  @db.Decimal(12, 2) // Calculated total cost
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  createdBy         String?
+  modifiedBy        String?
+
+  // Relations
+  productionOrder ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
+  material        Material        @relation(fields: [materialId], references: [id])
+  originalBOM     BOM?            @relation(fields: [originalBOMId], references: [id])
+
+  @@unique([productionOrderId, materialId])
+  @@index([productionOrderId])
+  @@index([materialId])
+  @@index([isAdjusted])
 }
 
 model ProductionOrder {
@@ -245,6 +279,7 @@ model ProductionOrder {
   materialConsumptions ProductionMaterialConsumption[]
   productionBatches    ProductionBatch[]
   costVariances        CostVariance[]
+  ProductionBOM        ProductionBOM[]
 }
 
 model WorkCenter {
