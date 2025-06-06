@@ -12,6 +12,7 @@ This directory contains the essential documentation for the XGen MRP system, org
 ### **System Architecture & Development**
 - **`System_Architecture_Code_Guide.md`** - Complete system architecture, codebase structure, patterns, and development guidelines
 - **`Development_Guidelines.md`** - Coding standards, best practices, and development workflows
+- **`UI_UX_Design_Guide.md`** - 🆕 Component patterns, styling standards, and user experience guidelines
 - **`README.md`** - This overview file
 
 ### **Role-Based Feature Trackers**
@@ -108,4 +109,153 @@ When updating documentation:
 3. **Create specific implementation guides** for major technical changes
 4. **Keep this README current** with any organizational changes
 
-This streamlined documentation structure provides comprehensive coverage while eliminating redundancy and confusion. 
+This streamlined documentation structure provides comprehensive coverage while eliminating redundancy and confusion.
+
+## Recent Updates
+
+### Customer Orders Production Navigation (Latest)
+**Feature:** Enhanced customer order management with production order navigation
+- **New Dialog Component**: `ProductionOrdersDialog` shows all production orders for a customer order
+- **Navigation Integration**: Click any production order to redirect to `/admin/production/[id]`
+- **Visual Enhancements**: Progress bars, status badges, and production details
+- **Smart Filtering**: Button disabled when no production orders exist
+- **Responsive Design**: Mobile-friendly with proper scrolling
+
+**Files Modified:**
+- `src/components/module/admin/customer-orders/production-orders-dialog.tsx` (NEW)
+- `src/components/module/admin/customer-orders/data-table-row-actions.tsx`
+- `src/lib/actions/production-order.ts` (added `getProductionOrdersByCustomerOrder`)
+
+### Customer Order Sheet Redesign
+**Feature:** Complete redesign of customer order view drawer
+- **Removed Edit Functionality**: Now view-only for better data integrity
+- **Enhanced Layout**: Card-based design with proper scrolling
+- **Mobile Responsive**: Optimized for all screen sizes
+- **Visual Improvements**: Icons, badges, and better information hierarchy
+
+### Database & Type Enhancements
+**Feature:** Enhanced customer order system with production tracking
+- **Enhanced Types**: `CustomerOrderColumn` with production order counts
+- **Database Relations**: Proper cascade delete for customer orders
+- **Action Improvements**: Better data fetching with production order relationships
+
+## Enhanced Production Order Management
+
+### **UI/UX Design Enhancement** ✨
+
+The production order page has been enhanced to follow the established UI/UX design guidelines:
+
+#### **Improved Page Layout**
+- **Enhanced Statistics Cards**: Color-coded information display with key metrics:
+  - Total Orders count
+  - Completed orders tracking  
+  - In Progress orders monitoring
+  - Overdue orders alerting
+- **Quick Filters**: Status-based filter badges for easy navigation
+- **Responsive Design**: Optimized for desktop, tablet, and mobile devices
+
+#### **Production Order Management Features**
+- **Comprehensive View**: Navigate to detailed production order view
+- **Status Management**: Update production order status and progress
+- **Delete Functionality**: Secure deletion with enhanced confirmation dialog
+
+#### **Enhanced Delete Production Order Workflow** 🗑️
+1. **Access**: Click the actions menu (⋮) on any production order row
+2. **Delete Option**: Select "Delete" from the dropdown menu
+3. **Business Rules**: Only pending or cancelled orders can be deleted
+4. **Enhanced Confirmation Dialog**: Multi-step confirmation process:
+   - **Order Summary**: Display complete order details with status badge
+   - **Impact Warning**: Detailed list of what will be permanently deleted
+   - **Text Confirmation**: User must type "DELETE" to enable deletion
+   - **Visual Feedback**: Clear indicators and error states
+   - **Final Warning**: Prominent "cannot be undone" messaging
+5. **Secure Deletion**: 
+   - Disabled until proper confirmation is provided
+   - Loading states during API calls
+   - **Toast Notifications**: Clear success/error messages with 4-second display
+   - Comprehensive error handling with recovery options
+   - **Page Refresh**: Automatic page reload to reflect changes
+
+#### **Toast Notification System** 🔔
+- **Success Messages**: ✅ Confirmation when operations complete successfully
+- **Error Handling**: ❌ Clear error messages with specific details
+- **Auto-dismiss**: Toasts automatically disappear after 4 seconds
+- **Multiple Toasts**: Support for up to 3 concurrent notifications
+- **Consistent Design**: Following UI/UX guidelines across all components
+
+#### **Enhanced User Experience**
+- **Visual Hierarchy**: Clear status indicators and progress tracking
+- **Responsive Design**: Optimized for desktop, tablet, and mobile
+- **Loading States**: Proper loading indicators during operations
+- **Error Handling**: Comprehensive error messaging and recovery options
+- **Business Rule Enforcement**: Smart deletion controls based on order status
+
+### **Technical Implementation**
+
+#### **Server-Side Architecture** 🏗️
+- **Static Generation**: Server-side data fetching for optimal performance
+- **Prisma Integration**: Direct database queries with proper relationships
+- **Error Boundaries**: Graceful error handling with fallback states
+- **Type Safety**: Full TypeScript integration throughout
+
+#### **Enhanced Row Actions**
+- **Consistent Design**: Following UI/UX guidelines for dropdown menus
+- **Smart Controls**: Context-aware action availability
+- **Confirmation Patterns**: Standard alert dialog implementation
+- **Status Validation**: Business rule enforcement for deletions
+- **Toast Integration**: Immediate feedback for all operations
+
+#### **Production Page Structure**
+```tsx
+// Production Page Architecture
+- Header Section (Title + Create Button)
+- Statistics Dashboard (4 main metric cards)
+- Quick Filters (Status-based badges)
+- Data Table (Enhanced with row actions)
+- Toast Notifications (Success/Error feedback)
+```
+
+#### **Delete Functionality Flow**
+```tsx
+// Delete Process Implementation
+1. Business Rule Check (canDelete)
+2. Enhanced Confirmation Dialog (AlertDialog)
+3. Text Input Validation ("DELETE")
+4. API Call (deleteProductionOrder)
+5. Toast Notification (Success/Error)
+6. Page Refresh (window.location.reload)
+```
+
+#### **Toast System Configuration**
+```tsx
+// Toast Settings
+- TOAST_LIMIT: 3 (concurrent notifications)
+- TOAST_REMOVE_DELAY: 4000ms (auto-dismiss time)
+- Position: Bottom-right corner
+- Variants: Default, Success, Error/Destructive
+```
+
+#### **Design Compliance**
+- **Color System**: Status-based color coding throughout
+- **Typography**: Consistent heading and text hierarchy
+- **Spacing**: Standard gap and padding patterns following design guide
+- **Icons**: Consistent Lucide React icon usage
+- **Responsive**: Mobile-first responsive design principles
+- **Accessibility**: Proper ARIA labels and keyboard navigation
+
+## Getting Started
+1. Read the [Development Guidelines](./Development_Guidelines.md) for coding standards
+2. Check [UI/UX Design Guide](./UI_UX_Design_Guide.md) for component patterns
+3. Review role-specific features for your development focus
+4. Follow implementation guides for specific features
+
+## System Overview
+The XGen MRP system provides comprehensive manufacturing resource planning capabilities including:
+- **Customer Order Management** with production planning integration
+- **Production Order Tracking** with material requirements
+- **Material Resource Planning** with intelligent reservation system
+- **Quality Control Workflows** with inspection management
+- **Inventory Management** with real-time tracking
+- **Multi-Role Access Control** for different user types
+
+All features are designed with mobile-first responsive design and follow consistent UI/UX patterns for optimal user experience. 

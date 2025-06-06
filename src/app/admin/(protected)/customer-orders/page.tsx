@@ -1,180 +1,68 @@
-"use client";
-
-// src/app/admin/(protected)/customer-orders/page.tsx
-import { DataTable } from "@/components/module/admin/customer-orders/data-table";
-import { columns } from "@/components/module/admin/customer-orders/columns";
-import { CreateCustomerOrderDialog } from "@/components/module/admin/customer-orders/create-dialog";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Metadata } from "next";
 import { getCustomerOrders } from "@/lib/actions/customer-order";
-import { getProductsForOrders } from "@/lib/actions/product";
 import { getAllCustomers } from "@/lib/actions/customers";
-import { getWorkCenters } from "@/lib/actions/work-center";
-import { InventoryCheck } from "@/components/module/admin/customer-orders/inventory-check";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useEffect, useState } from "react";
-import { createProductionOrder } from "@/lib/actions/production-order";
-import { Priority, Status } from "@prisma/client";
-import { CustomerOrder } from "@/types/admin/customer-order";
-import { ProductForOrder } from "@/types/admin/product";
-import { Loader2 } from "lucide-react";
+import { getProductsForOrders } from "@/lib/actions/product";
+import { columns } from "@/components/module/admin/customer-orders/columns";
+import { DataTable } from "@/components/module/admin/customer-orders/data-table";
+import { CreateCustomerOrderDialog } from "@/components/module/admin/customer-orders/create-dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { AnalyticsCard, analyticsCardVariants } from "@/components/ui/analytics-card";
+import { formatCurrencyPHP } from "@/lib/constant";
+import { CustomerOrderColumn } from "@/types/admin/customer-order";
 
-// Define types for customers and work centers
-interface Customer {
-  id: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  address?: string | null;
-}
+export const metadata: Metadata = {
+  title: "Customer Orders",
+  description: "Manage customer orders and production planning",
+};
 
-interface WorkCenter {
-  id: string;
-  name: string;
-  status: Status;
-  efficiencyRate: number;
-  capacityPerHour: number;
-  operatingHours: number;
-  description?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  createdBy?: string | null;
-  modifiedBy?: string | null;
-}
+export default async function CustomerOrdersPage() {
+  const [customerOrders, customers, products] = await Promise.all([
+    getCustomerOrders(),
+    getAllCustomers(),
+    getProductsForOrders(),
+  ]);
 
-interface ProductNeeded {
-  product: {
-    id: string;
-    name: string;
-    sku?: string;
-    currentStock: number;
-    minimumStockLevel: number;
-    leadTime?: number;
-  };
-  requiredQuantity: number;
-  reason: string;
-}
-
-export default function CustomerOrdersPage() {
-  const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>([]);
-  const [productsForOrders, setProductsForOrders] = useState<ProductForOrder[]>(
-    []
-  );
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [workCenters, setWorkCenters] = useState<WorkCenter[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [ordersData, productsData, customersData, workCentersData] =
-          await Promise.all([
-            getCustomerOrders(),
-            getProductsForOrders(),
-            getAllCustomers(),
-            getWorkCenters(),
-          ]);
-
-        setCustomerOrders(ordersData);
-        setProductsForOrders(productsData);
-        setCustomers(customersData);
-
-        // Convert Decimal to number in work centers data
-        const formattedWorkCenters = workCentersData.map((wc) => ({
-          ...wc,
-          efficiencyRate: Number(wc.efficiencyRate),
-        }));
-        setWorkCenters(formattedWorkCenters);
-      } catch (error) {
-        console.error("Error loading data:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadData();
-  }, []);
-
-  // Convert the products to include stock information with realistic demo values
-  const productsWithStock = productsForOrders.map((product, index) => ({
-    ...product,
-    // Generate some demo stock values for the demo (in real app these would come from DB)
-    currentStock: 10 + (index % 5) * 5,
-    minimumStockLevel: 5 + (index % 3) * 2,
-    sku: `SKU-${product.id?.substring(0, 5) || index}`,
+  // Transform orders data for the table
+  const tableData: CustomerOrderColumn[] = customerOrders.map((order) => ({
+    id: order.id,
+    orderNumber: order.orderNumber,
+    customerName: order.customer.name,
+    customerEmail: order.customer.email || null,
+    orderDate: order.orderDate,
+    requiredDate: order.requiredDate,
+    status: order.status,
+    totalAmount: order.totalAmount,
+    itemCount: order.orderLines.length,
+    totalQuantity: order.orderLines.reduce((sum, line) => sum + line.quantity, 0),
+    productionOrderCount: order._count?.productionOrders || 0,
+    notes: order.notes || null,
+    lastUpdated: new Date(), // Using current date for now, will fix when schema is updated
   }));
 
-  const handleCreateProductionOrders = async (
-    productsNeeded: ProductNeeded[]
-  ) => {
-    try {
-      // Implementation for creating production orders from client component
-      console.log("Creating production orders for:", productsNeeded);
+  // Calculate statistics
+  const totalOrders = customerOrders.length;
+  const totalRevenue = customerOrders.reduce((sum, order) => sum + order.totalAmount, 0);
 
-      // Example implementation for creating production orders
-      if (!workCenters.length) {
-        console.error("No work centers available");
-        return;
-      }
-
-      const defaultWorkCenter = workCenters[0];
-
-      for (const item of productsNeeded) {
-        const startDate = new Date();
-        const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + 14); // Due in two weeks
-
-        try {
-          const result = await createProductionOrder({
-            productId: item.product.id,
-            quantity: item.requiredQuantity,
-            startDate,
-            dueDate,
-            priority: Priority.HIGH,
-            notes: `Created from inventory check - Reason: ${item.reason}`,
-            operations: [
-              {
-                workCenterId: defaultWorkCenter.id,
-                startTime: startDate,
-                endTime: dueDate,
-                cost: 0, // Default cost
-              },
-            ],
-          });
-
-          console.log("Created production order:", result);
-        } catch (error) {
-          console.error(
-            `Failed to create production order for ${item.product.name}:`,
-            error
-          );
-        }
-      }
-    } catch (error) {
-      console.error("Error creating production orders:", error);
-    }
+  // Count statuses
+  const statusCounts = {
+    COMPLETED: 0,
+    IN_PROGRESS: 0,
+    PENDING: 0,
+    CANCELLED: 0,
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-[calc(100vh-80px)] w-full items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <h3 className="text-lg font-medium text-muted-foreground">
-            Loading customer orders...
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Please wait while we fetch your data
-          </p>
-        </div>
-      </div>
-    );
-  }
+  customerOrders.forEach((order) => {
+    if (order.status in statusCounts) {
+      statusCounts[order.status as keyof typeof statusCounts]++;
+    }
+  });
+
+  // Calculate orders requiring production
+  const ordersNeedingProduction = customerOrders.filter((order) => {
+    return order.status !== "COMPLETED" && order.status !== "CANCELLED" && 
+           (!order._count?.productionOrders || order._count.productionOrders === 0);
+  }).length;
 
   return (
     <div className="flex flex-col gap-6 p-8">
@@ -182,46 +70,76 @@ export default function CustomerOrdersPage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Customer Orders</h2>
           <p className="text-muted-foreground">
-            Manage and track all customer orders
+            Manage customer orders and production planning
           </p>
         </div>
-        <CreateCustomerOrderDialog
-          products={productsForOrders}
-          customers={customers}
-          workCenters={workCenters}
+        <CreateCustomerOrderDialog 
+          customers={customers} 
+          products={products} 
         />
       </div>
 
-      <Tabs defaultValue="orders" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="orders">Orders</TabsTrigger>
-          <TabsTrigger value="inventory">Inventory Planning</TabsTrigger>
-        </TabsList>
+      {/* Customer Order Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <AnalyticsCard
+          title="Total Orders"
+          value={totalOrders}
+          icon="ShoppingCart"
+          {...analyticsCardVariants.blue}
+        />
+        <AnalyticsCard
+          title="Completed"
+          value={statusCounts["COMPLETED"]}
+          icon="CheckCircle"
+          {...analyticsCardVariants.green}
+        />
+        <AnalyticsCard
+          title="Revenue"
+          value={formatCurrencyPHP(totalRevenue)}
+          icon="Package"
+          {...analyticsCardVariants.amber}
+        />
+        <AnalyticsCard
+          title="Need Production"
+          value={ordersNeedingProduction}
+          icon="AlertTriangle"
+          {...analyticsCardVariants.red}
+        />
+      </div>
 
-        <TabsContent value="orders">
-          <Card>
-            <CardHeader>
-              <CardTitle>All Customer Orders</CardTitle>
-              <CardDescription>
-                A list of all customer orders and their current status
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DataTable columns={columns} data={customerOrders} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+      {/* Quick Filters */}
+      <div className="flex flex-wrap gap-2 my-2">
+        <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
+          All ({totalOrders})
+        </Badge>
+        <Badge
+          variant="secondary"
+          className="cursor-pointer hover:bg-secondary"
+        >
+          In Progress ({statusCounts["IN_PROGRESS"]})
+        </Badge>
+        <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
+          Pending ({statusCounts["PENDING"]})
+        </Badge>
+        <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
+          Completed ({statusCounts["COMPLETED"]})
+        </Badge>
+        <Badge
+          variant="destructive"
+          className="cursor-pointer hover:bg-destructive/90"
+        >
+          Need Production ({ordersNeedingProduction})
+        </Badge>
+      </div>
 
-        <TabsContent value="inventory">
-          <div className="grid md:grid-cols-1 gap-6">
-            <InventoryCheck
-              products={productsWithStock}
-              canCreateProduction={workCenters.length > 0}
-              onCreateProductionOrders={handleCreateProductionOrders}
-            />
-          </div>
-        </TabsContent>
-      </Tabs>
+      <Card>
+        <CardHeader>
+          <CardTitle>All Customer Orders</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DataTable columns={columns} data={tableData} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

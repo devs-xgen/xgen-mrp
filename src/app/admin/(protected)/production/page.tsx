@@ -10,12 +10,7 @@ import { DataTable } from "@/components/module/admin/production/data-table";
 import { ProductionOrderDialog } from "@/components/module/admin/production/create-production-order-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  LucideAlertCircle,
-  LucideCheckCircle,
-  LucideClipboardList,
-  LucideTimerOff,
-} from "lucide-react";
+import { AnalyticsCard, analyticsCardVariants } from "@/components/ui/analytics-card";
 
 export const metadata: Metadata = {
   title: "Production Orders",
@@ -93,54 +88,30 @@ export default async function ProductionOrdersPage() {
 
       {/* Production Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="flex items-center py-6">
-            <LucideClipboardList className="w-8 h-8 mr-4 text-blue-500" />
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Total Orders
-              </p>
-              <h3 className="text-2xl font-bold">{totalOrders}</h3>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center py-6">
-            <LucideCheckCircle className="w-8 h-8 mr-4 text-green-500" />
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Completed
-              </p>
-              <h3 className="text-2xl font-bold">
-                {statusCounts["COMPLETED"]}
-              </h3>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center py-6">
-            <LucideAlertCircle className="w-8 h-8 mr-4 text-amber-500" />
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                In Progress
-              </p>
-              <h3 className="text-2xl font-bold">
-                {statusCounts["IN_PROGRESS"]}
-              </h3>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center py-6">
-            <LucideTimerOff className="w-8 h-8 mr-4 text-red-500" />
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Overdue
-              </p>
-              <h3 className="text-2xl font-bold">{overdueOrders}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        <AnalyticsCard
+          title="Total Orders"
+          value={totalOrders}
+          icon="ClipboardList"
+          {...analyticsCardVariants.blue}
+        />
+        <AnalyticsCard
+          title="Completed"
+          value={statusCounts["COMPLETED"]}
+          icon="CheckCircle"
+          {...analyticsCardVariants.green}
+        />
+        <AnalyticsCard
+          title="In Progress"
+          value={statusCounts["IN_PROGRESS"]}
+          icon="AlertTriangle"
+          {...analyticsCardVariants.amber}
+        />
+        <AnalyticsCard
+          title="Overdue"
+          value={overdueOrders}
+          icon="Timer"
+          {...analyticsCardVariants.red}
+        />
       </div>
 
       {/* Quick Filters */}

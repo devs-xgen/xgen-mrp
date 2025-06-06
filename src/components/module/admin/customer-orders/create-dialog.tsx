@@ -5,7 +5,9 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import * as z from "zod";
-import { Plus, X, AlertTriangle, ArrowRight } from "lucide-react";
+import { Plus, X, AlertTriangle, ArrowRight, CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,6 +27,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { createCustomerOrder } from "@/lib/actions/customer-order";
 import { useToast } from "@/hooks/use-toast";
 import { CustomerCombobox } from "./combobox-field";
@@ -52,8 +60,12 @@ const formatCurrency = (amount: number): string => {
 // Define schema for the form
 const formSchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
-  orderDate: z.string().min(1, "Order date is required"),
-  requiredDate: z.string().min(1, "Required date is required"),
+  orderDate: z.date({
+    required_error: "Order date is required",
+  }),
+  requiredDate: z.date({
+    required_error: "Required date is required",
+  }),
   notes: z.string().optional(),
   orderLines: z
     .array(
@@ -104,7 +116,7 @@ export function CreateCustomerOrderDialog({
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      orderDate: new Date().toISOString().split("T")[0], // Set default to today
+      orderDate: new Date(), // Set default to today
       notes: "",
       orderLines: [{ productId: "", quantity: 1, unitPrice: 0 }],
     },
@@ -171,10 +183,10 @@ export function CreateCustomerOrderDialog({
   const submitOrder = async (values: FormValues) => {
     try {
       const result = await createCustomerOrder({
-        ...values,
-        orderDate: new Date(values.orderDate),
-        requiredDate: new Date(values.requiredDate),
-        deliveryDate: undefined,
+        customerId: values.customerId,
+        requiredDate: values.requiredDate,
+        notes: values.notes,
+        orderLines: values.orderLines,
       });
 
       toast({
@@ -214,11 +226,12 @@ export function CreateCustomerOrderDialog({
       setIsSubmitting(true);
 
       // Create the customer order, which now automatically creates production orders for low stock
+      const formValues = form.getValues();
       const orderResult = await createCustomerOrder({
-        ...form.getValues(),
-        orderDate: new Date(form.getValues().orderDate),
-        requiredDate: new Date(form.getValues().requiredDate),
-        deliveryDate: undefined,
+        customerId: formValues.customerId,
+        requiredDate: formValues.requiredDate,
+        notes: formValues.notes,
+        orderLines: formValues.orderLines,
       });
 
       // Show success message
@@ -265,7 +278,7 @@ export function CreateCustomerOrderDialog({
             <Plus className="mr-2 h-4 w-4" /> Create Order
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[800px] h-[600px] overflow-y-auto">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
           <DialogHeader>
             <DialogTitle className="text-xl">Create Customer Order</DialogTitle>
             <DialogDescription>
@@ -273,14 +286,14 @@ export function CreateCustomerOrderDialog({
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
               {/* Order Details Card */}
               <Card className="border border-muted">
                 <CardContent className="pt-6">
                   <h3 className="text-lg font-medium mb-4">
                     Customer Order Details
                   </h3>
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     <FormField
                       control={form.control}
                       name="customerId"
@@ -306,16 +319,45 @@ export function CreateCustomerOrderDialog({
                       )}
                     />
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="orderDate"
                         render={({ field }) => (
-                          <FormItem>
+                          <FormItem className="flex flex-col">
                             <FormLabel>Order Date</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant={"outline"}
+                                  className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={field.onChange}
+                                  disabled={(date) => {
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    return date > today;
+                                  }}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -325,11 +367,40 @@ export function CreateCustomerOrderDialog({
                         control={form.control}
                         name="requiredDate"
                         render={({ field }) => (
-                          <FormItem>
+                          <FormItem className="flex flex-col">
                             <FormLabel>Required Date</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant={"outline"}
+                                  className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={field.onChange}
+                                  disabled={(date) => {
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    return date < today;
+                                  }}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -343,7 +414,7 @@ export function CreateCustomerOrderDialog({
               <Card className="border border-muted">
                 <CardContent className="pt-6">
                   <h3 className="text-lg font-medium mb-4">Order Lines</h3>
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {fields.map((field, index) => (
                       <div
                         key={field.id}
@@ -411,7 +482,7 @@ export function CreateCustomerOrderDialog({
                           )}
                         />
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {/* Quantity */}
                           <FormField
                             control={form.control}
@@ -554,7 +625,7 @@ export function CreateCustomerOrderDialog({
           open={showProductionPrompt}
           onOpenChange={setShowProductionPrompt}
         >
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
             <DialogHeader>
               <DialogTitle className="text-xl">Low Stock Warning</DialogTitle>
               <DialogDescription>
@@ -615,7 +686,7 @@ export function CreateCustomerOrderDialog({
               </ol>
             </div>
 
-            <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-4">
               <Button
                 variant="outline"
                 onClick={() => {

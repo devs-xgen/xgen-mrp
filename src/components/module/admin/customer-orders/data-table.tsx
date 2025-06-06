@@ -25,19 +25,20 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-import { CustomerOrderPagination } from "./data-table-pagination"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { DataTableToolbar } from "./data-table-toolbar"
-import { CustomerOrder } from "@/types/admin/customer-order"
 
-interface DataTableProps {
-  columns: ColumnDef<CustomerOrder>[]
-  data: CustomerOrder[]
+interface DataTableProps<TData, TValue> {
+  columns: ColumnDef<TData, TValue>[]
+  data: TData[]
+  onRefresh?: () => Promise<void>
 }
 
-export function DataTable({
+export function DataTable<TData, TValue>({
   columns,
   data,
-}: DataTableProps) {
+  onRefresh,
+}: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -68,14 +69,14 @@ export function DataTable({
   return (
     <div className="space-y-4">
       <DataTableToolbar table={table} />
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
+      <div className="rounded-md border overflow-hidden">
+        <Table className="border-collapse">
+          <TableHeader className="bg-muted/50">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} colSpan={header.colSpan}>
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -94,6 +95,7 @@ export function DataTable({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  className="transition-colors hover:bg-muted/30"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -118,7 +120,7 @@ export function DataTable({
           </TableBody>
         </Table>
       </div>
-      <CustomerOrderPagination table={table} />
+      <DataTablePagination table={table} />
     </div>
   )
 }

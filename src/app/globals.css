@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import "react-day-picker/dist/style.css";
+
 body {
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -202,4 +204,26 @@ body.light {
   :-moz-full-screen {
     background-color: #020817;
   }
+}
+
+/* Date picker styles to ensure it works in modals */
+[data-radix-popper-content-wrapper] {
+  z-index: 100 !important;
+}
+
+/* Additional styles for calendar in popovers */
+.rdp {
+  margin: 0;
+}
+
+.rdp-caption {
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+}
+
+.rdp-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }

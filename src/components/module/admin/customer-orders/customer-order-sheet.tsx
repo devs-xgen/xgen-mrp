@@ -1,229 +1,227 @@
 // src/components/module/admin/customer-orders/customer-order-sheet.tsx
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetDescription,
-  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { CustomerOrder } from "@/types/admin/customer-order"
-import { Status } from "@prisma/client"
-import { useToast } from "@/hooks/use-toast"
-import { updateCustomerOrder } from "@/lib/actions/customer-order"
-
-const formSchema = z.object({
-  orderDate: z.string(),
-  status: z.string(),
-  notes: z.string().optional(),
-})
+import { CustomerOrderColumn } from "@/types/admin/customer-order"
+import { formatCurrencyPHP } from "@/lib/constant"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { CalendarDays, Package, DollarSign, Factory, User, Mail, Clock } from "lucide-react"
 
 interface CustomerOrderSheetProps {
-  customerOrder: CustomerOrder
+  customerOrder: CustomerOrderColumn
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSuccess?: () => Promise<void>
 }
 
 export function CustomerOrderSheet({ 
     customerOrder, 
     open, 
-    onOpenChange,
-    onSuccess 
+    onOpenChange
   }: CustomerOrderSheetProps) {
-  const [isEditing, setIsEditing] = useState(false)
-  const { toast } = useToast()
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      orderDate: customerOrder.orderDate.toString().split('T')[0],
-      status: customerOrder.status,
-      notes: customerOrder.notes || '',
-    },
-  })
-
-  const { isDirty } = form.formState
-
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    try {
-      await updateCustomerOrder(customerOrder.id, {
-        // orderDate: new Date(values.orderDate),
-        status: values.status as Status,
-        notes: values.notes,
-      })
-
-      toast({
-        title: "Success",
-        description: "Customer order updated successfully",
-      })
-
-      setIsEditing(false)
-      if (onSuccess) await onSuccess()
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update customer order",
-        variant: "destructive",
-      })
-    }
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
   }
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      COMPLETED: { variant: "default" as const, className: "bg-green-500 text-white" },
+      IN_PROGRESS: { variant: "secondary" as const, className: "bg-blue-500 text-white" },
+      PENDING: { variant: "outline" as const, className: "bg-yellow-500 text-white" },
+      CANCELLED: { variant: "destructive" as const, className: "" },
+    }
+    
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.PENDING
+    
+    return (
+      <Badge variant={config.variant} className={config.className}>
+        {status.toLowerCase().replace("_", " ")}
+      </Badge>
+    )
+  }
+
+  const isOverdue = new Date(customerOrder.requiredDate) < new Date() && customerOrder.status !== "COMPLETED"
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-[600px]">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <SheetHeader>
-              <SheetTitle>Customer Order {customerOrder.orderNumber}</SheetTitle>
-              <SheetDescription>
-                View and manage customer order details
-              </SheetDescription>
-            </SheetHeader>
+      <SheetContent className="w-full sm:max-w-[540px] lg:max-w-[720px] overflow-hidden flex flex-col">
+        <SheetHeader className="flex-shrink-0 pb-4">
+          <SheetTitle className="text-xl">Order {customerOrder.orderNumber}</SheetTitle>
+          <SheetDescription>
+            Customer order details and information
+          </SheetDescription>
+        </SheetHeader>
 
-            <div className="grid gap-6 py-4">
-              {/* Customer Information */}
-              <div className="grid gap-2">
-                <h3 className="text-lg font-medium">Customer Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Name</label>
-                    <p className="text-sm text-muted-foreground">
-                      {customerOrder.customer.name}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Email</label>
-                    <p className="text-sm text-muted-foreground">
-                      {customerOrder.customer.email}
-                    </p>
-                  </div>
-                </div>
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+          <div className="space-y-6">
+            {/* Status and Key Info */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                {getStatusBadge(customerOrder.status)}
+                {isOverdue && (
+                  <Badge variant="destructive">
+                    Overdue
+                  </Badge>
+                )}
               </div>
-
-              {/* Order Details */}
-              <div className="grid gap-4">
-                <h3 className="text-lg font-medium">Order Details</h3>
-
-                {/* Order Date */}
-                <FormField
-                  control={form.control}
-                  name="orderDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Order Date</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="date" 
-                          {...field} 
-                          disabled={!isEditing}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Status */}
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select
-                        disabled={!isEditing}
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Object.values(Status).map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {status}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Notes */}
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          disabled={!isEditing}
-                          placeholder="Add notes..."
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <div className="text-right">
+                <p className="text-2xl font-bold">
+                  {formatCurrencyPHP(customerOrder.totalAmount)}
+                </p>
+                <p className="text-sm text-muted-foreground">Total Amount</p>
               </div>
             </div>
 
-            <SheetFooter>
-              {isEditing ? (
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      form.reset()
-                      setIsEditing(false)
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={!isDirty}>
-                    Save changes
-                  </Button>
-                </>
-              ) : (
-                <Button type="button" onClick={() => setIsEditing(true)}>
-                  Edit
-                </Button>
-              )}
-            </SheetFooter>
-          </form>
-        </Form>
+            <Separator />
+
+            {/* Customer Information */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Customer Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Customer Name</label>
+                    <p className="text-base font-medium">{customerOrder.customerName}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Email</label>
+                    <p className="text-base flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      {customerOrder.customerEmail || "No email provided"}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Order Summary */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Order Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Order Items</label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Package className="h-4 w-4" />
+                        <span className="text-base font-medium">
+                          {customerOrder.itemCount} items
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          ({customerOrder.totalQuantity} units)
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Production Status</label>
+                      <div className="mt-1">
+                        {customerOrder.productionOrderCount > 0 ? (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                            <Factory className="h-3 w-3 mr-1" />
+                            {customerOrder.productionOrderCount} production orders
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">
+                            <Factory className="h-3 w-3 mr-1" />
+                            No production orders
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Order Date</label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <CalendarDays className="h-4 w-4" />
+                        <span className="text-base">{formatDate(customerOrder.orderDate)}</span>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Due Date</label>
+                      <div className={`flex items-center gap-2 mt-1 ${isOverdue ? 'text-destructive' : ''}`}>
+                        <Clock className="h-4 w-4" />
+                        <span className="text-base">{formatDate(customerOrder.requiredDate)}</span>
+                        {isOverdue && <span className="text-xs">(Overdue)</span>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Financial Information */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Financial Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <p className="text-2xl font-bold">{formatCurrencyPHP(customerOrder.totalAmount)}</p>
+                    <p className="text-sm text-muted-foreground">Total Amount</p>
+                  </div>
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <p className="text-2xl font-bold">{customerOrder.itemCount}</p>
+                    <p className="text-sm text-muted-foreground">Line Items</p>
+                  </div>
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <p className="text-2xl font-bold">{customerOrder.totalQuantity}</p>
+                    <p className="text-sm text-muted-foreground">Total Units</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Additional Information */}
+            {customerOrder.notes && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Order Notes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                    {customerOrder.notes}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Last Updated */}
+            <div className="text-center text-xs text-muted-foreground pb-4">
+              Last updated: {formatDate(customerOrder.lastUpdated)}
+            </div>
+          </div>
+        </div>
       </SheetContent>
     </Sheet>
   )

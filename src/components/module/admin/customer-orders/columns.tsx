@@ -1,107 +1,126 @@
 // src/components/module/admin/customer-orders/columns.tsx
 "use client"
 
-import { ColumnDef, Row } from "@tanstack/react-table"
-import { CustomerOrder } from "@/types/admin/customer-order"
+import { ColumnDef } from "@tanstack/react-table"
+import { CustomerOrderColumn } from "@/types/admin/customer-order"
 import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
-import { CustomerOrderColumnHeader } from "./data-table-column-header"
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header"
 import { DataTableRowActions } from "./data-table-row-actions"
 import { formatDate } from "@/lib/utils"
-import { Status } from "@prisma/client"
-import { Decimal } from "@prisma/client/runtime/library"
+import { formatCurrencyPHP } from "@/lib/constant"
 
-export const columns: ColumnDef<CustomerOrder>[] = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={table.getIsAllPageRowsSelected()}
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
+export const columns: ColumnDef<CustomerOrderColumn>[] = [
   {
     accessorKey: "orderNumber",
     header: ({ column }) => (
-      <CustomerOrderColumnHeader column={column} title="Order Number" />
-    ),
-    cell: ({ row }) => (
-      <div className="font-medium">{row.getValue("orderNumber")}</div>
-    ),
-  },
-  {
-    accessorKey: "customer",
-    header: ({ column }) => (
-      <CustomerOrderColumnHeader column={column} title="Customer" />
+      <DataTableColumnHeader column={column} title="Order #" />
     ),
     cell: ({ row }) => {
-      const customer = row.original.customer
       return (
-        <div className="flex flex-col">
-          <span className="font-medium">{customer.name}</span>
+        <div>
+          <div className="font-medium">{row.getValue("orderNumber")}</div>
+          <div className="text-xs text-muted-foreground">
+            {formatDate(row.original.orderDate)}
+          </div>
         </div>
       )
     },
   },
   {
-    accessorKey: "orderDate",
+    accessorKey: "customerName",
     header: ({ column }) => (
-      <CustomerOrderColumnHeader column={column} title="Order Date" />
+      <DataTableColumnHeader column={column} title="Customer" />
     ),
-    cell: ({ row }) => (
-      <div>{formatDate(row.getValue("orderDate"))}</div>
-    ),
+    cell: ({ row }) => {
+      return (
+        <div>
+          <div className="font-medium">{row.getValue("customerName")}</div>
+          <div className="text-xs text-muted-foreground">
+            {row.original.customerEmail || "No email"}
+          </div>
+        </div>
+      )
+    },
   },
   {
-    accessorKey: "requiredDate",
+    accessorKey: "itemCount",
     header: ({ column }) => (
-      <CustomerOrderColumnHeader column={column} title="Required Date" />
+      <DataTableColumnHeader column={column} title="Items" />
     ),
-    cell: ({ row }) => (
-      <div>{formatDate(row.getValue("requiredDate"))}</div>
+    cell: ({ row }) => {
+      return (
+        <div>
+          <div className="font-medium">{row.getValue("itemCount")} items</div>
+          <div className="text-xs text-muted-foreground">
+            {row.original.totalQuantity} units
+          </div>
+        </div>
+      )
+    },
+  },
+  {
+    accessorKey: "productionOrderCount",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Production" />
     ),
+    cell: ({ row }) => {
+      const count = row.getValue("productionOrderCount") as number
+      return (
+        <div>
+          {count > 0 ? (
+            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+              {count} orders
+            </Badge>
+          ) : (
+            <Badge variant="outline">No production</Badge>
+          )}
+        </div>
+      )
+    },
   },
   {
     accessorKey: "totalAmount",
     header: ({ column }) => (
-      <CustomerOrderColumnHeader column={column} title="Total Amount" />
+      <DataTableColumnHeader column={column} title="Amount" />
     ),
     cell: ({ row }) => {
       const amount = row.getValue("totalAmount") as number
-      const formatted = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "PHP",
-      }).format(amount)
-      return <div className="font-medium">{formatted}</div>
+      return (
+        <div className="font-medium">
+          {formatCurrencyPHP(amount)}
+        </div>
+      )
     },
   },
-  // {
-  //   accessorKey: "unitPrice",
-  //   header: "Unit Price",
-  //   cell: ({ row }) => <span>{formatCurrency(row.original.unitPrice)}</span>
-  // },
   {
     accessorKey: "status",
     header: ({ column }) => (
-      <CustomerOrderColumnHeader column={column} title="Status" />
+      <DataTableColumnHeader column={column} title="Status" />
     ),
     cell: ({ row }) => {
-      const status = row.getValue("status") as Status
-
+      const status = row.getValue("status") as string
       return (
-        <Badge variant={getStatusColor(status)}>
-          {status.toLowerCase()}
+        <Badge
+          variant={
+            status === "COMPLETED"
+              ? "default"
+              : status === "IN_PROGRESS"
+              ? "secondary"
+              : status === "CANCELLED"
+              ? "destructive"
+              : "outline"
+          }
+          className={
+            status === "COMPLETED"
+              ? "bg-green-500 text-white"
+              : status === "IN_PROGRESS"
+              ? "bg-blue-500 text-white"
+              : status === "PENDING"
+              ? "bg-yellow-500 text-white"
+              : ""
+          }
+        >
+          {status.toLowerCase().replace("_", " ")}
         </Badge>
       )
     },
@@ -110,53 +129,27 @@ export const columns: ColumnDef<CustomerOrder>[] = [
     },
   },
   {
-    accessorKey: "orderLines",
+    accessorKey: "requiredDate",
     header: ({ column }) => (
-      <CustomerOrderColumnHeader column={column} title="Products" />
+      <DataTableColumnHeader column={column} title="Due Date" />
     ),
     cell: ({ row }) => {
-      const orderLines = row.original.orderLines; // Access orderLines
-  
-      if (!orderLines || orderLines.length === 0) {
-        return <div>No products</div>;
-      }
-  
+      const dueDate = new Date(row.getValue("requiredDate"))
+      const today = new Date()
+      const isOverdue = dueDate < today && row.original.status !== "COMPLETED"
+      
       return (
-        <ul className="list-disc pl-5">
-          {orderLines.map((orderLine) => (
-            <li key={orderLine.id}>
-              {orderLine.product?.name} ({orderLine.quantity} x{" "}
-              {formatCurrency(Number(orderLine.unitPrice))}) {/* ✅ Ensure Number conversion */}
-            </li>
-          ))}
-        </ul>
-      );
+        <div className={isOverdue ? "text-destructive font-medium" : ""}>
+          {formatDate(row.getValue("requiredDate"))}
+          {isOverdue && (
+            <div className="text-xs text-destructive">Overdue</div>
+          )}
+        </div>
+      )
     },
   },
-  
   {
     id: "actions",
-    cell: ({ row }) => <DataTableRowActions row={row as Row<CustomerOrder>} />, // ✅ Type Assertion
-  }
-  ,
+    cell: ({ row }) => <DataTableRowActions row={row} />,
+  },
 ]
-
-function getStatusColor(status: Status): "default" | "success" | "warning" | "destructive" {
-  switch (status) {
-    case "ACTIVE":
-      return "success"
-    case "PENDING":
-      return "warning"
-    case "CANCELLED":
-      return "destructive"
-    default:
-      return "default"
-  }
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "PHP",
-  }).format(amount);
-}
