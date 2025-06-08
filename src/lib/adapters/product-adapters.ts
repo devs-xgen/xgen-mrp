@@ -1,8 +1,8 @@
 // src/lib/adapters/product-adapters.ts
 import { Status } from "@prisma/client";
-import { 
-  ProductWithNumberValues, 
-  convertDecimalsToNumbers 
+import {
+  ProductWithNumberValues,
+  convertDecimalsToNumbers,
 } from "@/types/admin/product";
 
 /**
@@ -22,6 +22,7 @@ export interface ExtendedProductForTable {
   sizeRange: string[];
   colorOptions: string[];
   unitCost: number;
+  hasVariants: boolean;
   createdAt: Date;
   updatedAt: Date;
   expectedStock: number;
@@ -35,6 +36,7 @@ export interface ExtendedProductForTable {
     quantity: number;
     dueDate: Date;
   }>;
+  variants?: any[];
   [key: string]: any; // Allow other properties
 }
 
@@ -44,7 +46,7 @@ export interface ExtendedProductForTable {
 export function adaptProductForTable(product: any): ExtendedProductForTable {
   // Convert all Decimal values to regular numbers
   const converted = convertDecimalsToNumbers(product);
-  
+
   return {
     id: converted.id,
     name: converted.name,
@@ -59,9 +61,11 @@ export function adaptProductForTable(product: any): ExtendedProductForTable {
     minimumStockLevel: converted.minimumStockLevel,
     currentStock: converted.currentStock,
     leadTime: converted.leadTime,
+    hasVariants: converted.hasVariants || false,
     createdAt: converted.createdAt,
     updatedAt: converted.updatedAt,
     productionOrders: converted.productionOrders || [],
+    variants: converted.variants || [],
     // Add any missing properties with default values
     expectedStock: converted.expectedStock || 0,
     committedStock: converted.committedStock || 0,
@@ -75,7 +79,9 @@ export function adaptProductForTable(product: any): ExtendedProductForTable {
  * Adapts a table product back to a Prisma Product format for API operations
  * Without directly using Prisma's Decimal (to avoid fs dependency)
  */
-export function adaptTableProductForAPI(tableProduct: ExtendedProductForTable): any {
+export function adaptTableProductForAPI(
+  tableProduct: ExtendedProductForTable
+): any {
   return {
     id: tableProduct.id,
     name: tableProduct.name,
@@ -123,6 +129,7 @@ export function adaptTableProductForDetails(
     minimumStockLevel: tableProduct.minimumStockLevel,
     currentStock: tableProduct.currentStock,
     leadTime: tableProduct.leadTime,
+    hasVariants: tableProduct.hasVariants || false,
     createdAt: tableProduct.createdAt,
     updatedAt: tableProduct.updatedAt,
     expectedStock: tableProduct.expectedStock,
@@ -133,5 +140,6 @@ export function adaptTableProductForDetails(
     productionOrders: tableProduct.productionOrders,
     category: tableProduct.category,
     boms: tableProduct.boms as any,
+    variants: tableProduct.variants || [],
   };
 }

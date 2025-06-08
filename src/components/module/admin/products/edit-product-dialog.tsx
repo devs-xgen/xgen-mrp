@@ -49,7 +49,7 @@ interface EditProductDialogProps {
     product: Product
     categories: ProductCategory[]
     trigger: React.ReactNode
-    onSuccess?: () => void
+    onSuccess?: () => void | Promise<void>
 }
 
 export function EditProductDialog({
@@ -96,7 +96,7 @@ export function EditProductDialog({
                 description: "Product updated successfully",
             })
             setOpen(false)
-            onSuccess?.()
+            await onSuccess?.()
         } catch (error) {
             toast({
                 title: "Error",

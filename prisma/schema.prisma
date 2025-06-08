@@ -137,16 +137,17 @@ model Product {
   name              String
   description       String?
   categoryId        String
-  sizeRange         String[]
-  colorOptions      String[]
-  unitCost          Decimal           @db.Decimal(10, 2)
-  sellingPrice      Decimal           @db.Decimal(10, 2)
+  sizeRange         String[] // Keep for legacy/simple products
+  colorOptions      String[] // Keep for legacy/simple products
+  unitCost          Decimal           @db.Decimal(10, 2) // Base cost
+  sellingPrice      Decimal           @db.Decimal(10, 2) // Base price
   minimumStockLevel Int
   currentStock      Int
   expectedStock     Int               @default(0)
   committedStock    Int               @default(0)
   calculatedStock   Int               @default(0)
   leadTime          Int
+  hasVariants       Boolean           @default(false) // Changed from hasSizeVariants to hasVariants
   status            Status            @default(ACTIVE)
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
@@ -156,10 +157,150 @@ model Product {
   orderLines        OrderLine[]
   category          ProductCategory   @relation(fields: [categoryId], references: [id])
   productionOrders  ProductionOrder[]
+  variants          ProductVariant[] // Enhanced relation for all variants
 
   // MRP Enhancement Relations
   inventoryMovements InventoryMovement[]
   productionBatches  ProductionBatch[]
+  ProductSizeVariant ProductSizeVariant[]
+}
+
+// Enhanced model for comprehensive product variants (size + color + other attributes)
+model ProductVariant {
+  id        String @id @default(cuid())
+  productId String
+  sku       String @unique // Unique SKU for each variant (e.g., SHIRT-001-M-RED)
+
+  // Variant Attributes
+  sizeName     String? // XS, S, M, L, XL, XXL, etc.
+  sizeCode     String? // Size code for processing
+  colorName    String? // Red, Blue, Green, etc.
+  colorCode    String? // Color code (hex, pantone, etc.)
+  styleName    String? // Optional: Style variant (Regular, Slim, etc.)
+  materialName String? // Optional: Material variant (Cotton, Polyester, etc.)
+
+  // Pricing and Stock
+  unitCost          Decimal @db.Decimal(10, 2) // Variant-specific cost
+  sellingPrice      Decimal @db.Decimal(10, 2) // Variant-specific price
+  currentStock      Int     @default(0)
+  minimumStockLevel Int     @default(0)
+  expectedStock     Int     @default(0)
+  committedStock    Int     @default(0)
+
+  // Display and Organization
+  displayName String // Friendly display name (e.g., "Medium Red")
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0) // For ordering variants
+
+  // Metadata
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  createdBy  String?
+  modifiedBy String?
+
+  // Relations
+  product    Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  boms       ProductVariantBOM[] // Variant-specific BOMs
+  orderLines OrderLineVariant[] // Orders for specific variants
+
+  @@unique([productId, sizeName, colorName]) // Ensure unique size+color combinations per product
+  @@index([productId])
+  @@index([sizeName])
+  @@index([colorName])
+  @@index([sku])
+}
+
+// Variant-specific BOM (replaces ProductSizeVariantBOM)
+model ProductVariantBOM {
+  id               String   @id @default(cuid())
+  productVariantId String
+  materialId       String
+  quantityNeeded   Decimal  @db.Decimal(10, 3)
+  wastePercentage  Decimal  @db.Decimal(5, 2)
+  notes            String? // Notes about material usage for this variant
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  createdBy        String?
+  modifiedBy       String?
+
+  // Relations
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  material       Material       @relation(fields: [materialId], references: [id])
+
+  @@unique([productVariantId, materialId])
+  @@index([productVariantId])
+  @@index([materialId])
+}
+
+// Enhanced OrderLine to support specific variants
+model OrderLineVariant {
+  id          String   @id @default(cuid())
+  orderLineId String
+  variantId   String
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  orderLine OrderLine      @relation(fields: [orderLineId], references: [id], onDelete: Cascade)
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@unique([orderLineId, variantId])
+  @@index([orderLineId])
+  @@index([variantId])
+}
+
+// DEPRECATED: Keep for backward compatibility, but mark as deprecated
+// Will be migrated to ProductVariant gradually
+model ProductSizeVariant {
+  id                String   @id @default(cuid())
+  productId         String
+  sizeName          String // XS, S, M, L, XL, XXL, etc.
+  sizeCode          String // Size code for SKU generation
+  unitCost          Decimal  @db.Decimal(10, 2) // Size-specific cost
+  sellingPrice      Decimal  @db.Decimal(10, 2) // Size-specific price
+  currentStock      Int      @default(0)
+  minimumStockLevel Int      @default(0)
+  isActive          Boolean  @default(true)
+  sortOrder         Int      @default(0) // For ordering sizes (XS=1, S=2, etc.)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  createdBy         String?
+  modifiedBy        String?
+  // DEPRECATED: Will be migrated to ProductVariant
+  isDeprecated      Boolean  @default(false)
+
+  // Relations
+  product Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
+  boms    ProductSizeVariantBOM[] // Size-specific BOMs
+
+  @@unique([productId, sizeName])
+  @@index([productId])
+  @@index([sizeName])
+}
+
+// DEPRECATED: Keep for backward compatibility
+model ProductSizeVariantBOM {
+  id                   String   @id @default(cuid())
+  productSizeVariantId String
+  materialId           String
+  quantityNeeded       Decimal  @db.Decimal(10, 3)
+  wastePercentage      Decimal  @db.Decimal(5, 2)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  createdBy            String?
+  modifiedBy           String?
+  // DEPRECATED: Will be migrated to ProductVariantBOM
+  isDeprecated         Boolean  @default(false)
+
+  // Relations
+  productSizeVariant ProductSizeVariant @relation(fields: [productSizeVariantId], references: [id], onDelete: Cascade)
+  material           Material           @relation(fields: [materialId], references: [id])
+
+  @@unique([productSizeVariantId, materialId])
+  @@index([productSizeVariantId])
+  @@index([materialId])
 }
 
 model Material {
@@ -188,11 +329,13 @@ model Material {
   purchaseOrderLines PurchaseOrderLine[]
 
   // MRP Enhancement Relations
-  reservations       MaterialReservation[]
-  consumptions       ProductionMaterialConsumption[]
-  inventoryMovements InventoryMovement[]
-  costVariances      CostVariance[]
-  ProductionBOM      ProductionBOM[]
+  reservations          MaterialReservation[]
+  consumptions          ProductionMaterialConsumption[]
+  inventoryMovements    InventoryMovement[]
+  costVariances         CostVariance[]
+  ProductionBOM         ProductionBOM[]
+  ProductSizeVariantBOM ProductSizeVariantBOM[]
+  ProductVariantBOM     ProductVariantBOM[] // New relation
 }
 
 model BOM {
@@ -444,19 +587,20 @@ model CustomerOrder {
 }
 
 model OrderLine {
-  id            String        @id @default(cuid())
+  id            String             @id @default(cuid())
   orderId       String
   productId     String
   quantity      Int
-  unitPrice     Decimal       @db.Decimal(10, 2)
-  status        Status        @default(ACTIVE)
+  unitPrice     Decimal            @db.Decimal(10, 2)
+  status        Status             @default(ACTIVE)
   notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
   createdBy     String?
   modifiedBy    String?
-  customerOrder CustomerOrder @relation(fields: [orderId], references: [id])
-  product       Product       @relation(fields: [productId], references: [id])
+  customerOrder CustomerOrder      @relation(fields: [orderId], references: [id])
+  product       Product            @relation(fields: [productId], references: [id])
+  variants      OrderLineVariant[] // New relation for variant-specific orders
 }
 
 model Transaction {

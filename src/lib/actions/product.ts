@@ -14,7 +14,7 @@ export async function getAllProducts() {
           select: {
             id: true,
             name: true,
-          }
+          },
         },
         // Include brief information about production orders for this product
         productionOrders: {
@@ -22,21 +22,21 @@ export async function getAllProducts() {
             id: true,
             status: true,
             quantity: true,
-            dueDate: true
+            dueDate: true,
           },
           where: {
             status: {
-              in: ['PENDING', 'IN_PROGRESS', 'ACTIVE']
-            }
+              in: ["PENDING", "IN_PROGRESS", "ACTIVE"],
+            },
           },
           take: 5, // Limit to recent orders
           orderBy: {
-            createdAt: 'desc'
-          }
-        }
+            createdAt: "desc",
+          },
+        },
       },
       orderBy: {
-        name: 'asc',
+        name: "asc",
       },
     });
 
@@ -51,7 +51,7 @@ export async function getProductsForOrders(): Promise<ProductForOrder[]> {
   try {
     const products = await prisma.product.findMany({
       where: {
-        status: 'ACTIVE' // Only include active products for ordering
+        status: "ACTIVE", // Only include active products for ordering
       },
       select: {
         id: true,
@@ -67,13 +67,13 @@ export async function getProductsForOrders(): Promise<ProductForOrder[]> {
     });
 
     // Map to expected format with unitPrice
-    return products.map(product => ({
+    return products.map((product) => ({
       id: product.id,
       name: product.name,
       sku: product.sku,
       unitPrice: Number(product.sellingPrice), // Convert Decimal to number
       currentStock: product.currentStock,
-      minimumStockLevel: product.minimumStockLevel
+      minimumStockLevel: product.minimumStockLevel,
     }));
   } catch (error) {
     console.error("❌ Error fetching products for orders:", error);
@@ -85,7 +85,7 @@ export async function getProductById(id: string) {
   try {
     const product = await prisma.product.findUnique({
       where: {
-        id
+        id,
       },
       include: {
         category: true,
@@ -95,10 +95,27 @@ export async function getProductById(id: string) {
               select: {
                 id: true,
                 name: true,
-                costPerUnit: true
-              }
-            }
-          }
+                costPerUnit: true,
+              },
+            },
+          },
+        },
+        // Include product variants for enhanced UI
+        variants: {
+          include: {
+            boms: {
+              include: {
+                material: {
+                  select: {
+                    id: true,
+                    name: true,
+                    costPerUnit: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: [{ sizeName: "asc" }, { colorName: "asc" }],
         },
         // Include production orders too for consistency
         productionOrders: {
@@ -106,18 +123,18 @@ export async function getProductById(id: string) {
             id: true,
             status: true,
             quantity: true,
-            dueDate: true
+            dueDate: true,
           },
           where: {
             status: {
-              in: [Status.PENDING, Status.IN_PROGRESS, Status.ACTIVE]
-            }
+              in: [Status.PENDING, Status.IN_PROGRESS, Status.ACTIVE],
+            },
           },
           orderBy: {
-            createdAt: 'desc'
-          }
-        }
-      }
+            createdAt: "desc",
+          },
+        },
+      },
     });
 
     if (!product) {
@@ -136,7 +153,7 @@ export async function getProductionOrdersByProductId(productId: string) {
   try {
     const orders = await prisma.productionOrder.findMany({
       where: {
-        productId
+        productId,
       },
       select: {
         id: true,
@@ -148,19 +165,110 @@ export async function getProductionOrdersByProductId(productId: string) {
         createdAt: true,
         operations: {
           include: {
-            workCenter: true
-          }
+            workCenter: true,
+          },
         },
-        qualityChecks: true
+        qualityChecks: true,
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: "desc",
+      },
     });
 
     return convertDecimals(orders);
   } catch (error) {
     console.error("❌ Error fetching production orders for product:", error);
     throw new Error("Failed to fetch production orders");
+  }
+}
+
+// Function to adjust product stock
+export async function adjustProductStock(
+  productId: string,
+  adjustment: {
+    type: "ADD" | "REMOVE";
+    quantity: number;
+    reason: string;
+  }
+) {
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+    });
+
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    const newStock =
+      adjustment.type === "ADD"
+        ? product.currentStock + adjustment.quantity
+        : product.currentStock - adjustment.quantity;
+
+    if (newStock < 0) {
+      throw new Error("Cannot reduce stock below zero");
+    }
+
+    // Update product stock
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        currentStock: newStock,
+        updatedAt: new Date(),
+      },
+    });
+
+    // TODO: Add inventory movement record for audit trail
+    // This would be implemented when the inventory tracking system is enhanced
+
+    return { success: true, newStock };
+  } catch (error) {
+    console.error("❌ Error adjusting product stock:", error);
+    throw new Error("Failed to adjust product stock");
+  }
+}
+
+// Function to adjust variant stock
+export async function adjustVariantStock(
+  variantId: string,
+  adjustment: {
+    type: "ADD" | "REMOVE";
+    quantity: number;
+    reason: string;
+  }
+) {
+  try {
+    const variant = await prisma.productVariant.findUnique({
+      where: { id: variantId },
+    });
+
+    if (!variant) {
+      throw new Error("Product variant not found");
+    }
+
+    const newStock =
+      adjustment.type === "ADD"
+        ? variant.currentStock + adjustment.quantity
+        : variant.currentStock - adjustment.quantity;
+
+    if (newStock < 0) {
+      throw new Error("Cannot reduce stock below zero");
+    }
+
+    // Update variant stock
+    await prisma.productVariant.update({
+      where: { id: variantId },
+      data: {
+        currentStock: newStock,
+        updatedAt: new Date(),
+      },
+    });
+
+    // TODO: Add inventory movement record for audit trail
+
+    return { success: true, newStock };
+  } catch (error) {
+    console.error("❌ Error adjusting variant stock:", error);
+    throw new Error("Failed to adjust variant stock");
   }
 }

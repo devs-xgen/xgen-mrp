@@ -37,27 +37,36 @@ export function convertDecimalsToNumbers<T>(obj: T): T {
     return obj;
   }
 
-  if (typeof obj !== 'object') {
+  if (typeof obj !== "object") {
     return obj;
   }
 
   // Handle special case of objects with toNumber method (like Decimal)
-  if (obj && typeof obj === 'object' && 'toNumber' in obj && typeof (obj as any).toNumber === 'function') {
+  if (
+    obj &&
+    typeof obj === "object" &&
+    "toNumber" in obj &&
+    typeof (obj as any).toNumber === "function"
+  ) {
     return Number((obj as any).toNumber()) as unknown as T;
   }
 
   if (Array.isArray(obj)) {
-    return obj.map(item => convertDecimalsToNumbers(item)) as unknown as T;
+    return obj.map((item) => convertDecimalsToNumbers(item)) as unknown as T;
   }
 
   const result: Record<string, any> = {};
-  
+
   for (const [key, value] of Object.entries(obj)) {
     if (value === null || value === undefined) {
       result[key] = value;
-    }
-    else if (typeof value === 'object') {
-      if (value && typeof value === 'object' && 'toNumber' in value && typeof (value as any).toNumber === 'function') {
+    } else if (typeof value === "object") {
+      if (
+        value &&
+        typeof value === "object" &&
+        "toNumber" in value &&
+        typeof (value as any).toNumber === "function"
+      ) {
         result[key] = Number((value as any).toNumber());
       } else {
         result[key] = convertDecimalsToNumbers(value);
@@ -80,7 +89,7 @@ export interface ProductionOrderSummary {
 export interface ProductForOrder {
   id: string;
   name: string;
-  unitPrice: number; 
+  unitPrice: number;
   sku?: string;
   currentStock?: number;
   minimumStockLevel?: number;
@@ -100,7 +109,7 @@ export interface ExtendedBOM {
     id: string;
     name: string;
     costPerUnit: DecimalOrNumber;
-  }
+  };
 }
 
 // For usage in components, extends Product but guarantees number types
@@ -120,12 +129,14 @@ export interface ProductWithNumberValues {
   unitCost: number;
   createdAt: Date;
   updatedAt: Date;
+  hasVariants: boolean;
   category?: {
     id: string;
     name: string;
   };
   productionOrders?: ProductionOrderSummary[];
   boms?: ExtendedBOMWithNumberValues[];
+  variants?: ProductVariantWithNumberValues[];
   // Add these properties to avoid type errors
   expectedStock: number;
   committedStock: number;
@@ -148,5 +159,49 @@ export interface ExtendedBOMWithNumberValues {
     id: string;
     name: string;
     costPerUnit: number;
-  }
+  };
+}
+
+export interface ProductVariantWithNumberValues {
+  id: string;
+  productId: string;
+  sku: string;
+  sizeName?: string | null;
+  sizeCode?: string | null;
+  colorName?: string | null;
+  colorCode?: string | null;
+  styleName?: string | null;
+  materialName?: string | null;
+  unitCost: number;
+  sellingPrice: number;
+  currentStock: number;
+  minimumStockLevel: number;
+  expectedStock: number;
+  committedStock: number;
+  displayName: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy?: string | null;
+  modifiedBy?: string | null;
+  boms?: ProductVariantBOMWithNumberValues[];
+}
+
+export interface ProductVariantBOMWithNumberValues {
+  id: string;
+  productVariantId: string;
+  materialId: string;
+  quantityNeeded: number;
+  wastePercentage: number;
+  notes?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy?: string | null;
+  modifiedBy?: string | null;
+  material: {
+    id: string;
+    name: string;
+    costPerUnit: number;
+  };
 }

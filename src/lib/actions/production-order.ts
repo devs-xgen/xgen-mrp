@@ -17,6 +17,10 @@ import {
   reserveMaterialsForProduction,
   releaseMaterialReservations,
 } from "@/lib/actions/material-reservation";
+import {
+  createProductionBOMFromProduct,
+  getProductionBOMForDisplay,
+} from "@/lib/actions/production-bom";
 
 export async function getProductionOrders() {
   try {
@@ -83,9 +87,46 @@ export async function getProductionOrder(id: string) {
       throw new Error("Production order not found");
     }
 
-    // Fetch BOM/materials for the product
-    const bom = await getBOMForProduct(order.productId);
-    return { ...order, bom };
+    // Fetch ProductionBOM (working copy) for this production order
+    let productionBOM = null;
+    try {
+      const productionBOMResult = await getProductionBOMForDisplay(id);
+      if (productionBOMResult.success) {
+        productionBOM = productionBOMResult.data;
+      }
+    } catch (bomError) {
+      console.warn(`Failed to fetch ProductionBOM for order ${id}:`, bomError);
+    }
+
+    // If no ProductionBOM exists, fall back to Product BOM as template
+    let bom = null;
+    if (productionBOM && productionBOM.length > 0) {
+      // Transform ProductionBOM to BOM format for compatibility
+      bom = {
+        productId: order.productId,
+        productName: order.product.name,
+        entries: productionBOM.map((entry) => ({
+          id: entry.id,
+          materialId: entry.materialId,
+          materialName: entry.materialName,
+          materialSku: entry.materialSku,
+          unitOfMeasure: entry.unitOfMeasure,
+          quantityNeeded: entry.finalQuantity, // Use adjusted quantity if available
+          wastePercentage: entry.wastePercentage,
+          costPerUnit: entry.unitCost,
+          totalCost: entry.currentTotalCost,
+        })),
+        totalMaterialCost: productionBOM.reduce(
+          (sum, entry) => sum + entry.currentTotalCost,
+          0
+        ),
+      };
+    } else {
+      // Fall back to Product BOM template
+      bom = await getBOMForProduct(order.productId);
+    }
+
+    return { ...order, bom, productionBOM };
   } catch (error) {
     console.error("Error fetching production order:", error);
     throw error;
@@ -174,6 +215,21 @@ export async function createProductionOrder(data: CreateProductionOrderInput) {
         },
       },
     });
+
+    // Create ProductionBOM from Product BOM template
+    try {
+      await createProductionBOMFromProduct({
+        productionOrderId: order.id,
+        productId: data.productId,
+        createdBy: session.user.id,
+      });
+    } catch (bomError) {
+      console.warn(
+        `Failed to create ProductionBOM for production order ${order.id}:`,
+        bomError
+      );
+      // Continue even if ProductionBOM creation fails - not critical for basic order creation
+    }
 
     // Automatically reserve materials for the production order
     const reservationResult = await reserveMaterialsForProduction(order.id);

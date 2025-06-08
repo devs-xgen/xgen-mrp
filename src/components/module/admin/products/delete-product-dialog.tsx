@@ -18,7 +18,7 @@ import { Product } from "@prisma/client"
 interface DeleteProductDialogProps {
     product: Product
     trigger: React.ReactNode
-    onSuccess?: () => void
+    onSuccess?: () => void | Promise<void>
 }
 
 export function DeleteProductDialog({
@@ -32,12 +32,15 @@ export function DeleteProductDialog({
     const onDelete = async () => {
         try {
             setLoading(true)
+            console.log("Deleting product:", product.id, product.name)
             const response = await fetch(`/api/products/${product.id}`, {
                 method: "DELETE",
             })
 
             if (!response.ok) {
-                throw new Error("Failed to delete product")
+                const errorData = await response.text()
+                console.error("Delete failed:", response.status, errorData)
+                throw new Error(`Failed to delete product: ${response.status}`)
             }
 
             toast({
@@ -45,7 +48,7 @@ export function DeleteProductDialog({
                 description: "Product deleted successfully",
             })
             setOpen(false)
-            onSuccess?.()
+            await onSuccess?.()
         } catch (error) {
             toast({
                 title: "Error",

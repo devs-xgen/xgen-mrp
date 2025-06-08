@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Status, Priority } from "@prisma/client";
 import { ProductionOrder } from "@/types/admin/production-order";
 import { OperationsManagement } from "./operations-management";
@@ -8,7 +9,7 @@ import { QualityChecks } from "./quality-checks";
 import { DeliveryAssignment } from "./delivery-assignment";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Play, Pause, CheckCircle, HelpCircle, Info, CalendarClock, User, ShoppingCart, AlertTriangle, PackageOpen, PackageX, Settings, CheckSquare, Truck, History, StickyNote, Clock, RefreshCw, Eye, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Play, Pause, CheckCircle, HelpCircle, Info, CalendarClock, User, ShoppingCart, AlertTriangle, PackageOpen, PackageX, Settings, CheckSquare, Truck, History, StickyNote, Clock, RefreshCw, Eye, Calendar, ChevronLeft, ChevronRight, Edit } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -159,6 +160,8 @@ export function ProductionOrderDetails({
   deliveryUsers: initialDeliveryUsers = [],
   isLoading: initialLoading = false,
 }: ProductionOrderDetailsProps) {
+  const router = useRouter();
+  
   // State for the main order data and loading state
   const [order, setOrder] = useState(initialOrder as ProductionOrderWithBOM);
   const [updating, setUpdating] = useState(false);
@@ -745,10 +748,36 @@ export function ProductionOrderDetails({
           <div className="mt-8">
             <Card className="border shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-medium flex items-center gap-2">
-                  <PackageOpen className="h-5 w-5 text-muted-foreground" />
-                  Material Requirements (BOM)
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-medium flex items-center gap-2">
+                    <PackageOpen className="h-5 w-5 text-muted-foreground" />
+                    Material Requirements
+                    {(order as any).productionBOM && (order as any).productionBOM.length > 0 ? (
+                      <Badge variant="secondary" className="text-xs">
+                        Production BOM (Working Copy)
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">
+                        Product BOM (Template)
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  {(order as any).productionBOM && (order as any).productionBOM.length > 0 && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => router.push(`/admin/production/${order.id}/materials`)}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Manage Materials
+                    </Button>
+                  )}
+                </div>
+                {(order as any).productionBOM && (order as any).productionBOM.length > 0 && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    This is the working copy for production. Material quantities can be adjusted during production.
+                  </p>
+                )}
               </CardHeader>
               <CardContent>
                 {order.bom && order.bom.entries && order.bom.entries.length > 0 ? (
@@ -762,6 +791,9 @@ export function ProductionOrderDetails({
                           <th className="px-3 py-2 text-left font-semibold">Unit</th>
                           <th className="px-3 py-2 text-right font-semibold">Cost/Unit</th>
                           <th className="px-3 py-2 text-right font-semibold">Total Cost</th>
+                          {(order as any).productionBOM && (order as any).productionBOM.length > 0 && (
+                            <th className="px-3 py-2 text-center font-semibold">Status</th>
+                          )}
                         </tr>
                       </thead>
                       <tbody>
@@ -773,11 +805,27 @@ export function ProductionOrderDetails({
                             <td className="px-3 py-2">{entry.unitOfMeasure}</td>
                             <td className="px-3 py-2 text-right">{formatCurrencyPHP(entry.costPerUnit)}</td>
                             <td className="px-3 py-2 text-right">{formatCurrencyPHP(entry.totalCost)}</td>
+                            {(order as any).productionBOM && (order as any).productionBOM.length > 0 && (
+                              <td className="px-3 py-2 text-center">
+                                {(order as any).productionBOM.find((pb: any) => pb.materialId === entry.materialId)?.isAdjusted ? (
+                                  <Badge variant="warning" className="text-xs">
+                                    Adjusted
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="text-xs">
+                                    Original
+                                  </Badge>
+                                )}
+                              </td>
+                            )}
                           </tr>
                         ))}
                         <tr className="font-semibold bg-muted/30">
-                          <td className="px-3 py-2" colSpan={5}>Total Material Cost</td>
+                          <td className="px-3 py-2" colSpan={(order as any).productionBOM ? 6 : 5}>Total Material Cost</td>
                           <td className="px-3 py-2 text-right">{formatCurrencyPHP(order.bom.totalMaterialCost)}</td>
+                          {(order as any).productionBOM && (order as any).productionBOM.length > 0 && (
+                            <td className="px-3 py-2"></td>
+                          )}
                         </tr>
                       </tbody>
                     </table>
