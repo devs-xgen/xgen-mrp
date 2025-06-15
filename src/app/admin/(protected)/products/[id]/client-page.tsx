@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Package, TrendingUp, AlertTriangle, Factory, Plus, Minus, History, Edit, Eye, Palette, Ruler } from "lucide-react";
+import { ArrowLeft, Package, TrendingUp, AlertTriangle, Factory, Plus, Minus, History, Edit, Eye, Palette, Ruler, Box, Wrench, PieChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { AnalyticsCard, analyticsCardVariants } from "@/components/ui/analytics-
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { 
   Sheet, 
   SheetContent, 
@@ -30,9 +31,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CreateProductionDialog } from "@/components/module/admin/products/create-production-dialog";
-import { BOMSection } from "@/components/module/admin/products/bom/BOMSection";
 import { EnhancedVariantBOMSection } from "@/components/module/admin/products/bom/EnhancedVariantBOMSection";
 import { VariantCreationDialog } from "@/components/module/admin/products/variant-creation-dialog";
+import { ProductDetailsCard } from "@/components/module/admin/products/product-details-card";
+import { VariantManagementSection } from "@/components/module/admin/products/variant-management-section";
 import { useToast } from "@/hooks/use-toast";
 import { adjustProductStock, adjustVariantStock } from "@/lib/actions/product";
 import { formatCurrencyPHP } from "@/lib/constant";
@@ -98,9 +100,9 @@ export default function ProductDetailClientPage({
   const activeProductionOrders = product.productionOrders?.length || 0;
 
   const getStockStatus = (current: number, minimum: number) => {
-    if (current === 0) return { label: 'Out of Stock', color: 'bg-red-500' };
-    if (current <= minimum) return { label: 'Low Stock', color: 'bg-yellow-500' };
-    return { label: 'In Stock', color: 'bg-green-500' };
+    if (current === 0) return { label: 'Out of Stock', color: 'bg-red-500', variant: 'destructive' as const };
+    if (current <= minimum) return { label: 'Low Stock', color: 'bg-yellow-500', variant: 'secondary' as const };
+    return { label: 'In Stock', color: 'bg-green-500', variant: 'default' as const };
   };
 
   const handleStockAdjustment = async () => {
@@ -115,10 +117,8 @@ export default function ProductDetailClientPage({
 
     try {
       if (selectedVariant) {
-        // Adjust variant stock
         await adjustVariantStock(selectedVariant.id, stockAdjustment);
       } else {
-        // Adjust product stock
         await adjustProductStock(product.id, stockAdjustment);
       }
       
@@ -130,8 +130,6 @@ export default function ProductDetailClientPage({
       setShowStockDialog(false);
       setSelectedVariant(null);
       setStockAdjustment({ type: 'ADD', quantity: 0, reason: '' });
-      
-      // Refresh the page data
       router.refresh();
     } catch (error: any) {
       toast({
@@ -178,6 +176,10 @@ export default function ProductDetailClientPage({
             open={showProductionDialog}
             onOpenChange={setShowProductionDialog}
           />
+          <Button onClick={() => setShowProductionDialog(true)}>
+            <Factory className="h-4 w-4 mr-2" />
+            Create Production
+          </Button>
         </div>
       </div>
 
@@ -212,13 +214,13 @@ export default function ProductDetailClientPage({
       {/* Low Stock Alert */}
       {((!product.hasVariants && product.currentStock <= product.minimumStockLevel) || 
         (product.hasVariants && lowStockVariants > 0)) && (
-        <Card className="border-amber-200 bg-amber-50">
+        <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
               <div className="flex-1">
-                <h3 className="text-amber-800 font-medium">Low Stock Alert</h3>
-                <p className="text-amber-700 text-sm mt-1">
+                <h3 className="text-amber-800 dark:text-amber-200 font-medium">Low Stock Alert</h3>
+                <p className="text-amber-700 dark:text-amber-300 text-sm mt-1">
                   {!product.hasVariants 
                     ? `Current stock (${product.currentStock}) is below minimum level (${product.minimumStockLevel})`
                     : `${lowStockVariants} variant(s) are below minimum stock levels`
@@ -248,392 +250,46 @@ export default function ProductDetailClientPage({
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="variants">Variants & Stock</TabsTrigger>
-          <TabsTrigger value="materials">Materials & BOM</TabsTrigger>
-          <TabsTrigger value="pricing">Pricing</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <Package className="w-4 h-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="variants" className="flex items-center gap-2">
+            <Palette className="w-4 h-4" />
+            Variants
+          </TabsTrigger>
+          <TabsTrigger value="materials" className="flex items-center gap-2">
+            <Box className="w-4 h-4" />
+            Materials & BOM
+          </TabsTrigger>
+          <TabsTrigger value="pricing" className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Pricing
+          </TabsTrigger>
+          <TabsTrigger value="production" className="flex items-center gap-2">
+            <Factory className="w-4 h-4" />
+            Production
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {/* Basic Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="w-4 h-4" />
-                  Basic Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium text-muted-foreground">Status</span>
-                  <Badge variant={product.status === "ACTIVE" ? "default" : "secondary"}>
-                    {product.status.toLowerCase()}
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium text-muted-foreground">Lead Time</span>
-                  <span className="text-sm">{product.leadTime} days</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium text-muted-foreground">Has Variants</span>
-                  <Badge variant={product.hasVariants ? "default" : "outline"}>
-                    {product.hasVariants ? "Yes" : "No"}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Description */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Description</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  {product.description || "No description available"}
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  onClick={() => openStockDialog()}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Adjust Stock
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  onClick={() => setShowProductionDialog(true)}
-                >
-                  <Factory className="w-4 h-4 mr-2" />
-                  Create Production
-                </Button>
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full justify-start">
-                      <History className="w-4 h-4 mr-2" />
-                      Production History
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent className="w-[400px] sm:w-[540px]">
-                    <SheetHeader>
-                      <SheetTitle>Production History</SheetTitle>
-                      <SheetDescription>
-                        View all production orders for {product.name}
-                      </SheetDescription>
-                    </SheetHeader>
-                    <div className="mt-6 space-y-4">
-                      {product.productionOrders && product.productionOrders.length > 0 ? (
-                        <>
-                          {product.productionOrders.map((order: ProductionOrderSummary) => (
-                            <Card key={order.id}>
-                              <CardContent className="pt-4">
-                                <div className="flex justify-between items-start">
-                                  <div>
-                                    <p className="font-medium">Order #{order.id.slice(-6)}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                      Quantity: {order.quantity}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                      Due: {new Date(order.dueDate).toLocaleDateString()}
-                                    </p>
-                                  </div>
-                                  <div className="flex flex-col gap-2">
-                                    <Badge variant="outline">{order.status}</Badge>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => router.push(`/admin/production/${order.id}`)}
-                                    >
-                                      <Eye className="w-3 h-3 mr-1" />
-                                      View
-                                    </Button>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                          <Link href={`/admin/production?productId=${params.id}`}>
-                            <Button variant="outline" className="w-full">
-                              View All Production Orders
-                            </Button>
-                          </Link>
-                        </>
-                      ) : (
-                        <div className="text-center py-8">
-                          <Factory className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                          <p className="text-muted-foreground">
-                            No production orders found for this product.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </SheetContent>
-                </Sheet>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Legacy Size and Color Display (for non-variant products) */}
-          {!product.hasVariants && (product.sizeRange.length > 0 || product.colorOptions.length > 0) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Palette className="w-4 h-4" />
-                  Product Options
-                </CardTitle>
-                <CardDescription>
-                  Available sizes and colors for this product
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {product.sizeRange.length > 0 && (
-                  <div>
-                    <Label className="text-sm font-medium">Size Range</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {product.sizeRange.map((size) => (
-                        <Badge key={size} variant="outline" className="flex items-center gap-1">
-                          <Ruler className="w-3 h-3" />
-                          {size}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {product.colorOptions.length > 0 && (
-                  <div>
-                    <Label className="text-sm font-medium">Color Options</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {product.colorOptions.map((color) => (
-                        <Badge key={color} variant="outline" className="flex items-center gap-1">
-                          <Palette className="w-3 h-3" />
-                          {color}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          <ProductDetailsCard 
+            product={product} 
+            onStockAdjust={() => openStockDialog()}
+            onCreateProduction={() => setShowProductionDialog(true)}
+          />
         </TabsContent>
 
         <TabsContent value="variants" className="space-y-6">
-          {product.hasVariants && product.variants && product.variants.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Palette className="w-4 h-4" />
-                    Product Variants ({product.variants.length})
-                  </span>
-                  <div className="flex gap-2">
-                    <VariantCreationDialog
-                      productId={product.id}
-                      productName={product.name}
-                      onSuccess={async () => router.refresh()}
-                      trigger={
-                        <Button variant="outline" size="sm">
-                          <Plus className="w-4 h-4 mr-2" />
-                          Create Variants
-                        </Button>
-                      }
-                    />
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => openStockDialog()}
-                    >
-                      <Edit className="w-4 h-4 mr-2" />
-                      Bulk Adjust Stock
-                    </Button>
-                  </div>
-                </CardTitle>
-                <CardDescription>
-                  Manage stock levels for each product variant
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {product.variants.map((variant) => {
-                    const stockStatus = getStockStatus(variant.currentStock, variant.minimumStockLevel);
-                    
-                    return (
-                      <Card key={variant.id} className="border-l-4" style={{borderLeftColor: stockStatus.color.replace('bg-', '#')}}>
-                        <CardContent className="pt-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h4 className="font-medium">{variant.displayName}</h4>
-                                <Badge variant="outline" className="text-xs">
-                                  {variant.sku}
-                                </Badge>
-                                <Badge 
-                                  variant={stockStatus.label === 'In Stock' ? 'default' : 'destructive'}
-                                  className={`text-white ${stockStatus.color}`}
-                                >
-                                  {stockStatus.label}
-                                </Badge>
-                              </div>
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                {variant.sizeName && (
-                                  <div>
-                                    <span className="text-muted-foreground">Size:</span>
-                                    <span className="ml-1 font-medium">{variant.sizeName}</span>
-                                  </div>
-                                )}
-                                {variant.colorName && (
-                                  <div>
-                                    <span className="text-muted-foreground">Color:</span>
-                                    <span className="ml-1 font-medium">{variant.colorName}</span>
-                                  </div>
-                                )}
-                                <div>
-                                  <span className="text-muted-foreground">Stock:</span>
-                                  <span className="ml-1 font-medium">{variant.currentStock}</span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Min Level:</span>
-                                  <span className="ml-1 font-medium">{variant.minimumStockLevel}</span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Cost:</span>
-                                  <span className="ml-1 font-medium">{formatCurrencyPHP(variant.unitCost)}</span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Price:</span>
-                                  <span className="ml-1 font-medium">{formatCurrencyPHP(variant.sellingPrice)}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openStockDialog(variant)}
-                              >
-                                <Edit className="w-3 h-3 mr-1" />
-                                Adjust
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-6">
-              {/* Create Variants Option */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <Palette className="w-4 h-4" />
-                      Product Variants
-                    </span>
-                    <VariantCreationDialog
-                      productId={product.id}
-                      productName={product.name}
-                      onSuccess={async () => router.refresh()}
-                      trigger={
-                        <Button variant="default" size="sm">
-                          <Plus className="w-4 h-4 mr-2" />
-                          Create Variants
-                        </Button>
-                      }
-                    />
-                  </CardTitle>
-                  <CardDescription>
-                    This product does not have variants yet. Create size and color variants to manage different configurations.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-8">
-                    <Palette className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground mb-4">
-                      No variants created yet. Variants allow you to manage different sizes, colors, and configurations of this product.
-                    </p>
-                    <VariantCreationDialog
-                      productId={product.id}
-                      productName={product.name}
-                      onSuccess={async () => router.refresh()}
-                      trigger={
-                        <Button>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Create Your First Variants
-                        </Button>
-                      }
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Stock Management for Non-Variant Products */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <Package className="w-4 h-4" />
-                      Stock Management
-                    </span>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => openStockDialog()}
-                    >
-                      <Edit className="w-4 h-4 mr-2" />
-                      Adjust Stock
-                    </Button>
-                  </CardTitle>
-                <CardDescription>
-                  Manage stock levels for this product
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Current Stock</Label>
-                    <p className="text-2xl font-bold">{product.currentStock}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Minimum Stock Level</Label>
-                    <p className="text-2xl font-bold">{product.minimumStockLevel}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Stock Status</Label>
-                    <div className="mt-1">
-                      <Badge 
-                        variant={getStockStatus(product.currentStock, product.minimumStockLevel).label === 'In Stock' ? 'default' : 'destructive'}
-                        className={`text-white ${getStockStatus(product.currentStock, product.minimumStockLevel).color}`}
-                      >
-                        {getStockStatus(product.currentStock, product.minimumStockLevel).label}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            </div>
-          )}
+          <VariantManagementSection
+            product={product}
+            onStockAdjust={openStockDialog}
+            onRefresh={async () => router.refresh()}
+          />
         </TabsContent>
 
-        <TabsContent value="materials">
+        <TabsContent value="materials" className="space-y-6">
           <EnhancedVariantBOMSection 
             productId={product.id} 
             productName={product.name}
@@ -665,7 +321,8 @@ export default function ProductDetailClientPage({
                   <span className="text-sm font-medium text-muted-foreground">Selling Price</span>
                   <span className="text-lg font-semibold">{formatCurrencyPHP(product.sellingPrice)}</span>
                 </div>
-                <div className="flex justify-between items-center pt-2 border-t">
+                <Separator />
+                <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-muted-foreground">Profit Margin</span>
                   <span className="text-lg font-semibold text-green-600">
                     {(((product.sellingPrice - product.unitCost) / product.sellingPrice) * 100).toFixed(1)}%
@@ -674,10 +331,13 @@ export default function ProductDetailClientPage({
               </CardContent>
             </Card>
 
-            {product.hasVariants && (
+            {product.hasVariants && product.variants && product.variants.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Variant Pricing Summary</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <PieChart className="w-4 h-4" />
+                    Variant Pricing Summary
+                  </CardTitle>
                   <CardDescription>
                     Pricing overview across all variants
                   </CardDescription>
@@ -686,30 +346,98 @@ export default function ProductDetailClientPage({
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-muted-foreground">Lowest Cost</span>
                     <span className="text-lg font-semibold">
-                      {formatCurrencyPHP(Math.min(...(product.variants?.map(v => v.unitCost) || [product.unitCost])))}
+                      {formatCurrencyPHP(Math.min(...product.variants.map(v => v.unitCost)))}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-muted-foreground">Highest Price</span>
                     <span className="text-lg font-semibold">
-                      {formatCurrencyPHP(Math.max(...(product.variants?.map(v => v.sellingPrice) || [product.sellingPrice])))}
+                      {formatCurrencyPHP(Math.max(...product.variants.map(v => v.sellingPrice)))}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center pt-2 border-t">
+                  <Separator />
+                  <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-muted-foreground">Average Margin</span>
                     <span className="text-lg font-semibold text-green-600">
-                      {product.variants && product.variants.length > 0 
-                        ? (product.variants.reduce((acc, v) => 
-                            acc + (((v.sellingPrice - v.unitCost) / v.sellingPrice) * 100), 0
-                          ) / product.variants.length).toFixed(1)
-                        : '0.0'
-                      }%
+                      {(product.variants.reduce((acc, v) => 
+                        acc + (((v.sellingPrice - v.unitCost) / v.sellingPrice) * 100), 0
+                      ) / product.variants.length).toFixed(1)}%
                     </span>
                   </div>
                 </CardContent>
               </Card>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="production" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Factory className="w-4 h-4" />
+                  Production History
+                </span>
+                <Button onClick={() => setShowProductionDialog(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Production Order
+                </Button>
+              </CardTitle>
+              <CardDescription>
+                View and manage production orders for {product.name}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {product.productionOrders && product.productionOrders.length > 0 ? (
+                <div className="space-y-4">
+                  {product.productionOrders.map((order: ProductionOrderSummary) => (
+                    <Card key={order.id} className="border-l-4 border-l-blue-500">
+                      <CardContent className="pt-4">
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-1">
+                            <p className="font-medium">Order #{order.id.slice(-8)}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Quantity: {order.quantity} units
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Due: {new Date(order.dueDate).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{order.status}</Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => router.push(`/admin/production/${order.id}`)}
+                            >
+                              <Eye className="w-3 h-3 mr-1" />
+                              View
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  <Link href={`/admin/production?productId=${params.id}`}>
+                    <Button variant="outline" className="w-full">
+                      View All Production Orders
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Factory className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-4">
+                    No production orders found for this product.
+                  </p>
+                  <Button onClick={() => setShowProductionDialog(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create First Production Order
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -719,7 +447,7 @@ export default function ProductDetailClientPage({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="w-4 h-4" />
-              Adjust Stock
+              Adjust Stock Level
             </DialogTitle>
             <DialogDescription>
               {selectedVariant 
@@ -730,30 +458,30 @@ export default function ProductDetailClientPage({
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 p-3 bg-muted rounded-lg">
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">Current Stock</Label>
+                <Label className="text-xs font-medium text-muted-foreground">Current Stock</Label>
                 <p className="text-lg font-semibold">
                   {selectedVariant ? selectedVariant.currentStock : product.currentStock}
                 </p>
               </div>
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">Minimum Level</Label>
+                <Label className="text-xs font-medium text-muted-foreground">Minimum Level</Label>
                 <p className="text-lg font-semibold">
                   {selectedVariant ? selectedVariant.minimumStockLevel : product.minimumStockLevel}
                 </p>
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label>Adjustment Type</Label>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
                   variant={stockAdjustment.type === 'ADD' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setStockAdjustment(prev => ({ ...prev, type: 'ADD' }))}
-                  className="flex-1"
+                  className="w-full"
                 >
                   <Plus className="w-3 h-3 mr-1" />
                   Add Stock
@@ -763,7 +491,7 @@ export default function ProductDetailClientPage({
                   variant={stockAdjustment.type === 'REMOVE' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setStockAdjustment(prev => ({ ...prev, type: 'REMOVE' }))}
-                  className="flex-1"
+                  className="w-full"
                 >
                   <Minus className="w-3 h-3 mr-1" />
                   Remove Stock
@@ -772,7 +500,7 @@ export default function ProductDetailClientPage({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="quantity">Quantity</Label>
+              <Label htmlFor="quantity">Quantity to {stockAdjustment.type === 'ADD' ? 'Add' : 'Remove'}</Label>
               <Input
                 id="quantity"
                 type="number"
@@ -787,7 +515,7 @@ export default function ProductDetailClientPage({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="reason">Reason</Label>
+              <Label htmlFor="reason">Reason for Adjustment</Label>
               <Textarea
                 id="reason"
                 value={stockAdjustment.reason}
@@ -802,14 +530,12 @@ export default function ProductDetailClientPage({
 
             {stockAdjustment.quantity > 0 && (
               <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm font-medium">
-                  New Stock Level: {' '}
-                  <span className="text-lg">
-                    {stockAdjustment.type === 'ADD' 
-                      ? (selectedVariant ? selectedVariant.currentStock : product.currentStock) + stockAdjustment.quantity
-                      : (selectedVariant ? selectedVariant.currentStock : product.currentStock) - stockAdjustment.quantity
-                    }
-                  </span>
+                <Label className="text-sm font-medium">New Stock Level:</Label>
+                <p className="text-lg font-semibold">
+                  {stockAdjustment.type === 'ADD' 
+                    ? (selectedVariant ? selectedVariant.currentStock : product.currentStock) + stockAdjustment.quantity
+                    : (selectedVariant ? selectedVariant.currentStock : product.currentStock) - stockAdjustment.quantity
+                  } units
                 </p>
               </div>
             )}

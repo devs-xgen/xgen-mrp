@@ -519,3 +519,39 @@ export async function getCategories() {
     throw new Error("Failed to fetch categories");
   }
 }
+
+// Create Category Server Action
+export async function createCategory(formData: {
+  name: string;
+  description?: string;
+}) {
+  try {
+    const category = await prisma.productCategory.create({
+      data: {
+        name: formData.name,
+        description: formData.description,
+        status: "ACTIVE" as Status,
+      },
+    });
+
+    return {
+      success: true,
+      data: convertDecimals(category),
+      message: "Category created successfully",
+    };
+  } catch (error: any) {
+    console.error("Category creation error:", error);
+
+    if (error.code === "P2002") {
+      return {
+        success: false,
+        error: "A category with this name already exists",
+      };
+    }
+
+    return {
+      success: false,
+      error: "Error creating category",
+    };
+  }
+}

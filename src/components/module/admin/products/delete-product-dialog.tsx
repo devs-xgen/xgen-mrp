@@ -2,23 +2,22 @@
 
 import { useState } from "react"
 import {
-    AlertDialog,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger
-} from "@/components/ui/alert-dialog"
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
-import { Product } from "@prisma/client"
+import { deleteProduct } from "@/lib/actions/product"
+import { ProductWithRelations } from "./columns"
 
 interface DeleteProductDialogProps {
-    product: Product
+    product: ProductWithRelations
     trigger: React.ReactNode
-    onSuccess?: () => void | Promise<void>
+    onSuccess?: () => Promise<void>
 }
 
 export function DeleteProductDialog({
@@ -29,30 +28,27 @@ export function DeleteProductDialog({
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
 
-    const onDelete = async () => {
+    const handleDelete = async () => {
         try {
             setLoading(true)
-            console.log("Deleting product:", product.id, product.name)
-            const response = await fetch(`/api/products/${product.id}`, {
-                method: "DELETE",
-            })
-
-            if (!response.ok) {
-                const errorData = await response.text()
-                console.error("Delete failed:", response.status, errorData)
-                throw new Error(`Failed to delete product: ${response.status}`)
+            
+            const result = await deleteProduct(product.id)
+            
+            if (result.success) {
+                toast({
+                    title: "Success",
+                    description: `Product "${product.name}" deleted successfully`,
+                })
+                setOpen(false)
+                await onSuccess?.()
+            } else {
+                throw new Error(result.error || "Failed to delete product")
             }
-
-            toast({
-                title: "Success",
-                description: "Product deleted successfully",
-            })
-            setOpen(false)
-            await onSuccess?.()
         } catch (error) {
+            console.error("Delete product error:", error)
             toast({
                 title: "Error",
-                description: "Failed to delete product",
+                description: error instanceof Error ? error.message : "Failed to delete product",
                 variant: "destructive",
             })
         } finally {
@@ -60,30 +56,60 @@ export function DeleteProductDialog({
         }
     }
 
+    const variantCount = product.variants?.length || 0
+
     return (
-        <AlertDialog open={open} onOpenChange={setOpen}>
-            <AlertDialogTrigger asChild>
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
                 {trigger}
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This will permanently delete the product &quot;{product.name}&quot;.
-                        This action cannot be undone.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Delete Product</DialogTitle>
+                    <DialogDescription>
+                        Are you sure you want to delete this product? This action cannot be undone.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                    <div className="bg-muted p-4 rounded-lg">
+                        <h4 className="font-medium">{product.name}</h4>
+                        <p className="text-sm text-muted-foreground">SKU: {product.sku}</p>
+                        <p className="text-sm text-muted-foreground">Category: {product.category?.name}</p>
+                        {variantCount > 0 && (
+                            <p className="text-sm text-muted-foreground">
+                                This product has {variantCount} variant{variantCount > 1 ? 's' : ''} that will also be deleted.
+                            </p>
+                        )}
+                    </div>
+
+                    {product.currentStock > 0 && (
+                        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                            <p className="text-sm text-yellow-800">
+                                <strong>Warning:</strong> This product has {product.currentStock} units in stock. 
+                                Deleting this product will permanently remove all inventory records.
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex justify-end gap-2">
                     <Button
-                        variant="destructive"
-                        onClick={onDelete}
+                        variant="outline"
+                        onClick={() => setOpen(false)}
                         disabled={loading}
                     >
-                        {loading ? "Deleting..." : "Delete"}
+                        Cancel
                     </Button>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+                    <Button
+                        variant="destructive"
+                        onClick={handleDelete}
+                        disabled={loading}
+                    >
+                        {loading ? "Deleting..." : "Delete Product"}
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
     )
 }

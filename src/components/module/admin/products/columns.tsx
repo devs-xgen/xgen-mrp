@@ -1,100 +1,116 @@
 // src/components/module/admin/products/columns.tsx
+"use client";
+
 import { ColumnDef } from "@tanstack/react-table";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Pencil, Trash, Factory, Eye } from "lucide-react";
-import { ProductCategory, Status } from "@prisma/client";
-import { EditProductDialog } from "./edit-product-dialog";
-import { DeleteProductDialog } from "./delete-product-dialog";
+import { AlertTriangle } from "lucide-react";
 import Link from "next/link";
-import { CreateProductionDialog } from "./create-production-dialog";
+import { Badge } from "@/components/ui/badge";
 import {
-  ExtendedProductForTable,
-  adaptTableProductForAPI,
-  adaptTableProductForDetails,
-} from "@/lib/adapters/product-adapters";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { formatCurrencyPHP } from "@/lib/constant";
+import type { Product, ProductCategory, Status } from "@prisma/client";
 
-interface DataTableColumnProps {
-  categories: ProductCategory[];
-  workCenters: any[]; // Include work centers for production order creation
-  onSuccess?: () => Promise<void>;
-}
+// Define the Product type with relations
+export type ProductWithRelations = Product & {
+  category: ProductCategory;
+  variants?: any[];
+};
 
-export const createColumns = ({
-  categories,
-  workCenters,
-  onSuccess,
-}: DataTableColumnProps): ColumnDef<ExtendedProductForTable>[] => [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={table.getIsAllPageRowsSelected()}
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: "sku",
-    header: "SKU",
-  },
+export const columns: ColumnDef<ProductWithRelations>[] = [
   {
     accessorKey: "name",
-    header: "Name",
+    header: "Product Name",
     cell: ({ row }) => (
-      <Link
-        href={`/admin/products/${row.original.id}`}
-        className="font-medium hover:underline"
-      >
-        {row.getValue("name")}
-      </Link>
+      <TooltipProvider>
+        <div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link 
+                href={`/admin/products/${row.original.id}`}
+                className="font-medium hover:text-blue-600 hover:underline cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-sm"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    window.location.href = `/admin/products/${row.original.id}`;
+                  }
+                }}
+                tabIndex={0}
+              >
+                {row.getValue("name")}
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Click to view product details (or press Enter)</p>
+            </TooltipContent>
+          </Tooltip>
+          <div className="text-xs text-muted-foreground">
+            SKU: {row.original.sku}
+          </div>
+          {row.original.description && (
+            <div className="text-xs text-muted-foreground truncate max-w-xs">
+              {row.original.description}
+            </div>
+          )}
+        </div>
+      </TooltipProvider>
     ),
+  },
+  {
+    accessorKey: "category",
+    header: "Category",
+    cell: ({ row }) => row.original.category?.name || "-",
+  },
+  {
+    accessorKey: "sellingPrice",
+    header: "Selling Price",
+    cell: ({ row }) => {
+      return formatCurrencyPHP(Number(row.getValue("sellingPrice")));
+    },
+  },
+  {
+    accessorKey: "unitCost",
+    header: "Unit Cost",
+    cell: ({ row }) => {
+      return formatCurrencyPHP(Number(row.getValue("unitCost")));
+    },
   },
   {
     accessorKey: "currentStock",
-    header: "Stock",
+    header: "Current Stock",
     cell: ({ row }) => {
-      const stock = row.getValue("currentStock") as number;
+      const stock = Number(row.getValue("currentStock"));
       const minStock = row.original.minimumStockLevel;
+      const isLowStock = stock <= minStock;
 
       return (
-        <div className="flex items-center gap-2">
-          <span>{stock}</span>
-          {stock <= minStock && <Badge variant="destructive">Low Stock</Badge>}
+        <div className="flex items-center">
+          <span className="font-medium">{stock}</span>
+          {isLowStock && (
+            <AlertTriangle className="ml-2 h-4 w-4 text-amber-500" />
+          )}
+          <div className="text-xs text-muted-foreground ml-2">
+            Min: {minStock}
+          </div>
         </div>
       );
     },
   },
   {
-    accessorKey: "sellingPrice",
-    header: "Price",
+    accessorKey: "variants",
+    header: "Variants",
     cell: ({ row }) => {
-      const price = row.getValue("sellingPrice") as number;
-      const formatted = new Intl.NumberFormat("en-PH", {
-        style: "currency",
-        currency: "PHP",
-      }).format(price);
-
-      return formatted;
+      const variantCount = row.original.variants?.length || 0;
+      return variantCount > 0 ? (
+        <Badge variant="outline" className="text-xs">
+          {variantCount} variants
+        </Badge>
+      ) : (
+        <span className="text-muted-foreground text-xs">No variants</span>
+      );
     },
   },
   {
@@ -102,102 +118,42 @@ export const createColumns = ({
     header: "Status",
     cell: ({ row }) => {
       const status = row.getValue("status") as Status;
-      return (
-        <Badge variant={status === "ACTIVE" ? "default" : "secondary"}>
-          {status.toLowerCase()}
-        </Badge>
-      );
-    },
-  },
-  {
-    id: "production",
-    header: "Production",
-    cell: ({ row }) => {
-      const product = row.original;
-      // Use optional chaining and provide a default empty array if productionOrders is undefined
-      const productionOrdersLength = product.productionOrders?.length || 0;
-      const hasProductionOrders = productionOrdersLength > 0;
-
-      // Convert the product to ProductWithNumberValues for CreateProductionDialog
-      const productForDialog = adaptTableProductForDetails(product);
+      const stock = Number(row.original.currentStock);
+      const minStock = row.original.minimumStockLevel;
+      
+      // Determine display based on stock status
+      let stockStatus: "default" | "secondary" | "destructive" = "default";
+      let stockLabel = "In Stock";
+      
+      if (stock === 0) {
+        stockStatus = "destructive";
+        stockLabel = "Out of Stock";
+      } else if (stock <= minStock) {
+        stockStatus = "secondary";
+        stockLabel = "Low Stock";
+      }
 
       return (
-        <div className="flex items-center gap-2">
-          {hasProductionOrders ? (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Factory className="h-3 w-3" />
-              <span>{productionOrdersLength} active</span>
-            </Badge>
-          ) : product.currentStock <= product.minimumStockLevel ? (
-            <CreateProductionDialog
-              product={productForDialog}
-              workCenters={workCenters}
-            >
-              <Button variant="outline" size="sm" className="h-8">
-                <Factory className="mr-2 h-3 w-3" />
-                Create Production
-              </Button>
-            </CreateProductionDialog>
-          ) : null}
+        <div className="space-y-1">
+          <Badge
+            variant={status === "ACTIVE" ? "default" : "secondary"}
+            className="text-xs"
+          >
+            {status.toLowerCase()}
+          </Badge>
+          <Badge variant={stockStatus} className="text-xs block">
+            {stockLabel}
+          </Badge>
         </div>
       );
     },
   },
   {
-    id: "actions",
+    accessorKey: "leadTime",
+    header: "Lead Time",
     cell: ({ row }) => {
-      const tableProduct = row.original;
-
-      // Convert the table product back to a Prisma Product for the dialogs
-      const productForAPI = adaptTableProductForAPI(tableProduct);
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem asChild>
-              <Link href={`/admin/products/${tableProduct.id}`}>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href={`/admin/production?productId=${tableProduct.id}`}>
-                <Factory className="mr-2 h-4 w-4" />
-                View Production
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <EditProductDialog
-              product={productForAPI}
-              categories={categories}
-              onSuccess={onSuccess}
-              trigger={
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-              }
-            />
-            <DeleteProductDialog
-              product={productForAPI}
-              onSuccess={onSuccess}
-              trigger={
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <Trash className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              }
-            />
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
+      const leadTime = row.getValue("leadTime") as number;
+      return `${leadTime} days`;
     },
   },
 ];
