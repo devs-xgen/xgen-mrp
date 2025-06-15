@@ -3,7 +3,7 @@
 
 import { prisma } from "@/lib/db";
 import { ProductForOrder } from "@/types/admin/product";
-import { Status } from "@prisma/client";
+import { Status, Prisma } from "@prisma/client";
 import { convertDecimals } from "../convertDecimals";
 
 export async function getAllProducts() {
@@ -93,7 +93,7 @@ export async function getProductsForOrders(): Promise<ProductForOrder[]> {
     });
 
     // Map to expected format with unitPrice
-    return products.map((product) => ({
+    return products.map((product: any) => ({
       id: product.id,
       name: product.name,
       sku: product.sku,
@@ -296,5 +296,226 @@ export async function adjustVariantStock(
   } catch (error) {
     console.error("❌ Error adjusting variant stock:", error);
     throw new Error("Failed to adjust variant stock");
+  }
+}
+
+// Create Product Server Action (replaces API route)
+export async function createProduct(formData: {
+  name: string;
+  sku: string;
+  description?: string;
+  categoryId: string;
+  sizeRange?: string[];
+  colorOptions?: string[];
+  unitCost: number;
+  sellingPrice: number;
+  minimumStockLevel: number;
+  leadTime: number;
+  hasVariants?: boolean;
+  sizeVariants?: Array<{
+    sizeName: string;
+    sizeCode: string;
+    unitCost: number;
+    sellingPrice: number;
+    minimumStockLevel: number;
+    sortOrder?: number;
+  }>;
+}) {
+  try {
+    // Debug: Log the received data
+    console.log("Server Action received data:", {
+      name: formData.name,
+      hasVariants: formData.hasVariants,
+      sizeRange: formData.sizeRange,
+      colorOptions: formData.colorOptions,
+      sizeVariants: formData.sizeVariants,
+    });
+
+    // Create product with size variants in a transaction
+    const result = await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        // Create the main product
+        const product = await tx.product.create({
+          data: {
+            name: formData.name,
+            sku: formData.sku,
+            description: formData.description,
+            categoryId: formData.categoryId,
+            sizeRange: formData.sizeRange || [],
+            colorOptions: formData.colorOptions || [],
+            unitCost: formData.unitCost,
+            sellingPrice: formData.sellingPrice,
+            minimumStockLevel: formData.minimumStockLevel,
+            currentStock: 0, // Initial stock is 0
+            leadTime: formData.leadTime,
+            hasVariants: formData.hasVariants || false,
+            status: "ACTIVE" as Status,
+          },
+        });
+
+        // Create variants if specified
+        const variants = [];
+        if (
+          formData.hasVariants &&
+          formData.sizeVariants &&
+          formData.sizeVariants.length > 0
+        ) {
+          // Create product variants for each size
+          for (const sizeVariant of formData.sizeVariants) {
+            const variant = await tx.productVariant.create({
+              data: {
+                productId: product.id,
+                sku: `${product.sku}-${sizeVariant.sizeCode}`,
+                sizeName: sizeVariant.sizeName,
+                sizeCode: sizeVariant.sizeCode,
+                unitCost: sizeVariant.unitCost,
+                sellingPrice: sizeVariant.sellingPrice,
+                minimumStockLevel: sizeVariant.minimumStockLevel,
+                displayName: `${product.name} - ${sizeVariant.sizeName}`,
+                sortOrder: sizeVariant.sortOrder || 0,
+                isActive: true,
+              },
+            });
+            variants.push(variant);
+          }
+        }
+
+        return { product, variants };
+      }
+    );
+
+    return {
+      success: true,
+      data: convertDecimals(result.product),
+      variants: convertDecimals(result.variants),
+      message: `Product created successfully${result.variants.length > 0 ? ` with ${result.variants.length} variants` : ""}`,
+    };
+  } catch (error: any) {
+    console.error("Product creation error:", error);
+
+    if (error.code === "P2002") {
+      return {
+        success: false,
+        error: "A product with this SKU already exists",
+      };
+    }
+
+    return {
+      success: false,
+      error: "Error creating product",
+    };
+  }
+}
+
+// Update Product Server Action
+export async function updateProduct(
+  productId: string,
+  formData: {
+    name?: string;
+    sku?: string;
+    description?: string;
+    categoryId?: string;
+    sizeRange?: string[];
+    colorOptions?: string[];
+    unitCost?: number;
+    sellingPrice?: number;
+    minimumStockLevel?: number;
+    leadTime?: number;
+    status?: Status;
+  }
+) {
+  try {
+    const product = await prisma.product.update({
+      where: { id: productId },
+      data: {
+        ...formData,
+        updatedAt: new Date(),
+      },
+      include: {
+        category: true,
+        variants: true,
+      },
+    });
+
+    return {
+      success: true,
+      data: convertDecimals(product),
+      message: "Product updated successfully",
+    };
+  } catch (error: any) {
+    console.error("Product update error:", error);
+
+    if (error.code === "P2002") {
+      return {
+        success: false,
+        error: "A product with this SKU already exists",
+      };
+    }
+
+    if (error.code === "P2025") {
+      return {
+        success: false,
+        error: "Product not found",
+      };
+    }
+
+    return {
+      success: false,
+      error: "Error updating product",
+    };
+  }
+}
+
+// Delete Product Server Action
+export async function deleteProduct(productId: string) {
+  try {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Delete all product variants first
+      await tx.productVariant.deleteMany({
+        where: { productId },
+      });
+
+      // Delete the product
+      await tx.product.delete({
+        where: { id: productId },
+      });
+    });
+
+    return {
+      success: true,
+      message: "Product deleted successfully",
+    };
+  } catch (error: any) {
+    console.error("Product deletion error:", error);
+
+    if (error.code === "P2025") {
+      return {
+        success: false,
+        error: "Product not found",
+      };
+    }
+
+    return {
+      success: false,
+      error: "Error deleting product",
+    };
+  }
+}
+
+// Get Categories Server Action
+export async function getCategories() {
+  try {
+    const categories = await prisma.productCategory.findMany({
+      where: {
+        status: "ACTIVE",
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+    return convertDecimals(categories);
+  } catch (error) {
+    console.error("❌ Error fetching categories:", error);
+    throw new Error("Failed to fetch categories");
   }
 }

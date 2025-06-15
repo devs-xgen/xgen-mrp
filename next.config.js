@@ -2,9 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  // Next.js 15 - moved serverComponentsExternalPackages out of experimental
+  serverExternalPackages: ['@prisma/client', '@prisma/extension-accelerate', 'bcryptjs'],
   experimental: {
-    // We'll keep this one and remove transpilePackages
-    serverComponentsExternalPackages: ['@prisma/client', '@prisma/extension-accelerate', 'bcryptjs'],
     scrollRestoration: true,
   },
   eslint: {
