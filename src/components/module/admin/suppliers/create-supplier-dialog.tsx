@@ -91,36 +91,50 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
 
     // Update the useEffect to handle the new implementation
     useEffect(() => {
-        const { city, state, country } = form.getValues();
-        
-        if (country === 'Philippines') {
-            // For Philippines, only update postal code if barangay is provided
-            if (city && barangay) {
-                const updatePostalCode = async () => {
-                    
-                    const generatedCode = await generatePostalCode({
-                        city,
-                        state,
-                        country,
-                        barangay
-                    });
-                    form.setValue('postalCode', generatedCode);
-                };
-                updatePostalCode();
+        const subscription = form.watch((values, { name }) => {
+            // Only update postal code when relevant fields change
+            if (['city', 'state', 'country'].includes(name || '')) {
+                const { city, state, country } = values;
+                
+                if (country === 'Philippines') {
+                    // For Philippines, only update postal code if barangay is provided
+                    if (city && barangay) {
+                        const updatePostalCode = async () => {
+                            try {
+                                const generatedCode = await generatePostalCode({
+                                    city,
+                                    state,
+                                    country,
+                                    barangay
+                                });
+                                form.setValue('postalCode', generatedCode);
+                            } catch (error) {
+                                console.error('Error generating postal code:', error);
+                            }
+                        };
+                        updatePostalCode();
+                    }
+                } else if (city && country) {
+                    // For other countries
+                    const updatePostalCode = async () => {
+                        try {
+                            const generatedCode = await generatePostalCode({
+                                city,
+                                state,
+                                country
+                            });
+                            form.setValue('postalCode', generatedCode);
+                        } catch (error) {
+                            console.error('Error generating postal code:', error);
+                        }
+                    };
+                    updatePostalCode();
+                }
             }
-        } else if (city && country) {
-            // For other countries
-            const updatePostalCode = async () => {
-                const generatedCode = await generatePostalCode({
-                    city,
-                    state,
-                    country
-                });
-                form.setValue('postalCode', generatedCode);
-            };
-            updatePostalCode();
-        }
-    }, [form.watch(['city', 'state', 'country']), barangay]);
+        });
+        
+        return () => subscription.unsubscribe();
+    }, [barangay]); // ✅ FIXED: Using form.watch subscription instead of form.watch() in dependency array
 
     const onSubmit = async (data: FormData) => {
         try {

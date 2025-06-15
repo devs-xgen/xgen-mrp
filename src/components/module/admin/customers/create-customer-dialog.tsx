@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import * as z from "zod"
 import { useForm } from "react-hook-form"
 import { Status } from "@prisma/client"
@@ -39,6 +39,15 @@ import {
 } from "@/components/ui/select"
 import { generatePostalCode } from "@/lib/utils/location"
 
+// Simple debounce utility
+const debounce = <T extends (...args: any[]) => any>(func: T, wait: number): ((...args: Parameters<T>) => void) => {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
+
 const formSchema = z.object({
     name: z.string().min(1, "Name is required"),
     code: z.string().min(1, "Code is required"),
@@ -67,6 +76,7 @@ export function CreateCustomerDialog({ onSuccess }: CreateCustomerDialogProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [barangay, setBarangay] = useState("")
+    const [isGeneratingPostalCode, setIsGeneratingPostalCode] = useState(false)
 
     const form = useForm<FormData>({
         resolver: zodResolver(formSchema),
@@ -88,6 +98,23 @@ export function CreateCustomerDialog({ onSuccess }: CreateCustomerDialogProps) {
             notes: "",
         }
     })
+
+    // Debounced postal code generation
+    const generatePostalCodeDebounced = useCallback(
+        debounce(async (locationData: { city: string; state?: string; country: string; barangay?: string }) => {
+            try {
+                setIsGeneratingPostalCode(true);
+                const newCode = await generatePostalCode(locationData);
+                form.setValue('postalCode', newCode);
+            } catch (error) {
+                console.error('Error generating postal code:', error);
+                form.setValue('postalCode', 'Error - Enter manually');
+            } finally {
+                setIsGeneratingPostalCode(false);
+            }
+        }, 500),
+        [form]
+    );
 
     const onSubmit = async (data: FormData) => {
         try {
@@ -283,12 +310,11 @@ export function CreateCustomerDialog({ onSuccess }: CreateCustomerDialogProps) {
                                                             field.onChange(e);
                                                             const { city, state } = form.getValues();
                                                             if (city) {
-                                                                const newCode = await generatePostalCode({
+                                                                await generatePostalCodeDebounced({
                                                                     city,
                                                                     state,
                                                                     country: e.target.value,
                                                                 });
-                                                                form.setValue('postalCode', newCode);
                                                             }
                                                         }} 
                                                     />
@@ -311,12 +337,11 @@ export function CreateCustomerDialog({ onSuccess }: CreateCustomerDialogProps) {
                                                             field.onChange(e);
                                                             const { city, country } = form.getValues();
                                                             if (city && country) {
-                                                                const newCode = await generatePostalCode({
+                                                                await generatePostalCodeDebounced({
                                                                     city,
                                                                     state: e.target.value,
                                                                     country,
                                                                 });
-                                                                form.setValue('postalCode', newCode);
                                                             }
                                                         }}
                                                     />
@@ -342,13 +367,12 @@ export function CreateCustomerDialog({ onSuccess }: CreateCustomerDialogProps) {
                                                             field.onChange(e);
                                                             const { state, country } = form.getValues();
                                                             if (country) {
-                                                                const newCode = await generatePostalCode({
+                                                                await generatePostalCodeDebounced({
                                                                     city: e.target.value,
                                                                     state: state || '',
                                                                     country: country || '',
                                                                     barangay: country === 'Philippines' ? barangay : undefined
                                                                 });
-                                                                form.setValue('postalCode', newCode);
                                                             }
                                                         }}
                                                     />
@@ -392,13 +416,12 @@ export function CreateCustomerDialog({ onSuccess }: CreateCustomerDialogProps) {
                                                     setBarangay(e.target.value);
                                                     const { city, state, country } = form.getValues();
                                                     if (city && country === 'Philippines') {
-                                                        const newCode = await generatePostalCode({
+                                                        await generatePostalCodeDebounced({
                                                             city,
                                                             state,
                                                             country,
                                                             barangay: e.target.value
                                                         });
-                                                        form.setValue('postalCode', newCode);
                                                     }
                                                 }}
                                             />

@@ -86,7 +86,7 @@ export function EditMaterialDialog({
       });
       setAvailabilityInfo(null);
     }
-  }, [entry, open, form]);
+  }, [entry, open]);
 
   // When quantity changes, check availability
   useEffect(() => {

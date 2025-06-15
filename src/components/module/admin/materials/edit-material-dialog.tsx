@@ -216,7 +216,7 @@ export function EditMaterialDialog({
         status: material.status,
       });
     }
-  }, [material, form]);
+  }, [material]);
 
   async function onSubmit(data: MaterialFormValues) {
     console.log("Form submitted with data:", data);
@@ -259,13 +259,16 @@ export function EditMaterialDialog({
 
   // Update calculated stock when dependencies change
   useEffect(() => {
-    form.setValue("calculatedStock", effectiveStock);
+    const currentStock = form.watch("currentStock");
+    const expectedStock = form.watch("expectedStock");
+    const committedStock = form.watch("committedStock");
+    const calculatedStock = currentStock + expectedStock - committedStock;
+    
+    form.setValue("calculatedStock", calculatedStock);
   }, [
     form.watch("currentStock"),
     form.watch("expectedStock"),
-    form.watch("committedStock"),
-    form,
-    effectiveStock,
+    form.watch("committedStock")
   ]);
 
   // Debug dialog state

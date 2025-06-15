@@ -123,7 +123,7 @@ export function CreateUserDialog({
     if (isInspector && role !== "INSPECTOR") {
       form.setValue("role", "INSPECTOR");
     }
-  }, [isInspector, role, form]);
+  }, [isInspector, role]);
 
   // Fetch available inspectors when dialog opens
   useEffect(() => {

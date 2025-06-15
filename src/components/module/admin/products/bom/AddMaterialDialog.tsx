@@ -102,7 +102,7 @@ export function AddMaterialDialog({
       setSelectedMaterial(null);
       setAvailabilityInfo(null);
     }
-  }, [open, form]);
+  }, [open]);
 
   // When material or quantity changes, check availability
   useEffect(() => {
