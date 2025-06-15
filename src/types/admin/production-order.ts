@@ -89,6 +89,7 @@ export interface UpdateProductionOrderInput extends Partial<CreateProductionOrde
 }
 
 export interface ProductionOrderColumn {
+  [x: string]: never[]
   id: string
   productName: string
   productSku: string

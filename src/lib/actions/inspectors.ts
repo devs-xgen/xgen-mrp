@@ -8,7 +8,7 @@ import { authOptions } from "@/lib/auth";
 import { Task } from "@/types/inspector/task"; // Assuming you have a Task type defined
 import { revalidatePath } from "next/dist/server/web/spec-extension/revalidate";
 
-import { Inspector } from "@prisma/client";
+import { Inspector, Status } from "@prisma/client";
 
 // Re-export your Inspector type for convenience if needed elsewhere
 export type InspectorType = Inspector;
@@ -100,13 +100,24 @@ export async function getTasksByDepartment(): Promise<Task[]> {
 export async function getLoggedInInspectorData() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return null;
-    }
+
+    if (!session?.user?.email) return null;
 
     const inspector = await prisma.inspector.findUnique({
       where: {
-        userId: session.user.id,
+        email: session.user.email,
+      },
+      select: {
+        inspectorId: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phoneNumber: true,
+        department: true,
+        specialization: true,
+        certificationLevel: true,
+        yearsOfExperience: true,
+        notes: true,
       },
     });
 
@@ -158,7 +169,7 @@ export async function getLoggedInInspectorProductionOrderIds() {
       ])
     );
 
-    // Fetch full production order data for these IDs
+    // Fetch full production order data for these IDs, including quality checks and operations
     const productionOrders = await prisma.productionOrder.findMany({
       where: { id: { in: orderIds } },
       include: {
@@ -180,6 +191,7 @@ export async function getLoggedInInspectorProductionOrderIds() {
                 name: true,
               },
             },
+            status: true, // Ensure to include status for operations as well
           },
         },
         qualityChecks: {
@@ -188,20 +200,33 @@ export async function getLoggedInInspectorProductionOrderIds() {
             checkDate: true,
             status: true,
             defectsFound: true,
+            notes: true, // Include any additional fields from quality checks
           },
         },
       },
     });
 
-    // Log production orders to check data structure
-    console.log('Fetched production orders:', JSON.stringify(productionOrders, null, 2));
+    // Check if the production order is complete (both quality checks and operations)
+    const updatedOrders = productionOrders.map((order) => {
+      const allQualityChecksCompleted = order.qualityChecks.every(qc => qc.status === 'COMPLETED');
+      const allOperationsCompleted = order.operations.every(op => op.status === 'COMPLETED'); // Assuming there's a status on operations
 
-    return productionOrders;
+      // Determine if the production order is complete
+      const isCompleted = allQualityChecksCompleted && allOperationsCompleted;
+
+      return {
+        ...order,
+        status: isCompleted ? 'COMPLETED' : 'IN_PROGRESS',
+      };
+    });
+
+    return updatedOrders;
   } catch (error) {
     console.error('Error fetching production orders:', error);
     throw error;
   }
 }
+
 
 
 export async function markQualityCheckAsComplete(
@@ -376,45 +401,103 @@ export async function getProductionOrdersForInspector() {
 //     throw error;
 //   }
 // }
-// export async function getLoggedInInspectorData() {
-//   try {
-//     const session = await getServerSession(authOptions);
-//     if (!session?.user?.id) {
-//       return null; // No logged-in user
-//     }
+export async function getLoggedInInspectorDatas() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return null; // No logged-in user
+    }
 
-//     const inspector = await prisma.inspector.findUnique({
-//       where: {
-//         userId: session.user.id,
-//       },
-//       include: {
-//         user: {
-//           include: {
-//             profile: true,
-//           },
-//         },
-//         inspections: {
-//           include: {
-//             productionOrder: true,
-//           },
-//           orderBy: {
-//             checkDate: 'desc',
-//           },
-//         },
-//         assignedOperations: {
-//           include: {
-//             productionOrder: true,
-//           },
-//           orderBy: {
-//             startTime: 'desc',
-//           },
-//         },
-//       },
-//     });
+    const inspector = await prisma.inspector.findUnique({
+      where: {
+        userId: session.user.id,
+      },
+      include: {
+        user: {
+          include: {
+            profile: true,
+          },
+        },
+        inspections: {
+          include: {
+            productionOrder: true,
+          },
+          orderBy: {
+            checkDate: 'desc',
+          },
+        },
+        assignedOperations: {
+          include: {
+            productionOrder: true,
+          },
+          orderBy: {
+            startTime: 'desc',
+          },
+        },
+      },
+    });
 
-//     return inspector;
-//   } catch (error) {
-//     console.error('Error fetching logged-in inspector data:', error);
-//     throw error;
-//   }
-// }
+    return inspector;
+  } catch (error) {
+    console.error('Error fetching logged-in inspector data:', error);
+    throw error;
+  }
+}
+
+export interface Task {
+  id: string;
+  notes: string | null;
+  status: Status;
+  startTime: Date;
+  endTime: Date;
+  productionOrder: {
+    id: string;
+    status: Status;
+  } | null;
+}
+
+export async function updateTask(
+taskId: string, workerId: string, data: {
+  status?: Status;
+  notes?: string;
+  startTime?: Date;
+  endTime?: Date;
+}): Promise<Task> {
+  // Find the task by ID (no assignment check)
+  const task = await prisma.operation.findUnique({
+    where: { id: taskId },
+  });
+
+  if (!task) {
+    throw new Error("Task not found");
+  }
+
+  // Update the task
+  const updatedTask = await prisma.operation.update({
+    where: { id: taskId },
+    data: {
+      status: data.status,
+      notes: data.notes,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      updatedAt: new Date(),
+    },
+    include: {
+      productionOrder: true,
+    },
+  });
+
+  return {
+    id: updatedTask.id,
+    notes: updatedTask.notes,
+    status: updatedTask.status,
+    startTime: updatedTask.startTime,
+    endTime: updatedTask.endTime,
+    productionOrder: updatedTask.productionOrder
+      ? {
+          id: updatedTask.productionOrder.id,
+          status: updatedTask.productionOrder.status,
+        }
+      : null,
+  };
+}
