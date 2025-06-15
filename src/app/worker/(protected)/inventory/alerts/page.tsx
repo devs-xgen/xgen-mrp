@@ -14,14 +14,15 @@ export const metadata: Metadata = {
 export default async function InventoryAlertsPage({
   searchParams,
 }: {
-  searchParams: {
+  searchParams: Promise<{
     status?: string;
     page?: string;
-  };
+  }>;
 }) {
+  const { page: pageParam, status } = await searchParams;
   // Parse params
-  const page = searchParams.page ? parseInt(searchParams.page, 10) : 1;
-  const statusFilter = searchParams.status ? [searchParams.status] : undefined;
+  const page = pageParam ? parseInt(pageParam, 10) : 1;
+  const statusFilter = status ? [status] : undefined;
 
   // Get alerts data
   const alertsData = await getInventoryIssueReports(statusFilter, page, 10);

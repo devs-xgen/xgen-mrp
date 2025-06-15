@@ -15,15 +15,15 @@ import Link from "next/link";
 import { ArrowLeft, Pencil } from "lucide-react";
 
 interface QualityCheckPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({
   params,
 }: QualityCheckPageProps): Promise<Metadata> {
-  const check = await getQualityCheck(params.id);
+  const check = await getQualityCheck(id);
   if (!check) return { title: "Quality Check Not Found" };
 
   return {
@@ -35,7 +35,8 @@ export async function generateMetadata({
 export default async function QualityCheckPage({
   params,
 }: QualityCheckPageProps) {
-  const check = await getQualityCheck(params.id);
+  const { id } = await params;
+  const check = await getQualityCheck(id);
 
   if (!check) notFound();
 
@@ -59,7 +60,7 @@ export default async function QualityCheckPage({
             Inspection for {check.productionOrder.product.name}
           </p>
         </div>
-        <Link href={`/admin/quality-checks/${params.id}/edit`}>
+        <Link href={`/admin/quality-checks/${id}/edit`}>
           <Button>
             <Pencil className="h-4 w-4 mr-2" />
             Edit Check

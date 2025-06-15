@@ -50,9 +50,7 @@ interface WorkCenter {
 }
 
 interface ProductDetailClientPageProps {
-  params: {
-    id: string;
-  };
+  id: string;
   product: ProductWithNumberValues;
   workCenters: WorkCenter[];
 }
@@ -64,7 +62,7 @@ interface StockAdjustment {
 }
 
 export default function ProductDetailClientPage({
-  params,
+  id,
   product,
   workCenters,
 }: ProductDetailClientPageProps) {
@@ -164,7 +162,7 @@ export default function ProductDetailClientPage({
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href={`/admin/products/${params.id}/edit`}>
+          <Link href={`/admin/products/${id}/edit`}>
             <Button variant="outline">
               <Edit className="h-4 w-4 mr-2" />
               Edit Product
@@ -418,7 +416,7 @@ export default function ProductDetailClientPage({
                       </CardContent>
                     </Card>
                   ))}
-                  <Link href={`/admin/production?productId=${params.id}`}>
+                  <Link href={`/admin/production?productId=${id}`}>
                     <Button variant="outline" className="w-full">
                       View All Production Orders
                     </Button>

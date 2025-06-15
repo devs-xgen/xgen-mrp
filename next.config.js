@@ -22,7 +22,7 @@ const nextConfig = {
     ],
   },
   
-  webpack(config) {
+  webpack(config, { dev, isServer }) {
     // Add rule to handle HTML files
     config.module.rules.push({
       test: /\.html$/,
@@ -36,7 +36,7 @@ const nextConfig = {
 
     if (!config.isServer) {
       // Add server-only packages to client-side externals
-      config.externals = [...(config.externals || []), 'bcryptjs', '@prisma/client', '@prisma/extension-accelerate'];
+      config.externals = [...(config.externals || []), 'bcryptjs'];
       
       config.resolve.fallback = {
         fs: false,
@@ -59,10 +59,14 @@ const nextConfig = {
         querystring: false,
       };
     }
+    
     config.module.rules.push({
       test: /\.svg$/,
       use: ['@svgr/webpack'],
     });
+
+
+    
     return config;
   },
   // Enable CORS

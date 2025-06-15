@@ -9,8 +9,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+    const { id } = await params;
   try {
-    const productionOrderId = params.id;
+    const productionOrderId = id;
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {

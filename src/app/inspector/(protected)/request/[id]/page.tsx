@@ -11,15 +11,15 @@ import { getActiveInspectors } from "@/lib/actions/inspector";
 import { getProductionOrder, getAvailableWorkCenters } from "@/lib/actions/inspector/production-order";
 
 interface ProductionOrderPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({
   params,
 }: ProductionOrderPageProps): Promise<Metadata> {
-  const order = await getProductionOrder(params.id);
+  const order = await getProductionOrder(id);
   if (!order) return { title: "Production Order Not Found" };
 
   return {
@@ -31,12 +31,13 @@ export async function generateMetadata({
 export default async function ProductionOrderPage({
   params,
 }: ProductionOrderPageProps) {
+  const { id } = await params;
   const [orderData, workCenters, deliveryUsers, deliveryAssignment] =
     await Promise.all([
-      getProductionOrder(params.id),
+      getProductionOrder(id),
       getAvailableWorkCenters(),
       getDeliveryUsers(),
-      getDeliveryAssignment(params.id),
+      getDeliveryAssignment(id),
     ]);
 
   if (!orderData) notFound();

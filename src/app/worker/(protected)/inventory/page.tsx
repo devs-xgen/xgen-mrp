@@ -38,7 +38,7 @@ const mockLocations = [
 export default async function InventoryPage({
   searchParams,
 }: {
-  searchParams: {
+  searchParams: Promise<{
     search?: string;
     materialType?: string;
     stockLevel?: string;
@@ -48,25 +48,26 @@ export default async function InventoryPage({
     direction?: string;
     export_success?: string;
     export_error?: string;
-  };
+  }>;
 }) {
+  const { page: pageParam, sort, direction, stockLevel: stockLevelParam, search, materialType, locationType } = await searchParams;
   // Parse pagination and sorting params
-  const page = searchParams.page ? parseInt(searchParams.page, 10) : 1;
-  const sortField = searchParams.sort || "name";
-  const sortDirection = searchParams.direction === "desc" ? "desc" : "asc";
+  const page = pageParam ? parseInt(pageParam, 10) : 1;
+  const sortField = sort || "name";
+  const sortDirection = direction === "desc" ? "desc" : "asc";
 
   // Convert stockLevel param to the correct format if present
-  const stockLevel = searchParams.stockLevel as any;
+  const stockLevel = stockLevelParam as any;
 
   // Build filter from search params
   const filter = {
-    search: searchParams.search,
-    materialTypes: searchParams.materialType
-      ? [searchParams.materialType]
+    search: search,
+    materialTypes: materialType
+      ? [materialType]
       : undefined,
     stockLevels: stockLevel ? [stockLevel] : undefined,
-    locationTypes: searchParams.locationType
-      ? [searchParams.locationType]
+    locationTypes: locationType
+      ? [locationType]
       : undefined,
     isActive: true,
   };
@@ -135,10 +136,10 @@ export default async function InventoryPage({
           materialTypes={mockMaterialTypes}
           locations={mockLocations}
           defaultValues={{
-            search: searchParams.search,
+            search: search,
             stockLevel: stockLevel,
-            materialType: searchParams.materialType,
-            location: searchParams.locationType,
+            materialType: materialType,
+            location: locationType,
           }}
         />
       </Suspense>

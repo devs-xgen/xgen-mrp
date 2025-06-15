@@ -6,15 +6,16 @@ import { getMaterialUsage } from "@/lib/actions/material-search";
 import { MaterialDetailView } from "@/components/module/admin/materials/material-detail-view";
 
 interface MaterialDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({
   params,
 }: MaterialDetailPageProps): Promise<Metadata> {
-  const material = await getMaterialById(params.id);
+  const { id } = await params;
+  const material = await getMaterialById(id);
   if (!material) return { title: "Material Not Found" };
 
   return {
@@ -26,9 +27,10 @@ export async function generateMetadata({
 export default async function MaterialDetailPage({
   params,
 }: MaterialDetailPageProps) {
+  const { id } = await params;
   const [material, materialUsage] = await Promise.all([
-    getMaterialById(params.id),
-    getMaterialUsage(params.id),
+    getMaterialById(id),
+    getMaterialUsage(id),
   ]);
 
   if (!material) notFound();

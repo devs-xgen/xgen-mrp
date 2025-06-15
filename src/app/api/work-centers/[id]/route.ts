@@ -10,6 +10,7 @@ interface RouteParams {
 
 // GET /api/workcenters/[id]
 export async function GET(req: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const session = await getServerSession(authOptions);
         if (!session) {
@@ -17,7 +18,7 @@ export async function GET(req: Request, { params }: RouteParams) {
         }
 
         const workCenter = await prisma.workCenter.findUnique({
-            where: { id: params.id },
+            where: { id: id },
         });
 
         if (!workCenter) {
@@ -33,6 +34,7 @@ export async function GET(req: Request, { params }: RouteParams) {
 
 // PATCH /api/workcenters/[id]
 export async function PATCH(req: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const session = await getServerSession(authOptions);
         if (!session) {
@@ -43,7 +45,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         const body = workCenterSchema.partial().parse(json);
 
         const workCenter = await prisma.workCenter.update({
-            where: { id: params.id },
+            where: { id: id },
             data: { ...body, modifiedBy: session.user.id },
         });
 
@@ -56,6 +58,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
 // DELETE /api/workcenters/[id]
 export async function DELETE(req: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const session = await getServerSession(authOptions);
         if (!session) {
@@ -64,7 +67,7 @@ export async function DELETE(req: Request, { params }: RouteParams) {
 
         // Prevent deletion if linked to any operations
         const workCenterInUse = await prisma.operation.findFirst({
-            where: { workCenterId: params.id },
+            where: { workCenterId: id },
         });
 
         if (workCenterInUse) {
@@ -74,7 +77,7 @@ export async function DELETE(req: Request, { params }: RouteParams) {
             );
         }
 
-        await prisma.workCenter.delete({ where: { id: params.id } });
+        await prisma.workCenter.delete({ where: { id: id } });
 
         return new NextResponse(null, { status: 204 });
     } catch (error) {

@@ -12,6 +12,7 @@ interface RouteParams {
 
 // PATCH /api/operations/[id] - Update an operation
 export async function PATCH(req: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const session = await getServerSession(authOptions);
         if (!session) {
@@ -23,7 +24,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
         const operation = await prisma.operation.update({
             where: {
-                id: params.id,
+                id: id,
             },
             data: {
                 ...body,
@@ -48,6 +49,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
 // DELETE /api/operations/[id] - Delete an operation
 export async function DELETE(_: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const session = await getServerSession(authOptions);
         if (!session) {
@@ -56,7 +58,7 @@ export async function DELETE(_: Request, { params }: RouteParams) {
 
         await prisma.operation.delete({
             where: {
-                id: params.id,
+                id: id,
             },
         });
 
@@ -72,6 +74,7 @@ export async function DELETE(_: Request, { params }: RouteParams) {
 
 // GET /api/operations/[id] - Get a single operation
 export async function GET(_: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const session = await getServerSession(authOptions);
         if (!session) {
@@ -80,7 +83,7 @@ export async function GET(_: Request, { params }: RouteParams) {
 
         const operation = await prisma.operation.findUnique({
             where: {
-                id: params.id,
+                id: id,
             },
             include: {
                 workCenter: true,

@@ -27,13 +27,13 @@ async function refreshData() {
 
 // Extract the poId from the search params for filtering
 interface PageProps {
-  searchParams: { poId?: string };
+  searchParams: Promise<{ poId?: string }>;
 }
 
 export default async function PurchaseOrderLinesPage({
   searchParams,
 }: PageProps) {
-  const poId = searchParams.poId;
+  const { poId } = await searchParams;
 
   // Fetch data with optional filtering
   const [purchaseOrderLines, materials, purchaseOrders] = await Promise.all([

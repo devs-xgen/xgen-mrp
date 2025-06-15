@@ -12,14 +12,15 @@ export const metadata: Metadata = {
 };
 
 interface DeliveryOrderPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function DeliveryOrderPage({
   params,
 }: DeliveryOrderPageProps) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
@@ -27,7 +28,7 @@ export default async function DeliveryOrderPage({
   }
 
   try {
-    const assignment = await getDeliveryAssignmentById(params.id);
+    const assignment = await getDeliveryAssignmentById(id);
 
     // Check if the assignment is assigned to the current user
     if (assignment.userId !== session.user.id) {

@@ -9,11 +9,12 @@ interface RouteParams {
 
 // suppliers Patch
 export async function PATCH(req: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const json = await req.json();
         const supplier = await prisma.supplier.update({
             where: {
-                id: params.id,
+                id: id,
             },
             data: {
                 name: json.name,
@@ -52,10 +53,11 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
 // suppliers DELETE
 export async function DELETE(_: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         await prisma.supplier.delete({
             where: {
-                id: params.id,
+                id: id,
             },
         });
         return new NextResponse('', { status: 204 });
@@ -71,10 +73,11 @@ export async function DELETE(_: Request, { params }: RouteParams) {
 // suppliers GET
 
 export async function GET(_: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const supplier = await prisma.supplier.findUnique({
             where: {
-                id: params.id,
+                id: id,
             },
             include: {
                 materials: true,

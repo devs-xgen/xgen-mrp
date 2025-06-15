@@ -9,11 +9,12 @@ interface RouteParams {
 
 // Update Production Order
 export async function PATCH(req: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const json = await req.json();
         const order = await prisma.productionOrder.update({
             where: {
-                id: params.id,
+                id: id,
             },
             data: {
                 productId: json.productId,
@@ -44,10 +45,11 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
 // Delete Production Order
 export async function DELETE(_: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         // Check if the production order has associated operations or quality checks
         const order = await prisma.productionOrder.findUnique({
-            where: { id: params.id },
+            where: { id: id },
             include: {
                 operations: { select: { id: true }, take: 1 },
                 qualityChecks: { select: { id: true }, take: 1 },
@@ -63,7 +65,7 @@ export async function DELETE(_: Request, { params }: RouteParams) {
 
         await prisma.productionOrder.delete({
             where: {
-                id: params.id,
+                id: id,
             },
         });
         return new NextResponse(null, { status: 204 });

@@ -9,11 +9,12 @@ interface RouteParams {
 
 // Update Transaction
 export async function PATCH(req: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const json = await req.json();
         const transaction = await prisma.transaction.update({
             where: {
-                id: params.id,
+                id: id,
             },
             data: {
                 orderId: json.orderId,
@@ -43,10 +44,11 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
 // Delete Transaction
 export async function DELETE(_: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         await prisma.transaction.delete({
             where: {
-                id: params.id,
+                id: id,
             },
         });
         return new NextResponse(null, { status: 204 });

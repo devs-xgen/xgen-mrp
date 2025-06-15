@@ -1,5 +1,5 @@
-import { prisma } from '../prisma';
-import { Prisma, Status, Operation } from '@prisma/client';
+import { prisma } from "../db";
+import { Prisma, Status, Operation } from "@prisma/client";
 
 export interface Task {
   id: string;
@@ -20,7 +20,9 @@ export interface Stat {
   icon: "ClipboardList" | "Package" | "Clock" | "CheckCircle";
 }
 
-export async function getWorkerTasks(workerId: string): Promise<{ tasks: Task[]; stats: Stat[] }> {
+export async function getWorkerTasks(
+  workerId: string
+): Promise<{ tasks: Task[]; stats: Stat[] }> {
   // Get today's date at midnight for comparison
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -160,4 +162,4 @@ export async function updateWorkerTask(
         }
       : null,
   };
-} 
+}

@@ -21,11 +21,12 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-  searchParams: { highlight?: string };
+  searchParams: Promise<{ highlight?: string }>;
 }
 
 export default async function PurchaseOrdersPage({ searchParams }: PageProps) {
-  const highlightId = searchParams.highlight;
+  const { highlight } = await searchParams;
+  const highlightId = highlight;
 
   const [purchaseOrders, materials, suppliers] = await Promise.all([
     getPurchaseOrders(),

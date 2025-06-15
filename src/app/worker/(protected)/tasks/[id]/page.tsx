@@ -14,14 +14,15 @@ export const metadata: Metadata = {
 };
 
 interface TaskDetailsPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function TaskDetailsPage({
   params,
 }: TaskDetailsPageProps) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
@@ -30,7 +31,7 @@ export default async function TaskDetailsPage({
 
   const task = await prisma.operation.findFirst({
     where: {
-      id: params.id,
+      id: id,
       assignedToId: session.user.id,
     },
     include: {

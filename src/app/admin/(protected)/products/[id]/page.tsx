@@ -13,15 +13,16 @@ import {
 } from "@/types/admin/product";
 
 interface ProductDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({
   params,
 }: ProductDetailPageProps): Promise<Metadata> {
-  const product = await getProductById(params.id);
+  const { id } = await params;
+  const product = await getProductById(id);
   if (!product) return { title: "Product Not Found" };
 
   return {
@@ -33,10 +34,11 @@ export async function generateMetadata({
 export default async function ProductDetailPage({
   params,
 }: ProductDetailPageProps) {
+  const { id } = await params;
   // Fetch product, production orders, and work centers in parallel
   const [product, productionOrders, workCenters] = await Promise.all([
-    getProductById(params.id),
-    getProductionOrdersByProductId(params.id),
+    getProductById(id),
+    getProductionOrdersByProductId(id),
     getWorkCenters(),
   ]);
 
@@ -61,7 +63,7 @@ export default async function ProductDetailPage({
   // Add explicit type assertion with unknown as intermediate step
   return (
     <ProductDetailClientPage
-      params={params}
+      id={id}
       product={productWithNumberValues as unknown as ProductWithNumberValues}
       workCenters={workCentersWithNumberValues}
     />

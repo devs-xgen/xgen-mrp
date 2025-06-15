@@ -22,13 +22,14 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function WorkCenterDetailsPage({ params }: PageProps) {
-  const workCenterId = params.id;
+  const { id } = await params;
+  const workCenterId = id;
 
   try {
     // Fetch work center details

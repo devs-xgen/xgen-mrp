@@ -12,12 +12,13 @@ const unitOfMeasureSchema = z.object({
 })
 
 interface RouteParams {
-    params: {
+    params: Promise<{
         unitId: string
-    }
+    }>
 }
 
 export async function PATCH(req: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const session = await getServerSession(authOptions)
         if (!session) {
@@ -122,6 +123,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(req: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const session = await getServerSession(authOptions)
         if (!session) {

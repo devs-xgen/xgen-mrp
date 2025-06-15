@@ -6,11 +6,12 @@ import { z } from "zod";
 // GET /api/customerOrder/[id]
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const customerOrder = await prisma.customerOrder.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         customer: true,
         orderLines: true,
@@ -21,30 +22,37 @@ export async function GET(
     if (customerOrder) {
       return NextResponse.json(customerOrder);
     } else {
-      return new NextResponse(JSON.stringify({ error: 'Customer order not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return new NextResponse(
+        JSON.stringify({ error: "Customer order not found" }),
+        {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
   } catch (error) {
     console.error("Error getting customer order:", error);
-    return new NextResponse(JSON.stringify({ error: 'Failed to get customer order' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new NextResponse(
+      JSON.stringify({ error: "Failed to get customer order" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }
 
 // PATCH /api/customerOrder/[id]
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const data = await request.json();
 
     const updatedCustomerOrder = await prisma.customerOrder.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         orderNumber: data.orderNumber,
         customerId: data.customerId,
@@ -58,26 +66,32 @@ export async function PATCH(
         modifiedBy: data.modifiedBy,
 
         orderLines: {
-          upsert: data.orderLines?.map((orderLineData: z.infer<typeof CustomerOrderLineSchema> & { id?: string }) => ({
-            where: { id: orderLineData.id || '' },
-            update: {
-              productId: orderLineData.productId,
-              quantity: orderLineData.quantity,
-              unitPrice: orderLineData.unitPrice,
-              status: orderLineData.status,
-              notes: orderLineData.notes,
-              modifiedBy: orderLineData.modifiedBy
-            },
-            create: {
-              productId: orderLineData.productId,
-              quantity: orderLineData.quantity,
-              unitPrice: orderLineData.unitPrice,
-              status: orderLineData.status,
-              notes: orderLineData.notes,
-              createdBy: orderLineData.createdBy,
-              modifiedBy: orderLineData.modifiedBy
-            },
-          })),
+          upsert: data.orderLines?.map(
+            (
+              orderLineData: z.infer<typeof CustomerOrderLineSchema> & {
+                id?: string;
+              }
+            ) => ({
+              where: { id: orderLineData.id || "" },
+              update: {
+                productId: orderLineData.productId,
+                quantity: orderLineData.quantity,
+                unitPrice: orderLineData.unitPrice,
+                status: orderLineData.status,
+                notes: orderLineData.notes,
+                modifiedBy: orderLineData.modifiedBy,
+              },
+              create: {
+                productId: orderLineData.productId,
+                quantity: orderLineData.quantity,
+                unitPrice: orderLineData.unitPrice,
+                status: orderLineData.status,
+                notes: orderLineData.notes,
+                createdBy: orderLineData.createdBy,
+                modifiedBy: orderLineData.modifiedBy,
+              },
+            })
+          ),
         },
       },
       include: {
@@ -90,29 +104,36 @@ export async function PATCH(
     return NextResponse.json(updatedCustomerOrder);
   } catch (error) {
     console.error("Error updating customer order:", error);
-    return new NextResponse(JSON.stringify({ error: 'Failed to update customer order' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new NextResponse(
+      JSON.stringify({ error: "Failed to update customer order" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }
 
 // DELETE /api/customerOrder/[id]
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     await prisma.customerOrder.delete({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error("Error deleting customer order:", error);
-    return new NextResponse(JSON.stringify({ error: 'Failed to delete customer order' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new NextResponse(
+      JSON.stringify({ error: "Failed to delete customer order" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }

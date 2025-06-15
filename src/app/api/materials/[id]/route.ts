@@ -12,6 +12,7 @@ interface RouteParams {
 
 // GET /api/materials/[materialId]
 export async function GET(req: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const session = await getServerSession(authOptions);
         if (!session) {
@@ -20,7 +21,7 @@ export async function GET(req: Request, { params }: RouteParams) {
 
         const material = await prisma.material.findUnique({
             where: {
-                id: params.id,
+                id: id,
             },
             include: {
                 type: true,
@@ -42,6 +43,7 @@ export async function GET(req: Request, { params }: RouteParams) {
 
 // PATCH /api/materials/[materialId]
 export async function PATCH(req: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const session = await getServerSession(authOptions);
         if (!session) {
@@ -53,7 +55,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
         const material = await prisma.material.update({
             where: {
-                id: params.id,
+                id: id,
             },
             data: {
                 ...body,
@@ -75,6 +77,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
 // DELETE /api/materials/[materialId]
 export async function DELETE(req: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const session = await getServerSession(authOptions);
         if (!session) {
@@ -84,7 +87,7 @@ export async function DELETE(req: Request, { params }: RouteParams) {
         // Check if material is being used in any BOMs
         const materialInUse = await prisma.bOM.findFirst({
             where: {
-                materialId: params.id
+                materialId: id
             }
         });
 
@@ -97,7 +100,7 @@ export async function DELETE(req: Request, { params }: RouteParams) {
 
         await prisma.material.delete({
             where: {
-                id: params.id,
+                id: id,
             },
         });
 

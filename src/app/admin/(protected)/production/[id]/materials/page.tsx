@@ -5,16 +5,17 @@ import { Loader2 } from "lucide-react";
 import { notFound } from "next/navigation";
 
 interface ProductionMaterialsPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function ProductionMaterialsPage({
   params,
 }: ProductionMaterialsPageProps) {
   try {
-    const order = await getProductionOrder(params.id);
+    const { id } = await params;
+    const order = await getProductionOrder(id);
     
     if (!order) {
       notFound();

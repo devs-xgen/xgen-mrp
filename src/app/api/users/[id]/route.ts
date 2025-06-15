@@ -7,8 +7,9 @@ export async function DELETE(
     request: Request,
     { params }: { params: { id: string } }
 ) {
+    const { id } = await params;
     try {
-        const id = params.id
+        const id = id
 
         // Delete user
         await prisma.user.delete({
@@ -30,8 +31,9 @@ export async function PATCH(
     request: Request,
     { params }: { params: { id: string } }
 ) {
+    const { id } = await params;
     try {
-        const id = params.id
+        const id = id
         const json = await request.json()
         const { role, status, firstName, lastName, employeeId, department, position } = json
 

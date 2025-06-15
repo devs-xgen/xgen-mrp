@@ -14,6 +14,7 @@ interface RouteParams {
 
 // PATCH /api/quality-checks/[id] - Update a quality check
 export async function PATCH(req: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const session = await getServerSession(authOptions);
         if (!session) {
@@ -25,7 +26,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
         const qualityCheck = await prisma.qualityCheck.update({
             where: {
-                id: params.id,
+                id: id,
             },
             data: {
                 ...body,
@@ -46,6 +47,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
 // DELETE /api/quality-checks/[id] - Delete a quality check
 export async function DELETE(_: Request, { params }: RouteParams) {
+    const { id } = await params;
     try {
         const session = await getServerSession(authOptions);
         if (!session) {
@@ -54,7 +56,7 @@ export async function DELETE(_: Request, { params }: RouteParams) {
 
         await prisma.qualityCheck.delete({
             where: {
-                id: params.id,
+                id: id,
             },
         });
 

@@ -7,15 +7,15 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 interface EditQualityCheckPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({
   params,
 }: EditQualityCheckPageProps): Promise<Metadata> {
-  const check = await getQualityCheck(params.id);
+  const check = await getQualityCheck(id);
   if (!check) return { title: "Quality Check Not Found" };
 
   return {
@@ -27,14 +27,15 @@ export async function generateMetadata({
 export default async function EditQualityCheckPage({
   params,
 }: EditQualityCheckPageProps) {
-  const check = await getQualityCheck(params.id);
+  const { id } = await params;
+  const check = await getQualityCheck(id);
 
   if (!check) notFound();
 
   return (
     <div className="flex flex-col gap-6 p-8">
       <div className="flex items-center gap-4">
-        <Link href={`/admin/quality-checks/${params.id}`}>
+        <Link href={`/admin/quality-checks/${id}`}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Quality Check

@@ -8,6 +8,7 @@ interface Params {
 }
 
 export async function GET(request: Request, { params }: Params) {
+    const { id } = await params;
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.email) {
@@ -19,7 +20,7 @@ export async function GET(request: Request, { params }: Params) {
 
   try {
     const inspector = await prisma.inspector.findUnique({
-      where: { inspectorId: params.id },
+      where: { inspectorId: id },
       // include related data if needed
     });
 
