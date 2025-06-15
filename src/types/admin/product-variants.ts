@@ -331,3 +331,82 @@ export const CLOTHING_COLORS: ClothingColor[] = [
   { name: "Gray", code: "#808080", category: "neutral" },
   { name: "Brown", code: "#A52A2A", category: "neutral" },
 ];
+
+// =============================================
+// ENHANCED BULK VARIANT CREATION TYPES
+// =============================================
+
+export interface BulkVariantCreationRequest {
+  productId: string;
+  sizes: Array<{
+    name: string;
+    code: string;
+    priceModifier?: number; // Percentage modifier (e.g., 1.2 for 20% increase)
+    costModifier?: number;
+    sortOrder?: number;
+  }>;
+  colors: Array<{
+    name: string;
+    code?: string;
+    priceModifier?: number;
+    costModifier?: number;
+  }>;
+  inheritBOM: boolean;
+  bomModifications?: Array<{
+    materialId: string;
+    quantityModifier: number; // e.g., 1.2 for XL (20% more material)
+    sizeSpecific?: { [sizeName: string]: number }; // Size-specific multipliers
+    colorSpecific?: { [colorName: string]: string }; // Color-specific material substitutions
+  }>;
+  baseSettings: {
+    minimumStockLevel: number;
+    initialStock?: number;
+  };
+}
+
+export interface GroupedProductForDisplay {
+  id: string;
+  name: string;
+  sku: string;
+  description?: string;
+  hasVariants: boolean;
+  variantCount: number;
+  totalStock: number;
+  totalValue: number;
+  lowStockVariants: number;
+  category: {
+    id: string;
+    name: string;
+  };
+  variants: ProductVariantForDisplay[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface VariantBOMInheritance {
+  variantId: string;
+  parentProductId: string;
+  inheritedBOMs: Array<{
+    originalBOMId: string;
+    materialId: string;
+    materialName: string;
+    originalQuantity: number;
+    adjustedQuantity: number;
+    quantityModifier: number;
+    reason: string; // "SIZE_ADJUSTMENT" | "COLOR_SUBSTITUTION" | "MANUAL_OVERRIDE"
+  }>;
+}
+
+export interface BulkVariantCreationResult {
+  success: boolean;
+  createdVariants: ProductVariant[];
+  createdBOMs: number;
+  skippedVariants: Array<{
+    sizeName: string;
+    colorName: string;
+    reason: string;
+  }>;
+  totalCreated: number;
+  message: string;
+  errors?: string[];
+}

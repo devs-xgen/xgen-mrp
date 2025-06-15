@@ -16,6 +16,32 @@ export async function getAllProducts() {
             name: true,
           },
         },
+        // Include product variants for expandable table
+        variants: {
+          select: {
+            id: true,
+            sku: true,
+            sizeName: true,
+            sizeCode: true,
+            colorName: true,
+            colorCode: true,
+            currentStock: true,
+            minimumStockLevel: true,
+            unitCost: true,
+            sellingPrice: true,
+            displayName: true,
+            isActive: true,
+            sortOrder: true,
+          },
+          where: {
+            isActive: true,
+          },
+          orderBy: [
+            { sortOrder: "asc" },
+            { sizeName: "asc" },
+            { colorName: "asc" },
+          ],
+        },
         // Include brief information about production orders for this product
         productionOrders: {
           select: {

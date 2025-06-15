@@ -132,37 +132,81 @@ model UnitOfMeasure {
 }
 
 model Product {
-  id                String            @id @default(cuid())
-  sku               String            @unique
+  id                String   @id @default(cuid())
+  sku               String   @unique
   name              String
   description       String?
   categoryId        String
   sizeRange         String[] // Keep for legacy/simple products
   colorOptions      String[] // Keep for legacy/simple products
-  unitCost          Decimal           @db.Decimal(10, 2) // Base cost
-  sellingPrice      Decimal           @db.Decimal(10, 2) // Base price
+  unitCost          Decimal  @db.Decimal(10, 2) // Base cost
+  sellingPrice      Decimal  @db.Decimal(10, 2) // Base price
   minimumStockLevel Int
   currentStock      Int
-  expectedStock     Int               @default(0)
-  committedStock    Int               @default(0)
-  calculatedStock   Int               @default(0)
+  expectedStock     Int      @default(0)
+  committedStock    Int      @default(0)
+  calculatedStock   Int      @default(0)
   leadTime          Int
-  hasVariants       Boolean           @default(false) // Changed from hasSizeVariants to hasVariants
-  status            Status            @default(ACTIVE)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  hasVariants       Boolean  @default(false) // Changed from hasSizeVariants to hasVariants
+  status            Status   @default(ACTIVE)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
   createdBy         String?
   modifiedBy        String?
-  boms              BOM[]
-  orderLines        OrderLine[]
-  category          ProductCategory   @relation(fields: [categoryId], references: [id])
-  productionOrders  ProductionOrder[]
-  variants          ProductVariant[] // Enhanced relation for all variants
+
+  // Enhanced Variant Management
+  isVariantTemplate Boolean @default(false) // Master product for variants
+  parentProductId   String? // Link to parent product for variants
+  variantAttributes Json? // Flexible variant properties storage
+
+  boms             BOM[]
+  orderLines       OrderLine[]
+  category         ProductCategory   @relation(fields: [categoryId], references: [id])
+  productionOrders ProductionOrder[]
+  variants         ProductVariant[] // Enhanced relation for all variants
+
+  // Enhanced Variant Relations
+  parentProduct Product?  @relation("ProductVariants", fields: [parentProductId], references: [id])
+  childVariants Product[] @relation("ProductVariants")
 
   // MRP Enhancement Relations
-  inventoryMovements InventoryMovement[]
-  productionBatches  ProductionBatch[]
-  ProductSizeVariant ProductSizeVariant[]
+  inventoryMovements       InventoryMovement[]
+  productionBatches        ProductionBatch[]
+  ProductSizeVariant       ProductSizeVariant[]
+  ProductVariantTemplate   ProductVariantTemplate? @relation(fields: [productVariantTemplateId], references: [id])
+  productVariantTemplateId String?
+}
+
+// New ProductVariantTemplate model for variant configuration
+model ProductVariantTemplate {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+
+  // Size Configuration
+  availableSizes Json // ["XS", "S", "M", "L", "XL", "XXL"]
+  sizeMapping    Json // Size-specific multipliers/overrides
+
+  // Color Configuration  
+  availableColors Json // [{"name": "Red", "code": "#FF0000"}, ...]
+  colorMapping    Json // Color-specific pricing/materials
+
+  // BOM Configuration
+  baseBOMId      String?
+  bomInheritance Json // Rules for BOM inheritance
+
+  // Pricing Rules
+  pricingRules Json // Size/color-based pricing rules
+
+  // Metadata
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  createdBy  String?
+  modifiedBy String?
+
+  // Relations
+  products Product[]
+  baseBOM  BOM?      @relation("TemplateBOM", fields: [baseBOMId], references: [id])
 }
 
 // Enhanced model for comprehensive product variants (size + color + other attributes)
@@ -192,6 +236,12 @@ model ProductVariant {
   isActive    Boolean @default(true)
   sortOrder   Int     @default(0) // For ordering variants
 
+  // Enhanced BOM Management
+  inheritBOMFromParent Boolean @default(true) // Whether to inherit BOM from parent product
+  bomOverrides         Json? // JSON field for BOM modifications and overrides
+  variantGroup         String? // Group related variants together
+  isTemplate           Boolean @default(false) // Whether this variant is a template for others
+
   // Metadata
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -208,6 +258,7 @@ model ProductVariant {
   @@index([sizeName])
   @@index([colorName])
   @@index([sku])
+  @@index([variantGroup])
 }
 
 // Variant-specific BOM (replaces ProductSizeVariantBOM)
@@ -339,18 +390,19 @@ model Material {
 }
 
 model BOM {
-  id              String          @id @default(cuid())
-  productId       String
-  materialId      String
-  quantityNeeded  Decimal         @db.Decimal(10, 3)
-  wastePercentage Decimal         @db.Decimal(5, 2)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  createdBy       String?
-  modifiedBy      String?
-  material        Material        @relation(fields: [materialId], references: [id])
-  product         Product         @relation(fields: [productId], references: [id])
-  ProductionBOM   ProductionBOM[]
+  id                     String                   @id @default(cuid())
+  productId              String
+  materialId             String
+  quantityNeeded         Decimal                  @db.Decimal(10, 3)
+  wastePercentage        Decimal                  @db.Decimal(5, 2)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  createdBy              String?
+  modifiedBy             String?
+  material               Material                 @relation(fields: [materialId], references: [id])
+  product                Product                  @relation(fields: [productId], references: [id])
+  ProductionBOM          ProductionBOM[]
+  ProductVariantTemplate ProductVariantTemplate[] @relation("TemplateBOM")
 
   @@index([productId])
   @@index([materialId])

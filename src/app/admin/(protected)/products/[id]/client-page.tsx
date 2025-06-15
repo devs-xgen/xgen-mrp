@@ -32,8 +32,10 @@ import {
 import { CreateProductionDialog } from "@/components/module/admin/products/create-production-dialog";
 import { BOMSection } from "@/components/module/admin/products/bom/BOMSection";
 import { EnhancedVariantBOMSection } from "@/components/module/admin/products/bom/EnhancedVariantBOMSection";
+import { VariantCreationDialog } from "@/components/module/admin/products/variant-creation-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { adjustProductStock, adjustVariantStock } from "@/lib/actions/product";
+import { formatCurrencyPHP } from "@/lib/constant";
 import {
   ProductionOrderSummary,
   ProductWithNumberValues,
@@ -94,13 +96,6 @@ export default function ProductDetailClientPage({
     : product.currentStock;
   const lowStockVariants = product.variants?.filter(v => v.currentStock <= v.minimumStockLevel).length || 0;
   const activeProductionOrders = product.productionOrders?.length || 0;
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP',
-    }).format(amount);
-  };
 
   const getStockStatus = (current: number, minimum: number) => {
     if (current === 0) return { label: 'Out of Stock', color: 'bg-red-500' };
@@ -445,14 +440,27 @@ export default function ProductDetailClientPage({
                     <Palette className="w-4 h-4" />
                     Product Variants ({product.variants.length})
                   </span>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => openStockDialog()}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Bulk Adjust Stock
-                  </Button>
+                  <div className="flex gap-2">
+                    <VariantCreationDialog
+                      productId={product.id}
+                      productName={product.name}
+                      onSuccess={async () => router.refresh()}
+                      trigger={
+                        <Button variant="outline" size="sm">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create Variants
+                        </Button>
+                      }
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => openStockDialog()}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Bulk Adjust Stock
+                    </Button>
+                  </div>
                 </CardTitle>
                 <CardDescription>
                   Manage stock levels for each product variant
@@ -503,11 +511,11 @@ export default function ProductDetailClientPage({
                                 </div>
                                 <div>
                                   <span className="text-muted-foreground">Cost:</span>
-                                  <span className="ml-1 font-medium">{formatCurrency(variant.unitCost)}</span>
+                                  <span className="ml-1 font-medium">{formatCurrencyPHP(variant.unitCost)}</span>
                                 </div>
                                 <div>
                                   <span className="text-muted-foreground">Price:</span>
-                                  <span className="ml-1 font-medium">{formatCurrency(variant.sellingPrice)}</span>
+                                  <span className="ml-1 font-medium">{formatCurrencyPHP(variant.sellingPrice)}</span>
                                 </div>
                               </div>
                             </div>
@@ -530,22 +538,69 @@ export default function ProductDetailClientPage({
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    Stock Management
-                  </span>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => openStockDialog()}
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    Adjust Stock
-                  </Button>
-                </CardTitle>
+            <div className="space-y-6">
+              {/* Create Variants Option */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Palette className="w-4 h-4" />
+                      Product Variants
+                    </span>
+                    <VariantCreationDialog
+                      productId={product.id}
+                      productName={product.name}
+                      onSuccess={async () => router.refresh()}
+                      trigger={
+                        <Button variant="default" size="sm">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create Variants
+                        </Button>
+                      }
+                    />
+                  </CardTitle>
+                  <CardDescription>
+                    This product does not have variants yet. Create size and color variants to manage different configurations.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <Palette className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground mb-4">
+                      No variants created yet. Variants allow you to manage different sizes, colors, and configurations of this product.
+                    </p>
+                    <VariantCreationDialog
+                      productId={product.id}
+                      productName={product.name}
+                      onSuccess={async () => router.refresh()}
+                      trigger={
+                        <Button>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create Your First Variants
+                        </Button>
+                      }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Stock Management for Non-Variant Products */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Package className="w-4 h-4" />
+                      Stock Management
+                    </span>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => openStockDialog()}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Adjust Stock
+                    </Button>
+                  </CardTitle>
                 <CardDescription>
                   Manage stock levels for this product
                 </CardDescription>
@@ -574,6 +629,7 @@ export default function ProductDetailClientPage({
                 </div>
               </CardContent>
             </Card>
+            </div>
           )}
         </TabsContent>
 
@@ -603,11 +659,11 @@ export default function ProductDetailClientPage({
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-muted-foreground">Unit Cost</span>
-                  <span className="text-lg font-semibold">{formatCurrency(product.unitCost)}</span>
+                  <span className="text-lg font-semibold">{formatCurrencyPHP(product.unitCost)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-muted-foreground">Selling Price</span>
-                  <span className="text-lg font-semibold">{formatCurrency(product.sellingPrice)}</span>
+                  <span className="text-lg font-semibold">{formatCurrencyPHP(product.sellingPrice)}</span>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t">
                   <span className="text-sm font-medium text-muted-foreground">Profit Margin</span>
@@ -630,13 +686,13 @@ export default function ProductDetailClientPage({
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-muted-foreground">Lowest Cost</span>
                     <span className="text-lg font-semibold">
-                      {formatCurrency(Math.min(...(product.variants?.map(v => v.unitCost) || [product.unitCost])))}
+                      {formatCurrencyPHP(Math.min(...(product.variants?.map(v => v.unitCost) || [product.unitCost])))}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-muted-foreground">Highest Price</span>
                     <span className="text-lg font-semibold">
-                      {formatCurrency(Math.max(...(product.variants?.map(v => v.sellingPrice) || [product.sellingPrice])))}
+                      {formatCurrencyPHP(Math.max(...(product.variants?.map(v => v.sellingPrice) || [product.sellingPrice])))}
                     </span>
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t">

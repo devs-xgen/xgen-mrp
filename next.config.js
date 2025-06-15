@@ -4,7 +4,7 @@ const nextConfig = {
   output: 'standalone',
   experimental: {
     // We'll keep this one and remove transpilePackages
-    serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs'],
+    serverComponentsExternalPackages: ['@prisma/client', '@prisma/extension-accelerate', 'bcryptjs'],
     scrollRestoration: true,
   },
   eslint: {
@@ -35,8 +35,8 @@ const nextConfig = {
     });
 
     if (!config.isServer) {
-      // Add bcrypt to client-side externals
-      config.externals = [...(config.externals || []), 'bcryptjs'];
+      // Add server-only packages to client-side externals
+      config.externals = [...(config.externals || []), 'bcryptjs', '@prisma/client', '@prisma/extension-accelerate'];
       
       config.resolve.fallback = {
         fs: false,
