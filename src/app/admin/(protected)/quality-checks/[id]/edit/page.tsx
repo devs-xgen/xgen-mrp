@@ -15,6 +15,7 @@ interface EditQualityCheckPageProps {
 export async function generateMetadata({
   params,
 }: EditQualityCheckPageProps): Promise<Metadata> {
+  const { id } = await params;
   const check = await getQualityCheck(id);
   if (!check) return { title: "Quality Check Not Found" };
 

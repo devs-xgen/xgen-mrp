@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { workCenterSchema } from "@/lib/workcenter";
 
 interface RouteParams {
-    params: { id: string };
+    params: Promise<{ id: string }>
 }
 
 // GET /api/workcenters/[id]

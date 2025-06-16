@@ -1044,7 +1044,7 @@ function CalendarView({ startDate, dueDate }: { startDate: Date, dueDate: Date }
   const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
   
   // Create calendar grid
-  const calendarDays = [];
+  const calendarDays: React.ReactElement[] = [];
   
   // Add empty cells for days before the first of the month
   for (let i = 0; i < firstDay; i++) {

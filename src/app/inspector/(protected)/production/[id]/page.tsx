@@ -20,6 +20,7 @@ interface ProductionOrderPageProps {
 export async function generateMetadata({
   params,
 }: ProductionOrderPageProps): Promise<Metadata> {
+  const { id } = await params;
   const order = await getProductionOrder(id);
   if (!order) return { title: "Production Order Not Found" };
 

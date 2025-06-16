@@ -5,9 +5,9 @@ import { authOptions } from "@/lib/auth";
 import { operationSchema } from "@/lib/operations";
 
 interface RouteParams {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>
 }
 
 // PATCH /api/operations/[id] - Update an operation

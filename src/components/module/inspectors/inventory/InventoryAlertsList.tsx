@@ -184,10 +184,10 @@ export function InventoryAlertsList({
   // Generate pagination items
   const getPaginationItems = () => {
     const { page, totalPages } = pagination;
-    const items = [];
+    const items: React.ReactNode[] = [];
 
     // Create a range of pages to show
-    const range = [];
+    const range: number[] = [];
     const maxVisiblePages = 5;
 
     let startPage = Math.max(1, page - Math.floor(maxVisiblePages / 2));

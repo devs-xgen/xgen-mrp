@@ -82,6 +82,10 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
         open={materialDialogOpen} // ✅ boolean state value
         onOpenChange={setMaterialDialogOpen} // ✅ function to update state
         productionOrderId={row.original.id}
+        onSubmit={() => {
+          setMaterialDialogOpen(false);
+          if (onSuccess) onSuccess();
+        }}
       />
     </>
   )

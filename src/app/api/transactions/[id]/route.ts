@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 interface RouteParams {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>
 }
 
 // Update Transaction

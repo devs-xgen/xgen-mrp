@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
   try {

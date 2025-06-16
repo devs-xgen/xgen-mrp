@@ -20,6 +20,7 @@ interface ProductionOrderPageProps {
 export async function generateMetadata({
   params,
 }: ProductionOrderPageProps): Promise<Metadata> {
+  const { id } = await params;
   const order = await getProductionOrder(id);
   if (!order) return { title: "Production Order Not Found" };
 
@@ -59,7 +60,7 @@ export default async function ProductionOrderPage({
   // Transform the qualityChecks to include all required properties
   const order = {
     ...orderData,
-    qualityChecks: orderData.qualityChecks.map((check) => ({
+    qualityChecks: orderData.qualityChecks.map((check: any) => ({
       id: check.id,
       productionOrderId: check.productionOrderId,
       inspectorId: check.inspectorId,

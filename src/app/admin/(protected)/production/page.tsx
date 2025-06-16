@@ -25,7 +25,7 @@ export default async function ProductionOrdersPage() {
   ]);
 
   // Transform orders data for the table
-  const tableData = orders.map((order) => ({
+  const tableData = orders.map((order: any) => ({
     id: order.id,
     productName: order.product.name,
     productSku: order.product.sku,

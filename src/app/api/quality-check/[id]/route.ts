@@ -5,9 +5,9 @@ import { authOptions } from "@/lib/auth";
 import { qualityCheckSchema } from "@/lib/qualitycheck";
 
 interface RouteParams {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>
 }
 
 

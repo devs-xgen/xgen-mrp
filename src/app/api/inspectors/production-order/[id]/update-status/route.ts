@@ -7,9 +7,9 @@ import { revalidatePath } from "next/cache";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-    const { id } = await params;
+  const { id } = await params;
   try {
     const productionOrderId = id;
     const session = await getServerSession(authOptions);
@@ -58,9 +58,10 @@ export async function POST(
 
     if (operations.length === 0) {
       return NextResponse.json(
-        { 
-          error: "No operations found for this production order in your work centers",
-          workCenters: workCenterIds
+        {
+          error:
+            "No operations found for this production order in your work centers",
+          workCenters: workCenterIds,
         },
         { status: 404 }
       );
@@ -87,8 +88,8 @@ export async function POST(
     });
 
     // Check if all operations have the same status now
-    const allSameStatus = allOperations.every(op => op.status === status);
-    
+    const allSameStatus = allOperations.every((op) => op.status === status);
+
     if (allSameStatus) {
       await prisma.productionOrder.update({
         where: { id: productionOrderId },
@@ -101,10 +102,10 @@ export async function POST(
 
     revalidatePath("/inpector/tasks");
     revalidatePath("/inpector/dashboard");
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: true,
-      message: `Updated ${updates.length} operations for production order ${productionOrderId}`
+      message: `Updated ${updates.length} operations for production order ${productionOrderId}`,
     });
   } catch (error) {
     console.error("Error updating production order status:", error);
@@ -113,4 +114,4 @@ export async function POST(
       { status: 500 }
     );
   }
-} 
+}

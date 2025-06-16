@@ -2,9 +2,9 @@ import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
 
 interface RouteParams {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>
 }
 
 // suppliers Patch

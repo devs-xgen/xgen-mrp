@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 // Force dynamic rendering since this API route uses authentication
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
@@ -16,43 +16,40 @@ export async function GET(req: Request) {
     // Get all production orders
     const productionOrders = await prisma.productionOrder.findMany({
       take: 10, // Limit to 10 orders
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
 
-    const results = [];
+    const results: { productionOrderId: string; logId: string }[] = [];
 
     // Create logs for each production order
     for (const order of productionOrders) {
       // Create a log entry
       const log = await prisma.activityLog.create({
         data: {
-          type: 'PRODUCTION_STATUS_CHANGE',
+          type: "PRODUCTION_STATUS_CHANGE",
           userId: session.user.id,
           details: {
             productionOrderId: order.id,
-            oldStatus: 'PENDING',
+            oldStatus: "PENDING",
             newStatus: order.status,
-            notes: 'Initial production order status (seeded)'
-          }
-        }
+            notes: "Initial production order status (seeded)",
+          },
+        },
       });
-      
+
       results.push({
         productionOrderId: order.id,
-        logId: log.id
+        logId: log.id,
       });
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: `Created ${results.length} log entries`,
-      results
+      results,
     });
   } catch (error) {
     console.error("Error seeding logs:", error);
-    return NextResponse.json(
-      { error: "Failed to seed logs" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to seed logs" }, { status: 500 });
   }
-} 
+}
