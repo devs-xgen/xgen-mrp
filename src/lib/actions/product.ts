@@ -555,3 +555,89 @@ export async function createCategory(formData: {
     };
   }
 }
+
+// Update Category Server Action
+export async function updateCategory(
+  categoryId: string,
+  formData: {
+    name?: string;
+    description?: string;
+  }
+) {
+  try {
+    const category = await prisma.productCategory.update({
+      where: { id: categoryId },
+      data: {
+        ...formData,
+        updatedAt: new Date(),
+      },
+    });
+
+    return {
+      success: true,
+      data: convertDecimals(category),
+      message: "Category updated successfully",
+    };
+  } catch (error: any) {
+    console.error("Category update error:", error);
+
+    if (error.code === "P2002") {
+      return {
+        success: false,
+        error: "A category with this name already exists",
+      };
+    }
+
+    if (error.code === "P2025") {
+      return {
+        success: false,
+        error: "Category not found",
+      };
+    }
+
+    return {
+      success: false,
+      error: "Error updating category",
+    };
+  }
+}
+
+// Delete Category Server Action
+export async function deleteCategory(categoryId: string) {
+  try {
+    // Check if category has products
+    const productsCount = await prisma.product.count({
+      where: { categoryId },
+    });
+
+    if (productsCount > 0) {
+      return {
+        success: false,
+        error: `Cannot delete category. It has ${productsCount} product(s) associated with it.`,
+      };
+    }
+
+    await prisma.productCategory.delete({
+      where: { id: categoryId },
+    });
+
+    return {
+      success: true,
+      message: "Category deleted successfully",
+    };
+  } catch (error: any) {
+    console.error("Category deletion error:", error);
+
+    if (error.code === "P2025") {
+      return {
+        success: false,
+        error: "Category not found",
+      };
+    }
+
+    return {
+      success: false,
+      error: "Error deleting category",
+    };
+  }
+}

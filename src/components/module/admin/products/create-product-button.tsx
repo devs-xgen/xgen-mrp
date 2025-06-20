@@ -24,8 +24,11 @@ export function CreateProductButton({
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
-        <Plus className="mr-2 h-4 w-4" />
+      <Button 
+        onClick={() => setOpen(true)}
+        className="gap-2"
+      >
+        <Plus className="h-4 w-4" />
         Create Product
       </Button>
       
