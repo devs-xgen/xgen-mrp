@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Decimal } from "@prisma/client/runtime/library";
+import { convertDecimals } from "@/lib/convertDecimals";
 import {
   BulkVariantCreationRequest,
   BulkVariantCreationResult,
@@ -135,7 +136,7 @@ export async function createBulkProductVariants(
 
     return {
       success: true,
-      createdVariants,
+      createdVariants: convertDecimals(createdVariants),
       createdBOMs: totalBOMsCreated,
       skippedVariants,
       totalCreated: createdVariants.length,

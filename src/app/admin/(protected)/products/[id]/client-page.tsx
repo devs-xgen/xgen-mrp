@@ -4,15 +4,13 @@
 import { useEffect, useState } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Package, TrendingUp, AlertTriangle, Factory, Plus, Minus, History, Edit, Eye, Palette, Ruler, Box, Wrench, PieChart } from "lucide-react";
+import { ArrowLeft, Package, TrendingUp, AlertTriangle, Factory, Plus, Minus, History, Edit, Eye, PieChart, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnalyticsCard, analyticsCardVariants } from "@/components/ui/analytics-card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Separator } from "@/components/ui/separator";
 import { 
   Sheet, 
@@ -22,21 +20,20 @@ import {
   SheetTitle, 
   SheetTrigger 
 } from "@/components/ui/sheet";
+
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { CreateProductionDialog } from "@/components/module/admin/products/create-production-dialog";
 import { EnhancedVariantBOMSection } from "@/components/module/admin/products/bom/EnhancedVariantBOMSection";
 import { VariantCreationDialog } from "@/components/module/admin/products/variant-creation-dialog";
 import { ProductDetailsCard } from "@/components/module/admin/products/product-details-card";
 import { VariantManagementSection } from "@/components/module/admin/products/variant-management-section";
+import { StockAdjustmentDialog } from "@/components/module/admin/products/stock-adjustment-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { adjustProductStock, adjustVariantStock } from "@/lib/actions/product";
 import { formatCurrencyPHP } from "@/lib/constant";
 import {
   ProductionOrderSummary,
@@ -55,11 +52,7 @@ interface ProductDetailClientPageProps {
   workCenters: WorkCenter[];
 }
 
-interface StockAdjustment {
-  type: 'ADD' | 'REMOVE';
-  quantity: number;
-  reason: string;
-}
+
 
 export default function ProductDetailClientPage({
   id,
@@ -72,11 +65,6 @@ export default function ProductDetailClientPage({
   const [showProductionDialog, setShowProductionDialog] = useState(false);
   const [showStockDialog, setShowStockDialog] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
-  const [stockAdjustment, setStockAdjustment] = useState<StockAdjustment>({
-    type: 'ADD',
-    quantity: 0,
-    reason: ''
-  });
 
   // Check if we should open the production dialog automatically
   useEffect(() => {
@@ -103,40 +91,7 @@ export default function ProductDetailClientPage({
     return { label: 'In Stock', color: 'bg-green-500', variant: 'default' as const };
   };
 
-  const handleStockAdjustment = async () => {
-    if (!stockAdjustment.quantity || !stockAdjustment.reason.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter quantity and reason for stock adjustment",
-        variant: "destructive",
-      });
-      return;
-    }
 
-    try {
-      if (selectedVariant) {
-        await adjustVariantStock(selectedVariant.id, stockAdjustment);
-      } else {
-        await adjustProductStock(product.id, stockAdjustment);
-      }
-      
-      toast({
-        title: "Success",
-        description: "Stock adjusted successfully",
-      });
-      
-      setShowStockDialog(false);
-      setSelectedVariant(null);
-      setStockAdjustment({ type: 'ADD', quantity: 0, reason: '' });
-      router.refresh();
-    } catch (error: any) {
-      toast({
-        title: "Error", 
-        description: error?.message || "Failed to adjust stock",
-        variant: "destructive",
-      });
-    }
-  };
 
   const openStockDialog = (variant?: any) => {
     setSelectedVariant(variant);
@@ -144,45 +99,82 @@ export default function ProductDetailClientPage({
   };
 
   return (
-    <div className="flex flex-col gap-6 p-8">
-      {/* Header Section */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
+    <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
+      {/* Enhanced Responsive Header Section */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        {/* Left side - Back button and Product Info */}
+        <div className="flex flex-col gap-3 min-w-0 flex-1">
           <Link href="/admin/products">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" className="w-fit">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Products
             </Button>
           </Link>
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">{product.name}</h2>
-            <p className="text-muted-foreground">
-              SKU: {product.sku} • Category: {product.category?.name || "Uncategorized"}
+          <div className="min-w-0">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">{product.name}</h2>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              <span className="font-medium">SKU:</span> {product.sku}
+            </p>
+            <p className="text-muted-foreground text-sm">
+              <span className="font-medium">Category:</span> {product.category?.name || "Uncategorized"}
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Link href={`/admin/products/${id}/edit`}>
-            <Button variant="outline">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Product
+
+        {/* Right side - Action Buttons (Responsive) */}
+        <div className="flex items-center gap-2">
+          {/* Desktop: Show individual buttons */}
+          <div className="hidden md:flex gap-2">
+            <Link href={`/admin/products/${id}/edit`}>
+              <Button variant="outline" size="sm">
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Product
+              </Button>
+            </Link>
+            <Button size="sm" onClick={() => setShowProductionDialog(true)}>
+              <Factory className="h-4 w-4 mr-2" />
+              Create Production
             </Button>
-          </Link>
-          <CreateProductionDialog
-            product={product}
-            workCenters={workCenters}
-            open={showProductionDialog}
-            onOpenChange={setShowProductionDialog}
-          />
-          <Button onClick={() => setShowProductionDialog(true)}>
-            <Factory className="h-4 w-4 mr-2" />
-            Create Production
-          </Button>
+          </div>
+
+          {/* Mobile/Tablet: Show dropdown menu */}
+          <div className="md:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <MoreVertical className="h-4 w-4" />
+                  <span className="sr-only">Open menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => router.push(`/admin/products/${id}/edit`)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Product
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowProductionDialog(true)}>
+                  <Factory className="h-4 w-4 mr-2" />
+                  Create Production
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => openStockDialog()}>
+                  <Package className="h-4 w-4 mr-2" />
+                  Adjust Stock
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
+      {/* Hidden CreateProductionDialog component */}
+      <CreateProductionDialog
+        product={product}
+        workCenters={workCenters}
+        open={showProductionDialog}
+        onOpenChange={setShowProductionDialog}
+      />
+
       {/* Analytics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <AnalyticsCard
           title="Total Stock"
           value={totalStock}
@@ -248,28 +240,59 @@ export default function ProductDetailClientPage({
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <Package className="w-4 h-4" />
-            Overview
+        <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 h-auto p-1">
+          <TabsTrigger 
+            value="overview" 
+            className="text-xs sm:text-sm py-2 px-3 data-[state=active]:bg-background data-[state=active]:text-foreground"
+          >
+            <span className="hidden sm:inline">Overview</span>
+            <span className="sm:hidden">Info</span>
           </TabsTrigger>
-          <TabsTrigger value="variants" className="flex items-center gap-2">
-            <Palette className="w-4 h-4" />
-            Variants
+          <TabsTrigger 
+            value="variants" 
+            className="text-xs sm:text-sm py-2 px-3 data-[state=active]:bg-background data-[state=active]:text-foreground"
+          >
+            <span className="hidden sm:inline">Variants</span>
+            <span className="sm:hidden">Variants</span>
           </TabsTrigger>
-          <TabsTrigger value="materials" className="flex items-center gap-2">
-            <Box className="w-4 h-4" />
-            Materials & BOM
+          <TabsTrigger 
+            value="materials" 
+            className="text-xs sm:text-sm py-2 px-3 data-[state=active]:bg-background data-[state=active]:text-foreground"
+          >
+            <span className="hidden sm:inline">Materials & BOM</span>
+            <span className="sm:hidden">BOM</span>
           </TabsTrigger>
-          <TabsTrigger value="pricing" className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" />
+          <TabsTrigger 
+            value="pricing" 
+            className="text-xs sm:text-sm py-2 px-3 data-[state=active]:bg-background data-[state=active]:text-foreground hidden md:flex"
+          >
             Pricing
           </TabsTrigger>
-          <TabsTrigger value="production" className="flex items-center gap-2">
-            <Factory className="w-4 h-4" />
+          <TabsTrigger 
+            value="production" 
+            className="text-xs sm:text-sm py-2 px-3 data-[state=active]:bg-background data-[state=active]:text-foreground hidden md:flex"
+          >
             Production
           </TabsTrigger>
         </TabsList>
+
+        {/* Mobile Additional Tabs - Show on smaller screens */}
+        <div className="md:hidden mt-2">
+          <TabsList className="grid w-full grid-cols-2 h-auto p-1">
+            <TabsTrigger 
+              value="pricing" 
+              className="text-xs py-2 px-3 data-[state=active]:bg-background data-[state=active]:text-foreground"
+            >
+              Pricing
+            </TabsTrigger>
+            <TabsTrigger 
+              value="production" 
+              className="text-xs py-2 px-3 data-[state=active]:bg-background data-[state=active]:text-foreground"
+            >
+              Production
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview" className="space-y-6">
           <ProductDetailsCard 
@@ -440,115 +463,23 @@ export default function ProductDetailClientPage({
       </Tabs>
 
       {/* Stock Adjustment Dialog */}
-      <Dialog open={showStockDialog} onOpenChange={setShowStockDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Package className="w-4 h-4" />
-              Adjust Stock Level
-            </DialogTitle>
-            <DialogDescription>
-              {selectedVariant 
-                ? `Adjust stock for ${selectedVariant.displayName}`
-                : `Adjust stock for ${product.name}`
-              }
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 p-3 bg-muted rounded-lg">
-              <div>
-                <Label className="text-xs font-medium text-muted-foreground">Current Stock</Label>
-                <p className="text-lg font-semibold">
-                  {selectedVariant ? selectedVariant.currentStock : product.currentStock}
-                </p>
-              </div>
-              <div>
-                <Label className="text-xs font-medium text-muted-foreground">Minimum Level</Label>
-                <p className="text-lg font-semibold">
-                  {selectedVariant ? selectedVariant.minimumStockLevel : product.minimumStockLevel}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <Label>Adjustment Type</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant={stockAdjustment.type === 'ADD' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setStockAdjustment(prev => ({ ...prev, type: 'ADD' }))}
-                  className="w-full"
-                >
-                  <Plus className="w-3 h-3 mr-1" />
-                  Add Stock
-                </Button>
-                <Button
-                  type="button"
-                  variant={stockAdjustment.type === 'REMOVE' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setStockAdjustment(prev => ({ ...prev, type: 'REMOVE' }))}
-                  className="w-full"
-                >
-                  <Minus className="w-3 h-3 mr-1" />
-                  Remove Stock
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="quantity">Quantity to {stockAdjustment.type === 'ADD' ? 'Add' : 'Remove'}</Label>
-              <Input
-                id="quantity"
-                type="number"
-                min="1"
-                value={stockAdjustment.quantity || ''}
-                onChange={(e) => setStockAdjustment(prev => ({ 
-                  ...prev, 
-                  quantity: parseInt(e.target.value) || 0 
-                }))}
-                placeholder="Enter quantity..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="reason">Reason for Adjustment</Label>
-              <Textarea
-                id="reason"
-                value={stockAdjustment.reason}
-                onChange={(e) => setStockAdjustment(prev => ({ 
-                  ...prev, 
-                  reason: e.target.value 
-                }))}
-                placeholder="Enter reason for adjustment..."
-                rows={3}
-              />
-            </div>
-
-            {stockAdjustment.quantity > 0 && (
-              <div className="p-3 bg-muted rounded-lg">
-                <Label className="text-sm font-medium">New Stock Level:</Label>
-                <p className="text-lg font-semibold">
-                  {stockAdjustment.type === 'ADD' 
-                    ? (selectedVariant ? selectedVariant.currentStock : product.currentStock) + stockAdjustment.quantity
-                    : (selectedVariant ? selectedVariant.currentStock : product.currentStock) - stockAdjustment.quantity
-                  } units
-                </p>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowStockDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleStockAdjustment}>
-              Apply Adjustment
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <StockAdjustmentDialog
+        open={showStockDialog}
+        onOpenChange={setShowStockDialog}
+        product={selectedVariant ? undefined : {
+          id: product.id,
+          name: product.name,
+          currentStock: product.currentStock,
+          minimumStockLevel: product.minimumStockLevel
+        }}
+        variant={selectedVariant ? {
+          id: selectedVariant.id,
+          displayName: selectedVariant.displayName,
+          currentStock: selectedVariant.currentStock,
+          minimumStockLevel: selectedVariant.minimumStockLevel
+        } : undefined}
+        onSuccess={() => router.refresh()}
+      />
     </div>
   );
 }
