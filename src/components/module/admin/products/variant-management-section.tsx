@@ -14,7 +14,7 @@ import {
   CheckCircle,
   Package,
   Ruler,
-  DollarSign,
+  Banknote,
   BarChart3,
   Box,
   Wrench
@@ -47,6 +47,7 @@ export function VariantManagementSection({
       label: 'Out of Stock', 
       color: 'text-red-600', 
       bgColor: 'border-l-red-500',
+      circleColor: 'bg-red-500',
       icon: AlertCircle,
       variant: 'destructive' as const 
     };
@@ -54,6 +55,7 @@ export function VariantManagementSection({
       label: 'Low Stock', 
       color: 'text-yellow-600', 
       bgColor: 'border-l-yellow-500',
+      circleColor: 'bg-yellow-500',
       icon: AlertCircle,
       variant: 'secondary' as const 
     };
@@ -61,9 +63,43 @@ export function VariantManagementSection({
       label: 'In Stock', 
       color: 'text-green-600', 
       bgColor: 'border-l-green-500',
+      circleColor: 'bg-green-500',
       icon: CheckCircle,
       variant: 'default' as const 
     };
+  };
+
+  const getVariantColorCircle = (colorName?: string | null) => {
+    if (!colorName) return 'bg-gray-400';
+    
+    // Map common color names to Tailwind classes
+    const colorMap: Record<string, string> = {
+      'red': 'bg-red-500',
+      'blue': 'bg-blue-500',
+      'green': 'bg-green-500',
+      'yellow': 'bg-yellow-500',
+      'purple': 'bg-purple-500',
+      'pink': 'bg-pink-500',
+      'black': 'bg-black',
+      'white': 'bg-white border-2 border-gray-300',
+      'gray': 'bg-gray-500',
+      'grey': 'bg-gray-500',
+      'navy': 'bg-blue-900',
+      'brown': 'bg-amber-800',
+      'orange': 'bg-orange-500',
+      'teal': 'bg-teal-500',
+      'cyan': 'bg-cyan-500',
+      'indigo': 'bg-indigo-500',
+      'lime': 'bg-lime-500',
+      'emerald': 'bg-emerald-500',
+      'sky': 'bg-sky-500',
+      'violet': 'bg-violet-500',
+      'fuchsia': 'bg-fuchsia-500',
+      'rose': 'bg-rose-500',
+    };
+    
+    const normalizedColor = colorName.toLowerCase();
+    return colorMap[normalizedColor] || 'bg-gradient-to-br from-purple-400 to-pink-400';
   };
 
   const toggleVariantExpanded = (variantId: string) => {
@@ -120,36 +156,45 @@ export function VariantManagementSection({
             const isExpanded = expandedVariants[variant.id];
             
             return (
-              <Card key={variant.id} className={`border-l-4 ${stockStatus.bgColor}`}>
+                              <Card key={variant.id} className="border transition-all duration-200 hover:shadow-md">
                 <Collapsible
                   open={isExpanded}
                   onOpenChange={() => toggleVariantExpanded(variant.id)}
                 >
                   <CollapsibleTrigger asChild>
-                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-4">
                           {isExpanded ? 
                             <ChevronDown className="w-4 h-4 text-muted-foreground" /> : 
                             <ChevronRight className="w-4 h-4 text-muted-foreground" />
                           }
+                          
                           <div>
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              {variant.displayName}
-                              <Badge variant="outline" className="text-xs font-mono">
+                            <CardTitle className="text-lg flex items-center gap-3">
+                              <span>{variant.displayName}</span>
+                              <Badge variant="outline" className="text-xs font-mono bg-muted/50">
                                 {variant.sku}
                               </Badge>
                             </CardTitle>
-                            <div className="flex items-center gap-4 mt-1">
-                              <div className="flex items-center gap-1">
-                                <StatusIcon className={`w-4 h-4 ${stockStatus.color}`} />
-                                <Badge variant={stockStatus.variant}>
+                            <div className="flex items-center gap-4 mt-2">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${stockStatus.circleColor}`} />
+                                <Badge variant={stockStatus.variant} className="text-xs">
                                   {stockStatus.label}
                                 </Badge>
                               </div>
-                              <span className="text-sm text-muted-foreground">
-                                Stock: {variant.currentStock} / Min: {variant.minimumStockLevel}
-                              </span>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Package className="w-3 h-3" />
+                                  {variant.currentStock} units
+                                </span>
+                                <span>Min: {variant.minimumStockLevel}</span>
+                                <span className="flex items-center gap-1">
+                                  <Banknote className="w-3 h-3" />
+                                  {formatCurrencyPHP(variant.sellingPrice)}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -161,6 +206,7 @@ export function VariantManagementSection({
                               e.stopPropagation();
                               onStockAdjust(variant);
                             }}
+                            className="hover:bg-blue-50 hover:border-blue-300"
                           >
                             <Edit className="w-3 h-3 mr-1" />
                             Adjust
@@ -174,63 +220,69 @@ export function VariantManagementSection({
                     <CardContent>
                       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {/* Variant Attributes */}
-                        <Card className="bg-muted/30">
+                        <Card className="bg-gradient-to-br from-blue-50/50 to-indigo-50/50 border-blue-200/50">
                           <CardHeader className="pb-3">
-                            <CardTitle className="text-sm flex items-center gap-2">
+                            <CardTitle className="text-sm flex items-center gap-2 text-blue-700">
                               <Ruler className="w-4 h-4" />
                               Variant Attributes
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-3">
                             {variant.sizeName && (
-                              <div className="flex justify-between">
+                              <div className="flex items-center justify-between">
                                 <Label className="text-xs text-muted-foreground">Size</Label>
-                                <Badge variant="outline">{variant.sizeName}</Badge>
+                                <Badge variant="outline" className="bg-white/80">{variant.sizeName}</Badge>
                               </div>
                             )}
                             {variant.colorName && (
-                              <div className="flex justify-between">
+                              <div className="flex items-center justify-between">
                                 <Label className="text-xs text-muted-foreground">Color</Label>
-                                <Badge variant="outline">{variant.colorName}</Badge>
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-3 h-3 rounded-full ${getVariantColorCircle(variant.colorName)} border border-gray-300`} />
+                                  <Badge variant="outline" className="bg-white/80">{variant.colorName}</Badge>
+                                </div>
                               </div>
                             )}
                             {variant.styleName && (
-                              <div className="flex justify-between">
+                              <div className="flex items-center justify-between">
                                 <Label className="text-xs text-muted-foreground">Style</Label>
-                                <Badge variant="outline">{variant.styleName}</Badge>
+                                <Badge variant="outline" className="bg-white/80">{variant.styleName}</Badge>
                               </div>
                             )}
                             {variant.materialName && (
-                              <div className="flex justify-between">
+                              <div className="flex items-center justify-between">
                                 <Label className="text-xs text-muted-foreground">Material</Label>
-                                <Badge variant="outline">{variant.materialName}</Badge>
+                                <Badge variant="outline" className="bg-white/80">{variant.materialName}</Badge>
                               </div>
                             )}
                           </CardContent>
                         </Card>
 
                         {/* Stock Details */}
-                        <Card className="bg-muted/30">
+                        <Card className="bg-gradient-to-br from-green-50/50 to-emerald-50/50 border-green-200/50">
                           <CardHeader className="pb-3">
-                            <CardTitle className="text-sm flex items-center gap-2">
+                            <CardTitle className="text-sm flex items-center gap-2 text-green-700">
                               <Package className="w-4 h-4" />
                               Stock Information
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-3">
-                            <div className="flex justify-between">
+                            <div className="flex justify-between items-center">
                               <Label className="text-xs text-muted-foreground">Current Stock</Label>
-                              <span className="font-semibold">{variant.currentStock}</span>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${stockStatus.circleColor}`} />
+                                <span className="font-semibold">{variant.currentStock}</span>
+                              </div>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex justify-between items-center">
                               <Label className="text-xs text-muted-foreground">Min Level</Label>
                               <span className="font-semibold">{variant.minimumStockLevel}</span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex justify-between items-center">
                               <Label className="text-xs text-muted-foreground">Expected</Label>
                               <span className="font-semibold">{variant.expectedStock}</span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex justify-between items-center">
                               <Label className="text-xs text-muted-foreground">Committed</Label>
                               <span className="font-semibold">{variant.committedStock}</span>
                             </div>
@@ -238,24 +290,24 @@ export function VariantManagementSection({
                         </Card>
 
                         {/* Pricing Details */}
-                        <Card className="bg-muted/30">
+                        <Card className="bg-gradient-to-br from-purple-50/50 to-pink-50/50 border-purple-200/50">
                           <CardHeader className="pb-3">
-                            <CardTitle className="text-sm flex items-center gap-2">
-                              <DollarSign className="w-4 h-4" />
+                            <CardTitle className="text-sm flex items-center gap-2 text-purple-700">
+                              <Banknote className="w-4 h-4" />
                               Pricing Details
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-3">
-                            <div className="flex justify-between">
+                            <div className="flex justify-between items-center">
                               <Label className="text-xs text-muted-foreground">Unit Cost</Label>
-                              <span className="font-semibold">{formatCurrencyPHP(variant.unitCost)}</span>
+                              <span className="font-semibold text-red-600">{formatCurrencyPHP(variant.unitCost)}</span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex justify-between items-center">
                               <Label className="text-xs text-muted-foreground">Selling Price</Label>
-                              <span className="font-semibold">{formatCurrencyPHP(variant.sellingPrice)}</span>
+                              <span className="font-semibold text-blue-600">{formatCurrencyPHP(variant.sellingPrice)}</span>
                             </div>
                             <Separator />
-                            <div className="flex justify-between">
+                            <div className="flex justify-between items-center">
                               <Label className="text-xs text-muted-foreground">Profit Margin</Label>
                               <span className="font-semibold text-green-600">
                                 {(((variant.sellingPrice - variant.unitCost) / variant.sellingPrice) * 100).toFixed(1)}%
@@ -267,30 +319,30 @@ export function VariantManagementSection({
 
                       {/* BOM Information */}
                       {variant.boms && variant.boms.length > 0 && (
-                        <Card className="mt-4 bg-blue-50/50 border-blue-200">
+                        <Card className="mt-4 bg-gradient-to-br from-amber-50/50 to-orange-50/50 border-amber-200/50">
                           <CardHeader className="pb-3">
-                            <CardTitle className="text-sm flex items-center gap-2">
+                            <CardTitle className="text-sm flex items-center gap-2 text-amber-700">
                               <Box className="w-4 h-4" />
                               Bill of Materials ({variant.boms.length} materials)
                             </CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                               {variant.boms.slice(0, 3).map((bom) => (
-                                <div key={bom.id} className="flex justify-between items-center py-1">
-                                  <span className="text-sm">{bom.material.name}</span>
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="text-xs">
+                                <div key={bom.id} className="flex justify-between items-center py-2 px-3 bg-white/60 rounded-lg border border-amber-100">
+                                  <span className="text-sm font-medium">{bom.material.name}</span>
+                                  <div className="flex items-center gap-3">
+                                    <Badge variant="outline" className="text-xs bg-white/80">
                                       {bom.quantityNeeded} units
                                     </Badge>
-                                    <span className="text-xs text-muted-foreground">
+                                    <span className="text-xs font-semibold text-amber-700">
                                       {formatCurrencyPHP(bom.material.costPerUnit * bom.quantityNeeded)}
                                     </span>
                                   </div>
                                 </div>
                               ))}
                               {variant.boms.length > 3 && (
-                                <div className="text-xs text-muted-foreground text-center pt-2">
+                                <div className="text-xs text-muted-foreground text-center pt-2 font-medium">
                                   ... and {variant.boms.length - 3} more materials
                                 </div>
                               )}
