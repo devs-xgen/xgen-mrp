@@ -230,6 +230,46 @@ export async function copyBaseBOMToVariant(
 }
 
 /**
+ * Creates a new variant BOM entry
+ */
+export async function createVariantBOMEntry(data: {
+  productVariantId: string;
+  materialId: string;
+  quantityNeeded: number;
+  wastePercentage: number;
+  notes?: string;
+}) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const entry = await prisma.productVariantBOM.create({
+      data: {
+        ...data,
+        createdBy: session.user.id,
+      },
+      include: {
+        productVariant: {
+          select: { productId: true },
+        },
+        material: {
+          include: {
+            unitOfMeasure: true,
+          },
+        },
+      },
+    });
+
+    revalidatePath(`/admin/products/${entry.productVariant.productId}`);
+
+    return entry;
+  } catch (error) {
+    console.error("Error creating variant BOM entry:", error);
+    throw new Error("Failed to create variant BOM entry");
+  }
+}
+
+/**
  * Updates a variant BOM entry
  */
 export async function updateVariantBOMEntry(

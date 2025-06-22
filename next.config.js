@@ -4,6 +4,7 @@ const nextConfig = {
   output: 'standalone',
   // Next.js 15 - moved serverComponentsExternalPackages out of experimental
   serverExternalPackages: ['@prisma/client', '@prisma/extension-accelerate', 'bcryptjs'],
+  
   experimental: {
     scrollRestoration: true,
   },
@@ -36,6 +37,8 @@ const nextConfig = {
       test: /\.(png|jpe?g|gif|svg)$/i,
       type: 'asset/resource',
     });
+
+
 
     if (!config.isServer) {
       // Add server-only packages to client-side externals

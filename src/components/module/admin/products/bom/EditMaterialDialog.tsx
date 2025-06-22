@@ -25,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { updateBOMEntry } from "@/lib/actions/bom";
+import { updateVariantBOMEntry, createVariantBOMEntry } from "@/lib/actions/variant-bom";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { BOMEntryForDisplay } from "@/types/admin/bom";
 import { Label } from "@/components/ui/label";
@@ -55,6 +56,8 @@ interface EditMaterialDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => Promise<void>;
+  isVariantMode?: boolean;
+  variantId?: string;
 }
 
 export function EditMaterialDialog({
@@ -62,6 +65,8 @@ export function EditMaterialDialog({
   open,
   onOpenChange,
   onSuccess,
+  isVariantMode = false,
+  variantId,
 }: EditMaterialDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [availabilityInfo, setAvailabilityInfo] = useState<any>(null);
@@ -130,11 +135,32 @@ export function EditMaterialDialog({
     try {
       setIsLoading(true);
 
-      await updateBOMEntry({
-        id: entry.id,
-        quantityNeeded: values.quantityNeeded,
-        wastePercentage: values.wastePercentage,
-      });
+      if (isVariantMode && variantId) {
+        // Check if this is a variant-specific entry that exists
+        if ((entry as any).isVariantSpecific) {
+          // Update existing variant BOM entry
+          await updateVariantBOMEntry(entry.id, {
+            quantityNeeded: values.quantityNeeded,
+            wastePercentage: values.wastePercentage,
+          });
+        } else {
+          // Create new variant BOM entry to override base entry
+          await createVariantBOMEntry({
+            productVariantId: variantId,
+            materialId: entry.materialId,
+            quantityNeeded: values.quantityNeeded,
+            wastePercentage: values.wastePercentage,
+            notes: `Override for variant`,
+          });
+        }
+      } else {
+        // Regular base BOM update
+        await updateBOMEntry({
+          id: entry.id,
+          quantityNeeded: values.quantityNeeded,
+          wastePercentage: values.wastePercentage,
+        });
+      }
 
       await onSuccess();
       onOpenChange(false);
