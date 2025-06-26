@@ -87,6 +87,7 @@ export function CreateProductionOrdersDialog({
       // Map order lines to the format expected by analyzeCustomerOrder
       const orderLines = customerOrder.orderLines.map((line: any) => ({
         productId: line.productId,
+        productVariantId: line.productVariantId, // 🆕 ADD: Include variant ID
         quantity: line.quantity
       }))
       
@@ -97,6 +98,7 @@ export function CreateProductionOrdersDialog({
       // Initialize production decisions with recommended values
       const initialDecisions: ProductionDecisionInput[] = analysisResult.orderLines.map((lineAnalysis) => ({
         productId: lineAnalysis.productId,
+        productVariantId: lineAnalysis.productVariantId, // 🆕 ADD: Include variant ID
         requiredQuantity: lineAnalysis.requestedQuantity,
         decision: lineAnalysis.recommendedOption,
         useAvailableStock: lineAnalysis.stockAvailability.stockStatus !== StockStatus.OUT_OF_STOCK,
@@ -117,9 +119,9 @@ export function CreateProductionOrdersDialog({
     }
   }
 
-  const handleDecisionChange = (productId: string, field: keyof ProductionDecisionInput, value: any) => {
+  const handleDecisionChange = (productId: string, productVariantId: string | undefined, field: keyof ProductionDecisionInput, value: any) => {
     setProductionDecisions(prev => prev.map(decision => 
-      decision.productId === productId 
+      decision.productId === productId && decision.productVariantId === productVariantId
         ? { ...decision, [field]: value }
         : decision
     ))
@@ -141,6 +143,8 @@ export function CreateProductionOrdersDialog({
       // Filter out decisions with 0 production quantity
       const validDecisions = productionDecisions.filter(decision => decision.productionQuantity > 0)
       
+      console.log("Valid production decisions:", validDecisions)
+      
       if (validDecisions.length === 0) {
         toast({
           title: "No Production Orders",
@@ -150,7 +154,12 @@ export function CreateProductionOrdersDialog({
         return
       }
 
+      console.log(`Creating production orders for customer order: ${customerOrderId}`)
+      console.log(`Number of decisions: ${validDecisions.length}`)
+
       const createdOrders = await createProductionOrdersWithDecisions(customerOrderId, validDecisions)
+      
+      console.log(`Successfully created ${createdOrders.length} production orders:`, createdOrders)
       
       toast({
         title: "Success",
@@ -159,12 +168,18 @@ export function CreateProductionOrdersDialog({
 
       // Close dialog and refresh
       onOpenChange(false)
-      router.refresh()
+      
+      // Force a full page refresh to ensure the production order count is updated
+      window.location.reload()
     } catch (error) {
       console.error("Failed to create production orders:", error)
+      
+      // Extract error message for user display
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
+      
       toast({
         title: "Error",
-        description: "Failed to create production orders",
+        description: `Failed to create production orders: ${errorMessage}`,
         variant: "destructive",
       })
     } finally {
@@ -266,11 +281,15 @@ export function CreateProductionOrdersDialog({
                 <h3 className="text-lg font-semibold">Product Production Decisions</h3>
                 
                 {analysis.orderLines.map((lineAnalysis, index) => {
-                  const decision = productionDecisions.find(d => d.productId === lineAnalysis.productId)
+                  const decision = productionDecisions.find(d => 
+                    d.productId === lineAnalysis.productId && 
+                    d.productVariantId === lineAnalysis.productVariantId
+                  )
                   if (!decision) return null
 
+                  const uniqueKey = `${lineAnalysis.productId}-${lineAnalysis.productVariantId || 'no-variant'}`
                   return (
-                    <Card key={lineAnalysis.productId} className="border-l-4 border-l-blue-500">
+                    <Card key={uniqueKey} className="border-l-4 border-l-blue-500">
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between">
                           <div>
@@ -280,9 +299,15 @@ export function CreateProductionOrdersDialog({
                               <span className="text-sm font-normal text-muted-foreground">
                                 ({lineAnalysis.productSku})
                               </span>
+                              {lineAnalysis.variantDisplayName && (
+                                <Badge variant="outline" className="ml-2">
+                                  {lineAnalysis.variantDisplayName}
+                                </Badge>
+                              )}
                             </CardTitle>
                             <p className="text-sm text-muted-foreground mt-1">
                               Required: {lineAnalysis.requestedQuantity} units
+                              {lineAnalysis.variantDisplayName && " (variant-specific)"}
                             </p>
                           </div>
                           {getStockStatusBadge(lineAnalysis.stockAvailability.stockStatus)}
@@ -325,33 +350,35 @@ export function CreateProductionOrdersDialog({
                         <div className="space-y-4">
                           <div className="flex items-center space-x-2">
                             <Checkbox
-                              id={`produce-${lineAnalysis.productId}`}
+                              id={`produce-${uniqueKey}`}
                               checked={decision.productionQuantity > 0}
                               onCheckedChange={(checked) => {
                                 handleDecisionChange(
-                                  lineAnalysis.productId, 
+                                  lineAnalysis.productId,
+                                  lineAnalysis.productVariantId, 
                                   'productionQuantity', 
                                   checked ? lineAnalysis.requestedQuantity : 0
                                 )
                               }}
                               disabled={!hasActiveWorkCenter}
                             />
-                            <Label htmlFor={`produce-${lineAnalysis.productId}`} className="font-medium">
-                              Create production order for this product
+                            <Label htmlFor={`produce-${uniqueKey}`} className="font-medium">
+                              Create production order for this {lineAnalysis.variantDisplayName ? 'variant' : 'product'}
                             </Label>
                           </div>
 
                           {decision.productionQuantity > 0 && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
                               <div>
-                                <Label htmlFor={`quantity-${lineAnalysis.productId}`}>Production Quantity</Label>
+                                <Label htmlFor={`quantity-${uniqueKey}`}>Production Quantity</Label>
                                 <Input
-                                  id={`quantity-${lineAnalysis.productId}`}
+                                  id={`quantity-${uniqueKey}`}
                                   type="number"
                                   min="0"
                                   value={decision.productionQuantity}
                                   onChange={(e) => handleDecisionChange(
-                                    lineAnalysis.productId, 
+                                    lineAnalysis.productId,
+                                    lineAnalysis.productVariantId, 
                                     'productionQuantity', 
                                     parseInt(e.target.value) || 0
                                   )}
@@ -360,12 +387,13 @@ export function CreateProductionOrdersDialog({
                                 />
                               </div>
                               <div>
-                                <Label htmlFor={`reason-${lineAnalysis.productId}`}>Reason (Optional)</Label>
+                                <Label htmlFor={`reason-${uniqueKey}`}>Reason (Optional)</Label>
                                 <Input
-                                  id={`reason-${lineAnalysis.productId}`}
+                                  id={`reason-${uniqueKey}`}
                                   value={decision.reason || ''}
                                   onChange={(e) => handleDecisionChange(
-                                    lineAnalysis.productId, 
+                                    lineAnalysis.productId,
+                                    lineAnalysis.productVariantId, 
                                     'reason', 
                                     e.target.value
                                   )}

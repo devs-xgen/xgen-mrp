@@ -140,6 +140,7 @@ export interface MaterialShortage {
 
 export interface ProductionDecisionInput {
   productId: string;
+  productVariantId?: string; // 🆕 ADD: Optional variant tracking
   requiredQuantity: number;
   decision: ProductionDecision;
   useAvailableStock: boolean;
@@ -161,8 +162,10 @@ export interface CustomerOrderAnalysis {
 
 export interface OrderLineAnalysis {
   productId: string;
+  productVariantId?: string; // 🆕 ADD: Optional variant tracking
   productName: string;
   productSku: string;
+  variantDisplayName?: string; // 🆕 ADD: Variant display name
   requestedQuantity: number;
   stockAvailability: ProductStockAvailability;
   materialAvailability: MaterialAvailabilityStatus;

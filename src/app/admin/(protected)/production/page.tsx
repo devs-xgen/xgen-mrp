@@ -11,6 +11,7 @@ import { ProductionOrderDialog } from "@/components/module/admin/production/crea
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AnalyticsCard, analyticsCardVariants } from "@/components/ui/analytics-card";
+import { convertDecimals } from "@/lib/convertDecimals";
 
 export const metadata: Metadata = {
   title: "Production Orders",
@@ -18,17 +19,21 @@ export const metadata: Metadata = {
 };
 
 export default async function ProductionOrdersPage() {
-  const [orders, products, workCenters] = await Promise.all([
+  const [ordersRaw, products, workCenters] = await Promise.all([
     getProductionOrders(),
     getAvailableProducts(),
     getAvailableWorkCenters(),
   ]);
 
-  // Transform orders data for the table
+  // Convert Decimal fields to numbers for client component compatibility
+  const orders = convertDecimals(ordersRaw);
+
+  // Transform orders data for the table (Decimals already converted)
   const tableData = orders.map((order: any) => ({
     id: order.id,
     productName: order.product.name,
     productSku: order.product.sku,
+    variantDisplayName: order.productVariant?.displayName, // 🆕 ADD: Include variant display name
     quantity: order.quantity,
     startDate: order.startDate,
     dueDate: order.dueDate,
@@ -43,10 +48,10 @@ export default async function ProductionOrdersPage() {
     }, 0),
     lastUpdated: order.updatedAt,
     
-    // MRP Enhancement Fields
-    plannedMaterialCost: Number(order.plannedMaterialCost),
-    actualMaterialCost: Number(order.actualMaterialCost),
-    materialVariance: Number(order.materialVariance),
+    // MRP Enhancement Fields (already converted to numbers)
+    plannedMaterialCost: order.plannedMaterialCost,
+    actualMaterialCost: order.actualMaterialCost,
+    materialVariance: order.materialVariance,
     completedQuantity: order.completedQuantity,
   }));
 

@@ -118,6 +118,10 @@ interface ProductionQRGeneratorProps {
       name: string;
       sku: string;
     };
+    productVariant?: { // 🆕 ADD: Optional variant information
+      displayName: string;
+      sku: string;
+    };
     quantity: number;
     startDate: string | Date;
     dueDate: string | Date;
@@ -208,12 +212,21 @@ export function ProductionQRGenerator({ order }: ProductionQRGeneratorProps): JS
                 </View>
                 <View style={styles.detailsRow}>
                   <Text style={styles.detailsLabel}>Product:</Text>
-                  <Text style={styles.detailsValue}>{order.product.name}</Text>
+                  <Text style={styles.detailsValue}>
+                    {order.product.name}
+                    {order.productVariant && ` - ${order.productVariant.displayName}`}
+                  </Text>
                 </View>
                 <View style={styles.detailsRow}>
                   <Text style={styles.detailsLabel}>SKU:</Text>
                   <Text style={styles.detailsValue}>{order.product.sku}</Text>
                 </View>
+                {order.productVariant && (
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Variant SKU:</Text>
+                    <Text style={styles.detailsValue}>{order.productVariant.sku}</Text>
+                  </View>
+                )}
                 <View style={styles.detailsRow}>
                   <Text style={styles.detailsLabel}>Quantity:</Text>
                   <Text style={styles.detailsValue}>{String(order.quantity)}</Text>

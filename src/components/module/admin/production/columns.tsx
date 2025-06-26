@@ -17,11 +17,17 @@ export const columns: ColumnDef<ProductionOrderColumn>[] = [
       <DataTableColumnHeader column={column} title="Product" />
     ),
     cell: ({ row }) => {
+      const variantDisplayName = row.original.variantDisplayName;
       return (
         <div>
           <div className="font-medium">{row.getValue("productName")}</div>
           <div className="text-xs text-muted-foreground">
             {row.original.productSku}
+            {variantDisplayName && (
+              <Badge variant="outline" className="ml-2 text-xs">
+                {variantDisplayName}
+              </Badge>
+            )}
           </div>
         </div>
       );

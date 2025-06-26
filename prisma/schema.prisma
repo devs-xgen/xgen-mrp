@@ -249,10 +249,11 @@ model ProductVariant {
   modifiedBy String?
 
   // Relations
-  product    Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
-  boms       ProductVariantBOM[] // Variant-specific BOMs
-  orderLines OrderLineVariant[] // Orders for specific variants
-  OrderLine  OrderLine[]
+  product         Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  boms            ProductVariantBOM[] // Variant-specific BOMs
+  orderLines      OrderLineVariant[] // Orders for specific variants
+  OrderLine       OrderLine[]
+  ProductionOrder ProductionOrder[]
 
   @@unique([productId, sizeName, colorName]) // Ensure unique size+color combinations per product
   @@index([productId])
@@ -439,21 +440,22 @@ model ProductionBOM {
 }
 
 model ProductionOrder {
-  id              String   @id @default(cuid())
-  productId       String
-  quantity        Int
-  startDate       DateTime
-  dueDate         DateTime
-  status          Status   @default(ACTIVE)
-  priority        Priority @default(MEDIUM)
-  customerOrderId String?
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  createdBy       String?
-  createdByUser   User?    @relation("CreatedBy", fields: [createdBy], references: [id])
-  modifiedBy      String?
-  modifiedByUser  User?    @relation("ModifiedBy", fields: [modifiedBy], references: [id])
+  id               String   @id @default(cuid())
+  productId        String
+  productVariantId String? // 🆕 ADD: Optional variant tracking for variant-specific production
+  quantity         Int
+  startDate        DateTime
+  dueDate          DateTime
+  status           Status   @default(ACTIVE)
+  priority         Priority @default(MEDIUM)
+  customerOrderId  String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  createdBy        String?
+  createdByUser    User?    @relation("CreatedBy", fields: [createdBy], references: [id])
+  modifiedBy       String?
+  modifiedByUser   User?    @relation("ModifiedBy", fields: [modifiedBy], references: [id])
 
   // Material Cost Tracking
   plannedMaterialCost Decimal @default(0) @db.Decimal(12, 2)
@@ -464,11 +466,12 @@ model ProductionOrder {
   completedQuantity Int       @default(0)
   completedAt       DateTime?
 
-  operations    Operation[]
-  customerOrder CustomerOrder?      @relation(fields: [customerOrderId], references: [id])
-  product       Product             @relation(fields: [productId], references: [id])
-  qualityChecks QualityCheck[]
-  delivery      DeliveryAssignment?
+  operations     Operation[]
+  customerOrder  CustomerOrder?      @relation(fields: [customerOrderId], references: [id])
+  product        Product             @relation(fields: [productId], references: [id])
+  productVariant ProductVariant?     @relation(fields: [productVariantId], references: [id]) // 🆕 ADD: Variant relation
+  qualityChecks  QualityCheck[]
+  delivery       DeliveryAssignment?
 
   // MRP Enhancement Relations
   materialReservations MaterialReservation[]
@@ -476,6 +479,8 @@ model ProductionOrder {
   productionBatches    ProductionBatch[]
   costVariances        CostVariance[]
   ProductionBOM        ProductionBOM[]
+
+  @@index([productVariantId]) // 🆕 ADD: Index for performance
 }
 
 model WorkCenter {

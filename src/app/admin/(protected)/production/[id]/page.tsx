@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { getDeliveryUsers, getDeliveryAssignment } from "@/lib/actions/delivery/delivery-assignment";
 import { getActiveInspectors } from "@/lib/actions/inspector";
 import { getProductionOrder, getAvailableWorkCenters } from "@/lib/actions/production-order";
+import { convertDecimals } from "@/lib/convertDecimals";
 
 interface ProductionOrderPageProps {
   params: Promise<{
@@ -34,7 +35,7 @@ export default async function ProductionOrderPage({
   params,
 }: ProductionOrderPageProps) {
   const { id } = await params;
-  const [orderData, workCenters, deliveryUsers, deliveryAssignment] =
+  const [orderDataRaw, workCenters, deliveryUsers, deliveryAssignment] =
     await Promise.all([
       getProductionOrder(id),
       getAvailableWorkCenters(),
@@ -42,7 +43,10 @@ export default async function ProductionOrderPage({
       getDeliveryAssignment(id),
     ]);
 
-  if (!orderData) notFound();
+  if (!orderDataRaw) notFound();
+
+  // Convert Decimal fields to numbers for client component compatibility
+  const orderData = convertDecimals(orderDataRaw);
 
   // Remove debug logs
   console.log(
@@ -57,9 +61,11 @@ export default async function ProductionOrderPage({
     inspectorsMap.set(inspector.inspectorId, `${inspector.firstName} ${inspector.lastName}`);
   }
 
-  // Transform the qualityChecks to include all required properties
+  // Transform the data to include all required properties (Decimals already converted)
   const order = {
     ...orderData,
+    
+    // Transform qualityChecks to include all required properties
     qualityChecks: orderData.qualityChecks.map((check: any) => ({
       id: check.id,
       productionOrderId: check.productionOrderId,
@@ -93,11 +99,21 @@ export default async function ProductionOrderPage({
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
               {order.product.name}
+              {order.productVariant && (
+                <span className="text-lg font-normal text-muted-foreground">
+                  - {order.productVariant.displayName}
+                </span>
+              )}
             </h1>
             <p className="text-muted-foreground">
               Production Order #{order.id.substring(0, 8)}
+              {order.productVariant && (
+                <span className="ml-2 text-xs">
+                  (Variant: {order.productVariant.sku})
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -109,6 +125,10 @@ export default async function ProductionOrderPage({
               name: orderData.product.name,
               sku: orderData.product.sku,
             },
+            productVariant: orderData.productVariant ? {
+              displayName: orderData.productVariant.displayName,
+              sku: orderData.productVariant.sku,
+            } : undefined,
             quantity: orderData.quantity,
             startDate: orderData.startDate,
             dueDate: orderData.dueDate,

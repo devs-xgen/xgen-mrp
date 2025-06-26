@@ -118,7 +118,7 @@ export function ProductionOrdersDialog({
               <Factory className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">No Production Orders</h3>
               <p className="text-muted-foreground">
-                This customer order doesn't have any production orders yet.
+                This customer order doesn&apos;t have any production orders yet.
               </p>
             </div>
           ) : (

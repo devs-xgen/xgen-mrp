@@ -585,7 +585,11 @@ export async function deleteCustomerOrder(id: string) {
  * Enhanced customer order analysis with comprehensive stock and material checking
  */
 export async function analyzeCustomerOrder(
-  orderLines: Array<{ productId: string; quantity: number }>
+  orderLines: Array<{
+    productId: string;
+    productVariantId?: string;
+    quantity: number;
+  }>
 ): Promise<CustomerOrderAnalysis> {
   try {
     const orderLineAnalyses: OrderLineAnalysis[] = [];
@@ -598,7 +602,8 @@ export async function analyzeCustomerOrder(
     for (const orderLine of orderLines) {
       const analysis = await analyzeOrderLine(
         orderLine.productId,
-        orderLine.quantity
+        orderLine.quantity,
+        orderLine.productVariantId
       );
       orderLineAnalyses.push(analysis);
 
@@ -671,9 +676,10 @@ export async function analyzeCustomerOrder(
  */
 async function analyzeOrderLine(
   productId: string,
-  requestedQuantity: number
+  requestedQuantity: number,
+  productVariantId?: string
 ): Promise<OrderLineAnalysis> {
-  // Get product details
+  // Get product details with optional variant
   const product = await prisma.product.findUnique({
     where: { id: productId },
     include: {
@@ -693,6 +699,29 @@ async function analyzeOrderLine(
           },
         },
       },
+      variants: productVariantId
+        ? {
+            where: { id: productVariantId },
+            include: {
+              boms: {
+                include: {
+                  material: {
+                    select: {
+                      id: true,
+                      name: true,
+                      sku: true,
+                      currentStock: true,
+                      minimumStockLevel: true,
+                      availableStock: true,
+                      costPerUnit: true,
+                      leadTime: true,
+                    },
+                  },
+                },
+              },
+            },
+          }
+        : false,
     },
   });
 
@@ -700,18 +729,52 @@ async function analyzeOrderLine(
     throw new Error(`Product with ID ${productId} not found`);
   }
 
-  // Analyze stock availability
-  const stockAvailability = analyzeProductStock(product, requestedQuantity);
+  // Get variant details if variant is specified
+  let variant = null;
+  if (productVariantId) {
+    variant =
+      product.variants?.[0] ||
+      (await prisma.productVariant.findUnique({
+        where: { id: productVariantId },
+        include: {
+          boms: {
+            include: {
+              material: {
+                select: {
+                  id: true,
+                  name: true,
+                  sku: true,
+                  currentStock: true,
+                  minimumStockLevel: true,
+                  availableStock: true,
+                  costPerUnit: true,
+                  leadTime: true,
+                },
+              },
+            },
+          },
+        },
+      }));
 
-  // Analyze material availability for production
+    if (!variant) {
+      throw new Error(`Product variant with ID ${productVariantId} not found`);
+    }
+  }
+
+  // Analyze stock availability - use variant stock if available, otherwise product stock
+  const stockTarget = variant || product;
+  const stockAvailability = analyzeProductStock(stockTarget, requestedQuantity);
+
+  // Analyze material availability for production - use variant BOM if available, otherwise product BOM
+  const bomsToUse = variant?.boms || product.boms;
   const materialAvailability = await analyzeMaterialAvailability(
-    product.boms,
+    bomsToUse,
     requestedQuantity
   );
 
   // Generate production options
   const productionOptions = generateProductionOptions(
-    product,
+    stockTarget,
     requestedQuantity,
     stockAvailability,
     materialAvailability
@@ -725,8 +788,10 @@ async function analyzeOrderLine(
 
   return {
     productId: product.id,
+    productVariantId: variant?.id,
     productName: product.name,
     productSku: product.sku,
+    variantDisplayName: variant?.displayName,
     requestedQuantity,
     stockAvailability,
     materialAvailability,
@@ -1012,9 +1077,30 @@ export async function createProductionOrdersWithDecisions(
 ): Promise<any[]> {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user?.id)
+      throw new Error("Unauthorized - no valid session or user ID");
+
+    // Verify the user exists in the database
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, email: true, role: true },
+    });
+
+    if (!user) {
+      throw new Error(`User with ID ${session.user.id} not found in database`);
+    }
 
     const createdOrders = [];
+
+    // Verify customer order exists
+    const customerOrder = await prisma.customerOrder.findUnique({
+      where: { id: customerOrderId },
+      select: { id: true, orderNumber: true },
+    });
+
+    if (!customerOrder) {
+      throw new Error(`Customer order ${customerOrderId} not found`);
+    }
 
     // Get default work center
     const defaultWorkCenter = await prisma.workCenter.findFirst({
@@ -1025,38 +1111,70 @@ export async function createProductionOrdersWithDecisions(
       throw new Error("No active work center found");
     }
 
+    console.log(
+      `Using work center: ${defaultWorkCenter.name} (${defaultWorkCenter.id})`
+    );
+
     for (const decision of productionDecisions) {
-      if (decision.productionQuantity <= 0) continue;
+      if (decision.productionQuantity <= 0) {
+        console.log(`Skipping product ${decision.productId} - zero quantity`);
+        continue;
+      }
 
       const startDate = new Date();
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 14); // 2 weeks default
 
       try {
-        // Create production order
-        const productionOrder = await createProductionOrder({
-          productId: decision.productId,
-          quantity: decision.productionQuantity,
-          startDate,
-          dueDate,
-          priority: Priority.HIGH,
-          customerOrderId,
-          notes: `Decision: ${decision.decision}${decision.reason ? ` - ${decision.reason}` : ""}`,
-          operations: [
-            {
-              workCenterId: defaultWorkCenter.id,
-              startTime: startDate,
-              endTime: dueDate,
-              cost: 0,
+        console.log(
+          `Creating production order for product ${decision.productId}, quantity: ${decision.productionQuantity}`
+        );
+
+        // Create production order directly without material availability check
+        // (since we want to allow production orders for procurement planning)
+        const productionOrder = await prisma.productionOrder.create({
+          data: {
+            productId: decision.productId,
+            productVariantId: decision.productVariantId, // 🆕 ADD: Include variant ID
+            quantity: decision.productionQuantity,
+            startDate,
+            dueDate,
+            priority: Priority.HIGH,
+            customerOrderId,
+            notes: `Decision: ${decision.decision}${decision.reason ? ` - ${decision.reason}` : ""}`,
+            status: Status.PENDING,
+            createdBy: user.id,
+            plannedMaterialCost: 0, // Will be calculated later
+            operations: {
+              create: [
+                {
+                  workCenterId: defaultWorkCenter.id,
+                  startTime: startDate,
+                  endTime: dueDate,
+                  status: Status.PENDING,
+                  cost: 0,
+                },
+              ],
             },
-          ],
+          },
+          include: {
+            product: true,
+            operations: {
+              include: {
+                workCenter: true,
+              },
+            },
+          },
         });
 
-        // Create ProductionBOM from product BOM
+        console.log(`Created production order: ${productionOrder.id}`);
+
+        // Create ProductionBOM from product BOM (with variant support)
         await createProductionBOMFromProduct({
           productionOrderId: productionOrder.id,
           productId: decision.productId,
-          createdBy: session.user.id,
+          productVariantId: decision.productVariantId, // 🆕 ADD: Pass variant ID
+          createdBy: user.id,
         });
 
         createdOrders.push(productionOrder);
@@ -1065,15 +1183,24 @@ export async function createProductionOrdersWithDecisions(
           `Failed to create production order for product ${decision.productId}:`,
           error
         );
+        // Re-throw the error to stop the process and inform the user
+        throw error;
       }
     }
 
+    console.log(
+      `Successfully created ${createdOrders.length} production orders`
+    );
+
+    // Clear Next.js caches
     revalidatePath("/admin/customer-orders");
     revalidatePath("/admin/production");
 
     return createdOrders;
   } catch (error) {
     console.error("Error creating production orders with decisions:", error);
-    throw new Error("Failed to create production orders");
+    throw new Error(
+      `Failed to create production orders: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
   }
 }

@@ -17,7 +17,7 @@ import {
   ProductionBOMComparison,
 } from "@/types/admin/production-bom";
 
-// Create ProductionBOM from Product's BOM template
+// Create ProductionBOM from Product's BOM template (with optional variant support)
 export async function createProductionBOMFromProduct(
   input: CreateProductionBOMFromProductInput
 ) {
@@ -27,7 +27,7 @@ export async function createProductionBOMFromProduct(
       throw new Error("Unauthorized");
     }
 
-    const { productionOrderId, productId, createdBy } = input;
+    const { productionOrderId, productId, productVariantId, createdBy } = input;
 
     // Check if ProductionBOM already exists for this production order
     const existingProductionBOM = await prisma.productionBOM.findFirst({
@@ -38,23 +38,75 @@ export async function createProductionBOMFromProduct(
       throw new Error("ProductionBOM already exists for this production order");
     }
 
-    // Get the product's BOM
-    const productBOM = await prisma.bOM.findMany({
-      where: { productId },
-      include: {
-        material: {
-          select: {
-            id: true,
-            name: true,
-            costPerUnit: true,
-            currentStock: true,
+    // Get the BOM - use variant BOM if available, otherwise product BOM
+    let productBOM;
+
+    if (productVariantId) {
+      // Try to get variant-specific BOM first
+      const variantBOM = await prisma.productVariantBOM.findMany({
+        where: { productVariantId },
+        include: {
+          material: {
+            select: {
+              id: true,
+              name: true,
+              costPerUnit: true,
+              currentStock: true,
+            },
           },
         },
-      },
-    });
+      });
+
+      if (variantBOM.length > 0) {
+        // Transform ProductVariantBOM to BOM-like structure for compatibility
+        productBOM = variantBOM.map((vbom) => ({
+          id: `variant-${vbom.id}`, // Prefix to distinguish from regular BOM
+          productId,
+          materialId: vbom.materialId,
+          quantityNeeded: vbom.quantityNeeded,
+          wastePercentage: vbom.wastePercentage,
+          createdAt: vbom.createdAt,
+          updatedAt: vbom.updatedAt,
+          createdBy: vbom.createdBy,
+          modifiedBy: vbom.modifiedBy,
+          material: vbom.material,
+        }));
+      } else {
+        // Fall back to product BOM if no variant BOM exists
+        productBOM = await prisma.bOM.findMany({
+          where: { productId },
+          include: {
+            material: {
+              select: {
+                id: true,
+                name: true,
+                costPerUnit: true,
+                currentStock: true,
+              },
+            },
+          },
+        });
+      }
+    } else {
+      // Use product BOM for non-variant production orders
+      productBOM = await prisma.bOM.findMany({
+        where: { productId },
+        include: {
+          material: {
+            select: {
+              id: true,
+              name: true,
+              costPerUnit: true,
+              currentStock: true,
+            },
+          },
+        },
+      });
+    }
 
     if (productBOM.length === 0) {
-      throw new Error("No BOM found for this product");
+      const bomType = productVariantId ? "variant" : "product";
+      throw new Error(`No BOM found for this ${bomType}`);
     }
 
     // Get production order details

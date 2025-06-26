@@ -33,6 +33,16 @@ export async function getProductionOrders() {
             sku: true,
           },
         },
+        productVariant: {
+          // 🆕 ADD: Include variant information
+          select: {
+            id: true,
+            sku: true,
+            displayName: true,
+            sizeName: true,
+            colorName: true,
+          },
+        },
         customerOrder: {
           select: {
             id: true,
@@ -73,6 +83,16 @@ export async function getProductionOrder(id: string) {
       where: { id },
       include: {
         product: true,
+        productVariant: {
+          // 🆕 ADD: Include variant information
+          select: {
+            id: true,
+            sku: true,
+            displayName: true,
+            sizeName: true,
+            colorName: true,
+          },
+        },
         customerOrder: true,
         operations: {
           include: {

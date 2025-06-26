@@ -46,6 +46,7 @@ export interface ProductionBOMWithMaterial extends ProductionBOM {
 export interface CreateProductionBOMFromProductInput {
   productionOrderId: string;
   productId: string;
+  productVariantId?: string; // 🆕 ADD: Optional variant support
   createdBy?: string;
 }
 
