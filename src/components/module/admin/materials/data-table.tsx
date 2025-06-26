@@ -24,10 +24,10 @@ import { DataTableRowActions } from "./data-table-row-actions";
 import { DataTableToolbar } from "./data-table-toolbar";
 import { DataTablePagination } from "./data-table-pagination";
 import { Material } from "@/types/admin/materials";
+import { createColumns } from "./columns";
 
 interface DataTableProps {
   data: Material[];
-  columns: ColumnDef<Material, any>[];
   materialTypes: { id: string; name: string }[];
   unitOfMeasures: { id: string; name: string; symbol?: string }[];
   suppliers: { id: string; name: string }[];
@@ -36,7 +36,6 @@ interface DataTableProps {
 
 export function DataTable({
   data,
-  columns,
   materialTypes,
   unitOfMeasures,
   suppliers,
@@ -46,28 +45,13 @@ export function DataTable({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState({});
 
-  // Create a new array of columns with the actions column added
-  const columnsWithActions: ColumnDef<Material, any>[] = [
-    ...columns,
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => (
-        <DataTableRowActions
-          row={row}
-          materialTypes={materialTypes}
-          unitOfMeasures={unitOfMeasures}
-          suppliers={suppliers}
-          onSuccess={onSuccess}
-        />
-      ),
-    },
-  ];
+  // Create columns with required props
+  const columns = createColumns(materialTypes, unitOfMeasures, suppliers, onSuccess);
 
   // Initialize the table with proper data and columns including actions
   const table = useReactTable({
     data,
-    columns: columnsWithActions,
+    columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
@@ -125,7 +109,7 @@ export function DataTable({
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={columnsWithActions.length}
+                  colSpan={columns.length}
                   className="h-24 text-center"
                 >
                   No materials found.

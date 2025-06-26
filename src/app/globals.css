@@ -10,23 +10,23 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 0 0% 95.3%; /* #F2F3F4 converted to HSL */
     --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
+    --card: 0 0% 95.3%; /* #F2F3F4 - Primary card background */
     --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
+    --popover: 0 0% 100%; /* Keep pure white for elevated elements */
     --popover-foreground: 0 0% 3.9%;
     --primary: 0 0% 9%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
+    --secondary: 0 0% 97.6%; /* #F8F9FA converted to HSL */
     --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
+    --muted: 0 0% 98.4%; /* #FAFBFC converted to HSL */
     --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
+    --accent: 0 0% 98.4%; /* #FAFBFC converted to HSL */
     --accent-foreground: 0 0% 9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
+    --border: 0 0% 85.8%; /* Slightly more subtle than default */
     --input: 0 0% 89.8%;
     --ring: 0 0% 3.9%;
     --chart-1: 12 76% 61%;
@@ -35,13 +35,13 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 0 0% 97.6%; /* #F8F9FA */
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent: 0 0% 98.4%; /* #FAFBFC */
     --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
+    --sidebar-border: 220 13% 87%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
   .dark {
@@ -89,41 +89,34 @@ body {
   }
 }
 
-
-/* Dark Theme */
-.dark-theme .bg-neutral-800 { /* Add .dark-theme prefix */
+/* Enhanced theme system with subtle backgrounds */
+.dark-theme .bg-neutral-800 {
   background-color: #1f2937;
 }
 
-.dark-theme .text-slate-100 { /* Add .dark-theme prefix */
+.dark-theme .text-slate-100 {
   color: #f8f9fa;
 }
 
-/* ... other dark theme styles */
-
-/* Light Theme */
-.light-theme .bg-white { /* Add .light-theme prefix */
-  background-color: white;
+/* Light theme with subtle shades instead of pure white */
+.light-theme .bg-white {
+  background-color: #F2F3F4; /* Replace white with subtle shade */
 }
 
-.light-theme .text-gray-800 { /* Add .light-theme prefix */
+.light-theme .text-gray-800 {
   color: #333;
 }
 
-/* ... other light theme styles */
-
-/* Hover Styles (Less Specific) */
-.bg-gray-700:hover {  /* Keep these less specific */
+/* Enhanced hover styles with subtle transitions */
+.bg-gray-700:hover {
   background-color: gray;
 }
 
-.bg-gray-200:hover { /* Keep these less specific */
+.bg-gray-200:hover {
   background-color: lightgray;
 }
 
-/* ... other hover styles */
-
-/* Add this to your body tag in _app.tsx or layout.tsx*/
+/* Add theme classes to body */
 body.dark {
   @apply dark-theme
 }
@@ -150,9 +143,9 @@ body.light {
   width: 6px;
 }
 
-/* Fullscreen styles */
+/* Enhanced fullscreen styles with subtle backgrounds */
 :fullscreen {
-  background-color: white;
+  background-color: #F2F3F4; /* Use subtle shade instead of white */
   padding: 1.5rem;
   overflow-y: auto;
 }
@@ -183,15 +176,15 @@ body.light {
   }
 }
 
-/* Fix for Safari and Firefox */
+/* Fix for Safari and Firefox with subtle backgrounds */
 :-webkit-full-screen {
-  background-color: white;
+  background-color: #F2F3F4; /* Use subtle shade */
   padding: 1.5rem;
   overflow-y: auto;
 }
 
 :-moz-full-screen {
-  background-color: white;
+  background-color: #F2F3F4; /* Use subtle shade */
   padding: 1.5rem;
   overflow-y: auto;
 }
@@ -206,24 +199,21 @@ body.light {
   }
 }
 
-/* Date picker styles to ensure it works in modals */
+/* Enhanced component styling */
 [data-radix-popper-content-wrapper] {
-  z-index: 100 !important;
+  z-index: 50;
 }
 
-/* Additional styles for calendar in popovers */
 .rdp {
-  margin: 0;
+  --rdp-cell-size: 40px;
+  --rdp-accent-color: #0000ff;
+  --rdp-background-color: #F2F3F4; /* Use subtle background */
 }
 
 .rdp-caption {
-  display: flex;
-  justify-content: center;
-  padding: 8px;
+  margin-bottom: 1rem;
 }
 
 .rdp-nav {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  white-space: nowrap;
 }

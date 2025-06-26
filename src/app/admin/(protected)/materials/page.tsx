@@ -7,7 +7,6 @@ import {
   getSuppliers,
 } from "@/lib/actions/materials";
 import { DataTable } from "@/components/module/admin/materials/data-table";
-import { columns } from "@/components/module/admin/materials/columns";
 import { CreateMaterialDialog } from "@/components/module/admin/materials/create-material-dialog";
 import { MaterialTypeDialog } from "@/components/module/admin/materials/material-type-dialog";
 import { UnitOfMeasureDialog } from "@/components/module/admin/materials/unit-of-measure-dialog";
@@ -88,7 +87,6 @@ export default async function MaterialsPage() {
 
         {/* Data Table with materials and editing capabilities */}
         <DataTable
-          columns={columns}
           data={materials}
           materialTypes={materialTypes}
           unitOfMeasures={unitOfMeasures}

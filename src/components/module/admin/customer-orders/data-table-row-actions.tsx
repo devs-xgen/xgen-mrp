@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Row } from "@tanstack/react-table"
-import { Eye, MoreHorizontal, Trash, Factory } from "lucide-react"
+import { Eye, MoreHorizontal, Trash, Factory, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { CustomerOrderSheet } from "./customer-order-sheet"
 import { ProductionOrdersDialog } from "./production-orders-dialog"
+import { CreateProductionOrdersDialog } from "./create-production-orders-dialog"
 
 interface DataTableRowActionsProps {
   row: Row<CustomerOrderColumn>
@@ -35,6 +36,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showViewSheet, setShowViewSheet] = useState(false)
   const [showProductionDialog, setShowProductionDialog] = useState(false)
+  const [showCreateProductionDialog, setShowCreateProductionDialog] = useState(false)
   const { toast } = useToast()
   const customerOrder = row.original
 
@@ -69,18 +71,24 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             <span className="sr-only">Open menu</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-[160px]">
+        <DropdownMenuContent align="end" className="w-[180px]">
           <DropdownMenuItem onClick={() => setShowViewSheet(true)}>
             <Eye className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
-            View
+            View Details
           </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => setShowProductionDialog(true)}
-            disabled={customerOrder.productionOrderCount === 0}
-          >
-            <Factory className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
-            View Production
-          </DropdownMenuItem>
+          
+          {customerOrder.productionOrderCount > 0 ? (
+            <DropdownMenuItem onClick={() => setShowProductionDialog(true)}>
+              <Factory className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+              View Production
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={() => setShowCreateProductionDialog(true)}>
+              <Plus className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+              Create Production
+            </DropdownMenuItem>
+          )}
+          
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={() => setShowDeleteDialog(true)}
@@ -124,6 +132,13 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         customerOrderNumber={customerOrder.orderNumber}
         open={showProductionDialog}
         onOpenChange={setShowProductionDialog}
+      />
+
+      <CreateProductionOrdersDialog
+        customerOrderId={customerOrder.id}
+        customerOrderNumber={customerOrder.orderNumber}
+        open={showCreateProductionDialog}
+        onOpenChange={setShowCreateProductionDialog}
       />
     </>
   )

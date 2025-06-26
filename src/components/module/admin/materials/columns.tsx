@@ -5,6 +5,7 @@ import { AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Material } from "@/types/admin/materials";
 import { Status } from "@prisma/client";
+import { DataTableRowActions } from "./data-table-row-actions";
 
 // Format currency for display
 const formatCurrency = (amount: number) => {
@@ -16,7 +17,12 @@ const formatCurrency = (amount: number) => {
 
 console.log("Defining columns for material table - without actions column");
 
-export const columns: ColumnDef<Material>[] = [
+export const createColumns = (
+  materialTypes: { id: string; name: string }[],
+  unitOfMeasures: { id: string; name: string; symbol?: string }[],
+  suppliers: { id: string; name: string }[],
+  onSuccess?: () => Promise<void>
+): ColumnDef<Material>[] => [
   {
     accessorKey: "name",
     header: "Material Name",
@@ -90,7 +96,16 @@ export const columns: ColumnDef<Material>[] = [
       );
     },
   },
-  // Removed the actions column since we're adding it in the DataTable component
+  {
+    id: "actions",
+    cell: ({ row }) => (
+      <DataTableRowActions
+        row={row}
+        materialTypes={materialTypes}
+        unitOfMeasures={unitOfMeasures}
+        suppliers={suppliers}
+        onSuccess={onSuccess}
+      />
+    ),
+  },
 ];
-
-console.log("Columns defined:", columns.length, "columns");

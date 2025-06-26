@@ -2,7 +2,6 @@
 import { Metadata } from "next";
 import { getAllProducts, getCategories } from "@/lib/actions/product";
 import { DataTable } from "@/components/module/admin/products/data-table";
-import { columns } from "@/components/module/admin/products/columns";
 import { CreateProductButton } from "@/components/module/admin/products/create-product-button";
 import { ProductCategoryDialog } from "@/components/module/admin/products/product-category-dialog";
 import { revalidatePath } from "next/cache";
@@ -64,7 +63,6 @@ export default async function ProductsPage() {
 
         {/* Data Table with products and editing capabilities */}
         <DataTable
-          columns={columns}
           data={products}
           categories={categories}
           onSuccess={refreshData}

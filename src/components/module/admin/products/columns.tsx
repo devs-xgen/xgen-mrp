@@ -2,7 +2,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Factory } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,14 +13,50 @@ import {
 } from "@/components/ui/tooltip";
 import { formatCurrencyPHP } from "@/lib/constant";
 import type { Product, ProductCategory, Status } from "@prisma/client";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
+import { DataTableRowActions } from "./data-table-row-actions";
 
 // Define the Product type with relations
 export type ProductWithRelations = Product & {
   category: ProductCategory;
   variants?: any[];
+  _count?: {
+    productionOrders?: number;
+  };
 };
 
-export const columns: ColumnDef<ProductWithRelations>[] = [
+export const createColumns = (
+  categories: ProductCategory[],
+  onSuccess?: () => Promise<void>
+): ColumnDef<ProductWithRelations>[] => [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() 
+            ? true 
+            : table.getIsSomePageRowsSelected() 
+            ? "indeterminate" 
+            : false
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+        className="translate-y-[2px]"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+        className="translate-y-[2px]"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
   {
     accessorKey: "name",
     header: "Product Name",
@@ -100,16 +136,24 @@ export const columns: ColumnDef<ProductWithRelations>[] = [
     },
   },
   {
-    accessorKey: "variants",
-    header: "Variants",
+    accessorKey: "productionOrders",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Production" />
+    ),
     cell: ({ row }) => {
-      const variantCount = row.original.variants?.length || 0;
-      return variantCount > 0 ? (
-        <Badge variant="outline" className="text-xs">
-          {variantCount} variants
-        </Badge>
-      ) : (
-        <span className="text-muted-foreground text-xs">No variants</span>
+      const productionOrders = row.original._count?.productionOrders || 0;
+      
+      return (
+        <div className="flex items-center">
+          {productionOrders > 0 ? (
+            <Badge variant="secondary" className="bg-blue-100 text-blue-800 flex items-center gap-1">
+              <Factory className="h-3 w-3" />
+              {productionOrders} orders
+            </Badge>
+          ) : (
+            <Badge variant="outline">No production</Badge>
+          )}
+        </div>
       );
     },
   },
@@ -155,5 +199,9 @@ export const columns: ColumnDef<ProductWithRelations>[] = [
       const leadTime = row.getValue("leadTime") as number;
       return `${leadTime} days`;
     },
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => <DataTableRowActions row={row} categories={categories} onSuccess={onSuccess} />,
   },
 ];

@@ -1,0 +1,547 @@
+{
+  "designSystem": {
+    "name": "XGen MRP Design System",
+    "version": "1.3.0",
+    "description": "A consistent design system for the XGen MRP application with enhanced color system through Tailwind CSS custom properties",
+    "colorTheme": {
+      "philosophy": "Enhanced color system using Tailwind CSS custom properties to automatically apply subtle backgrounds throughout the application. Standard classes like bg-white now use #F2F3F4 instead of pure white.",
+      "implementation": "Colors are defined in CSS custom properties and automatically applied through standard Tailwind classes. No need for manual bg-[#F2F3F4] usage - just use bg-white, bg-card, bg-muted, etc.",
+      "backgrounds": {
+        "description": "Standard Tailwind classes now use subtle background colors automatically",
+        "primary": {
+          "class": "bg-white or bg-background",
+          "value": "#F2F3F4 (95.3% lightness)",
+          "description": "Primary background for main content areas - automatically applied to bg-white"
+        },
+        "card": {
+          "class": "bg-card",
+          "value": "#F2F3F4 (95.3% lightness)",
+          "description": "Card backgrounds - same as primary for consistency"
+        },
+        "secondary": {
+          "class": "bg-secondary",
+          "value": "#F8F9FA (97.6% lightness)",
+          "description": "Lighter background for nested content or secondary areas"
+        },
+        "muted": {
+          "class": "bg-muted",
+          "value": "#FAFBFC (98.4% lightness)",
+          "description": "Accent background for highlighted content or special sections"
+        },
+        "elevated": {
+          "class": "bg-popover",
+          "value": "Pure white (100% lightness)",
+          "description": "Elevated background for floating elements like dialogs or modals"
+        }
+      },
+      "borders": {
+        "description": "Enhanced border system with automatic subtle styling",
+        "default": {
+          "class": "border",
+          "description": "Default border with enhanced subtlety - automatically applied"
+        },
+        "slate": {
+          "light": "border-slate-200/60 dark:border-slate-700/60",
+          "description": "Custom border for specific components needing extra control"
+        }
+      },
+      "surfaces": {
+        "description": "Simplified surface combinations using standard Tailwind classes",
+        "card": {
+          "standard": "bg-card border rounded-lg",
+          "description": "Standard card surface using CSS custom properties"
+        },
+        "dialog": {
+          "elevated": "bg-popover border rounded-lg",
+          "description": "Dialog surface with elevated appearance"
+        },
+        "panel": {
+          "nested": "bg-secondary border rounded-lg",
+          "description": "Nested panel surface for content within cards"
+        },
+        "highlight": {
+          "accent": "bg-muted border rounded-lg",
+          "description": "Highlighted surface for special content"
+        }
+      }
+    },
+    "colors": {
+      "primary": {
+        "base": "var(--primary)",
+        "foreground": "var(--primary-foreground)",
+        "variants": {
+          "blue": {
+            "base": "text-blue-600 dark:text-blue-400",
+            "bg": "bg-blue-50/90 dark:bg-blue-950/30",
+            "border": "border-blue-200/70 dark:border-blue-800/50",
+            "surface": "bg-blue-50/90 border border-blue-200/70 dark:bg-blue-950/30 dark:border-blue-800/50"
+          },
+          "green": {
+            "base": "text-green-600 dark:text-green-400",
+            "bg": "bg-green-50/90 dark:bg-green-950/30",
+            "border": "border-green-200/70 dark:border-green-800/50",
+            "surface": "bg-green-50/90 border border-green-200/70 dark:bg-green-950/30 dark:border-green-800/50"
+          },
+          "amber": {
+            "base": "text-amber-600 dark:text-amber-400",
+            "bg": "bg-amber-50/90 dark:bg-amber-950/30",
+            "border": "border-amber-200/70 dark:border-amber-800/50",
+            "surface": "bg-amber-50/90 border border-amber-200/70 dark:bg-amber-950/30 dark:border-amber-800/50"
+          },
+          "red": {
+            "base": "text-red-600 dark:text-red-400",
+            "bg": "bg-red-50/90 dark:bg-red-950/30",
+            "border": "border-red-200/70 dark:border-red-800/50",
+            "surface": "bg-red-50/90 border border-red-200/70 dark:bg-red-950/30 dark:border-red-800/50"
+          },
+          "purple": {
+            "base": "text-purple-600 dark:text-purple-400",
+            "bg": "bg-purple-50/90 dark:bg-purple-950/30",
+            "border": "border-purple-200/70 dark:border-purple-800/50",
+            "surface": "bg-purple-50/90 border border-purple-200/70 dark:bg-purple-950/30 dark:border-purple-800/50"
+          },
+          "slate": {
+            "base": "text-slate-600 dark:text-slate-400",
+            "bg": "bg-slate-50/90 dark:bg-slate-950/30",
+            "border": "border-slate-200/70 dark:border-slate-800/50",
+            "surface": "bg-slate-50/90 border border-slate-200/70 dark:bg-slate-950/30 dark:border-slate-800/50"
+          }
+        }
+      },
+      "muted": {
+        "base": "var(--muted)",
+        "foreground": "var(--muted-foreground)"
+      }
+    },
+    "spacing": {
+      "xs": "0.25rem",
+      "sm": "0.5rem",
+      "md": "1rem",
+      "lg": "1.5rem",
+      "xl": "2rem"
+    },
+    "typography": {
+      "fontFamily": {
+        "sans": "var(--font-sans)",
+        "mono": "var(--font-mono)"
+      },
+      "fontSize": {
+        "xs": "0.75rem",
+        "sm": "0.875rem",
+        "base": "1rem",
+        "lg": "1.125rem",
+        "xl": "1.25rem",
+        "2xl": "1.5rem",
+        "3xl": "1.875rem"
+      }
+    },
+    "borderRadius": {
+      "sm": "0.125rem",
+      "md": "0.375rem",
+      "lg": "0.5rem",
+      "full": "9999px"
+    }
+  },
+  "components": {
+    "layout": {
+      "dialogLayout": {
+        "description": "Standard dialog layout pattern using enhanced Tailwind classes",
+        "variants": {
+          "standard": {
+            "description": "Standard dialog with fixed header and footer using elevated appearance",
+            "structure": "flex flex-col bg-popover",
+            "header": "flex-shrink-0 px-6 py-4 border-b",
+            "body": "flex-1 overflow-auto bg-muted",
+            "footer": "flex-shrink-0 border-t p-4 bg-popover"
+          },
+          "fullHeight": {
+            "description": "Full height dialog with fixed header and footer",
+            "structure": "max-h-[90vh] flex flex-col bg-popover",
+            "header": "flex-shrink-0 px-6 py-4 border-b",
+            "body": "flex-1 overflow-hidden bg-muted",
+            "footer": "flex-shrink-0 border-t p-4 bg-popover"
+          },
+          "twoPanel": {
+            "description": "Two-panel layout using standard Tailwind classes",
+            "structure": "grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 h-full bg-muted",
+            "panel": "flex flex-col min-h-0 bg-card border rounded-lg"
+          }
+        }
+      },
+      "pageLayout": {
+        "description": "Standard page layout pattern",
+        "structure": "flex flex-col gap-6 p-8",
+        "header": {
+          "structure": "flex items-center justify-between",
+          "title": "text-3xl font-bold tracking-tight",
+          "description": "text-muted-foreground"
+        }
+      },
+      "tablePageLayout": {
+        "description": "Standard layout pattern for pages with data tables",
+        "variants": {
+          "standard": {
+            "description": "Standard table page with header, toolbar, and table",
+            "structure": "flex flex-col gap-6 p-8 bg-background min-h-screen",
+            "pageHeader": {
+              "structure": "flex items-center justify-between",
+              "title": "text-3xl font-bold tracking-tight",
+              "description": "text-muted-foreground mt-1",
+              "actions": "flex items-center gap-2"
+            },
+            "tableContainer": {
+              "structure": "bg-card border rounded-lg",
+              "header": "p-6 pb-4 border-b bg-card",
+              "toolbar": "flex items-center justify-between gap-4 flex-wrap",
+              "tableWrapper": "overflow-auto"
+            }
+          },
+          "withSummaryCards": {
+            "description": "Table page with summary analytics cards at the top",
+            "structure": "flex flex-col gap-6 p-8 bg-background min-h-screen",
+            "pageHeader": "flex items-center justify-between mb-6",
+            "summarySection": {
+              "structure": "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6",
+              "card": "bg-card border rounded-lg p-6"
+            },
+            "tableSection": "bg-card border rounded-lg"
+          },
+          "withSidebar": {
+            "description": "Table page with sidebar for filters or additional controls",
+            "structure": "flex gap-6 p-8 bg-background min-h-screen",
+            "sidebar": {
+              "structure": "w-64 flex-shrink-0 bg-card border rounded-lg p-6",
+              "header": "font-semibold mb-4",
+              "content": "space-y-4"
+            },
+            "mainContent": {
+              "structure": "flex-1 flex flex-col gap-6",
+              "table": "bg-card border rounded-lg"
+            }
+          }
+        }
+      },
+      "cardLayout": {
+        "description": "Standard card layout pattern using enhanced Tailwind classes",
+        "variants": {
+          "standard": {
+            "structure": "bg-card border rounded-lg",
+            "header": "p-4 pb-2",
+            "body": "p-4 pt-2",
+            "description": "Standard card using CSS custom properties for subtle background"
+          },
+          "flexColumn": {
+            "description": "Card with flex column layout for scrollable content",
+            "structure": "flex-1 flex flex-col min-h-0 bg-card border rounded-lg",
+            "header": "flex-shrink-0",
+            "body": "flex-1 p-0 overflow-hidden"
+          },
+          "elevated": {
+            "description": "Elevated card with prominent appearance",
+            "structure": "bg-popover border rounded-lg shadow-sm",
+            "header": "p-4 pb-2",
+            "body": "p-4 pt-2"
+          },
+          "nested": {
+            "description": "Nested card for content within other cards",
+            "structure": "bg-secondary border rounded-md",
+            "header": "p-3 pb-2",
+            "body": "p-3 pt-2"
+          }
+        }
+      }
+    },
+    "patterns": {
+      "searchableList": {
+        "description": "A list with search functionality",
+        "structure": {
+          "searchBox": {
+            "description": "Search input with icon",
+            "example": "<div className=\"relative\"><Search className=\"absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground\" /><Input placeholder=\"Search...\" className=\"pl-10\" /></div>"
+          },
+          "list": {
+            "description": "Scrollable list container",
+            "example": "<ScrollArea className=\"h-full\"><div className=\"p-4 space-y-2\">List items go here</div></ScrollArea>"
+          },
+          "emptyState": {
+            "description": "Empty state display",
+            "example": "<div className=\"text-center py-8 text-muted-foreground\"><Icon className=\"w-12 h-12 mx-auto mb-4 opacity-50\" /><p className=\"text-sm\">No items found</p></div>"
+          }
+        }
+      },
+      "twoPanel": {
+        "description": "Two-panel selector pattern (browse and select)",
+        "example": "AddMaterialDialog.tsx and create-dialog.tsx",
+        "leftPanel": {
+          "description": "Browse and search panel",
+          "structure": "flex flex-col min-h-0"
+        },
+        "rightPanel": {
+          "description": "Selected items panel",
+          "structure": "flex flex-col min-h-0"
+        }
+      },
+      "statusBadges": {
+        "description": "Consistent status badges",
+        "variants": {
+          "stock": {
+            "normal": "variant=\"outline\"",
+            "low": "variant=\"secondary\" className=\"bg-blue-500 text-white\"",
+            "out": "variant=\"destructive\""
+          },
+          "status": {
+            "active": "variant=\"default\" className=\"bg-green-500 text-white\"",
+            "pending": "variant=\"outline\" className=\"bg-yellow-500 text-white\"",
+            "completed": "variant=\"default\" className=\"bg-green-500 text-white\"",
+            "cancelled": "variant=\"destructive\""
+          },
+          "priority": {
+            "high": "variant=\"destructive\" className=\"bg-red-500 text-white\"",
+            "medium": "variant=\"secondary\" className=\"bg-orange-500 text-white\"",
+            "low": "variant=\"outline\" className=\"bg-gray-500 text-white\"",
+            "urgent": "variant=\"destructive\" className=\"bg-red-600 text-white\""
+          }
+        }
+      },
+      "formLayouts": {
+        "description": "Standard form layouts",
+        "variants": {
+          "grid": "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4",
+          "stack": "space-y-4"
+        }
+      }
+    },
+    "analytics": {
+      "description": "Analytics card components using enhanced Tailwind classes",
+      "card": {
+        "description": "Standard analytics card using CSS custom properties",
+        "structure": "relative rounded-lg bg-card border p-6 transition-all duration-200 hover:shadow-sm",
+        "content": "flex items-center space-x-4",
+        "icon": "h-8 w-8",
+        "title": "text-sm font-medium text-muted-foreground truncate",
+        "value": "text-2xl font-bold text-foreground mt-1 sm:text-3xl",
+        "subtitle": "text-xs text-muted-foreground mt-1 truncate"
+      },
+      "variants": {
+        "elevated": {
+          "description": "Elevated analytics card with prominent styling",
+          "structure": "relative rounded-lg bg-popover border p-6 transition-all duration-200 shadow-sm hover:shadow-md"
+        },
+        "coloredMetric": {
+          "description": "Analytics card with colored background for specific metrics",
+          "blue": "relative rounded-lg bg-blue-50/90 border border-blue-200/70 dark:bg-blue-950/30 dark:border-blue-800/50 p-6 transition-all duration-200",
+          "green": "relative rounded-lg bg-green-50/90 border border-green-200/70 dark:bg-green-950/30 dark:border-green-800/50 p-6 transition-all duration-200",
+          "amber": "relative rounded-lg bg-amber-50/90 border border-amber-200/70 dark:bg-amber-950/30 dark:border-amber-800/50 p-6 transition-all duration-200",
+          "red": "relative rounded-lg bg-red-50/90 border border-red-200/70 dark:bg-red-950/30 dark:border-red-800/50 p-6 transition-all duration-200"
+        }
+      }
+    },
+    "dialogs": {
+      "addEntityDialog": {
+        "description": "Pattern for adding entities (materials, products, etc.)",
+        "structure": {
+          "header": {
+            "description": "Dialog header with title, description, and actions",
+            "example": "<DialogHeader className=\"px-6 py-4 border-b flex-shrink-0\"><div className=\"flex items-center justify-between\">...</div></DialogHeader>"
+          },
+          "body": {
+            "description": "Dialog body with two panels",
+            "example": "<div className=\"flex-1 overflow-hidden\"><div className=\"grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 h-full\">...</div></div>"
+          },
+          "footer": {
+            "description": "Dialog footer with actions",
+            "example": "<div className=\"flex-shrink-0 pt-4 border-t\"><div className=\"flex justify-between items-center\">...</div></div>"
+          }
+        }
+      }
+    },
+    "tables": {
+      "dataTable": {
+        "description": "Standard data table pattern with consistent styling",
+        "structure": {
+          "container": "bg-card border rounded-lg overflow-hidden",
+          "header": "p-6 pb-4 border-b bg-card",
+          "toolbar": "flex items-center justify-between gap-4 flex-wrap mb-4",
+          "tableWrapper": "overflow-auto",
+          "table": "w-full",
+          "footer": "p-4 border-t bg-card"
+        },
+        "components": {
+          "dataTable": "Base table component with consistent row styling",
+          "dataTableToolbar": "Search and filter controls with responsive layout",
+          "dataTableColumnHeader": "Sortable column headers with clear visual feedback",
+          "dataTablePagination": "Pagination controls with page size options",
+          "dataTableRowActions": "Action dropdown for each row with consistent styling"
+        },
+        "styling": {
+          "headerRow": "bg-muted/50 border-b",
+          "dataRow": "border-b hover:bg-muted/30 transition-colors",
+          "cell": "p-4 align-middle",
+          "headerCell": "p-4 text-left font-medium"
+        }
+      },
+      "tableStates": {
+        "loading": {
+          "description": "Loading state for data tables",
+          "structure": "flex items-center justify-center py-12",
+          "content": "flex items-center gap-2",
+          "example": "<div className=\"flex items-center justify-center py-12\"><Loader2 className=\"h-6 w-6 animate-spin\" /><span>Loading data...</span></div>"
+        },
+        "empty": {
+          "description": "Empty state when no data is available",
+          "structure": "text-center py-12",
+          "icon": "w-16 h-16 mx-auto mb-4 text-muted-foreground/50",
+          "title": "text-lg font-medium mb-2",
+          "description": "text-muted-foreground",
+          "action": "mt-4"
+        },
+        "error": {
+          "description": "Error state when data loading fails",
+          "structure": "text-center py-12",
+          "icon": "w-16 h-16 mx-auto mb-4 text-destructive/50",
+          "title": "text-lg font-medium mb-2 text-destructive",
+          "description": "text-muted-foreground",
+          "action": "mt-4"
+        }
+      },
+      "tableToolbar": {
+        "description": "Standard toolbar above data tables",
+        "structure": "flex items-center justify-between gap-4 flex-wrap p-6 pb-4 border-b bg-card",
+        "leftSection": {
+          "description": "Search and filter controls",
+          "structure": "flex items-center gap-4 flex-1",
+          "searchBox": "relative max-w-sm",
+          "filters": "flex items-center gap-2"
+        },
+        "rightSection": {
+          "description": "Action buttons and view controls",
+          "structure": "flex items-center gap-2",
+          "actions": "flex items-center gap-2",
+          "viewToggle": "flex items-center gap-1"
+        }
+      }
+    }
+  },
+  "patterns": {
+    "responsiveDesign": {
+      "description": "Patterns for responsive design",
+      "mobileFirst": true,
+      "breakpoints": {
+        "sm": "640px",
+        "md": "768px",
+        "lg": "1024px",
+        "xl": "1280px"
+      },
+      "mobileAdaptations": {
+        "hideOnMobile": "hidden sm:flex",
+        "showOnlyOnMobile": "sm:hidden",
+        "simplifyOnMobile": "Use simplified layouts and fewer columns on mobile"
+      }
+    },
+    "dataFetching": {
+      "description": "Patterns for data fetching",
+      "loading": {
+        "description": "Loading state display",
+        "example": "<div className=\"flex items-center justify-center py-12\"><Loader2 className=\"h-8 w-8 animate-spin\" /><span className=\"ml-2\">Loading...</span></div>"
+      },
+      "error": {
+        "description": "Error state display",
+        "example": "<div className=\"text-center py-12\"><AlertTriangle className=\"h-12 w-12 mx-auto text-muted-foreground mb-4\" /><h3 className=\"text-lg font-medium mb-2\">Error</h3><p className=\"text-muted-foreground\">Error message here</p></div>"
+      },
+      "empty": {
+        "description": "Empty state display",
+        "example": "<div className=\"text-center py-12\"><Icon className=\"h-12 w-12 mx-auto text-muted-foreground mb-4\" /><h3 className=\"text-lg font-medium mb-2\">No Data</h3><p className=\"text-muted-foreground\">No data available</p></div>"
+      }
+    }
+  },
+  "bestPractices": {
+    "colorTheme": [
+      "Use bg-[#F2F3F4] as the primary background for cards and main content areas",
+      "Apply bg-[#F8F9FA] for nested content or secondary panels within cards",
+      "Use bg-[#FAFBFC] for dialog bodies and highlighted sections",
+      "Implement elevated surfaces (bg-white/90) for modals and floating elements",
+      "Combine backgrounds with appropriate borders (border-slate-200/60) for definition",
+      "Use color variants (blue, green, amber, red) sparingly for status indicators and important metrics",
+      "Always provide dark mode equivalents for all background colors",
+      "Maintain consistent opacity levels (50-90%) for visual hierarchy"
+    ],
+    "dialogDesign": [
+      "Always include a clear title and description",
+      "Provide a way to close the dialog (X button or Cancel)",
+      "Use consistent button ordering (Cancel on left, primary action on right)",
+      "For large dialogs, use a fixed header and footer with scrollable content",
+      "For complex forms, consider a multi-step approach",
+      "Always show loading states during async operations",
+      "Use elevated backgrounds (bg-white/90) for dialog headers and footers",
+      "Apply subtle backgrounds (bg-[#FAFBFC]) for dialog bodies"
+    ],
+    "formDesign": [
+      "Group related fields together",
+      "Use clear, concise labels",
+      "Provide helper text for complex fields",
+      "Show validation errors inline",
+      "Use appropriate input types (date pickers, selects, etc.)",
+      "Consider using grid layouts for dense forms"
+    ],
+    "tableDesign": [
+      "Always wrap tables in bg-card containers with rounded corners for visual definition",
+      "Use bg-muted/50 for table headers to distinguish from data rows",
+      "Apply hover:bg-muted/30 to data rows for interactive feedback",
+      "Include comprehensive search and filter capabilities in the toolbar",
+      "Use consistent row actions with dropdown menus for multiple actions",
+      "Implement pagination for datasets with >50 items",
+      "Allow column sorting where appropriate with clear visual indicators",
+      "Use skeleton loaders or loading states during data fetching",
+      "Provide empty states with helpful icons and action buttons",
+      "Include error states with retry mechanisms",
+      "Use consistent cell padding (p-4) for readability",
+      "Implement responsive design - hide less important columns on mobile",
+      "Add summary cards above tables when showing key metrics",
+      "Use sidebar layouts for complex filtering requirements",
+      "Maintain consistent spacing between page header, summary cards, and table (gap-6)"
+    ],
+    "iconUsage": [
+      "Use icons consistently across similar components",
+      "Pair icons with text for better clarity",
+      "Keep icon sizes consistent within contexts",
+      "Use color to enhance meaning, not as the sole indicator"
+    ]
+  },
+  "exampleImplementations": {
+    "twoPanel": {
+      "description": "Two-panel selector pattern as seen in AddMaterialDialog and CreateCustomerOrderDialog",
+      "key": "This pattern features a left panel for browsing/searching and a right panel for selected items",
+      "implementation": [
+        "Use grid layout with 1 column on mobile, 2 columns on desktop",
+        "Each panel is a Card with flex-column layout",
+        "Left panel contains search and scrollable list of items",
+        "Right panel contains selected items with quantity/price inputs",
+        "Both panels have fixed headers with scrollable content areas"
+      ],
+      "code": {
+        "layout": "<div className=\"grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 h-full bg-[#FAFBFC] dark:bg-slate-700/50\">",
+        "panel": "<Card className=\"flex-1 flex flex-col min-h-0 bg-[#F2F3F4] border border-slate-200/60 dark:bg-slate-900/50 dark:border-slate-700/60\">",
+        "panelHeader": "<CardHeader className=\"pb-3 flex-shrink-0 bg-[#F8F9FA] dark:bg-slate-800/50 border-b border-slate-100/80 dark:border-slate-800/60\">",
+        "panelContent": "<CardContent className=\"flex-1 p-0 overflow-hidden\"><ScrollArea className=\"h-full\">",
+        "searchBox": "<div className=\"relative\"><Search className=\"absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground\" /><Input className=\"pl-10 bg-white/80 dark:bg-slate-700/80\" /></div>"
+      }
+    },
+    "analyticsCard": {
+      "description": "Analytics card pattern for displaying metrics",
+      "key": "Consistent card design with icon, title, and value",
+      "implementation": [
+        "Use consistent padding and spacing",
+        "Include an icon that represents the metric",
+        "Display a clear title and prominent value",
+        "Optional subtitle for additional context",
+        "Use color variants to categorize different types of metrics"
+      ],
+      "code": {
+        "card": "<div className=\"relative rounded-lg bg-[#F2F3F4] border border-slate-200/60 dark:bg-slate-900/50 dark:border-slate-700/60 p-6 transition-all duration-200 hover:shadow-sm\">",
+        "coloredCard": "<div className=\"relative rounded-lg bg-blue-50/90 border border-blue-200/70 dark:bg-blue-950/30 dark:border-blue-800/50 p-6 transition-all duration-200\">",
+        "elevatedCard": "<div className=\"relative rounded-lg bg-white/90 border border-slate-200/80 dark:bg-slate-800/90 dark:border-slate-700/80 p-6 transition-all duration-200 shadow-sm hover:shadow-md\">",
+        "content": "<div className=\"flex items-center space-x-4\"><Icon className=\"h-8 w-8 text-color\" /><div>...</div></div>"
+      }
+    }
+  }
+}

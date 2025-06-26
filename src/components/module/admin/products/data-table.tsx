@@ -35,19 +35,17 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { X, ChevronLeft, ChevronRight, Settings2 } from "lucide-react";
 import { DataTableRowActions } from "./data-table-row-actions";
-import { ProductWithRelations } from "./columns";
+import { ProductWithRelations, createColumns } from "./columns";
 import type { ProductCategory } from "@prisma/client";
 
 interface DataTableProps {
   data: ProductWithRelations[];
-  columns: ColumnDef<ProductWithRelations, any>[];
   categories: ProductCategory[];
   onSuccess?: () => Promise<void>;
 }
 
 export function DataTable({
   data,
-  columns,
   categories,
   onSuccess,
 }: DataTableProps) {
@@ -56,27 +54,13 @@ export function DataTable({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
-  // Add actions column to the provided columns
-  const columnsWithActions: ColumnDef<ProductWithRelations, any>[] = [
-    ...columns,
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => (
-        <DataTableRowActions
-          row={row}
-          categories={categories}
-          onSuccess={onSuccess}
-        />
-      ),
-      enableHiding: false, // Always show actions column
-    },
-  ];
+  // Create columns with required props
+  const columns = createColumns(categories, onSuccess);
 
   // Initialize the table with enhanced state management
   const table = useReactTable({
     data,
-    columns: columnsWithActions,
+    columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
@@ -204,7 +188,7 @@ export function DataTable({
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={columnsWithActions.length}
+                    colSpan={columns.length}
                     className="h-24 text-center"
                   >
                     No products found.
