@@ -107,6 +107,70 @@ export async function getProductsForOrders(): Promise<ProductForOrder[]> {
   }
 }
 
+export async function getProductsWithVariantsForOrders() {
+  try {
+    const products = await prisma.product.findMany({
+      where: {
+        status: "ACTIVE", // Only include active products for ordering
+      },
+      include: {
+        variants: {
+          where: {
+            isActive: true, // Only include active variants
+          },
+          select: {
+            id: true,
+            productId: true,
+            sku: true,
+            displayName: true,
+            sizeName: true,
+            sizeCode: true,
+            colorName: true,
+            colorCode: true,
+            sellingPrice: true,
+            currentStock: true,
+            minimumStockLevel: true,
+          },
+          orderBy: [{ sizeName: "asc" }, { colorName: "asc" }],
+        },
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    // Map to expected format with variants
+    return products.map((product: any) => ({
+      id: product.id,
+      name: product.name,
+      sku: product.sku,
+      unitPrice: Number(product.sellingPrice),
+      currentStock: product.currentStock,
+      minimumStockLevel: product.minimumStockLevel,
+      hasVariants: product.hasVariants && product.variants.length > 0,
+      variants: product.variants.map((variant: any) => ({
+        id: variant.id,
+        productId: variant.productId,
+        sku: variant.sku,
+        displayName: variant.displayName,
+        sizeName: variant.sizeName,
+        sizeCode: variant.sizeCode,
+        colorName: variant.colorName,
+        colorCode: variant.colorCode,
+        unitPrice: Number(variant.sellingPrice),
+        currentStock: variant.currentStock,
+        minimumStockLevel: variant.minimumStockLevel,
+      })),
+    }));
+  } catch (error) {
+    console.error(
+      "❌ Error fetching products with variants for orders:",
+      error
+    );
+    throw new Error("Failed to fetch products with variants for orders");
+  }
+}
+
 export async function getProductById(id: string) {
   try {
     const product = await prisma.product.findUnique({

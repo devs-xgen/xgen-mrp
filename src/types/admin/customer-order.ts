@@ -10,6 +10,7 @@ export interface Customer {
 export interface OrderLine {
   id: string;
   productId: string;
+  productVariantId?: string;
   quantity: number;
   unitPrice: number;
   status: Status;
@@ -17,6 +18,13 @@ export interface OrderLine {
     id: string;
     name: string;
     sku: string;
+  };
+  productVariant?: {
+    id: string;
+    sku: string;
+    displayName: string;
+    sizeName?: string | null;
+    colorName?: string | null;
   };
 }
 
@@ -60,6 +68,7 @@ export interface ProductionOrderSummary {
 export interface OrderLineForDisplay {
   id: string;
   productId: string;
+  productVariantId?: string;
   quantity: number;
   unitPrice: number;
   status: Status;
@@ -67,6 +76,13 @@ export interface OrderLineForDisplay {
     id: string;
     name: string;
     sku: string;
+  };
+  productVariant?: {
+    id: string;
+    sku: string;
+    displayName: string;
+    sizeName?: string | null;
+    colorName?: string | null;
   };
 }
 
@@ -76,6 +92,7 @@ export interface CreateCustomerOrderInput {
   notes?: string;
   orderLines: Array<{
     productId: string;
+    productVariantId?: string;
     quantity: number;
     unitPrice: number;
   }>;
@@ -219,4 +236,30 @@ export interface CustomerOrderColumn {
   productionOrderCount: number;
   notes: string | null;
   lastUpdated: Date;
+}
+
+// Add interface for products with variants for order selection
+export interface ProductWithVariantsForOrder {
+  id: string;
+  name: string;
+  sku: string;
+  unitPrice: number;
+  currentStock?: number;
+  minimumStockLevel?: number;
+  hasVariants: boolean;
+  variants?: ProductVariantForOrder[];
+}
+
+export interface ProductVariantForOrder {
+  id: string;
+  productId: string;
+  sku: string;
+  displayName: string;
+  sizeName?: string | null;
+  sizeCode?: string | null;
+  colorName?: string | null;
+  colorCode?: string | null;
+  unitPrice: number;
+  currentStock: number;
+  minimumStockLevel: number;
 }

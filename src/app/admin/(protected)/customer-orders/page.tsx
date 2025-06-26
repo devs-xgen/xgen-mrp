@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { getCustomerOrders } from "@/lib/actions/customer-order";
 import { getAllCustomers } from "@/lib/actions/customers";
-import { getProductsForOrders } from "@/lib/actions/product";
+import { getProductsWithVariantsForOrders } from "@/lib/actions/product";
 import { columns } from "@/components/module/admin/customer-orders/columns";
 import { DataTable } from "@/components/module/admin/customer-orders/data-table";
 import { CreateCustomerOrderDialog } from "@/components/module/admin/customer-orders/create-dialog";
@@ -20,7 +20,7 @@ export default async function CustomerOrdersPage() {
   const [customerOrders, customers, products] = await Promise.all([
     getCustomerOrders(),
     getAllCustomers(),
-    getProductsForOrders(),
+    getProductsWithVariantsForOrders(),
   ]);
 
   // Transform orders data for the table
@@ -70,7 +70,7 @@ export default async function CustomerOrdersPage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Customer Orders</h2>
           <p className="text-muted-foreground">
-            Manage customer orders and production planning
+            Manage customer orders and production planning with product variants
           </p>
         </div>
         <CreateCustomerOrderDialog 

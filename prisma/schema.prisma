@@ -252,6 +252,7 @@ model ProductVariant {
   product    Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
   boms       ProductVariantBOM[] // Variant-specific BOMs
   orderLines OrderLineVariant[] // Orders for specific variants
+  OrderLine  OrderLine[]
 
   @@unique([productId, sizeName, colorName]) // Ensure unique size+color combinations per product
   @@index([productId])
@@ -639,20 +640,22 @@ model CustomerOrder {
 }
 
 model OrderLine {
-  id            String             @id @default(cuid())
-  orderId       String
-  productId     String
-  quantity      Int
-  unitPrice     Decimal            @db.Decimal(10, 2)
-  status        Status             @default(ACTIVE)
-  notes         String?
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  createdBy     String?
-  modifiedBy    String?
-  customerOrder CustomerOrder      @relation(fields: [orderId], references: [id])
-  product       Product            @relation(fields: [productId], references: [id])
-  variants      OrderLineVariant[] // New relation for variant-specific orders
+  id               String             @id @default(cuid())
+  orderId          String
+  productId        String
+  productVariantId String? // Optional field for variant orders
+  quantity         Int
+  unitPrice        Decimal            @db.Decimal(10, 2)
+  status           Status             @default(ACTIVE)
+  notes            String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  createdBy        String?
+  modifiedBy       String?
+  customerOrder    CustomerOrder      @relation(fields: [orderId], references: [id])
+  product          Product            @relation(fields: [productId], references: [id])
+  productVariant   ProductVariant?    @relation(fields: [productVariantId], references: [id]) // Direct variant relation
+  variants         OrderLineVariant[] // Keep for backward compatibility
 }
 
 model Transaction {

@@ -45,6 +45,15 @@ export async function getCustomerOrders(): Promise<CustomerOrder[]> {
                 sellingPrice: true,
               },
             },
+            productVariant: {
+              select: {
+                id: true,
+                sku: true,
+                displayName: true,
+                sizeName: true,
+                colorName: true,
+              },
+            },
           },
         },
         productionOrders: {
@@ -91,6 +100,7 @@ export async function getCustomerOrders(): Promise<CustomerOrder[]> {
       orderLines: order.orderLines.map((line) => ({
         id: line.id,
         productId: line.productId,
+        productVariantId: line.productVariantId || undefined,
         quantity: line.quantity,
         unitPrice:
           line.unitPrice instanceof Decimal
@@ -102,6 +112,15 @@ export async function getCustomerOrders(): Promise<CustomerOrder[]> {
               id: line.product.id,
               name: line.product.name,
               sku: line.product.sku,
+            }
+          : undefined,
+        productVariant: line.productVariant
+          ? {
+              id: line.productVariant.id,
+              sku: line.productVariant.sku,
+              displayName: line.productVariant.displayName,
+              sizeName: line.productVariant.sizeName,
+              colorName: line.productVariant.colorName,
             }
           : undefined,
       })),
@@ -271,6 +290,7 @@ export async function createCustomerOrder(data: CreateCustomerOrderInput) {
         orderLines: {
           create: data.orderLines.map((line) => ({
             productId: line.productId,
+            productVariantId: line.productVariantId || null, // Add variant support
             quantity: line.quantity,
             unitPrice: new Decimal(line.unitPrice),
             status: Status.PENDING,
@@ -293,6 +313,15 @@ export async function createCustomerOrder(data: CreateCustomerOrderInput) {
                 name: true,
                 sku: true,
                 sellingPrice: true,
+              },
+            },
+            productVariant: {
+              select: {
+                id: true,
+                sku: true,
+                displayName: true,
+                sizeName: true,
+                colorName: true,
               },
             },
           },
@@ -393,6 +422,15 @@ export async function updateCustomerOrder(
                 name: true,
                 sku: true,
                 sellingPrice: true,
+              },
+            },
+            productVariant: {
+              select: {
+                id: true,
+                sku: true,
+                displayName: true,
+                sizeName: true,
+                colorName: true,
               },
             },
           },
