@@ -354,7 +354,7 @@ export function CreateProductionOrdersDialog({
                               checked={decision.productionQuantity > 0}
                               onCheckedChange={(checked) => {
                                 handleDecisionChange(
-                                  lineAnalysis.productId,
+                                  lineAnalysis.productId, 
                                   lineAnalysis.productVariantId, 
                                   'productionQuantity', 
                                   checked ? lineAnalysis.requestedQuantity : 0
@@ -377,7 +377,7 @@ export function CreateProductionOrdersDialog({
                                   min="0"
                                   value={decision.productionQuantity}
                                   onChange={(e) => handleDecisionChange(
-                                    lineAnalysis.productId,
+                                    lineAnalysis.productId, 
                                     lineAnalysis.productVariantId, 
                                     'productionQuantity', 
                                     parseInt(e.target.value) || 0
@@ -392,7 +392,7 @@ export function CreateProductionOrdersDialog({
                                   id={`reason-${uniqueKey}`}
                                   value={decision.reason || ''}
                                   onChange={(e) => handleDecisionChange(
-                                    lineAnalysis.productId,
+                                    lineAnalysis.productId, 
                                     lineAnalysis.productVariantId, 
                                     'reason', 
                                     e.target.value
