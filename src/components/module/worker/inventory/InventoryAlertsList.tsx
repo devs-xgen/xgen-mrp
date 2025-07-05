@@ -45,11 +45,13 @@ import {
 interface InventoryAlertsListProps {
   issues: InventoryIssueReport[];
   pagination: InventoryPagination;
+  viewOnly?: boolean;
 }
 
 export function InventoryAlertsList({
   issues,
   pagination,
+  viewOnly = false,
 }: InventoryAlertsListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();

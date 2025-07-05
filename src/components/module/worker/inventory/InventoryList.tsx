@@ -23,6 +23,7 @@ import {
   MoveHorizontal,
   ChevronLeft,
   ChevronRight,
+  Eye,
 } from "lucide-react";
 import {
   Dialog,
@@ -45,9 +46,10 @@ import { toast } from "@/hooks/use-toast";
 interface InventoryListProps {
   items: InventoryItem[];
   pagination: InventoryPagination;
+  viewOnly?: boolean;
 }
 
-export function InventoryList({ items, pagination }: InventoryListProps) {
+export function InventoryList({ items, pagination, viewOnly = false }: InventoryListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [sortField, setSortField] = useState<string>(
@@ -60,6 +62,7 @@ export function InventoryList({ items, pagination }: InventoryListProps) {
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [showIssueDialog, setShowIssueDialog] = useState<boolean>(false);
   const [showMovementDialog, setShowMovementDialog] = useState<boolean>(false);
+  const [showDetailsDialog, setShowDetailsDialog] = useState<boolean>(false);
 
   const handleSort = (field: string) => {
     const direction =
@@ -98,91 +101,6 @@ export function InventoryList({ items, pagination }: InventoryListProps) {
 
   const calculateValue = (item: InventoryItem) => {
     return item.currentStock * item.cost;
-  };
-
-  // Generate pagination items
-  const getPaginationItems = () => {
-    const { page, totalPages } = pagination;
-    const items = [];
-
-    // Create a range of pages to show
-    const range = [];
-    const maxVisiblePages = 5;
-
-    let startPage = Math.max(1, page - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-
-    // Adjust if we're near the end
-    if (endPage - startPage + 1 < maxVisiblePages) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1);
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      range.push(i);
-    }
-
-    // Show ellipsis at the beginning if needed
-    if (startPage > 1) {
-      items.push(
-        <Button
-          key="start"
-          variant="outline"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => handlePageChange(1)}
-        >
-          1
-        </Button>
-      );
-
-      if (startPage > 2) {
-        items.push(
-          <span key="ellipsis-start" className="mx-1">
-            ...
-          </span>
-        );
-      }
-    }
-
-    // Add the page range
-    for (const p of range) {
-      items.push(
-        <Button
-          key={p}
-          variant={p === page ? "default" : "outline"}
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => handlePageChange(p)}
-        >
-          {p}
-        </Button>
-      );
-    }
-
-    // Show ellipsis at the end if needed
-    if (endPage < totalPages) {
-      if (endPage < totalPages - 1) {
-        items.push(
-          <span key="ellipsis-end" className="mx-1">
-            ...
-          </span>
-        );
-      }
-
-      items.push(
-        <Button
-          key="end"
-          variant="outline"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => handlePageChange(totalPages)}
-        >
-          {totalPages}
-        </Button>
-      );
-    }
-
-    return items;
   };
 
   // Mock function for reporting an issue - to be connected to the real server action
@@ -276,15 +194,22 @@ export function InventoryList({ items, pagination }: InventoryListProps) {
                   </TableHead>
                   <TableHead className="text-right w-[100px]">Unit</TableHead>
                   <TableHead className="text-right w-[120px]">Value</TableHead>
-                  <TableHead className="text-right w-[100px]">
-                    Actions
-                  </TableHead>
+                  {!viewOnly && (
+                    <TableHead className="text-right w-[100px]">
+                      Actions
+                    </TableHead>
+                  )}
+                  {viewOnly && (
+                    <TableHead className="text-right w-[100px]">
+                      Details
+                    </TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-4">
+                    <TableCell colSpan={viewOnly ? 7 : 7} className="text-center py-4">
                       No inventory items found
                     </TableCell>
                   </TableRow>
@@ -310,38 +235,53 @@ export function InventoryList({ items, pagination }: InventoryListProps) {
                         {formatCurrency(calculateValue(item))}
                       </TableCell>
                       <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                            >
-                              <span className="sr-only">Open menu</span>
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedItem(item);
-                                setShowMovementDialog(true);
-                              }}
-                            >
-                              <MoveHorizontal className="mr-2 h-4 w-4" />
-                              Record Movement
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedItem(item);
-                                setShowIssueDialog(true);
-                              }}
-                            >
-                              <AlertTriangle className="mr-2 h-4 w-4" />
-                              Report Issue
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {viewOnly ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              setSelectedItem(item);
+                              setShowDetailsDialog(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                            <span className="sr-only">View details</span>
+                          </Button>
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                              >
+                                <span className="sr-only">Open menu</span>
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedItem(item);
+                                  setShowMovementDialog(true);
+                                }}
+                              >
+                                <MoveHorizontal className="mr-2 h-4 w-4" />
+                                Record Movement
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedItem(item);
+                                  setShowIssueDialog(true);
+                                }}
+                              >
+                                <AlertTriangle className="mr-2 h-4 w-4" />
+                                Report Issue
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -352,41 +292,124 @@ export function InventoryList({ items, pagination }: InventoryListProps) {
         </CardContent>
       </Card>
 
-      {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-center space-x-2 py-4">
+      {/* Pagination */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Showing {(pagination.page - 1) * pagination.pageSize + 1} to{" "}
+          {Math.min(
+            pagination.page * pagination.pageSize,
+            pagination.totalItems
+          )}{" "}
+          of {pagination.totalItems} items
+        </p>
+        <div className="flex items-center space-x-2">
           <Button
             variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() =>
-              pagination.page > 1 && handlePageChange(pagination.page - 1)
-            }
+            size="sm"
+            onClick={() => handlePageChange(pagination.page - 1)}
             disabled={pagination.page <= 1}
           >
             <ChevronLeft className="h-4 w-4" />
+            Previous
           </Button>
-
           <div className="flex items-center space-x-1">
-            {getPaginationItems()}
+            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+              .filter(
+                (page) =>
+                  page === 1 ||
+                  page === pagination.totalPages ||
+                  Math.abs(page - pagination.page) <= 1
+              )
+              .map((page, index, array) => (
+                <div key={page} className="flex items-center">
+                  {index > 0 && array[index - 1] !== page - 1 && (
+                    <span className="px-2 text-muted-foreground">...</span>
+                  )}
+                  <Button
+                    variant={
+                      page === pagination.page ? "default" : "outline"
+                    }
+                    size="sm"
+                    onClick={() => handlePageChange(page)}
+                  >
+                    {page}
+                  </Button>
+                </div>
+              ))}
           </div>
-
           <Button
             variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() =>
-              pagination.page < pagination.totalPages &&
-              handlePageChange(pagination.page + 1)
-            }
+            size="sm"
+            onClick={() => handlePageChange(pagination.page + 1)}
             disabled={pagination.page >= pagination.totalPages}
           >
+            Next
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
+      </div>
+
+      {/* View Details Dialog for View-Only Mode */}
+      {viewOnly && selectedItem && (
+        <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{selectedItem.name}</DialogTitle>
+              <DialogDescription>
+                Detailed information about this inventory item
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">SKU</label>
+                  <p className="font-mono">{selectedItem.sku}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Current Stock</label>
+                  <p>{selectedItem.currentStock} {selectedItem.unitOfMeasure}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Reorder Point</label>
+                  <p>{selectedItem.reorderPoint} {selectedItem.unitOfMeasure}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Critical Point</label>
+                  <p>{selectedItem.criticalPoint} {selectedItem.unitOfMeasure}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Unit Cost</label>
+                  <p>{formatCurrency(selectedItem.cost)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Total Value</label>
+                  <p>{formatCurrency(calculateValue(selectedItem))}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Stock Status</label>
+                  <StockLevelIndicator level={selectedItem.stockLevel} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Location ID</label>
+                  <p>{selectedItem.locationId}</p>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Last Updated</label>
+                <p className="text-sm">{selectedItem.lastUpdated}</p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setShowDetailsDialog(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
-      {/* Issue Report Dialog - This would be connected to the real API */}
-      {selectedItem && (
+      {/* Issue Report Dialog - Only shown when not in view-only mode */}
+      {!viewOnly && selectedItem && (
         <Dialog open={showIssueDialog} onOpenChange={setShowIssueDialog}>
           <DialogContent>
             <DialogHeader>
@@ -424,8 +447,8 @@ export function InventoryList({ items, pagination }: InventoryListProps) {
         </Dialog>
       )}
 
-      {/* Movement Record Dialog - This would be connected to the real API */}
-      {selectedItem && (
+      {/* Movement Record Dialog - Only shown when not in view-only mode */}
+      {!viewOnly && selectedItem && (
         <Dialog open={showMovementDialog} onOpenChange={setShowMovementDialog}>
           <DialogContent>
             <DialogHeader>

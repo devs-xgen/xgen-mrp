@@ -1,9 +1,9 @@
 import { Metadata } from "next";
 import { getMyTasks, getTaskStatistics } from "@/lib/actions/worker/tasks";
-import { TasksList } from "@/components/module/worker/tasks";
+import { TasksList, TaskAnalyticsModal } from "@/components/module/worker/tasks";
 import { Suspense } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, CheckCircle, AlertTriangle, ClipboardList, AlertCircle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { AlertCircle } from "lucide-react";
 import { Status } from "@prisma/client";
 
 // Force dynamic rendering since this page uses authentication
@@ -17,27 +17,23 @@ export const metadata: Metadata = {
 export default async function TasksPage() {
   const [tasks, stats] = await Promise.all([getMyTasks(), getTaskStatistics()]);
 
-  // Group tasks by status
-  const notStarted = tasks.filter((task) => task.status === Status.PENDING);
-  const inProgress = tasks.filter((task) => task.status === Status.IN_PROGRESS);
-  const completed = tasks.filter((task) => task.status === Status.COMPLETED);
-
-  // Get urgent tasks
-  const urgentTasks = tasks.filter((task) => task.priority === "URGENT");
-  
-  // Count active vs inactive tasks
-  const activeTasks = tasks.filter(task => task.isActive === true);
+  // Count inactive tasks
   const inactiveTasks = tasks.filter(task => task.isActive === false);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">My Tasks</h2>
-        <p className="text-muted-foreground">
-          View and manage your assigned production tasks
-        </p>
+      {/* Header with Analytics Button */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">My Tasks</h2>
+          <p className="text-muted-foreground">
+            View and manage your assigned production tasks
+          </p>
+        </div>
+        <TaskAnalyticsModal tasks={tasks} stats={stats} />
       </div>
 
+      {/* Inactive Tasks Warning - Only show if there are inactive tasks */}
       {inactiveTasks.length > 0 && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="pt-6 flex items-start gap-3">
@@ -53,62 +49,7 @@ export default async function TasksPage() {
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Not Started</CardTitle>
-            <ClipboardList className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.pending}</div>
-            <p className="text-xs text-muted-foreground">
-              {notStarted.length} tasks to start
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <Clock className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.inProgress}</div>
-            <p className="text-xs text-muted-foreground">
-              {inProgress.length} tasks being worked on
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Completed Today
-            </CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.completed}</div>
-            <p className="text-xs text-muted-foreground">
-              {completed.length} tasks finished
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Urgent</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.urgentTasks}</div>
-            <p className="text-xs text-muted-foreground">
-              {urgentTasks.length} high priority tasks
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
+      {/* Task List - Show immediately */}
       <Suspense fallback={<div>Loading tasks...</div>}>
         <TasksList tasks={tasks} />
       </Suspense>

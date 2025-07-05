@@ -3,12 +3,12 @@ import { Suspense } from "react";
 import { getInventoryIssueReports } from "@/lib/actions/worker/inventory";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { InventoryAlertsList } from "@/components/module/worker/inventory/InventoryAlertsList";
 
 export const metadata: Metadata = {
   title: "Inventory Alerts",
-  description: "View and manage inventory alerts and issue reports",
+  description: "View inventory alerts and issue reports (Read-only)",
 };
 
 export default async function InventoryAlertsPage({
@@ -35,7 +35,7 @@ export default async function InventoryAlertsPage({
             Inventory Alerts
           </h2>
           <p className="text-muted-foreground">
-            View and manage inventory issue reports and alerts
+            View inventory issue reports and alerts (Read-only access)
           </p>
         </div>
 
@@ -47,10 +47,23 @@ export default async function InventoryAlertsPage({
         </Button>
       </div>
 
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center">
+          <AlertTriangle className="h-5 w-5 text-blue-600 mr-2" />
+          <div>
+            <h3 className="text-sm font-medium text-blue-800">Information</h3>
+            <p className="text-sm text-blue-700">
+              You have read-only access to inventory alerts. If you need to report an issue, please contact your supervisor.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <Suspense fallback={<div>Loading alerts...</div>}>
         <InventoryAlertsList
           issues={alertsData.issues}
           pagination={alertsData.pagination}
+          viewOnly={true}
         />
       </Suspense>
     </div>

@@ -1,897 +1,527 @@
-'use server'
+"use server";
 
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import {
-  InventoryItem,
-  StockStatus,
-  InventoryMovement,
-  MaterialRequest,
-  MaterialRequestItem,
-  InventoryIssueReport,
-  InventoryFilters,
-  InventorySortOption,
-  InventoryPagination,
-  InventoryQueryResult,
-  StockLevel,
-  MovementType,
-  RequestStatus,
-  RequestPriority
-} from "@/types/worker/inventory";
-import { formatDate } from "@/lib/utils";
-import { getWorkCenterById } from "@/lib/data/worker/workCenters";
-import { getUserById } from "@/lib/data/worker/users";
-import { getLocationById } from "@/lib/data/worker/locations";
-import { getMaterialById } from "@/lib/data/worker/materials";
+import { formatCurrencyPHP } from "@/lib/constant";
+import { StockLevel, InventoryIssueReport } from "@/types/worker/inventory";
 
-// Helper function to check worker access to locations
-async function getWorkerLocationIds(userId: string): Promise<string[]> {
-  try {
-    // Get the worker's work centers
-    const userWorkCenters = await prisma.userWorkCenter.findMany({
-      where: { userId },
-      select: { workCenterId: true }
-    });
+// Updated types for Material-based inventory
+export interface MaterialInventoryItem {
+  id: string;
+  name: string;
+  sku: string;
+  materialType: string;
+  materialTypeName: string;
+  unitOfMeasure: string;
+  unitOfMeasureSymbol: string;
+  currentStock: number;
+  minimumStockLevel: number;
+  committedStock: number;
+  availableStock: number;
+  costPerUnit: number;
+  totalValue: number;
+  stockLevel: StockLevel;
+  supplier: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  leadTime: number;
+  lastUpdated: string;
+  notes?: string;
+}
 
-    // Get locations associated with those work centers
-    const workCenterIds = userWorkCenters.map(uwc => uwc.workCenterId);
-    
-    const locations = await prisma.location.findMany({
-      where: {
-        OR: [
-          { workCenterId: { in: workCenterIds } },
-          { isPublic: true } // Include public locations
-        ]
-      },
-      select: { id: true }
-    });
+export interface MaterialStockStatus {
+  totalMaterials: number;
+  normalStock: number;
+  lowStock: number;
+  criticalStock: number;
+  outOfStock: number;
+  totalValue: number;
+}
 
-    return locations.map(loc => loc.id);
-  } catch (error) {
-    console.error("Error fetching worker locations:", error);
-    return [];
-  }
+export interface ProductUsage {
+  id: string;
+  name: string;
+  sku: string;
+  quantityNeeded: number;
+  wastePercentage: number;
+  totalRequired: number; // quantityNeeded + waste
+}
+
+export interface MaterialWithProducts extends MaterialInventoryItem {
+  products: ProductUsage[];
+  totalProductsUsing: number;
+}
+
+export interface MaterialInventoryResult {
+  materials: MaterialInventoryItem[];
+  stockStatus: MaterialStockStatus;
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
 }
 
 // Helper function to determine stock level
 function getStockLevel(
   currentStock: number,
   minimumStockLevel: number,
-  criticalStockLevel: number
+  committedStock: number = 0
 ): StockLevel {
-  if (currentStock <= 0) return "outOfStock";
-  if (currentStock <= criticalStockLevel) return "critical";
-  if (currentStock <= minimumStockLevel) return "low";
+  const availableStock = currentStock - committedStock;
+
+  if (availableStock <= 0) return "outOfStock";
+  if (availableStock <= minimumStockLevel * 0.5) return "critical"; // Critical at 50% of minimum
+  if (availableStock <= minimumStockLevel) return "low";
   return "normal";
 }
 
-// Update the InventoryFilters interface to include isActive
-declare module "@/types/worker/inventory" {
-  interface InventoryFilters {
+// Get materials inventory with filtering, sorting, and pagination
+export async function getWorkerMaterialInventory(
+  filter?: {
+    search?: string;
+    materialType?: string;
+    stockLevel?: StockLevel | "all";
+    supplierId?: string;
     isActive?: boolean;
-  }
-}
-
-// Get inventory with filtering, sorting, and pagination
-export async function getWorkerInventory(
-  filter?: InventoryFilters,
-  sortOption?: InventorySortOption,
+  },
+  sortOption?: {
+    field:
+      | "name"
+      | "sku"
+      | "currentStock"
+      | "stockLevel"
+      | "materialType"
+      | "costPerUnit";
+    direction: "asc" | "desc";
+  },
   pagination?: { page: number; pageSize: number }
-): Promise<InventoryQueryResult> {
+): Promise<MaterialInventoryResult> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) throw new Error("Unauthorized");
 
-    // Get locations accessible to this worker
-    const accessibleLocationIds = await getWorkerLocationIds(session.user.id);
-    
-    if (accessibleLocationIds.length === 0) {
-      return {
-        items: [],
-        stockStatus: {
-          totalItems: 0,
-          normalStock: 0,
-          lowStock: 0,
-          criticalStock: 0,
-          outOfStock: 0
-        },
-        pagination: {
-          page: 1,
-          pageSize: 10,
-          totalItems: 0,
-          totalPages: 0
-        }
-      };
-    }
-
     // Build the query
     const where: any = {
-      locationId: { in: accessibleLocationIds }
+      status: "ACTIVE", // Only show active materials
     };
 
     // Apply filters
     if (filter) {
       if (filter.search) {
         where.OR = [
-          { name: { contains: filter.search, mode: 'insensitive' } },
-          { sku: { contains: filter.search, mode: 'insensitive' } },
-          { description: { contains: filter.search, mode: 'insensitive' } }
+          { name: { contains: filter.search, mode: "insensitive" } },
+          { sku: { contains: filter.search, mode: "insensitive" } },
+          { notes: { contains: filter.search, mode: "insensitive" } },
         ];
       }
 
       if (filter.materialType) {
-        where.materialType = filter.materialType;
+        where.typeId = filter.materialType;
       }
 
-      if (filter.location) {
-        // Only filter by locations the worker has access to
-        if (accessibleLocationIds.includes(filter.location)) {
-          where.locationId = filter.location;
-        }
-      }
-
-      if (filter.isActive !== undefined) {
-        where.isActive = filter.isActive;
+      if (filter.supplierId) {
+        where.supplierId = filter.supplierId;
       }
     }
 
     // Set up sorting
     const orderBy: any = {};
     if (sortOption) {
-      orderBy[sortOption.field] = sortOption.direction;
+      switch (sortOption.field) {
+        case "materialType":
+          orderBy.type = { name: sortOption.direction };
+          break;
+        case "stockLevel":
+          // For stock level, we'll sort by available stock ratio
+          orderBy.currentStock = sortOption.direction;
+          break;
+        default:
+          orderBy[sortOption.field] = sortOption.direction;
+      }
     } else {
-      orderBy.name = 'asc';
+      orderBy.name = "asc";
     }
 
     // Set up pagination
     const page = pagination?.page || 1;
-    const pageSize = pagination?.pageSize || 10;
+    const pageSize = pagination?.pageSize || 20;
     const skip = (page - 1) * pageSize;
 
     // Get count for pagination
-    const totalItems = await prisma.inventoryItem.count({ where });
+    const totalItems = await prisma.material.count({ where });
     const totalPages = Math.ceil(totalItems / pageSize);
 
-    // Get inventory items
-    const items = await prisma.inventoryItem.findMany({
+    // Get materials with related data
+    const materials = await prisma.material.findMany({
       where,
       orderBy,
       skip,
       take: pageSize,
       include: {
-        location: {
+        type: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        unitOfMeasure: {
           select: {
             name: true,
-            locationType: true
-          }
-        }
-      }
+            symbol: true,
+          },
+        },
+        supplier: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+      },
     });
 
-    // Calculate stock levels for each item
-    const mappedItems = items.map(item => {
-      const stockLevel = getStockLevel(
-        item.currentStock, 
-        item.minimumStockLevel, 
-        item.criticalStockLevel
+    // Map materials to our interface
+    const mappedMaterials: MaterialInventoryItem[] = materials.map(
+      (material) => {
+        const stockLevel = getStockLevel(
+          material.currentStock,
+          material.minimumStockLevel,
+          material.committedStock
+        );
+
+        const totalValue = material.currentStock * Number(material.costPerUnit);
+
+        return {
+          id: material.id,
+          name: material.name,
+          sku: material.sku,
+          materialType: material.type.id,
+          materialTypeName: material.type.name,
+          unitOfMeasure: material.unitOfMeasure.name,
+          unitOfMeasureSymbol: material.unitOfMeasure.symbol,
+          currentStock: material.currentStock,
+          minimumStockLevel: material.minimumStockLevel,
+          committedStock: material.committedStock,
+          availableStock: material.availableStock,
+          costPerUnit: Number(material.costPerUnit),
+          totalValue,
+          stockLevel,
+          supplier: {
+            id: material.supplier.id,
+            name: material.supplier.name,
+            code: material.supplier.code,
+          },
+          leadTime: material.leadTime,
+          lastUpdated: material.updatedAt.toISOString(),
+          notes: material.notes || undefined,
+        };
+      }
+    );
+
+    // Apply stock level filter after mapping (since it's calculated)
+    let filteredMaterials = mappedMaterials;
+    if (filter?.stockLevel && filter.stockLevel !== "all") {
+      filteredMaterials = mappedMaterials.filter(
+        (material) => material.stockLevel === filter.stockLevel
       );
-      
-      return {
-        id: item.id,
-        name: item.name,
-        sku: item.sku,
-        materialTypeId: item.materialType,
-        locationId: item.locationId,
-        currentStock: item.currentStock,
-        reorderPoint: item.minimumStockLevel,
-        criticalPoint: item.criticalStockLevel,
-        unitOfMeasure: item.unit,
-        cost: Number(item.cost),
-        lastUpdated: item.updatedAt.toISOString(),
-        stockLevel
-      };
-    });
+    }
 
     // Calculate stock status statistics
-    const normal = mappedItems.filter(item => item.stockLevel === "normal").length;
-    const low = mappedItems.filter(item => item.stockLevel === "low").length;
-    const critical = mappedItems.filter(item => item.stockLevel === "critical").length;
-    const outOfStock = mappedItems.filter(item => item.stockLevel === "outOfStock").length;
+    const normal = mappedMaterials.filter(
+      (m) => m.stockLevel === "normal"
+    ).length;
+    const low = mappedMaterials.filter((m) => m.stockLevel === "low").length;
+    const critical = mappedMaterials.filter(
+      (m) => m.stockLevel === "critical"
+    ).length;
+    const outOfStock = mappedMaterials.filter(
+      (m) => m.stockLevel === "outOfStock"
+    ).length;
+    const totalValue = mappedMaterials.reduce(
+      (sum, m) => sum + m.totalValue,
+      0
+    );
 
-    const stockStatus: StockStatus = {
-      totalItems,
+    const stockStatus: MaterialStockStatus = {
+      totalMaterials: totalItems,
       normalStock: normal,
       lowStock: low,
       criticalStock: critical,
-      outOfStock: outOfStock
+      outOfStock: outOfStock,
+      totalValue,
     };
 
     return {
-      items: mappedItems,
+      materials: filteredMaterials,
       stockStatus,
       pagination: {
         page,
         pageSize,
-        totalItems,
-        totalPages
-      }
-    };
-  } catch (error) {
-    console.error("Error fetching worker inventory:", error);
-    throw new Error("Failed to fetch inventory");
-  }
-}
-
-// Get details of a specific inventory item
-export async function getInventoryItemDetails(itemId: string): Promise<InventoryItem | null> {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error("Unauthorized");
-
-    // Get accessible locations
-    const accessibleLocationIds = await getWorkerLocationIds(session.user.id);
-
-    // Get the inventory item
-    const item = await prisma.inventoryItem.findFirst({
-      where: {
-        id: itemId,
-        locationId: { in: accessibleLocationIds }
+        totalItems: filteredMaterials.length,
+        totalPages: Math.ceil(filteredMaterials.length / pageSize),
       },
+    };
+  } catch (error) {
+    console.error("Error fetching material inventory:", error);
+    throw new Error("Failed to fetch material inventory");
+  }
+}
+
+// Get material details with products that use it
+export async function getMaterialWithProducts(
+  materialId: string
+): Promise<MaterialWithProducts | null> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    // Get the material with related data
+    const material = await prisma.material.findUnique({
+      where: { id: materialId },
       include: {
-        location: {
-          select: {
-            name: true,
-            locationType: true
-          }
-        }
-      }
-    });
-
-    if (!item) return null;
-
-    // Map to our type
-    return {
-      id: item.id,
-      sku: item.sku,
-      name: item.name,
-      materialTypeId: item.materialType,
-      locationId: item.locationId,
-      currentStock: item.currentStock,
-      reorderPoint: item.minimumStockLevel,
-      criticalPoint: item.criticalStockLevel,
-      unitOfMeasure: item.unit,
-      cost: Number(item.cost),
-      lastUpdated: item.updatedAt.toISOString(),
-      stockLevel: getStockLevel(item.currentStock, item.minimumStockLevel, item.criticalStockLevel)
-    };
-  } catch (error) {
-    console.error("Error fetching inventory item:", error);
-    throw new Error("Failed to fetch inventory item");
-  }
-}
-
-// Record an inventory movement (consumption, transfer, etc.)
-export async function recordStockMovement(
-  inventoryItemId: string,
-  quantity: number,
-  movementType: MovementType,
-  sourceLocationId?: string,
-  destinationLocationId?: string,
-  referenceNumber?: string,
-  notes?: string,
-  productionOrderId?: string,
-  customerOrderId?: string
-): Promise<InventoryMovement> {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error("Unauthorized");
-
-    // Validate the item
-    const item = await prisma.inventoryItem.findUnique({
-      where: { id: inventoryItemId },
-      include: {
-        location: { select: { name: true } }
-      }
-    });
-
-    if (!item) {
-      throw new Error("Inventory item not found");
-    }
-
-    // Check location access
-    const accessibleLocationIds = await getWorkerLocationIds(session.user.id);
-    
-    if (!accessibleLocationIds.includes(item.locationId)) {
-      throw new Error("You don't have access to this inventory location");
-    }
-
-    // Get source and destination location names if provided
-    let sourceLocationName = undefined;
-    let destinationLocationName = undefined;
-
-    if (sourceLocationId) {
-      const sourceLocation = await prisma.location.findUnique({
-        where: { id: sourceLocationId },
-        select: { name: true }
-      });
-      if (sourceLocation) sourceLocationName = sourceLocation.name;
-    }
-
-    if (destinationLocationId) {
-      const destLocation = await prisma.location.findUnique({
-        where: { id: destinationLocationId },
-        select: { name: true }
-      });
-      if (destLocation) destinationLocationName = destLocation.name;
-    }
-
-    // Create a simple movement record in a transaction
-    const now = new Date();
-    const movementId = `mov_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    
-    // Perform the inventory update in a transaction
-    await prisma.$transaction(async (tx) => {
-      // Update inventory based on movement type
-      let newStock = item.currentStock;
-      
-      switch (movementType) {
-        case "RECEIPT":
-          newStock += quantity;
-          break;
-        case "ISSUE":
-        case "CONSUMPTION":
-          newStock -= quantity;
-          break;
-        case "ADJUSTMENT":
-          newStock = quantity; // Direct set
-          break;
-        case "TRANSFER":
-          // For transfer, handle both source and destination
-          if (destinationLocationId) {
-            await tx.inventoryItem.updateMany({
-              where: { 
-                locationId: destinationLocationId,
-                sku: item.sku
-              },
-              data: {
-                currentStock: {
-                  increment: quantity
-                },
-                updatedAt: now
-              }
-            });
-          }
-          newStock -= quantity;
-          break;
-      }
-
-      // Update the stock level
-      await tx.inventoryItem.update({
-        where: { id: inventoryItemId },
-        data: {
-          currentStock: newStock < 0 ? 0 : newStock,
-          updatedAt: now
-        }
-      });
-    });
-
-    // Get user info
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { email: true }
-    });
-
-    revalidatePath("/worker/inventory");
-
-    // Return the movement data that matches the InventoryMovement interface
-    return {
-      id: movementId,
-      inventoryItemId,
-      inventoryItemName: item.name,
-      date: now,
-      quantity,
-      movementType,
-      sourceLocationId,
-      sourceLocationName,
-      destinationLocationId,
-      destinationLocationName,
-      performedById: session.user.id,
-      performedByName: user?.email || "Unknown User",
-      referenceNumber,
-      notes,
-      productionOrderId,
-      customerOrderId
-    };
-  } catch (error) {
-    console.error("Error recording stock movement:", error);
-    throw new Error("Failed to record stock movement");
-  }
-}
-
-// Report an inventory issue
-export async function reportInventoryIssue(
-  inventoryItemId: string,
-  reportType: "LOW_STOCK" | "DISCREPANCY" | "DAMAGE" | "QUALITY" | "OTHER",
-  description: string,
-  severity: "LOW" | "MEDIUM" | "HIGH"
-): Promise<InventoryIssueReport> {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error("Unauthorized");
-
-    // Check if item exists and worker has access
-    const item = await prisma.inventoryItem.findUnique({
-      where: { id: inventoryItemId }
-    });
-
-    if (!item) {
-      throw new Error("Inventory item not found");
-    }
-
-    const accessibleLocationIds = await getWorkerLocationIds(session.user.id);
-    if (!accessibleLocationIds.includes(item.locationId)) {
-      throw new Error("You don't have access to this inventory location");
-    }
-
-    // Create the report
-    const report = await prisma.inventoryIssueReport.create({
-      data: {
-        inventoryItemId,
-        reportType,
-        reportDate: new Date(),
-        reportedById: session.user.id,
-        description,
-        severity,
-        status: "OPEN"
-      }
-    });
-
-    // Get username
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { email: true }
-    });
-
-    revalidatePath("/worker/inventory");
-
-    return {
-      id: report.id,
-      inventoryItemId,
-      inventoryItemName: item.name,
-      reportType,
-      reportDate: report.reportDate,
-      reportedById: session.user.id,
-      reportedByName: user?.email || "Unknown User",
-      description,
-      severity,
-      status: "OPEN"
-    };
-  } catch (error) {
-    console.error("Error reporting inventory issue:", error);
-    throw new Error("Failed to report inventory issue");
-  }
-}
-
-// Request materials
-export async function requestMaterials(
-  workCenterId: string,
-  requiredDate: Date,
-  priority: RequestPriority,
-  notes: string,
-  items: {
-    inventoryItemId: string;
-    quantityRequested: number;
-    notes?: string;
-  }[],
-  productionOrderId?: string
-): Promise<MaterialRequest> {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error("Unauthorized");
-
-    // Validate the work center
-    const userWorkCenters = await prisma.userWorkCenter.findMany({
-      where: { 
-        userId: session.user.id,
-        workCenterId
-      }
-    });
-
-    if (userWorkCenters.length === 0) {
-      throw new Error("You don't have access to this work center");
-    }
-
-    // Get work center name
-    const workCenter = await prisma.workCenter.findUnique({
-      where: { id: workCenterId },
-      select: { name: true }
-    });
-
-    if (!workCenter) {
-      throw new Error("Work center not found");
-    }
-
-    // Create the material request
-    const materialRequest = await prisma.materialRequest.create({
-      data: {
-        requestDate: new Date(),
-        requestedById: session.user.id,
-        workCenterId,
-        status: "PENDING",
-        priority,
-        requiredDate,
-        notes,
-        productionOrderId,
-      }
-    });
-
-    // Create request items
-    const requestItems = await Promise.all(
-      items.map(async (item) => {
-        // Validate inventory item
-        const inventoryItem = await prisma.inventoryItem.findUnique({
-          where: { id: item.inventoryItemId },
-          select: { name: true, unit: true }
-        });
-
-        if (!inventoryItem) {
-          throw new Error(`Inventory item ${item.inventoryItemId} not found`);
-        }
-
-        // Create the request item
-        const requestItem = await prisma.materialRequestItem.create({
-          data: {
-            materialRequestId: materialRequest.id,
-            inventoryItemId: item.inventoryItemId,
-            quantityRequested: item.quantityRequested,
-            unit: inventoryItem.unit,
-            notes: item.notes,
-            status: "PENDING"
-          }
-        });
-
-        return {
-          id: requestItem.id,
-          materialRequestId: materialRequest.id,
-          inventoryItemId: item.inventoryItemId,
-          inventoryItemName: inventoryItem.name,
-          quantityRequested: item.quantityRequested,
-          unit: inventoryItem.unit,
-          notes: item.notes,
-          status: "PENDING" as RequestStatus
-        };
-      })
-    );
-
-    // Get username
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { email: true }
-    });
-
-    revalidatePath("/worker/inventory");
-
-    return {
-      id: materialRequest.id,
-      requestDate: materialRequest.requestDate,
-      requestedById: session.user.id,
-      requestedByName: user?.email || "Unknown User",
-      workCenterId,
-      workCenterName: workCenter.name,
-      status: "PENDING",
-      priority,
-      requiredDate,
-      notes,
-      productionOrderId,
-      items: requestItems
-    };
-  } catch (error) {
-    console.error("Error requesting materials:", error);
-    throw new Error("Failed to request materials");
-  }
-}
-
-// Get material requests for the worker
-export async function getWorkerMaterialRequests(
-  status?: RequestStatus[],
-  page: number = 1,
-  pageSize: number = 10
-): Promise<{
-  requests: MaterialRequest[];
-  pagination: InventoryPagination;
-}> {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error("Unauthorized");
-
-    // Get the worker's work centers
-    const userWorkCenters = await prisma.userWorkCenter.findMany({
-      where: { userId: session.user.id },
-      select: { workCenterId: true }
-    });
-
-    const workCenterIds = userWorkCenters.map(uwc => uwc.workCenterId);
-
-    // Build query
-    const where: any = {
-      workCenterId: { in: workCenterIds }
-    };
-
-    if (status && status.length > 0) {
-      where.status = { in: status };
-    }
-
-    // Calculate pagination
-    const skip = (page - 1) * pageSize;
-    const totalItems = await prisma.materialRequest.count({ where });
-    const totalPages = Math.ceil(totalItems / pageSize);
-
-    // Get material requests
-    const requests = await prisma.materialRequest.findMany({
-      where,
-      orderBy: [
-        { status: 'asc' },
-        { priority: 'desc' },
-        { requiredDate: 'asc' }
-      ],
-      skip,
-      take: pageSize,
-      include: {
-        requestedBy: {
-          select: { email: true }
-        },
-        approvedBy: {
-          select: { email: true }
-        },
-        workCenter: {
-          select: { name: true }
-        },
-        items: {
-          include: {
-            inventoryItem: {
-              select: { name: true, unit: true }
-            }
-          }
-        }
-      }
-    });
-
-    // Map to our type
-    const mappedRequests: MaterialRequest[] = requests.map(req => ({
-      id: req.id,
-      requestDate: req.requestDate,
-      requestedById: req.requestedById,
-      requestedByName: req.requestedBy.email || "Unknown User",
-      workCenterId: req.workCenterId,
-      workCenterName: req.workCenter.name,
-      status: req.status as RequestStatus,
-      priority: req.priority as RequestPriority,
-      requiredDate: req.requiredDate,
-      approvedById: req.approvedById || undefined,
-      approvedByName: req.approvedBy?.email,
-      approvedDate: req.approvedDate || undefined,
-      fulfilledDate: req.fulfilledDate || undefined,
-      notes: req.notes || undefined,
-      productionOrderId: req.productionOrderId || undefined,
-      items: req.items.map(item => ({
-        id: item.id,
-        materialRequestId: item.materialRequestId,
-        inventoryItemId: item.inventoryItemId,
-        inventoryItemName: item.inventoryItem.name,
-        quantityRequested: item.quantityRequested,
-        quantityApproved: item.quantityApproved || undefined,
-        quantityFulfilled: item.quantityFulfilled || undefined,
-        unit: item.unit,
-        notes: item.notes || undefined,
-        status: item.status as RequestStatus
-      }))
-    }));
-
-    return {
-      requests: mappedRequests,
-      pagination: {
-        page,
-        pageSize,
-        totalItems,
-        totalPages
-      }
-    };
-  } catch (error) {
-    console.error("Error fetching material requests:", error);
-    throw new Error("Failed to fetch material requests");
-  }
-}
-
-// Get work centers accessible to the worker
-export async function getWorkerWorkCenters() {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error("Unauthorized");
-
-    // Get the worker's work centers
-    const userWorkCenters = await prisma.userWorkCenter.findMany({
-      where: { userId: session.user.id },
-      select: { 
-        workCenterId: true,
-        workCenter: {
+        type: {
           select: {
             id: true,
             name: true,
-            description: true,
-            status: true
-          }
-        }
-      }
+          },
+        },
+        unitOfMeasure: {
+          select: {
+            name: true,
+            symbol: true,
+          },
+        },
+        supplier: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+        boms: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                status: true,
+              },
+            },
+          },
+          where: {
+            product: {
+              status: "ACTIVE",
+            },
+          },
+        },
+      },
     });
 
-    // Map to simpler format
-    return userWorkCenters
-      .filter(uwc => uwc.workCenter.status === 'ACTIVE')
-      .map(uwc => ({
-        id: uwc.workCenter.id,
-        name: uwc.workCenter.name,
-        description: uwc.workCenter.description || undefined
-      }));
+    if (!material) return null;
+
+    // Map to our base material interface
+    const stockLevel = getStockLevel(
+      material.currentStock,
+      material.minimumStockLevel,
+      material.committedStock
+    );
+
+    const totalValue = material.currentStock * Number(material.costPerUnit);
+
+    const baseMaterial: MaterialInventoryItem = {
+      id: material.id,
+      name: material.name,
+      sku: material.sku,
+      materialType: material.type.id,
+      materialTypeName: material.type.name,
+      unitOfMeasure: material.unitOfMeasure.name,
+      unitOfMeasureSymbol: material.unitOfMeasure.symbol,
+      currentStock: material.currentStock,
+      minimumStockLevel: material.minimumStockLevel,
+      committedStock: material.committedStock,
+      availableStock: material.availableStock,
+      costPerUnit: Number(material.costPerUnit),
+      totalValue,
+      stockLevel,
+      supplier: {
+        id: material.supplier.id,
+        name: material.supplier.name,
+        code: material.supplier.code,
+      },
+      leadTime: material.leadTime,
+      lastUpdated: material.updatedAt.toISOString(),
+      notes: material.notes || undefined,
+    };
+
+    // Map products that use this material
+    const products: ProductUsage[] = material.boms.map((bom) => {
+      const wasteQuantity =
+        Number(bom.quantityNeeded) * (Number(bom.wastePercentage) / 100);
+      const totalRequired = Number(bom.quantityNeeded) + wasteQuantity;
+
+      return {
+        id: bom.product.id,
+        name: bom.product.name,
+        sku: bom.product.sku,
+        quantityNeeded: Number(bom.quantityNeeded),
+        wastePercentage: Number(bom.wastePercentage),
+        totalRequired,
+      };
+    });
+
+    return {
+      ...baseMaterial,
+      products,
+      totalProductsUsing: products.length,
+    };
   } catch (error) {
-    console.error("Error fetching worker work centers:", error);
-    throw new Error("Failed to fetch work centers");
+    console.error("Error fetching material with products:", error);
+    throw new Error("Failed to fetch material details");
   }
 }
 
-// Get inventory items for material requests
-export async function getInventoryItemsForRequest() {
+// Get material types for filtering
+export async function getMaterialTypes() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error("Unauthorized");
-
-    // Get locations accessible to this worker
-    const accessibleLocationIds = await getWorkerLocationIds(session.user.id);
-    
-    if (accessibleLocationIds.length === 0) {
-      return [];
-    }
-
-    // Get active inventory items
-    const items = await prisma.inventoryItem.findMany({
-      where: {
-        locationId: { in: accessibleLocationIds },
-        isActive: true
-      },
-      orderBy: {
-        name: 'asc'
-      },
+    const materialTypes = await prisma.materialType.findMany({
+      where: { status: "ACTIVE" },
+      orderBy: { name: "asc" },
       select: {
         id: true,
         name: true,
-        sku: true,
-        unit: true,
-        currentStock: true,
-        minimumStockLevel: true,
-        criticalStockLevel: true
-      }
+        description: true,
+      },
     });
 
-    // Helper function to determine stock level
-    const getStockLevelHelper = (
-      current: number, 
-      minimum: number, 
-      critical: number
-    ): StockLevel => {
-      if (current <= 0) return "outOfStock";
-      if (current <= critical) return "critical";
-      if (current <= minimum) return "low"; 
-      return "normal";
-    };
-
-    // Map to our type
-    return items.map(item => ({
-      id: item.id,
-      name: item.name,
-      sku: item.sku,
-      unitOfMeasure: item.unit,
-      currentStock: item.currentStock,
-      stockLevel: getStockLevelHelper(
-        item.currentStock, 
-        item.minimumStockLevel, 
-        item.criticalStockLevel
-      )
-    }));
+    return materialTypes;
   } catch (error) {
-    console.error("Error fetching inventory items for request:", error);
-    throw new Error("Failed to fetch inventory items");
+    console.error("Error fetching material types:", error);
+    throw new Error("Failed to fetch material types");
   }
 }
 
-// Get inventory issue reports for worker
+// Get suppliers for filtering
+export async function getSuppliers() {
+  try {
+    const suppliers = await prisma.supplier.findMany({
+      where: { status: "ACTIVE" },
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+      },
+    });
+
+    return suppliers;
+  } catch (error) {
+    console.error("Error fetching suppliers:", error);
+    throw new Error("Failed to fetch suppliers");
+  }
+}
+
+// Keep the existing functions for backward compatibility but mark as deprecated
+export async function getWorkerInventory(
+  filter?: any,
+  sortOption?: any,
+  pagination?: any
+): Promise<any> {
+  // Redirect to the new material inventory function
+  return await getWorkerMaterialInventory(filter, sortOption, pagination);
+}
+
+// Get inventory issue reports for the alerts page
 export async function getInventoryIssueReports(
-  status?: string[],
+  statusFilter?: string[],
   page: number = 1,
   pageSize: number = 10
 ): Promise<{
   issues: InventoryIssueReport[];
-  pagination: InventoryPagination;
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
 }> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) throw new Error("Unauthorized");
 
-    // Get accessible location IDs for this worker
-    const accessibleLocationIds = await getWorkerLocationIds(session.user.id);
-    
-    if (accessibleLocationIds.length === 0) {
-      return {
-        issues: [],
-        pagination: {
-          page,
-          pageSize,
-          totalItems: 0,
-          totalPages: 0
-        }
+    // Build the where clause for filtering
+    const whereClause: any = {};
+
+    if (statusFilter && statusFilter.length > 0) {
+      whereClause.status = {
+        in: statusFilter,
       };
     }
 
-    // Build query
-    const where: any = {
-      inventoryItem: {
-        locationId: { in: accessibleLocationIds }
-      }
-    };
-
-    if (status && status.length > 0) {
-      where.status = { in: status };
-    }
-
-    // Calculate pagination
-    const skip = (page - 1) * pageSize;
-    const totalItems = await prisma.inventoryIssueReport.count({ where });
-    const totalPages = Math.ceil(totalItems / pageSize);
-
-    // Get issue reports
-    const issues = await prisma.inventoryIssueReport.findMany({
-      where,
-      orderBy: [
-        { status: 'asc' },
-        { severity: 'desc' },
-        { reportDate: 'desc' }
-      ],
-      skip,
-      take: pageSize,
-      include: {
-        inventoryItem: {
-          select: { 
-            name: true, 
-            sku: true,
-            unit: true,
-            currentStock: true,
-            minimumStockLevel: true,
-            criticalStockLevel: true,
-            location: {
-              select: { name: true }
-            }
-          }
-        },
-        reportedBy: {
-          select: { email: true }
-        }
-      }
+    // Get total count for pagination
+    const totalItems = await prisma.inventoryIssueReport.count({
+      where: whereClause,
     });
 
-    // Map to our type
-    const mappedIssues: InventoryIssueReport[] = issues.map(issue => ({
-      id: issue.id,
-      inventoryItemId: issue.inventoryItemId,
-      inventoryItemName: issue.inventoryItem.name,
-      reportType: issue.reportType as any,
-      reportDate: issue.reportDate,
-      reportedById: issue.reportedById,
-      reportedByName: issue.reportedBy.email || "Unknown User",
-      description: issue.description,
-      severity: issue.severity as any,
-      status: issue.status as any,
-      resolvedDate: issue.resolvedDate || undefined,
-      resolution: issue.resolution || undefined
+    // Calculate pagination
+    const totalPages = Math.ceil(totalItems / pageSize);
+    const skip = (page - 1) * pageSize;
+
+    // Fetch the issue reports
+    const issueReports = await prisma.inventoryIssueReport.findMany({
+      where: whereClause,
+      include: {
+        inventoryItem: {
+          select: {
+            name: true,
+            sku: true,
+          },
+        },
+        reportedBy: {
+          include: {
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        reportDate: "desc",
+      },
+      skip,
+      take: pageSize,
+    });
+
+    // Map to the expected interface
+    const mappedIssues: InventoryIssueReport[] = issueReports.map((report) => ({
+      id: report.id,
+      inventoryItemId: report.inventoryItemId,
+      inventoryItemName: report.inventoryItem.name,
+      reportType: report.reportType as
+        | "LOW_STOCK"
+        | "DISCREPANCY"
+        | "DAMAGE"
+        | "QUALITY"
+        | "OTHER",
+      reportDate: report.reportDate,
+      reportedById: report.reportedById,
+      reportedByName: report.reportedBy.profile
+        ? `${report.reportedBy.profile.firstName} ${report.reportedBy.profile.lastName}`
+        : report.reportedBy.email,
+      description: report.description,
+      severity: report.severity as "LOW" | "MEDIUM" | "HIGH",
+      status: report.status as "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED",
+      resolvedDate: report.resolvedDate || undefined,
+      resolution: report.resolution || undefined,
     }));
 
     return {
@@ -900,265 +530,11 @@ export async function getInventoryIssueReports(
         page,
         pageSize,
         totalItems,
-        totalPages
-      }
+        totalPages,
+      },
     };
   } catch (error) {
     console.error("Error fetching inventory issue reports:", error);
     throw new Error("Failed to fetch inventory issue reports");
   }
 }
-
-// Export inventory data as CSV
-export async function exportInventoryData(): Promise<{
-  csvContent: string;
-  filename: string;
-}> {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error("Unauthorized");
-
-    // Get locations accessible to this worker
-    const accessibleLocationIds = await getWorkerLocationIds(session.user.id);
-    
-    if (accessibleLocationIds.length === 0) {
-      throw new Error("No accessible inventory locations found");
-    }
-
-    // Get all inventory items (no pagination)
-    const items = await prisma.inventoryItem.findMany({
-      where: {
-        locationId: { in: accessibleLocationIds },
-        isActive: true
-      },
-      orderBy: {
-        name: 'asc'
-      },
-      include: {
-        location: {
-          select: {
-            name: true,
-            locationType: true
-          }
-        }
-      }
-    });
-
-    // Helper function to determine stock level for export
-    const getStockLevelForExport = (
-      current: number, 
-      minimum: number, 
-      critical: number
-    ): string => {
-      if (current <= 0) return "Out of Stock";
-      if (current <= critical) return "Critical";
-      if (current <= minimum) return "Low"; 
-      return "Normal";
-    };
-
-    // Build CSV headers
-    const headers = [
-      "SKU",
-      "Name",
-      "Material Type",
-      "Location",
-      "Current Stock",
-      "Unit",
-      "Minimum Stock",
-      "Critical Stock",
-      "Stock Status",
-      "Last Updated",
-      "Value"
-    ];
-
-    // Build CSV rows
-    const rows = items.map(item => {
-      const stockLevel = getStockLevelForExport(
-        item.currentStock, 
-        item.minimumStockLevel, 
-        item.criticalStockLevel
-      );
-      
-      const value = (item.currentStock * Number(item.cost)).toFixed(2);
-      const lastUpdated = item.updatedAt.toISOString().split('T')[0]; // YYYY-MM-DD
-      
-      return [
-        item.sku,
-        item.name,
-        item.materialType,
-        item.location.name,
-        item.currentStock.toString(),
-        item.unit,
-        item.minimumStockLevel.toString(),
-        item.criticalStockLevel.toString(),
-        stockLevel,
-        lastUpdated,
-        value
-      ];
-    });
-
-    // Convert to CSV content
-    const csvRows = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => 
-        // Escape commas and quotes in cell content
-        `"${cell.replace(/"/g, '""')}"`
-      ).join(','))
-    ];
-    
-    const csvContent = csvRows.join('\n');
-    
-    // Generate filename with date
-    const date = new Date().toISOString().split('T')[0];
-    const filename = `inventory-export-${date}.csv`;
-
-    return {
-      csvContent,
-      filename
-    };
-  } catch (error) {
-    console.error("Error exporting inventory data:", error);
-    throw new Error("Failed to export inventory data");
-  }
-}
-
-interface GenerateMaterialRequestPdfParams {
-  workCenterId: string;
-  requiredDate: Date;
-  priority: RequestPriority;
-  notes?: string;
-  productionOrderId?: string;
-  items: MaterialRequestItem[];
-}
-
-export async function generateMaterialRequestPdf({
-  workCenterId,
-  requiredDate,
-  priority,
-  notes,
-  productionOrderId,
-  items,
-}: GenerateMaterialRequestPdfParams) {
-  // Get current user for requester information
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-  if (!userId) {
-    throw new Error("User not authenticated");
-  }
-
-  // Fetch related data
-  const [workCenter, user] = await Promise.all([
-    getWorkCenterById(workCenterId),
-    getUserById(userId),
-  ]);
-
-  // Generate HTML content
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Material Request</title>
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          margin: 0;
-          padding: 20px;
-          color: #333;
-        }
-        .header {
-          text-align: center;
-          margin-bottom: 20px;
-          padding-bottom: 10px;
-          border-bottom: 1px solid #ccc;
-        }
-        .request-info {
-          margin-bottom: 20px;
-        }
-        .request-info div {
-          margin-bottom: 5px;
-        }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 20px;
-        }
-        th, td {
-          border: 1px solid #ccc;
-          padding: 8px;
-          text-align: left;
-        }
-        th {
-          background-color: #f2f2f2;
-        }
-        .notes {
-          margin-top: 20px;
-          padding: 10px;
-          border: 1px solid #ccc;
-          background-color: #f9f9f9;
-        }
-        .footer {
-          margin-top: 40px;
-          text-align: center;
-          font-size: 12px;
-          color: #666;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>Material Request</h1>
-        <p>Generated on ${formatDate(new Date())}</p>
-      </div>
-      
-      <div class="request-info">
-        <div><strong>Requester:</strong> ${user?.email || 'Unknown'}</div>
-        <div><strong>Work Center:</strong> ${workCenter?.name || 'Unknown'}</div>
-        <div><strong>Required Date:</strong> ${formatDate(requiredDate)}</div>
-        <div><strong>Priority:</strong> ${priority}</div>
-        ${productionOrderId ? `<div><strong>Production Order:</strong> ${productionOrderId}</div>` : ''}
-      </div>
-      
-      <table>
-        <thead>
-          <tr>
-            <th>Material ID</th>
-            <th>Material Name</th>
-            <th>Quantity</th>
-            <th>Unit</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${items.map(item => `
-            <tr>
-              <td>${item.inventoryItemId || 'Unknown'}</td>
-              <td>${item.inventoryItemName || 'Unknown'}</td>
-              <td>${item.quantityRequested}</td>
-              <td>${item.unit || 'EA'}</td>
-              <td>${item.status}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-      
-      ${notes ? `
-        <div class="notes">
-          <h3>Notes</h3>
-          <p>${notes}</p>
-        </div>
-      ` : ''}
-      
-      <div class="footer">
-        <p>This document was automatically generated by the MRP system.</p>
-      </div>
-    </body>
-    </html>
-  `;
-
-  return {
-    htmlContent,
-    filename: `material-request-${new Date().toISOString().split('T')[0]}.pdf`
-  };
-} 

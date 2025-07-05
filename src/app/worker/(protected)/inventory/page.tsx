@@ -1,156 +1,195 @@
 // src/app/worker/(protected)/inventory/page.tsx
 import { Metadata } from "next";
 import { Suspense } from "react";
-import { getWorkerInventory } from "@/lib/actions/worker/inventory";
-import {
-  InventoryList,
-  InventoryFilters,
-  StockStatusDashboard,
-  InventoryExportButton,
-  ExportStatusNotification,
-} from "@/components/module/worker/inventory";
-import { Separator } from "@/components/ui/separator";
+import { 
+  getWorkerMaterialInventory, 
+  getMaterialTypes, 
+  getSuppliers 
+} from "@/lib/actions/worker/inventory";
+import { MaterialInventoryView } from "@/components/module/worker/inventory/MaterialInventoryView";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Plus, AlertTriangle } from "lucide-react";
+import { AlertTriangle, Eye, Package, Boxes } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 export const metadata: Metadata = {
-  title: "Inventory Management",
-  description: "View and manage inventory items",
+  title: "Materials Inventory",
+  description: "View materials inventory and product usage (Read-only)",
 };
 
-// Mock data - in a real app, this would come from the database
-const mockMaterialTypes = [
-  { id: "raw", name: "Raw Materials" },
-  { id: "component", name: "Components" },
-  { id: "packaging", name: "Packaging" },
-  { id: "consumable", name: "Consumables" },
-  { id: "finished", name: "Finished Goods" },
-];
-
-const mockLocations = [
-  { id: "warehouse", name: "Main Warehouse" },
-  { id: "assembly", name: "Assembly Area" },
-  { id: "packing", name: "Packing Area" },
-  { id: "staging", name: "Staging Area" },
-];
-
-export default async function InventoryPage({
+export default async function WorkerInventoryPage({
   searchParams,
 }: {
   searchParams: Promise<{
+    page?: string;
     search?: string;
     materialType?: string;
     stockLevel?: string;
-    locationType?: string;
-    page?: string;
-    sort?: string;
-    direction?: string;
-    export_success?: string;
-    export_error?: string;
+    supplier?: string;
   }>;
 }) {
-  const { page: pageParam, sort, direction, stockLevel: stockLevelParam, search, materialType, locationType } = await searchParams;
-  // Parse pagination and sorting params
+  const { 
+    page: pageParam, 
+    search, 
+    materialType, 
+    stockLevel, 
+    supplier 
+  } = await searchParams;
+
+  // Parse params
   const page = pageParam ? parseInt(pageParam, 10) : 1;
-  const sortField = sort || "name";
-  const sortDirection = direction === "desc" ? "desc" : "asc";
+  const pageSize = 20;
 
-  // Convert stockLevel param to the correct format if present
-  const stockLevel = stockLevelParam as any;
-
-  // Build filter from search params
+  // Build filter object
   const filter = {
-    search: search,
-    materialTypes: materialType
-      ? [materialType]
-      : undefined,
-    stockLevels: stockLevel ? [stockLevel] : undefined,
-    locationTypes: locationType
-      ? [locationType]
-      : undefined,
+    search: search || undefined,
+    materialType: materialType || undefined,
+    stockLevel: (stockLevel as any) || "all",
+    supplierId: supplier || undefined,
     isActive: true,
   };
 
-  // Prepare sort options
+  // Build sort option
   const sortOption = {
-    field: sortField as any,
-    direction: sortDirection as any,
+    field: "name" as const,
+    direction: "asc" as const,
   };
 
-  // Pagination
-  const pagination = {
-    page,
-    pageSize: 10,
-  };
-
-  // Get inventory data
-  const inventoryData = await getWorkerInventory(
-    filter,
-    sortOption,
-    pagination
-  );
+  // Fetch data
+  const [inventoryResult, materialTypes, suppliers] = await Promise.all([
+    getWorkerMaterialInventory(filter, sortOption, { page, pageSize }),
+    getMaterialTypes(),
+    getSuppliers(),
+  ]);
 
   return (
     <div className="space-y-6">
-      {/* Notification component for export status */}
-      <ExportStatusNotification />
-
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">
-            Inventory Management
-          </h2>
+          <h1 className="text-3xl font-bold tracking-tight">Materials Inventory</h1>
           <p className="text-muted-foreground">
-            View inventory levels and manage stock
+            View materials inventory and product usage information (Read-only access)
           </p>
         </div>
-
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm">
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
             <Link href="/worker/inventory/alerts">
-              <AlertTriangle className="mr-2 h-4 w-4" />
-              Alerts
-            </Link>
-          </Button>
-          <InventoryExportButton />
-          <Button asChild>
-            <Link href="/worker/inventory/request">
-              <Plus className="mr-2 h-4 w-4" />
-              Request Materials
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              View Alerts
             </Link>
           </Button>
         </div>
       </div>
 
-      {/* Stock Status Dashboard */}
-      <Suspense fallback={<div>Loading stock status...</div>}>
-        <StockStatusDashboard stockStatus={inventoryData.stockStatus} />
-      </Suspense>
+      {/* Stock Status Overview */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total Materials</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{inventoryResult.stockStatus.totalMaterials}</div>
+            <p className="text-xs text-muted-foreground">Active materials</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Normal Stock</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{inventoryResult.stockStatus.normalStock}</div>
+            <p className="text-xs text-muted-foreground">Well stocked</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{inventoryResult.stockStatus.lowStock}</div>
+            <p className="text-xs text-muted-foreground">Need reorder</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Critical Stock</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{inventoryResult.stockStatus.criticalStock}</div>
+            <p className="text-xs text-muted-foreground">Urgent reorder</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrencyPHP(inventoryResult.stockStatus.totalValue)}</div>
+            <p className="text-xs text-muted-foreground">Inventory value</p>
+          </CardContent>
+        </Card>
+      </div>
 
-      <Separator />
-
-      {/* Filters */}
-      <Suspense fallback={<div>Loading filters...</div>}>
-        <InventoryFilters
-          materialTypes={mockMaterialTypes}
-          locations={mockLocations}
-          defaultValues={{
-            search: search,
-            stockLevel: stockLevel,
-            materialType: materialType,
-            location: locationType,
-          }}
-        />
-      </Suspense>
-
-      {/* Inventory List */}
-      <Suspense fallback={<div>Loading inventory items...</div>}>
-        <InventoryList
-          items={inventoryData.items}
-          pagination={inventoryData.pagination}
-        />
-      </Suspense>
+      {/* Main Content */}
+      <Tabs defaultValue="materials" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="materials">
+            <Package className="h-4 w-4 mr-2" />
+            Materials ({inventoryResult.stockStatus.totalMaterials})
+          </TabsTrigger>
+          <TabsTrigger value="products">
+            <Boxes className="h-4 w-4 mr-2" />
+            Products Usage
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="materials" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Materials List</CardTitle>
+              <CardDescription>
+                View all materials in inventory with stock levels and supplier information
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MaterialInventoryView
+                materials={inventoryResult.materials}
+                materialTypes={materialTypes}
+                suppliers={suppliers}
+                pagination={inventoryResult.pagination}
+                currentFilters={filter}
+                viewOnly={true}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="products" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Products Using Materials</CardTitle>
+              <CardDescription>
+                View which products use specific materials and their quantities
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Product Usage Information</h3>
+                <p className="text-muted-foreground mb-4">
+                  Select a material from the Materials tab to view which products use it
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  This will show the quantity needed, waste percentage, and total requirements for each product
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

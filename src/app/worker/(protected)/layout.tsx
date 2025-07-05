@@ -5,7 +5,6 @@ import { authOptions } from "@/lib/auth";
 import { ThemeProvider } from "@/context/ThemeContext";
 import LayoutWithTheme from "@/components/shared/LayoutWithTheme";
 import { Toaster } from "@/components/ui/toaster";
-import RequireAuth from "@/components/global/require-auth";
 
 export default async function WorkerProtectedLayout({
   children,
@@ -27,10 +26,7 @@ export default async function WorkerProtectedLayout({
 
   return (
     <ThemeProvider>
-      {/* Client-side auth check as backup for more reliability */}
-      <RequireAuth allowedRoles={['WORKER']}>
-        <LayoutWithTheme>{children}</LayoutWithTheme>
-      </RequireAuth>
+      <LayoutWithTheme>{children}</LayoutWithTheme>
       <Toaster />
     </ThemeProvider>
   );

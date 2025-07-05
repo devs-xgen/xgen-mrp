@@ -20,130 +20,130 @@ import {
   Timer,
   Hammer,
   LineChart,
-  QrCode
-} from 'lucide-react'
+  QrCode,
+} from "lucide-react";
 
 interface NavItem {
-  icon?: any
-  label: string
-  href?: string
-  description?: string
-  items?: NavItem[]
+  icon?: any;
+  label: string;
+  href?: string;
+  description?: string;
+  items?: NavItem[];
 }
 
 export const adminNavItems: NavItem[] = [
   {
     icon: LayoutDashboard,
-    label: 'Dashboard',
-    href: '/admin/dashboard',
-    description: 'Overview of system metrics and activities'
+    label: "Dashboard",
+    href: "/admin/dashboard",
+    description: "Overview of system metrics and activities",
   },
   {
     icon: Box,
-    label: 'Item Management',
+    label: "Item Management",
     items: [
       {
         icon: Package,
-        label: 'Products',
-        href: '/admin/products',
-        description: 'Manage product catalog'
+        label: "Products",
+        href: "/admin/products",
+        description: "Manage product catalog",
       },
       {
         icon: Warehouse,
-        label: 'Materials',
-        href: '/admin/materials',
-        description: 'Raw materials inventory management'
-      }
-    ]
+        label: "Materials",
+        href: "/admin/materials",
+        description: "Raw materials inventory management",
+      },
+    ],
   },
   {
     icon: Factory,
-    label: 'Production',
+    label: "Production",
     items: [
       {
-        label: 'Production Orders',
-        href: '/admin/production',
-        description: 'Production orders and scheduling'
+        label: "Production Orders",
+        href: "/admin/production",
+        description: "Production orders and scheduling",
       },
       {
-        label: 'Work Centers',
-        href: '/admin/work-centers',
-        description: 'Manage work centers'
-      }
-    ]
+        label: "Work Centers",
+        href: "/admin/work-centers",
+        description: "Manage work centers",
+      },
+    ],
   },
   {
     icon: ShoppingCart,
-    label: 'Orders',
+    label: "Orders",
     items: [
       {
-        label: 'Purchase Orders',
-        href: '/admin/purchase-orders',
-        description: 'Manage supplier orders'
+        label: "Purchase Orders",
+        href: "/admin/purchase-orders",
+        description: "Manage supplier orders",
       },
       {
-        label: 'Customer Orders',
-        href: '/admin/customer-orders',
-        description: 'View and manage customer orders'
-      }
-    ]
+        label: "Customer Orders",
+        href: "/admin/customer-orders",
+        description: "View and manage customer orders",
+      },
+    ],
   },
   {
     icon: Users,
-    label: 'Partners',
+    label: "Partners",
     items: [
       {
         icon: Truck,
-        label: 'Suppliers',
-        href: '/admin/suppliers',
-        description: 'Supplier management'
+        label: "Suppliers",
+        href: "/admin/suppliers",
+        description: "Supplier management",
       },
       {
         icon: Users,
-        label: 'Customers',
-        href: '/admin/customers',
-        description: 'Customer management'
+        label: "Customers",
+        href: "/admin/customers",
+        description: "Customer management",
       },
       {
         icon: UserSquare,
-        label: 'Inspectors',
-        href: '/admin/inspectors',
-        description: 'Worker management'
+        label: "Inspectors",
+        href: "/admin/inspectors",
+        description: "Worker management",
       },
-    ]
+    ],
   },
   {
     icon: Users,
-    label: 'Users',
-    href: '/admin/users',
-    description: 'User management'
+    label: "Users",
+    href: "/admin/users",
+    description: "User management",
   },
   {
     icon: Settings,
-    label: 'Settings',
-    href: '/admin/settings',
-    description: 'System configuration'
-  }
-]
+    label: "Settings",
+    href: "/admin/settings",
+    description: "System configuration",
+  },
+];
 
 export const workerNavItems: NavItem[] = [
   {
     icon: LayoutDashboard,
-    label: 'Dashboard',
-    href: '/worker/dashboard',
-    description: 'Your work overview and daily tasks'
+    label: "Dashboard",
+    href: "/worker/dashboard",
+    description: "Your work overview and daily tasks",
   },
   {
     icon: ClipboardList,
-    label: 'Tasks',
-    href: '/worker/tasks',
-    description: 'View and manage your assigned tasks'
+    label: "Tasks",
+    href: "/worker/tasks",
+    description: "View and manage your assigned tasks",
   },
   {
     icon: QrCode,
-    label: 'QR Scanner',
-    href: '/worker/qr-scanner',
-    description: 'Scan production QR codes to update status'
+    label: "QR Scanner",
+    href: "/worker/qr-scanner",
+    description: "Scan production QR codes to update status",
   },
   // {
   //   icon: Factory,
@@ -178,21 +178,21 @@ export const workerNavItems: NavItem[] = [
   // },
   {
     icon: Package,
-    label: 'Inventory',
+    label: "Inventory",
     items: [
       {
         icon: Warehouse,
-        label: 'Materials',
-        href: '/worker/inventory',
-        description: 'Check inventory levels'
+        label: "Materials",
+        href: "/worker/inventory",
+        description: "Check inventory levels",
       },
       {
         icon: AlertTriangle,
-        label: 'Low Stock Alerts',
-        href: '/worker/inventory/alerts',
-        description: 'View materials requiring attention'
-      }
-    ]
+        label: "Low Stock Alerts",
+        href: "/worker/inventory/alerts",
+        description: "View materials requiring attention",
+      },
+    ],
   },
   // {
   //   icon: BadgeDollarSign,
@@ -213,62 +213,57 @@ export const workerNavItems: NavItem[] = [
   //     }
   //   ]
   // },
-  {
-    icon: LineChart,
-    label: 'Reports',
-    href: '/worker/reports',
-    description: 'View your productivity metrics'
-  },
+
   {
     icon: UserCircle,
-    label: 'Profile',
-    href: '/worker/profile',
-    description: 'Manage your profile and skills'
+    label: "Profile",
+    href: "/worker/profile",
+    description: "Manage your profile and skills",
   },
   {
     icon: Settings,
-    label: 'Settings',
-    href: '/worker/settings',
-    description: 'Account settings and preferences'
-  }
-]
+    label: "Settings",
+    href: "/worker/settings",
+    description: "Account settings and preferences",
+  },
+];
 
 export const inspectorNavItems: NavItem[] = [
   {
     icon: LayoutDashboard,
-    label: 'Dashboard',
-    href: '/inspector/dashboard',
-    description: 'Your inspector overview'
+    label: "Dashboard",
+    href: "/inspector/dashboard",
+    description: "Your inspector overview",
   },
   {
     icon: ClipboardList, //check
-    label: 'Request materials',
-    href: '/inspector/request',
-    description: 'View and report assigned tasks'
+    label: "Request materials",
+    href: "/inspector/request",
+    description: "View and report assigned tasks",
   },
   {
     icon: Factory,
-    label: 'Production',
-    description: 'Production Inspector',
+    label: "Production",
+    description: "Production Inspector",
     items: [
       {
         icon: ClipboardList, //check
-        label: 'Own Tasks',
-        href: '/inspector/production',
-        description: 'View and manage production tasks'
+        label: "Own Tasks",
+        href: "/inspector/production",
+        description: "View and manage production tasks",
       },
       {
         icon: QrCode,
-        label: 'QR Scanner',
-        href: '/inspector/qr-scanner',
-        description: 'Scan production QR codes to update status'
+        label: "QR Scanner",
+        href: "/inspector/qr-scanner",
+        description: "Scan production QR codes to update status",
       },
-    ]
+    ],
   },
   {
     icon: BadgeDollarSign,
-    label: 'Orders',
-    description: 'Orders management',
+    label: "Orders",
+    description: "Orders management",
     items: [
       // {
       //   icon: ShoppingCart,
@@ -278,82 +273,82 @@ export const inspectorNavItems: NavItem[] = [
       // },
       {
         icon: Warehouse,
-        label: 'Materials',
-        href: '/inspector/inventory',
-        description: 'Check inventory levels'
+        label: "Materials",
+        href: "/inspector/inventory",
+        description: "Check inventory levels",
       },
       {
         icon: AlertTriangle,
-        label: 'Low Stock Alerts',
-        href: '/inspector/inventory/alerts',
-        description: 'View materials requiring attention'
-      }
-    ]
+        label: "Low Stock Alerts",
+        href: "/inspector/inventory/alerts",
+        description: "View materials requiring attention",
+      },
+    ],
   },
   {
     icon: UserCircle,
-    label: 'Profile',
-    href: '/inspector/profile',
-    description: 'Manage your profile'
+    label: "Profile",
+    href: "/inspector/profile",
+    description: "Manage your profile",
   },
   {
     icon: Settings,
-    label: 'Settings',
-    href: '/inspector/settings',
-    description: 'Account settings and preferences'
-  }
-]
+    label: "Settings",
+    href: "/inspector/settings",
+    description: "Account settings and preferences",
+  },
+];
 
 export const deliveryNavItems: NavItem[] = [
   {
     icon: LayoutDashboard,
-    label: 'Dashboard',
-    href: '/delivery/dashboard',
-    description: 'Delivery overview'
+    label: "Dashboard",
+    href: "/delivery/dashboard",
+    description: "Delivery overview",
   },
   {
     icon: ClipboardList,
-    label: 'Tasks',
-    href: '/delivery/tasks',
-    description: 'View and update delivery tasks'
+    label: "Tasks",
+    href: "/delivery/tasks",
+    description: "View and update delivery tasks",
   },
   {
     icon: ShoppingCart,
-    label: 'Orders',
-    href: '/delivery/orders',
-    description: 'Delivery orders'
+    label: "Orders",
+    href: "/delivery/orders",
+    description: "Delivery orders",
   },
   {
     icon: Truck,
-    label: 'Deliveries',
-    href: '/delivery/deliveries',
-    description: 'Manage deliveries'
+    label: "Deliveries",
+    href: "/delivery/deliveries",
+    description: "Manage deliveries",
   },
   {
     icon: UserCircle,
-    label: 'Profile',
-    href: '/delivery/profile',
-    description: 'Manage your profile'
+    label: "Profile",
+    href: "/delivery/profile",
+    description: "Manage your profile",
   },
   {
     icon: Settings,
-    label: 'Settings',
-    href: '/delivery/settings',
-    description: 'Account settings'
-  }
-]
+    label: "Settings",
+    href: "/delivery/settings",
+    description: "Account settings",
+  },
+];
 
 export const getNavItems = (role: string) => {
   switch (role) {
-    case 'ADMIN':
-      return adminNavItems
-    case 'WORKER':
-      return workerNavItems
-    case 'INSPECTOR':
-      return inspectorNavItems
-    case 'DELIVERY':
-      return deliveryNavItems
+    case "ADMIN":
+      return adminNavItems;
+    case "WORKER":
+      return workerNavItems;
+    case "INSPECTOR":
+      return inspectorNavItems;
+    case "DELIVERY":
+      return deliveryNavItems;
     default:
-      return []
+      return [];
   }
-}
+};

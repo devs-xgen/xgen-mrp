@@ -13,20 +13,22 @@ export const profileUpdateSchema = z.object({
 });
 
 // Schema for password change validation
-export const passwordChangeSchema = z.object({
-  currentPassword: z.string().min(1, "Current password is required"),
-  newPassword: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
-    ),
-  confirmPassword: z.string().min(1, "Confirm password is required"),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+export const passwordChangeSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+        "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+      ),
+    confirmPassword: z.string().min(1, "Confirm password is required"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
 
 // Type for profile update data
 export type ProfileUpdateData = z.infer<typeof profileUpdateSchema>;
@@ -52,7 +54,7 @@ export interface WorkCenterData {
   description?: string | null;
   capacityPerHour?: number;
   operatingHours?: number;
-  efficiencyRate?: number | string;
+  efficiencyRate?: number; // Changed from number | string to number
 }
 
 // Type for operation data
@@ -62,19 +64,24 @@ export interface OperationData {
   endTime: Date | string;
   status: string;
   notes?: string | null;
-  cost: number | string;
+  cost: number; // Changed from number | string to number
   workCenter: WorkCenterData;
   productionOrder: {
     id: string;
     quantity: number;
     status: string;
     priority: string;
+    plannedMaterialCost?: number; // Added for consistency
+    actualMaterialCost?: number; // Added for consistency
+    materialVariance?: number; // Added for consistency
     product: {
       id: string;
       name: string;
       sku: string;
-    }
-  }
+      unitCost?: number; // Added for consistency
+      sellingPrice?: number; // Added for consistency
+    };
+  };
 }
 
 // Type for user profile data returned from API
@@ -106,17 +113,21 @@ export interface UserProfileData {
     emergencyContact?: EmergencyContactData | null;
   } | null;
   // Work center assignments
-  workCenterAssignments?: Array<{
-    id: string;
-    isPrimary: boolean;
-    workCenter: WorkCenterData;
-  }> | [];
+  workCenterAssignments?:
+    | Array<{
+        id: string;
+        isPrimary: boolean;
+        workCenter: WorkCenterData;
+      }>
+    | [];
   // User work center direct assignments
-  UserWorkCenter?: Array<{
-    id: string;
-    isResponsible: boolean;
-    workCenter: WorkCenterData;
-  }> | [];
+  UserWorkCenter?:
+    | Array<{
+        id: string;
+        isResponsible: boolean;
+        workCenter: WorkCenterData;
+      }>
+    | [];
   // Assigned operations
   assignedOperations?: OperationData[] | [];
-} 
+}

@@ -7,17 +7,27 @@ import { cn } from "@/lib/utils";
 
 export function GlobalFullscreenToggle() {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isSupported, setIsSupported] = useState(false);
 
   useEffect(() => {
-    // Check if fullscreen preference is stored
-    const storedPreference = localStorage.getItem("global-fullscreen");
-    if (storedPreference === "true") {
-      toggleFullscreen(true);
-    }
+    // Check if fullscreen API is supported
+    setIsSupported(
+      !!(
+        document.documentElement.requestFullscreen ||
+        (document.documentElement as any).webkitRequestFullscreen ||
+        (document.documentElement as any).mozRequestFullScreen ||
+        (document.documentElement as any).msRequestFullscreen
+      )
+    );
+
+    // Check current fullscreen state
+    const checkFullscreenState = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
 
     // Add event listener for fullscreen change
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      checkFullscreenState();
     };
 
     // Add keyboard shortcut (F11)
@@ -28,34 +38,70 @@ export function GlobalFullscreenToggle() {
       }
     };
 
+    // Initial state check
+    checkFullscreenState();
+
     document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
     document.addEventListener("keydown", handleKeyDown);
     
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("mozfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("MSFullscreenChange", handleFullscreenChange);
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
 
-  const toggleFullscreen = (forceState?: boolean) => {
-    const newState = forceState !== undefined ? forceState : !isFullscreen;
+  const toggleFullscreen = async () => {
+    if (!isSupported) {
+      console.warn("Fullscreen API is not supported in this browser");
+      return;
+    }
 
-    if (newState && !document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => {
-        console.error(`Error attempting to enable fullscreen: ${err.message}`);
-      });
-      localStorage.setItem("global-fullscreen", "true");
-    } else if (!newState && document.fullscreenElement) {
-      document.exitFullscreen();
-      localStorage.setItem("global-fullscreen", "false");
+    try {
+      if (!document.fullscreenElement) {
+        // Enter fullscreen
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        } else if ((document.documentElement as any).webkitRequestFullscreen) {
+          await (document.documentElement as any).webkitRequestFullscreen();
+        } else if ((document.documentElement as any).mozRequestFullScreen) {
+          await (document.documentElement as any).mozRequestFullScreen();
+        } else if ((document.documentElement as any).msRequestFullscreen) {
+          await (document.documentElement as any).msRequestFullscreen();
+        }
+      } else {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen();
+        } else if ((document as any).mozCancelFullScreen) {
+          await (document as any).mozCancelFullScreen();
+        } else if ((document as any).msExitFullscreen) {
+          await (document as any).msExitFullscreen();
+        }
+      }
+    } catch (err: any) {
+      // Handle errors silently or show a user-friendly message
+      console.warn("Fullscreen operation failed:", err.message);
     }
   };
+
+  // Don't render the button if fullscreen is not supported
+  if (!isSupported) {
+    return null;
+  }
 
   return (
     <Button
       variant="outline"
       size="icon"
-      onClick={() => toggleFullscreen()}
+      onClick={toggleFullscreen}
       className="h-10 w-10 rounded-full shadow-md bg-background/80 backdrop-blur-sm border-primary/20 hover:bg-background/90"
       title={isFullscreen ? "Exit fullscreen (F11)" : "Enter fullscreen (F11)"}
     >
