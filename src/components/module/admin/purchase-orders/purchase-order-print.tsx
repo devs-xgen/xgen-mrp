@@ -46,6 +46,13 @@ export function PurchaseOrderPrint({ purchaseOrder }: PurchaseOrderPrintProps) {
     }
   };
 
+  const companyDetails = {
+    name: "Xgen",
+    address: "123 Business Street, Quezon City",
+    phone: "09123123123",
+    email: "xgen.com",
+  };
+
   // Format dates
   const formatDate = (date: Date): string => {
     return new Date(date).toLocaleDateString("en-US", {
@@ -96,13 +103,13 @@ export function PurchaseOrderPrint({ purchaseOrder }: PurchaseOrderPrintProps) {
           <div className="flex justify-between items-start mb-8">
             <div>
               <div className="h-16 w-48 relative bg-gray-100 flex items-center justify-center">
-                <span className="text-gray-400">Company Logo</span>
+                <span className="text-gray-400 font-bold">XGEN</span>
               </div>
-              <h2 className="text-lg font-bold mt-2">Your Company Name</h2>
-              <p className="text-sm text-gray-500">123 Business Street</p>
-              <p className="text-sm text-gray-500">City, State 12345</p>
+              <h2 className="text-lg font-bold mt-2">{ companyDetails.name }</h2>
+              <p className="text-sm text-gray-500">188 Langka Street, Payatas B</p>
+              <p className="text-sm text-gray-500">Quezon City, Metro Manila</p>
               <p className="text-sm text-gray-500">Phone: (123) 456-7890</p>
-              <p className="text-sm text-gray-500">Email: info@company.com</p>
+              <p className="text-sm text-gray-500">Email: support@xgen.com.ph</p>
             </div>
 
             <div className="text-right">
@@ -252,7 +259,7 @@ export function PurchaseOrderPrint({ purchaseOrder }: PurchaseOrderPrintProps) {
 
           {/* Footer */}
           <div className="mt-12 pt-4 border-t text-center text-sm text-gray-500">
-            <p>This is an official document of Your Company Name.</p>
+            <p>This is an official document of {companyDetails.name}.</p>
             <p>
               Purchase Order: {purchaseOrder.poNumber} • Generated on{" "}
               {new Date().toLocaleDateString()}

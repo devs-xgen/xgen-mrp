@@ -147,7 +147,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           onClick={() => setShowPrintDialog(false)}
         >
           <div
-            className="bg-background rounded-lg p-6 w-full max-w-4xl"
+            className="bg-background p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <PurchaseOrderPrint purchaseOrder={purchase} />
