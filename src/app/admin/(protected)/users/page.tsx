@@ -36,13 +36,12 @@ export default function UserManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Function to fetch users
+  // Function to fetch users using server action
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/users");
-      if (!response.ok) throw new Error("Failed to fetch users");
-      const data = await response.json();
+      const { getUsers } = await import("@/lib/actions/users");
+      const data = await getUsers();
       setUsers(data);
       setFilteredUsers(data);
     } catch (error) {

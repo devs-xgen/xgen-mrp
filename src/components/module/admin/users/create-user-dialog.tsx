@@ -37,9 +37,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   getAvailableInspectors,
-  createInspectorForUser,
-  linkUserToInspector,
 } from "@/lib/actions/user-inspector";
+import { createUser } from "@/lib/actions/users";
 
 // Enhanced form schema with inspector-related fields
 const formSchema = z.object({
@@ -62,7 +61,7 @@ const formSchema = z.object({
 
   // Inspector related fields
   isInspector: z.boolean().default(false),
-  inspectorOption: z.enum(["new", "existing"]).optional(),
+  inspectorOption: z.enum(["new", "existing"]).default("new").optional(),
   existingInspectorId: z.string().optional(),
 
   // Additional inspector fields (only those not in basic information)
@@ -70,10 +69,21 @@ const formSchema = z.object({
   specialization: z.string().optional(),
   certificationLevel: z.string().optional(),
   yearsOfExperience: z.preprocess(
-    (val) => (val === "" ? undefined : Number(val)),
+    (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
     z.number().min(0).optional()
   ),
   notes: z.string().optional(),
+}).superRefine((data, ctx) => {
+  // Only validate inspector fields if user is actually an inspector
+  if (data.isInspector) {
+    if (data.inspectorOption === "existing" && !data.existingInspectorId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["existingInspectorId"],
+        message: "Please select an existing inspector when using this option.",
+      });
+    }
+  }
 });
 
 interface CreateUserDialogProps {
@@ -123,7 +133,7 @@ export function CreateUserDialog({
     if (isInspector && role !== "INSPECTOR") {
       form.setValue("role", "INSPECTOR");
     }
-  }, [isInspector, role]);
+  }, [isInspector, role, form]);
 
   // Fetch available inspectors when dialog opens
   useEffect(() => {
@@ -147,66 +157,59 @@ export function CreateUserDialog({
       setIsLoading(true);
       setError(null);
 
-      // User data to send to API
+      // Prepare user data for server action
       const userData = {
-        email: values.email,
+        email: values.email.trim(),
         password: values.password,
         role: values.role,
         profile: {
-          firstName: values.firstName,
-          lastName: values.lastName,
-          employeeId: values.employeeId || null,
-          department: values.department || null,
-          position: values.position || null,
+          firstName: values.firstName.trim(),
+          lastName: values.lastName.trim(),
+          employeeId: values.employeeId?.trim() || null,
+          department: values.department?.trim() || null,
+          position: values.position?.trim() || null,
         },
+        // Inspector specific fields
+        isInspector: Boolean(values.isInspector),
+        inspectorOption: values.inspectorOption || 'new',
+        existingInspectorId: values.existingInspectorId?.trim() || undefined,
+        phoneNumber: values.phoneNumber?.trim() || undefined,
+        specialization: values.specialization?.trim() || undefined,
+        certificationLevel: values.certificationLevel?.trim() || undefined,
+        yearsOfExperience: values.yearsOfExperience || undefined,
+        notes: values.notes?.trim() || undefined,
       };
 
-      // Create the user
-      const response = await fetch("/api/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      });
+      // Create the user using server action
+      await createUser(userData);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || data.message || "Failed to create user");
+      // Reset form and close dialog
+      form.reset();
+      onOpenChange(false);
+      
+      // Call onSuccess callback
+      if (onSuccess) {
+        onSuccess();
       }
 
-      const userId = data.id;
-
-      // If the user should be an inspector, handle that relationship
-      if (values.isInspector) {
-        if (
-          values.inspectorOption === "existing" &&
-          values.existingInspectorId
-        ) {
-          // Link the user to an existing inspector
-          await linkUserToInspector(userId, values.existingInspectorId);
-        } else if (values.inspectorOption === "new") {
-          // Create a new inspector and link to user
-          await createInspectorForUser(userId, {
-            firstName: values.firstName,
-            lastName: values.lastName,
-            email: values.email,
-            phoneNumber: values.phoneNumber,
-            department: values.department,
-            specialization: values.specialization,
-            certificationLevel: values.certificationLevel,
-            yearsOfExperience: values.yearsOfExperience,
-            notes: values.notes,
-          });
+    } catch (error) {
+      // Handle errors
+      let errorMessage = "An error occurred while creating the user";
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Handle specific error types
+        if (error.message.includes("email already exists") || error.message.includes("P2002")) {
+          errorMessage = "A user with this email address already exists. Please use a different email.";
+        } else if (error.message.includes("Unauthorized")) {
+          errorMessage = "You don't have permission to create users. Please check your login status.";
+        } else if (error.message.includes("validation") || error.message.includes("required")) {
+          errorMessage = `Please check your input: ${error.message}`;
         }
       }
-
-      form.reset();
-      onSuccess?.();
-    } catch (error) {
-      console.error("Error in form submission:", error);
-      setError(error instanceof Error ? error.message : "An error occurred");
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -602,10 +605,14 @@ export function CreateUserDialog({
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 type="button"
+                disabled={isLoading}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button 
+                type="submit" 
+                disabled={isLoading}
+              >
                 {isLoading ? "Creating..." : "Create User"}
               </Button>
             </DialogFooter>

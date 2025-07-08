@@ -1,30 +1,18 @@
 // src/app/worker/(protected)/layout.tsx
-import { getServerSession } from "next-auth/next";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
-import { ThemeProvider } from "@/context/ThemeContext";
-import LayoutWithTheme from "@/components/shared/LayoutWithTheme";
+import UnifiedLayout from "@/components/shared/UnifiedLayout";
 
-export default async function WorkerProtectedLayout({
+export default async function InspectorProtectedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
-
-  // Redirect if no session
-  if (!session?.user) {
-    redirect("/inspector/login");
-  }
-
-  // Redirect if admin trying to access worker pages
-  if (["ADMIN", "MANAGER"].includes(session.user.role)) {
-    redirect("/inspector/dashboard");
-  }
-
   return (
-    <ThemeProvider>
-      <LayoutWithTheme>{children}</LayoutWithTheme>
-    </ThemeProvider>
+    <UnifiedLayout
+      allowedRoles={["INSPECTOR"]}
+      fallbackRoute="/admin/dashboard"
+      loginRoute="/inspector/login"
+    >
+      {children}
+    </UnifiedLayout>
   );
 }

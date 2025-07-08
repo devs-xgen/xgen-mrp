@@ -237,7 +237,7 @@ export default function AppSidebar({
   return (
     <div
       className={cn(
-        "flex h-full flex-col bg-neutral-800 text-slate-100 transition-all duration-300",
+        "flex h-screen flex-col bg-neutral-800 text-slate-100 transition-all duration-300 relative border-r border-slate-700",
         isCollapsed ? "w-20" : "w-64"
       )}
     >
@@ -290,7 +290,7 @@ export default function AppSidebar({
       </div>
 
       {/* Navigation section - Scrollable */}
-      <nav className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800 space-y-2 p-4">
+      <nav className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800 space-y-2 p-4 min-h-0">
         {isLoading ? (
           // Show skeleton UI while loading
           <>

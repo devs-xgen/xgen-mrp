@@ -125,9 +125,13 @@ body.light {
   @apply light-theme
 }
 
-/* Add scrollbar styling */
+/* Enhanced scrollbar styling for better layout control */
 .scrollbar-thin {
   scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
 }
 
 .scrollbar-thumb-slate-700::-webkit-scrollbar-thumb {
@@ -139,8 +143,39 @@ body.light {
   background-color: #1e293b; /* slate-800 */
 }
 
-.scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
+/* Ensure proper layout behavior */
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.h-screen {
+  height: 100vh;
+  height: 100dvh; /* Use dynamic viewport height for mobile */
+}
+
+/* Fix for sticky sidebar layout */
+.layout-container {
+  display: flex !important;
+  flex-direction: row !important; /* Explicitly set horizontal layout */
+  height: 100vh !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+  width: 100% !important;
+}
+
+.sidebar-container {
+  flex-shrink: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+.main-content-container {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  min-width: 0 !important; /* Prevent flex child from overflowing */
 }
 
 /* Enhanced fullscreen styles with subtle backgrounds */
