@@ -1,14 +1,45 @@
-'use server'
+"use server";
 
-import { prisma } from "@/lib/db"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
-import { revalidatePath } from "next/cache"
-import { 
-  DeliveryAssignmentInput, 
-  UpdateDeliveryAssignmentInput 
-} from "@/types/admin/production-order"
-import { DeliveryAssignment, Status } from "@prisma/client"
+import { prisma } from "@/lib/db";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
+import {
+  DeliveryAssignmentInput,
+  UpdateDeliveryAssignmentInput,
+} from "@/types/admin/production-order";
+import { DeliveryAssignment, Status } from "@prisma/client";
+
+// Helper function to serialize Prisma Decimal values
+function serializeDecimal(value: any) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "object" && "toNumber" in value) {
+    return value.toNumber();
+  }
+  return value;
+}
+
+// Helper function to serialize an object with potential Decimal values
+function serializeObject(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) {
+    return obj.map((item) => serializeObject(item));
+  }
+  if (typeof obj === "object") {
+    const serialized: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (typeof value === "object" && value !== null && "toNumber" in value) {
+        serialized[key] = (value as any).toNumber();
+      } else if (typeof value === "object") {
+        serialized[key] = serializeObject(value);
+      } else {
+        serialized[key] = value;
+      }
+    }
+    return serialized;
+  }
+  return obj;
+}
 
 // Get users with delivery role
 export async function getDeliveryUsers() {
@@ -16,26 +47,28 @@ export async function getDeliveryUsers() {
     const users = await prisma.user.findMany({
       where: {
         role: "DELIVERY",
-        status: "ACTIVE"
+        status: "ACTIVE",
       },
       include: {
-        profile: true
+        profile: true,
       },
       orderBy: {
         profile: {
-          firstName: 'asc'
-        }
-      }
-    })
+          firstName: "asc",
+        },
+      },
+    });
 
-    return users.map(user => ({
+    return users.map((user) => ({
       id: user.id,
       email: user.email,
-      name: user.profile ? `${user.profile.firstName} ${user.profile.lastName}` : undefined
-    }))
+      name: user.profile
+        ? `${user.profile.firstName} ${user.profile.lastName}`
+        : undefined,
+    }));
   } catch (error) {
-    console.error('Error fetching delivery users:', error)
-    throw new Error('Failed to fetch delivery users')
+    console.error("Error fetching delivery users:", error);
+    throw new Error("Failed to fetch delivery users");
   }
 }
 
@@ -61,12 +94,13 @@ export async function getDeliveryAssignments(userId: string) {
       orderBy: {
         createdAt: "desc",
       },
-    })
+    });
 
-    return assignments
+    // Serialize the data to handle Decimal types
+    return serializeObject(assignments);
   } catch (error) {
-    console.error("Error fetching delivery assignments:", error)
-    throw new Error("Failed to fetch delivery assignments")
+    console.error("Error fetching delivery assignments:", error);
+    throw new Error("Failed to fetch delivery assignments");
   }
 }
 
@@ -74,31 +108,31 @@ export async function getDeliveryAssignments(userId: string) {
 export async function getDeliveryAssignment(productionOrderId: string) {
   try {
     if (!productionOrderId) {
-      console.error('No productionOrderId provided');
+      console.error("No productionOrderId provided");
       return null;
     }
 
     const deliveryAssignment = await prisma.deliveryAssignment.findUnique({
       where: {
-        productionOrderId
+        productionOrderId,
       },
       include: {
         user: {
           include: {
-            profile: true
-          }
+            profile: true,
+          },
         },
         productionOrder: {
           include: {
             product: true,
             customerOrder: {
               include: {
-                customer: true
-              }
-            }
-          }
-        }
-      }
+                customer: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!deliveryAssignment) {
@@ -110,7 +144,7 @@ export async function getDeliveryAssignment(productionOrderId: string) {
     return {
       id: deliveryAssignment.id,
       userId: deliveryAssignment.userId,
-      userName: deliveryAssignment.user.profile 
+      userName: deliveryAssignment.user.profile
         ? `${deliveryAssignment.user.profile.firstName} ${deliveryAssignment.user.profile.lastName}`
         : deliveryAssignment.user.email,
       scheduledDate: deliveryAssignment.scheduledDate,
@@ -123,26 +157,30 @@ export async function getDeliveryAssignment(productionOrderId: string) {
         id: deliveryAssignment.productionOrder.id,
         product: {
           id: deliveryAssignment.productionOrder.product.id,
-          name: deliveryAssignment.productionOrder.product.name
+          name: deliveryAssignment.productionOrder.product.name,
         },
         customerOrder: deliveryAssignment.productionOrder.customerOrder
           ? {
               id: deliveryAssignment.productionOrder.customerOrder.id,
-              shippingAddress: deliveryAssignment.productionOrder.customerOrder.shippingAddress || null,
+              shippingAddress:
+                deliveryAssignment.productionOrder.customerOrder
+                  .shippingAddress || null,
               customer: {
-                id: deliveryAssignment.productionOrder.customerOrder.customer.id,
-                name: deliveryAssignment.productionOrder.customerOrder.customer.name
-              }
+                id: deliveryAssignment.productionOrder.customerOrder.customer
+                  .id,
+                name: deliveryAssignment.productionOrder.customerOrder.customer
+                  .name,
+              },
             }
-          : null
-      }
+          : null,
+      },
     };
   } catch (error) {
-    console.error('Error fetching delivery assignment:', error);
+    console.error("Error fetching delivery assignment:", error);
     if (error instanceof Error) {
       throw error;
     }
-    throw new Error('Failed to fetch delivery assignment');
+    throw new Error("Failed to fetch delivery assignment");
   }
 }
 
@@ -165,16 +203,17 @@ export async function getDeliveryAssignmentById(id: string) {
           },
         },
       },
-    })
+    });
 
     if (!assignment) {
-      throw new Error("Delivery assignment not found")
+      throw new Error("Delivery assignment not found");
     }
 
-    return assignment
+    // Serialize the data to handle Decimal types
+    return serializeObject(assignment);
   } catch (error) {
-    console.error("Error fetching delivery assignment:", error)
-    throw new Error("Failed to fetch delivery assignment")
+    console.error("Error fetching delivery assignment:", error);
+    throw new Error("Failed to fetch delivery assignment");
   }
 }
 
@@ -185,9 +224,9 @@ export async function updateDeliveryAssignmentStatus(
 ) {
   try {
     // Validate status
-    const validStatuses = ["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"]
+    const validStatuses = ["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
     if (!validStatuses.includes(status)) {
-      throw new Error("Invalid status")
+      throw new Error("Invalid status");
     }
 
     const assignment = await prisma.deliveryAssignment.update({
@@ -210,15 +249,15 @@ export async function updateDeliveryAssignmentStatus(
           },
         },
       },
-    })
+    });
 
-    revalidatePath("/admin/production")
-    revalidatePath("/delivery/tasks")
-    revalidatePath(`/delivery/orders/${id}`)
-    return assignment
+    revalidatePath("/admin/production");
+    revalidatePath("/delivery/tasks");
+    revalidatePath(`/delivery/orders/${id}`);
+    return serializeObject(assignment);
   } catch (error) {
-    console.error("Error updating delivery assignment status:", error)
-    throw new Error("Failed to update delivery assignment status")
+    console.error("Error updating delivery assignment status:", error);
+    throw new Error("Failed to update delivery assignment status");
   }
 }
 
@@ -231,18 +270,20 @@ export async function assignDeliveryToProductionOrder(data: {
   notes?: string;
 }) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) throw new Error('Unauthorized')
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
 
     // Check if there's already an assignment
     const existingAssignment = await prisma.deliveryAssignment.findUnique({
       where: {
-        productionOrderId: data.productionOrderId
-      }
-    })
+        productionOrderId: data.productionOrderId,
+      },
+    });
 
     if (existingAssignment) {
-      throw new Error('This production order already has a delivery assignment')
+      throw new Error(
+        "This production order already has a delivery assignment"
+      );
     }
 
     // Create new assignment
@@ -254,18 +295,18 @@ export async function assignDeliveryToProductionOrder(data: {
         deliveryAddress: data.deliveryAddress,
         notes: data.notes,
         createdBy: session.user.id,
-        modifiedBy: session.user.id
-      }
-    })
+        modifiedBy: session.user.id,
+      },
+    });
 
     // Revalidate the production order page
-    revalidatePath(`/admin/production/${data.productionOrderId}`)
-    revalidatePath("/delivery/tasks")
-    
-    return { success: true, id: deliveryAssignment.id }
+    revalidatePath(`/admin/production/${data.productionOrderId}`);
+    revalidatePath("/delivery/tasks");
+
+    return { success: true, id: deliveryAssignment.id };
   } catch (error) {
-    console.error('Error assigning delivery:', error)
-    throw error
+    console.error("Error assigning delivery:", error);
+    throw error;
   }
 }
 
@@ -281,27 +322,27 @@ export async function updateDeliveryAssignment(
   }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) throw new Error('Unauthorized')
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
 
     // Get the assignment to validate it exists
     const deliveryAssignment = await prisma.deliveryAssignment.findUnique({
       where: {
-        id
+        id,
       },
       select: {
-        productionOrderId: true
-      }
-    })
+        productionOrderId: true,
+      },
+    });
 
     if (!deliveryAssignment) {
-      throw new Error('Delivery assignment not found')
+      throw new Error("Delivery assignment not found");
     }
 
     // Update the assignment using proper nested update syntax
     const updatedAssignment = await prisma.deliveryAssignment.update({
       where: {
-        id
+        id,
       },
       data: {
         scheduledDate: data.scheduledDate,
@@ -311,22 +352,22 @@ export async function updateDeliveryAssignment(
         ...(data.userId && {
           user: {
             connect: {
-              id: data.userId
-            }
-          }
-        })
-      }
-    })
-    
+              id: data.userId,
+            },
+          },
+        }),
+      },
+    });
+
     // Revalidate the production order page
-    revalidatePath(`/admin/production/${deliveryAssignment.productionOrderId}`)
-    revalidatePath("/delivery/tasks")
-    revalidatePath(`/delivery/orders/${id}`)
-    
-    return { success: true }
+    revalidatePath(`/admin/production/${deliveryAssignment.productionOrderId}`);
+    revalidatePath("/delivery/tasks");
+    revalidatePath(`/delivery/orders/${id}`);
+
+    return { success: true };
   } catch (error) {
-    console.error('Error updating delivery assignment:', error)
-    throw error
+    console.error("Error updating delivery assignment:", error);
+    throw error;
   }
 }
 
@@ -349,14 +390,14 @@ export async function createDeliveryAssignment(data: {
         createdBy: data.createdBy,
         modifiedBy: data.createdBy,
       },
-    })
+    });
 
-    revalidatePath("/admin/production")
-    revalidatePath("/delivery/tasks")
-    return assignment
+    revalidatePath("/admin/production");
+    revalidatePath("/delivery/tasks");
+    return assignment;
   } catch (error) {
-    console.error("Error creating delivery assignment:", error)
-    throw new Error("Failed to create delivery assignment")
+    console.error("Error creating delivery assignment:", error);
+    throw new Error("Failed to create delivery assignment");
   }
 }
 
@@ -366,11 +407,11 @@ export async function deleteDeliveryAssignment(id: string) {
       where: {
         id,
       },
-    })
+    });
 
-    return { success: true }
+    return { success: true };
   } catch (error) {
-    console.error("Error deleting delivery assignment:", error)
-    throw new Error("Failed to delete delivery assignment")
+    console.error("Error deleting delivery assignment:", error);
+    throw new Error("Failed to delete delivery assignment");
   }
-} 
+}

@@ -5,6 +5,37 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
+// Helper function to serialize Prisma Decimal values
+function serializeDecimal(value: any) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "object" && value !== null && "toNumber" in value) {
+    return value.toNumber();
+  }
+  return value;
+}
+
+// Helper function to serialize an object with potential Decimal values
+function serializeObject(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) {
+    return obj.map((item) => serializeObject(item));
+  }
+  if (typeof obj === "object") {
+    const serialized: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (typeof value === "object" && value !== null && "toNumber" in value) {
+        serialized[key] = (value as any).toNumber();
+      } else if (typeof value === "object") {
+        serialized[key] = serializeObject(value);
+      } else {
+        serialized[key] = value;
+      }
+    }
+    return serialized;
+  }
+  return obj;
+}
+
 // Get delivery orders for a specific user
 export async function getDeliveryOrders(userId: string) {
   try {
@@ -61,7 +92,7 @@ export async function getDeliveryOrders(userId: string) {
       ],
     });
 
-    return orders;
+    return serializeObject(orders);
   } catch (error) {
     console.error("Error fetching delivery orders:", error);
     throw new Error("Failed to fetch delivery orders");
@@ -124,7 +155,7 @@ export async function getDeliveryOrdersByStatus(
       orderBy: [{ scheduledDate: "asc" }, { createdAt: "desc" }],
     });
 
-    return orders;
+    return serializeObject(orders);
   } catch (error) {
     console.error("Error fetching delivery orders by status:", error);
     throw new Error("Failed to fetch delivery orders by status");
@@ -152,7 +183,7 @@ export async function updateDeliveryOrderNotes(orderId: string, notes: string) {
     revalidatePath(`/delivery/orders/${orderId}`);
     revalidatePath("/delivery/tasks");
 
-    return { success: true, order: updatedOrder };
+    return { success: true, order: serializeObject(updatedOrder) };
   } catch (error) {
     console.error("Error updating delivery order notes:", error);
     throw new Error("Failed to update delivery order notes");
@@ -181,7 +212,7 @@ export async function startDeliveryOrder(orderId: string) {
     revalidatePath("/delivery/tasks");
     revalidatePath("/delivery/dashboard");
 
-    return { success: true, order: updatedOrder };
+    return { success: true, order: serializeObject(updatedOrder) };
   } catch (error) {
     console.error("Error starting delivery order:", error);
     throw new Error("Failed to start delivery order");
@@ -215,7 +246,7 @@ export async function completeDeliveryOrder(
     revalidatePath("/delivery/dashboard");
     revalidatePath("/admin/production");
 
-    return { success: true, order: updatedOrder };
+    return { success: true, order: serializeObject(updatedOrder) };
   } catch (error) {
     console.error("Error completing delivery order:", error);
     throw new Error("Failed to complete delivery order");

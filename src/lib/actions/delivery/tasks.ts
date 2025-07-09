@@ -5,6 +5,37 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
+// Helper function to serialize Prisma Decimal values
+function serializeDecimal(value: any) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "object" && value !== null && "toNumber" in value) {
+    return value.toNumber();
+  }
+  return value;
+}
+
+// Helper function to serialize an object with potential Decimal values
+function serializeObject(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) {
+    return obj.map((item) => serializeObject(item));
+  }
+  if (typeof obj === "object") {
+    const serialized: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (typeof value === "object" && value !== null && "toNumber" in value) {
+        serialized[key] = (value as any).toNumber();
+      } else if (typeof value === "object") {
+        serialized[key] = serializeObject(value);
+      } else {
+        serialized[key] = value;
+      }
+    }
+    return serialized;
+  }
+  return obj;
+}
+
 // Get delivery tasks for a specific user
 export async function getDeliveryTasks(userId: string) {
   try {
@@ -61,7 +92,7 @@ export async function getDeliveryTasks(userId: string) {
       ],
     });
 
-    return tasks;
+    return serializeObject(tasks);
   } catch (error) {
     console.error("Error fetching delivery tasks:", error);
     throw new Error("Failed to fetch delivery tasks");
@@ -121,7 +152,7 @@ export async function getPendingDeliveryTasks(userId: string) {
       orderBy: [{ scheduledDate: "asc" }, { createdAt: "asc" }],
     });
 
-    return tasks;
+    return serializeObject(tasks);
   } catch (error) {
     console.error("Error fetching pending delivery tasks:", error);
     throw new Error("Failed to fetch pending delivery tasks");
@@ -181,7 +212,7 @@ export async function getInProgressDeliveryTasks(userId: string) {
       orderBy: [{ scheduledDate: "asc" }, { createdAt: "asc" }],
     });
 
-    return tasks;
+    return serializeObject(tasks);
   } catch (error) {
     console.error("Error fetching in-progress delivery tasks:", error);
     throw new Error("Failed to fetch in-progress delivery tasks");
@@ -221,7 +252,7 @@ export async function updateDeliveryTaskStatus(
     revalidatePath("/delivery/dashboard");
     revalidatePath(`/delivery/orders/${taskId}`);
 
-    return { success: true, task: updatedTask };
+    return { success: true, task: serializeObject(updatedTask) };
   } catch (error) {
     console.error("Error updating delivery task status:", error);
     throw new Error("Failed to update delivery task status");
@@ -292,7 +323,7 @@ export async function getTodaysDeliveryTasks(userId: string) {
       orderBy: [{ scheduledDate: "asc" }, { status: "asc" }],
     });
 
-    return tasks;
+    return serializeObject(tasks);
   } catch (error) {
     console.error("Error fetching today's delivery tasks:", error);
     throw new Error("Failed to fetch today's delivery tasks");
@@ -359,7 +390,7 @@ export async function getOverdueDeliveryTasks(userId: string) {
       orderBy: [{ scheduledDate: "asc" }],
     });
 
-    return tasks;
+    return serializeObject(tasks);
   } catch (error) {
     console.error("Error fetching overdue delivery tasks:", error);
     throw new Error("Failed to fetch overdue delivery tasks");
@@ -405,7 +436,10 @@ export async function updateDeliveryTaskPriority(
     revalidatePath("/delivery/orders");
     revalidatePath("/delivery/dashboard");
 
-    return { success: true, productionOrder: updatedProductionOrder };
+    return {
+      success: true,
+      productionOrder: serializeObject(updatedProductionOrder),
+    };
   } catch (error) {
     console.error("Error updating delivery task priority:", error);
     throw new Error("Failed to update delivery task priority");

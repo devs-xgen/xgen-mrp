@@ -4,6 +4,37 @@ import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+// Helper function to serialize Prisma Decimal values
+function serializeDecimal(value: any) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "object" && value !== null && "toNumber" in value) {
+    return value.toNumber();
+  }
+  return value;
+}
+
+// Helper function to serialize an object with potential Decimal values
+function serializeObject(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) {
+    return obj.map((item) => serializeObject(item));
+  }
+  if (typeof obj === "object") {
+    const serialized: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (typeof value === "object" && value !== null && "toNumber" in value) {
+        serialized[key] = (value as any).toNumber();
+      } else if (typeof value === "object") {
+        serialized[key] = serializeObject(value);
+      } else {
+        serialized[key] = value;
+      }
+    }
+    return serialized;
+  }
+  return obj;
+}
+
 // Get delivery dashboard data for a specific user
 export async function getDeliveryDashboardData(userId: string) {
   try {
@@ -88,10 +119,10 @@ export async function getDeliveryDashboardData(userId: string) {
         overdueAssignments: overdueAssignments.length,
         todaysAssignments: todaysAssignments.length,
       },
-      recentAssignments,
-      overdueAssignments,
-      todaysAssignments,
-      allAssignments: assignments,
+      recentAssignments: serializeObject(recentAssignments),
+      overdueAssignments: serializeObject(overdueAssignments),
+      todaysAssignments: serializeObject(todaysAssignments),
+      allAssignments: serializeObject(assignments),
     };
   } catch (error) {
     console.error("Error fetching delivery dashboard data:", error);
@@ -163,7 +194,9 @@ export async function getDeliveryPerformanceMetrics(userId: string) {
       totalCompletedDeliveries: completedDeliveries.length,
       onTimeDeliveryRate: Math.round(onTimeRate),
       averageDeliveryTime: averageDeliveryHours,
-      recentCompletedDeliveries: completedDeliveries.slice(0, 10),
+      recentCompletedDeliveries: serializeObject(
+        completedDeliveries.slice(0, 10)
+      ),
     };
   } catch (error) {
     console.error("Error fetching delivery performance metrics:", error);
