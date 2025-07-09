@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 
 import { ProductionOrderDetails } from "@/components/module/admin/production/production-order-details";
 import { ProductionQRGenerator } from "@/components/module/admin/production/production-qr-generator";
-import { ProductionWorkflowProgress } from "@/components/module/admin/production/production-workflow-progress";
+import { ProductionWorkflowProgressButton } from "@/components/module/admin/production/production-workflow-progress-button";
 import { Button } from "@/components/ui/button";
 import { getDeliveryUsers, getDeliveryAssignment } from "@/lib/actions/delivery/delivery-assignment";
 import { getActiveInspectors } from "@/lib/actions/inspector";
@@ -117,56 +117,52 @@ export default async function ProductionOrderPage({
           </div>
         </div>
         
-        <ProductionQRGenerator
-          order={{
-            id: orderData.id,
-            product: {
-              name: orderData.product.name,
-              sku: orderData.product.sku,
-            },
-            productVariant: orderData.productVariant ? {
-              displayName: orderData.productVariant.displayName,
-              sku: orderData.productVariant.sku,
-            } : undefined,
-            quantity: orderData.quantity,
-            startDate: orderData.startDate,
-            dueDate: orderData.dueDate,
-            status: orderData.status,
-            priority: orderData.priority,
-            delivery: {
-              address: orderData.deliveryInfo?.deliveryAddress || "Not Assigned",
-              contactName: orderData.deliveryInfo?.userName || "Not Assigned",
-              contactPhone: "Not Assigned",
-              estimatedDelivery: orderData.deliveryInfo?.scheduledDate || new Date(),
-              instructions: orderData.deliveryInfo?.notes || "Not Assigned"
-            },
-            assignments: {
-              qualityInspector: order.qualityChecks?.[0]?.inspectorName || "Not Assigned",
-              logisticsCoordinator: orderData.deliveryInfo?.userName || "Not Assigned"
-            }
-          }}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        {/* Workflow Progress - Responsive positioning */}
-        <div className="xl:col-span-1 order-1">
-          <div className="sticky top-6">
-            <ProductionWorkflowProgress 
-              phaseStatus={orderData.phaseStatus}
-              deliveryInfo={orderData.deliveryInfo}
-            />
-          </div>
-        </div>
-        
-        {/* Production Order Details - Takes remaining space */}
-        <div className="xl:col-span-3 order-2">
-          <ProductionOrderDetails
-            order={order as any}
-            workCenters={workCenters}
-            deliveryUsers={deliveryUsers}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <ProductionWorkflowProgressButton
+            productionOrderId={orderData.id}
+            currentStatus={orderData.status}
+            className="sm:w-auto"
+          />
+          
+          <ProductionQRGenerator
+            order={{
+              id: orderData.id,
+              product: {
+                name: orderData.product.name,
+                sku: orderData.product.sku,
+              },
+              productVariant: orderData.productVariant ? {
+                displayName: orderData.productVariant.displayName,
+                sku: orderData.productVariant.sku,
+              } : undefined,
+              quantity: orderData.quantity,
+              startDate: orderData.startDate,
+              dueDate: orderData.dueDate,
+              status: orderData.status,
+              priority: orderData.priority,
+              delivery: {
+                address: orderData.deliveryInfo?.deliveryAddress || "Not Assigned",
+                contactName: orderData.deliveryInfo?.userName || "Not Assigned",
+                contactPhone: "Not Assigned",
+                estimatedDelivery: orderData.deliveryInfo?.scheduledDate || new Date(),
+                instructions: orderData.deliveryInfo?.notes || "Not Assigned"
+              },
+              assignments: {
+                qualityInspector: order.qualityChecks?.[0]?.inspectorName || "Not Assigned",
+                logisticsCoordinator: orderData.deliveryInfo?.userName || "Not Assigned"
+              }
+            }}
           />
         </div>
+      </div>
+
+      {/* Production Order Details - Full width now */}
+      <div className="w-full">
+        <ProductionOrderDetails
+          order={order as any}
+          workCenters={workCenters}
+          deliveryUsers={deliveryUsers}
+        />
       </div>
     </div>
   );
