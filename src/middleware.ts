@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 // Define which roles belong to each portal
 const PORTAL_ROLES = {
@@ -17,50 +18,237 @@ const PORTAL_PATHS = {
   DELIVERY_PORTAL: "/delivery",
 };
 
-export default function middleware(req: NextRequest) {
+// Rate limiting configuration (more reasonable limits)
+const RATE_LIMIT_CONFIG = {
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  maxRequests: 1000, // Increased general request limit for normal usage
+  loginMaxRequests: 50, // Increased login page visits (for legitimate portal switching)
+};
+
+// Simple in-memory rate limiting store (use Redis in production)
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+
+// Clear rate limits for an IP (useful for legitimate users after logout)
+function clearRateLimit(ip: string) {
+  rateLimitStore.delete(ip);
+}
+
+// Rate limiting function
+function checkRateLimit(
+  ip: string,
+  maxRequests: number = RATE_LIMIT_CONFIG.maxRequests
+): boolean {
+  const now = Date.now();
+  const windowMs = RATE_LIMIT_CONFIG.windowMs;
+
+  const existing = rateLimitStore.get(ip);
+
+  if (!existing || now > existing.resetTime) {
+    rateLimitStore.set(ip, { count: 1, resetTime: now + windowMs });
+    return true;
+  }
+
+  if (existing.count >= maxRequests) {
+    return false;
+  }
+
+  existing.count++;
+  return true;
+}
+
+// Security headers configuration
+function addSecurityHeaders(response: NextResponse): NextResponse {
+  // Prevent clickjacking
+  response.headers.set("X-Frame-Options", "DENY");
+
+  // Prevent MIME type sniffing
+  response.headers.set("X-Content-Type-Options", "nosniff");
+
+  // Enable XSS protection
+  response.headers.set("X-XSS-Protection", "1; mode=block");
+
+  // Referrer policy
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  // Content Security Policy (basic)
+  response.headers.set(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;"
+  );
+
+  // Strict Transport Security (if HTTPS)
+  if (process.env.NODE_ENV === "production") {
+    response.headers.set(
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains"
+    );
+  }
+
+  return response;
+}
+
+// Validate role access to specific paths
+function hasRoleAccess(userRole: string, pathname: string): boolean {
+  // Extract portal from pathname
+  const portalMatch = pathname.match(/^\/(admin|worker|inspector|delivery)/);
+  if (!portalMatch) return true; // Allow access to non-portal routes
+
+  const portal = portalMatch[1].toUpperCase() + "_PORTAL";
+  const allowedRoles = PORTAL_ROLES[portal as keyof typeof PORTAL_ROLES] || [];
+
+  return allowedRoles.includes(userRole);
+}
+
+export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
+  const ip =
+    req.headers.get("x-forwarded-for") ||
+    req.headers.get("x-real-ip") ||
+    req.headers.get("cf-connecting-ip") ||
+    "unknown";
 
   // Skip API routes and static files
   if (
     pathname.startsWith("/api/") ||
     pathname.startsWith("/_next/") ||
-    pathname.includes(".")
+    pathname.includes(".") ||
+    pathname.startsWith("/favicon")
   ) {
     return NextResponse.next();
   }
 
-  // Get session token from cookies
-  const sessionToken =
-    req.cookies.get("next-auth.session-token") ||
-    req.cookies.get("__Secure-next-auth.session-token");
+  // Rate limiting check (more lenient in development)
+  const isLoginPage = pathname.includes("/login");
+  const maxRequests = isLoginPage
+    ? RATE_LIMIT_CONFIG.loginMaxRequests
+    : RATE_LIMIT_CONFIG.maxRequests;
 
-  // Public routes
+  // Skip rate limiting in development for better developer experience
+  if (process.env.NODE_ENV === "development") {
+    // Only check rate limiting for actual login attempts (not just visiting login pages)
+    if (req.method === "POST" && isLoginPage) {
+      if (!checkRateLimit(ip, 10)) {
+        // 10 actual login attempts per 15 minutes
+        console.warn(`Login rate limit exceeded for IP: ${ip}`);
+        return new NextResponse("Too Many Login Attempts", { status: 429 });
+      }
+    }
+    // Skip general rate limiting in development
+  } else {
+    // Apply full rate limiting in production
+    if (!checkRateLimit(ip, maxRequests)) {
+      console.warn(`Rate limit exceeded for IP: ${ip} on path: ${pathname}`);
+      return new NextResponse("Too Many Requests", { status: 429 });
+    }
+  }
+
+  // Create response
+  let response = NextResponse.next();
+
+  // Add security headers to all responses
+  response = addSecurityHeaders(response);
+
+  // Public routes (allow access without authentication)
   if (pathname === "/" || pathname.includes("/login")) {
-    // If authenticated and trying to access login, redirect to dashboard
-    if (sessionToken && pathname.includes("/login")) {
+    try {
+      // Check if user is already authenticated
+      const token = await getToken({
+        req,
+        secret: process.env.NEXTAUTH_SECRET,
+      });
+
+      // If authenticated and trying to access login, redirect to appropriate dashboard
+      if (token && isLoginPage) {
+        const portalMatch = pathname.match(
+          /^\/(admin|worker|inspector|delivery)/
+        );
+        const portal = portalMatch ? portalMatch[1] : "admin";
+
+        // Validate role access before redirecting
+        if (hasRoleAccess(token.role as string, `/${portal}/dashboard`)) {
+          return NextResponse.redirect(
+            new URL(`/${portal}/dashboard`, req.url)
+          );
+        } else {
+          // If user doesn't have access to this portal, redirect to their appropriate portal
+          const userRole = (token.role as string).toLowerCase();
+          return NextResponse.redirect(
+            new URL(`/${userRole}/dashboard`, req.url)
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error checking authentication token:", error);
+      // Continue to allow access to public routes even if token check fails
+    }
+
+    return response;
+  }
+
+  // Protected routes - require authentication and proper role access
+  try {
+    const token = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
+
+    // No valid session - redirect to appropriate login
+    if (!token) {
       const portalMatch = pathname.match(
         /^\/(admin|worker|inspector|delivery)/
       );
       const portal = portalMatch ? portalMatch[1] : "admin";
-      return NextResponse.redirect(new URL(`/${portal}/dashboard`, req.url));
-    }
-    return NextResponse.next();
-  }
 
-  // Protected routes - require authentication
-  if (!sessionToken) {
-    // Determine which login page to redirect to based on the URL path
+      console.info(
+        `Unauthenticated access attempt to ${pathname}, redirecting to ${portal}/login`
+      );
+      return NextResponse.redirect(new URL(`/${portal}/login`, req.url));
+    }
+
+    // Check role-based access
+    if (!hasRoleAccess(token.role as string, pathname)) {
+      console.warn(
+        `Unauthorized access attempt by ${token.email} (${token.role}) to ${pathname}`
+      );
+
+      // Redirect to appropriate dashboard based on user's actual role
+      const userRole = (token.role as string).toLowerCase();
+      return NextResponse.redirect(new URL(`/${userRole}/dashboard`, req.url));
+    }
+
+    // Add user context to headers for server components
+    response.headers.set("x-user-id", token.id as string);
+    response.headers.set("x-user-role", token.role as string);
+    response.headers.set("x-user-email", (token.email as string) || "");
+
+    // Log successful access for audit purposes
+    if (process.env.NODE_ENV === "development") {
+      console.info(
+        `✅ Authorized access: ${token.email} (${token.role}) → ${pathname}`
+      );
+    }
+  } catch (error) {
+    console.error("Middleware authentication error:", error);
+
+    // On token validation error, redirect to login
     const portalMatch = pathname.match(/^\/(admin|worker|inspector|delivery)/);
     const portal = portalMatch ? portalMatch[1] : "admin";
     return NextResponse.redirect(new URL(`/${portal}/login`, req.url));
   }
 
-  // For now, allow all authenticated users to access any protected route
-  // In a production environment, you might want to decode the JWT to check roles
-  // but this avoids the jose library issues in Edge Runtime
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder files
+     */
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*|public).*)",
+  ],
 };

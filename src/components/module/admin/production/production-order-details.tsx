@@ -9,7 +9,7 @@ import { QualityChecks } from "./quality-checks";
 import { DeliveryAssignment } from "./delivery-assignment";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Play, Pause, CheckCircle, HelpCircle, Info, CalendarClock, User, ShoppingCart, AlertTriangle, PackageOpen, PackageX, Settings, CheckSquare, Truck, History, StickyNote, Clock, RefreshCw, Eye, Calendar, ChevronLeft, ChevronRight, Edit } from "lucide-react";
+import { Loader2, Play, Pause, CheckCircle, HelpCircle, Info, CalendarClock, User, ShoppingCart, AlertTriangle, PackageOpen, PackageX, Settings, CheckSquare, Truck, History, StickyNote, Clock, RefreshCw, Eye, Calendar, ChevronLeft, ChevronRight, Edit, TrendingUp } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -842,21 +842,26 @@ export function ProductionOrderDetails({
           </div>
 
           {/* Production Management Actions */}
-          <div className="mt-8">
+          {/* Production Management Section */}
+          <div className="mt-8 space-y-6">
+            {/* Workflow Progress Component - Top Row */}
             <Card className="border shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-medium">Production Management</CardTitle>
+                <CardTitle className="text-lg font-medium flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Workflow Progress
+                </CardTitle>
                 <CardDescription>
-                  Monitor workflow progress and manage production controls
+                  Monitor production phases and dependencies
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col sm:flex-row gap-3 items-start">
+                <div className="flex justify-center">
                   <ProductionWorkflowProgressButton
                     productionOrderId={order.id}
                     currentStatus={order.status}
                     showOverrideControls={true}
-                    className="sm:w-auto"
+                    className="w-full sm:w-auto"
                     onRefresh={async () => {
                       // Refresh the order data after any changes
                       const updatedOrder = await getProductionOrder(order.id);
@@ -872,23 +877,36 @@ export function ProductionOrderDetails({
                       ]);
                     }}
                   />
-                  
-                  {/* Production Control Buttons */}
-                  <ProductionOrderControlButtons
-                    order={order}
-                    updating={updating}
-                    onPause={() => handleProductionControl('pause')}
-                    onComplete={() => handleStatusUpdate(Status.COMPLETED)}
-                    onRefresh={async () => {
-                      // Refresh the order data after validation-based start
-                      const updatedOrder = await getProductionOrder(order.id);
-                      if (updatedOrder) {
-                        const processedOrder = convertPrismaOrderToTypescript(updatedOrder);
-                        setOrder(processedOrder);
-                      }
-                    }}
-                  />
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Production Control Buttons - Full Width Bottom Row */}
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-medium flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Production Control
+                </CardTitle>
+                <CardDescription>
+                  Start, pause, or complete production with validation
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ProductionOrderControlButtons
+                  order={order}
+                  updating={updating}
+                  onPause={() => handleProductionControl('pause')}
+                  onComplete={() => handleStatusUpdate(Status.COMPLETED)}
+                  onRefresh={async () => {
+                    // Refresh the order data after validation-based start
+                    const updatedOrder = await getProductionOrder(order.id);
+                    if (updatedOrder) {
+                      const processedOrder = convertPrismaOrderToTypescript(updatedOrder);
+                      setOrder(processedOrder);
+                    }
+                  }}
+                />
               </CardContent>
             </Card>
           </div>

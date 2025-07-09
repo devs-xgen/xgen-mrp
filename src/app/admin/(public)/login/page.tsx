@@ -2,6 +2,8 @@ import { Metadata } from "next"
 import Link from "next/link"
 import { LoginForm } from "@/components/global/login/login-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { ArrowLeft } from "lucide-react"
 
 export const metadata: Metadata = {
     title: "Admin Login",
@@ -10,24 +12,25 @@ export const metadata: Metadata = {
 
 export default function AdminLoginPage() {
     return (
-        <div className="container relative min-h-screen flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-1 lg:px-0">
-            <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+        <div className="min-h-screen flex items-center justify-center bg-background p-4">
+            <div className="w-full max-w-md mx-auto">
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-2xl font-semibold tracking-tight">
-                            Admin Login
-                        </CardTitle>
+                    <CardHeader className="space-y-1 text-center">
+                        <CardTitle className="text-2xl font-bold">Admin Login</CardTitle>
                         <CardDescription>
                             Enter your credentials to access the admin dashboard
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <LoginForm />
-                        <p className="mt-4 text-center text-sm text-muted-foreground">
-                            <Link href="/" className="hover:text-primary underline underline-offset-4">
-                                Back to home
+                        <div className="mt-6 text-center">
+                            <Link href="/">
+                                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+                                    <ArrowLeft className="mr-2 h-4 w-4" />
+                                    Back to home
+                                </Button>
                             </Link>
-                        </p>
+                        </div>
                     </CardContent>
                 </Card>
             </div>

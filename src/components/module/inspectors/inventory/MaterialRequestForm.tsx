@@ -17,7 +17,7 @@ import {
   requestMaterials,
   getWorkerWorkCenters,
   getInventoryItemsForRequest,
-} from "@/lib/actions/worker/inventory";
+} from "@/lib/actions/inspector/inventory";
 import { InventoryItem, RequestPriority } from "@/types/inspector/inventory";
 import { toast } from "@/hooks/use-toast";
 import MaterialRequestPdf from "./MaterialRequestPdf";
