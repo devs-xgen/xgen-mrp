@@ -243,6 +243,7 @@ export async function updateTaskStatus(
     let inspectionReadiness = false;
     let deliveryReadiness = false;
     let phaseProgressInfo = null;
+    const automaticTransitions = [];
 
     if (data.status === "COMPLETED" && previousStatus !== "COMPLETED") {
       // Import the phase checking functions
@@ -298,6 +299,11 @@ export async function updateTaskStatus(
               "Successfully notified inspectors:",
               notificationResult.message
             );
+            automaticTransitions.push({
+              type: "NOTIFICATION_SENT",
+              target: "INSPECTORS",
+              message: notificationResult.message,
+            });
           } else {
             console.error(
               "Failed to notify inspectors:",
@@ -309,6 +315,80 @@ export async function updateTaskStatus(
             "Error sending work center completion notifications:",
             notificationError
           );
+        }
+
+        // Automatically create quality checks if they don't exist
+        try {
+          const productionOrder = await prisma.productionOrder.findUnique({
+            where: { id: productionOrderId },
+            include: {
+              qualityChecks: true,
+              product: { select: { name: true } },
+            },
+          });
+
+          if (productionOrder && productionOrder.qualityChecks.length === 0) {
+            // Find available inspectors
+            const availableInspectors = await prisma.user.findMany({
+              where: {
+                role: "INSPECTOR",
+                status: "ACTIVE",
+              },
+              include: {
+                inspector: true,
+              },
+            });
+
+            if (availableInspectors.length > 0) {
+              // Auto-assign to the first available inspector or use round-robin logic
+              const selectedInspector = availableInspectors[0];
+
+              const { createQualityCheck } = await import(
+                "@/lib/actions/quality-checks"
+              );
+
+              // Create quality check automatically
+              const newQualityCheck = await createQualityCheck({
+                productionOrderId,
+                inspectorId: selectedInspector.id,
+                checkDate: new Date(),
+                defectsFound: null,
+                actionTaken: null,
+                notes: `Auto-created quality check after work center completion by ${session.user.email}`,
+              });
+
+              automaticTransitions.push({
+                type: "QUALITY_CHECK_CREATED",
+                target: "INSPECTION_PHASE",
+                qualityCheckId: newQualityCheck.id,
+                assignedInspector: selectedInspector.email,
+                message: "Quality check automatically created and assigned",
+              });
+
+              console.log(
+                `Auto-created quality check ${newQualityCheck.id} for production order ${productionOrderId}`
+              );
+            } else {
+              console.warn("No available inspectors found for auto-assignment");
+              automaticTransitions.push({
+                type: "QUALITY_CHECK_CREATION_FAILED",
+                target: "INSPECTION_PHASE",
+                reason: "No available inspectors",
+                message: "Manual quality check assignment required",
+              });
+            }
+          }
+        } catch (qualityCheckError) {
+          console.error(
+            "Error auto-creating quality check:",
+            qualityCheckError
+          );
+          automaticTransitions.push({
+            type: "QUALITY_CHECK_CREATION_ERROR",
+            target: "INSPECTION_PHASE",
+            error: qualityCheckError.message,
+            message: "Failed to auto-create quality check",
+          });
         }
       }
     }
@@ -346,6 +426,7 @@ export async function updateTaskStatus(
       inspectionReadiness,
       deliveryReadiness,
       phaseProgressInfo,
+      automaticTransitions,
       message: inspectionReadiness
         ? "Operation completed! All work centers are done - inspections can now start."
         : "Operation updated successfully.",

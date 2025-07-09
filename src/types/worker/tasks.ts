@@ -36,12 +36,23 @@ export interface TaskUpdateInput {
   timeSpent?: number; // In minutes
 }
 
+export interface AutomaticTransition {
+  type: string;
+  target: string;
+  message: string;
+  qualityCheckId?: string;
+  assignedInspector?: string;
+  reason?: string;
+  error?: string;
+}
+
 export interface TaskUpdateResult {
   success: boolean;
   triggeredPhaseUpdate: boolean;
   inspectionReadiness: boolean;
   deliveryReadiness: boolean;
   phaseProgressInfo: any; // Phase progress information
+  automaticTransitions: AutomaticTransition[];
   message: string;
 }
 

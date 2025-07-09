@@ -255,6 +255,7 @@ export async function updateTaskStatus(data: TaskUpdateInput) {
     // Check if this completion affects delivery readiness
     let deliveryReadiness = false;
     let allInspectionsComplete = false;
+    const automaticTransitions = [];
 
     if (data.status === "COMPLETED" && previousStatus !== "COMPLETED") {
       // Check if all inspections are now complete for this production order
@@ -289,6 +290,138 @@ export async function updateTaskStatus(data: TaskUpdateInput) {
         } catch (logError) {
           console.error("Failed to log inspector task completion:", logError);
         }
+
+        // Send notifications to delivery personnel
+        try {
+          const { notifyDeliveryInspectionsCompleted } = await import(
+            "@/lib/actions/notifications"
+          );
+          const notificationResult = await notifyDeliveryInspectionsCompleted(
+            productionOrderId,
+            session.user.id
+          );
+
+          if (notificationResult.success) {
+            console.log(
+              "Successfully notified delivery personnel:",
+              notificationResult.message
+            );
+            automaticTransitions.push({
+              type: "NOTIFICATION_SENT",
+              target: "DELIVERY_PERSONNEL",
+              message: notificationResult.message,
+            });
+          } else {
+            console.error(
+              "Failed to notify delivery personnel:",
+              notificationResult.error
+            );
+          }
+        } catch (notificationError) {
+          console.error(
+            "Error sending inspection completion notifications:",
+            notificationError
+          );
+        }
+
+        // Automatically create delivery assignment if it doesn't exist
+        try {
+          const existingDelivery = await prisma.deliveryAssignment.findUnique({
+            where: { productionOrderId },
+          });
+
+          if (!existingDelivery) {
+            // Find available delivery personnel
+            const availableDeliveryUsers = await prisma.user.findMany({
+              where: {
+                role: "DELIVERY",
+                status: "ACTIVE",
+              },
+              include: {
+                profile: true,
+              },
+            });
+
+            if (availableDeliveryUsers.length > 0) {
+              // Auto-assign to the first available delivery person or use round-robin logic
+              const selectedDeliveryUser = availableDeliveryUsers[0];
+
+              // Get production order details for delivery address
+              const productionOrderDetails =
+                await prisma.productionOrder.findUnique({
+                  where: { id: productionOrderId },
+                  include: {
+                    customerOrder: {
+                      include: {
+                        customer: true,
+                      },
+                    },
+                    product: {
+                      select: { name: true, sku: true },
+                    },
+                  },
+                });
+
+              const newDeliveryAssignment =
+                await prisma.deliveryAssignment.create({
+                  data: {
+                    productionOrderId,
+                    userId: selectedDeliveryUser.id,
+                    status: "PENDING",
+                    deliveryAddress:
+                      productionOrderDetails?.customerOrder?.customer
+                        ?.address || "Address to be confirmed",
+                    notes: `Auto-created delivery assignment after inspection completion by ${session.user.email}`,
+                    createdBy: session.user.id,
+                  },
+                });
+
+              automaticTransitions.push({
+                type: "DELIVERY_ASSIGNMENT_CREATED",
+                target: "DELIVERY_PHASE",
+                deliveryAssignmentId: newDeliveryAssignment.id,
+                assignedDeliveryUser: selectedDeliveryUser.email,
+                message:
+                  "Delivery assignment automatically created and assigned",
+              });
+
+              console.log(
+                `Auto-created delivery assignment ${newDeliveryAssignment.id} for production order ${productionOrderId}`
+              );
+            } else {
+              console.warn(
+                "No available delivery personnel found for auto-assignment"
+              );
+              automaticTransitions.push({
+                type: "DELIVERY_ASSIGNMENT_CREATION_FAILED",
+                target: "DELIVERY_PHASE",
+                reason: "No available delivery personnel",
+                message: "Manual delivery assignment required",
+              });
+            }
+          } else {
+            // Update existing delivery assignment to PENDING if it's not already active
+            if (existingDelivery.status === "PENDING") {
+              automaticTransitions.push({
+                type: "DELIVERY_ASSIGNMENT_READY",
+                target: "DELIVERY_PHASE",
+                deliveryAssignmentId: existingDelivery.id,
+                message: "Existing delivery assignment is now ready to proceed",
+              });
+            }
+          }
+        } catch (deliveryAssignmentError) {
+          console.error(
+            "Error managing delivery assignment:",
+            deliveryAssignmentError
+          );
+          automaticTransitions.push({
+            type: "DELIVERY_ASSIGNMENT_ERROR",
+            target: "DELIVERY_PHASE",
+            error: deliveryAssignmentError.message,
+            message: "Failed to auto-create delivery assignment",
+          });
+        }
       }
     }
 
@@ -321,6 +454,7 @@ export async function updateTaskStatus(data: TaskUpdateInput) {
       success: true,
       deliveryReadiness,
       allInspectionsComplete,
+      automaticTransitions,
       message: deliveryReadiness
         ? "Inspector task completed! All inspections are done - delivery can now start."
         : "Inspector task updated successfully.",
