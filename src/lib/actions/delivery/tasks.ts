@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { validateDeliveryStatusDependencies } from "@/lib/actions/production-order";
 
 // Helper function to serialize Prisma Decimal values
 function serializeDecimal(value: any) {
@@ -219,7 +220,7 @@ export async function getInProgressDeliveryTasks(userId: string) {
   }
 }
 
-// Update delivery task status
+// Update delivery task status with dependency validation
 export async function updateDeliveryTaskStatus(
   taskId: string,
   status: string,
@@ -235,10 +236,41 @@ export async function updateDeliveryTaskStatus(
       throw new Error("Invalid status");
     }
 
-    const updatedTask = await prisma.deliveryAssignment.update({
+    // Get the delivery assignment to validate dependencies
+    const deliveryAssignment = await prisma.deliveryAssignment.findUnique({
       where: {
         id: taskId,
         userId: session.user.id, // Ensure user can only update their own tasks
+      },
+      select: { productionOrderId: true, status: true },
+    });
+
+    if (!deliveryAssignment) {
+      throw new Error("Delivery task not found or unauthorized");
+    }
+
+    // Validate delivery status dependencies
+    const validation = await validateDeliveryStatusDependencies(
+      deliveryAssignment.productionOrderId,
+      status as any
+    );
+
+    if (!validation.isAllowed) {
+      const errorMessage = [
+        `Cannot update delivery status to ${status}.`,
+        ...validation.blockingReasons,
+        ...(validation.recommendations.length > 0
+          ? ["Recommendations:", ...validation.recommendations]
+          : []),
+      ].join(" ");
+
+      throw new Error(errorMessage);
+    }
+
+    const updatedTask = await prisma.deliveryAssignment.update({
+      where: {
+        id: taskId,
+        userId: session.user.id,
       },
       data: {
         status: status as any,
@@ -255,7 +287,11 @@ export async function updateDeliveryTaskStatus(
     return { success: true, task: serializeObject(updatedTask) };
   } catch (error) {
     console.error("Error updating delivery task status:", error);
-    throw new Error("Failed to update delivery task status");
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "Failed to update delivery task status"
+    );
   }
 }
 

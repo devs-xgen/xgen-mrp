@@ -21,6 +21,8 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
+  Users,
+  ArrowRight,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -49,12 +51,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { WorkflowImpactCard } from "./WorkflowImpactCard";
 
 interface TaskCardProps {
   task: WorkerTask;
+  workflowData?: {
+    phaseStatus?: any;
+    workCenterStatus?: any;
+    inspectionStatus?: any;
+    currentPhase?: string;
+    canStartInspection?: boolean;
+    canStartDelivery?: boolean;
+  };
 }
 
-export function TaskCard({ task }: TaskCardProps) {
+export function TaskCard({ task, workflowData }: TaskCardProps) {
   const [loading, setLoading] = useState<boolean>(false);
   const [expanded, setExpanded] = useState<boolean>(false);
   const [isTimerActive, setIsTimerActive] = useState<boolean>(false);
@@ -97,19 +108,37 @@ export function TaskCard({ task }: TaskCardProps) {
   const handleStatusChange = async (newStatus: Status) => {
     try {
       setLoading(true);
-      await updateTaskStatus({
+      const result = await updateTaskStatus({
         id: task.id,
         status: newStatus,
         notes,
       });
+      
+      // Enhanced feedback based on workflow impact
+      let toastTitle = "Task updated";
+      let toastDescription = `Task status changed to ${newStatus}`;
+      
+      if (result.triggeredPhaseUpdate) {
+        toastTitle = "Task completed with workflow impact!";
+        toastDescription = `Task marked as ${newStatus}. ${result.message}`;
+      }
+      
+      if (result.inspectionReadiness) {
+        toastDescription += " Quality inspection can now begin.";
+      }
+      
+      if (result.deliveryReadiness) {
+        toastDescription += " Delivery can now be scheduled.";
+      }
+
       toast({
-        title: "Task updated",
-        description: `Task status changed to ${newStatus}`,
+        title: toastTitle,
+        description: toastDescription,
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to update task status",
+        description: error.message || "Failed to update task status",
         variant: "destructive",
       });
     } finally {
@@ -210,6 +239,10 @@ export function TaskCard({ task }: TaskCardProps) {
     new Date(task.dueDate).getTime() < new Date().getTime() &&
     task.status !== Status.COMPLETED;
 
+  // Determine if this task is critical for workflow progression
+  const isWorkflowCritical = workflowData?.currentPhase === "work_centers" && 
+    task.status !== Status.COMPLETED;
+
   return (
     <Card
       className={`
@@ -217,6 +250,7 @@ export function TaskCard({ task }: TaskCardProps) {
       ${task.priority === "HIGH" ? "border-orange-400" : ""}
       ${isOverdue ? "bg-red-50" : ""}
       ${isTaskInactive ? "opacity-70 border-dashed" : ""}
+      ${isWorkflowCritical ? "border-blue-500 bg-blue-50/30" : ""}
     `}
     >
       <CardHeader className="pb-2">
@@ -231,6 +265,13 @@ export function TaskCard({ task }: TaskCardProps) {
               <Badge variant={getPriorityBadgeVariant(task.priority)}>
                 {task.priority}
               </Badge>
+
+              {isWorkflowCritical && (
+                <Badge variant="outline" className="border-blue-500 text-blue-600">
+                  <Users className="h-3 w-3 mr-1" />
+                  Critical for Team Progress
+                </Badge>
+              )}
 
               {isTaskInactive && (
                 <Badge variant="outline" className="border-amber-500 text-amber-500">
@@ -277,6 +318,15 @@ export function TaskCard({ task }: TaskCardProps) {
                 <p className="text-xs mt-1">You will be able to work on this task once the production order is started.</p>
               </div>
             </div>
+          )}
+
+          {/* Workflow Impact Card */}
+          {workflowData && !isTaskInactive && (
+            <WorkflowImpactCard 
+              task={task}
+              workflowData={workflowData}
+              className="mb-4"
+            />
           )}
           
           <div className="grid grid-cols-2 gap-4 text-sm mb-3">
@@ -370,12 +420,14 @@ export function TaskCard({ task }: TaskCardProps) {
 
           {task.status === Status.IN_PROGRESS && (
             <Button
-              variant="default"
+              variant={isWorkflowCritical ? "default" : "outline"}
               size="sm"
               onClick={() => handleStatusChange(Status.COMPLETED)}
               disabled={loading || isTaskInactive}
+              className={isWorkflowCritical ? "bg-blue-600 hover:bg-blue-700" : ""}
             >
-              <CheckCircle className="h-4 w-4 mr-1" /> Complete
+              <CheckCircle className="h-4 w-4 mr-1" /> 
+              {isWorkflowCritical ? "Complete & Enable Team" : "Complete"}
             </Button>
           )}
 

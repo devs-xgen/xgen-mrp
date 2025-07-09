@@ -609,6 +609,150 @@ export async function getAvailableCustomerOrders() {
   }
 }
 
+/**
+ * Validates if a production order has all required role assignments before starting production
+ * @param productionOrderId The ID of the production order to validate
+ * @returns Validation result with readiness status and issues
+ */
+export async function validateProductionOrderReadiness(
+  productionOrderId: string
+) {
+  try {
+    const assignmentData =
+      await getProductionOrderWithAssignments(productionOrderId);
+    const issues: string[] = [];
+
+    // Check work centers and workers
+    if (assignmentData.workCenters.length === 0) {
+      issues.push("No work centers assigned to this production order");
+    } else {
+      // Check if all work centers have assigned workers
+      const workCentersWithoutWorkers = assignmentData.workCenters.filter(
+        (wc) => wc.assignedUsers.length === 0
+      );
+
+      if (workCentersWithoutWorkers.length > 0) {
+        issues.push(
+          `${workCentersWithoutWorkers.length} work center(s) have no assigned workers: ${workCentersWithoutWorkers
+            .map((wc) => wc.name)
+            .join(", ")}`
+        );
+      }
+    }
+
+    // Check inspectors
+    if (assignmentData.inspectors.length === 0) {
+      issues.push(
+        "No quality control inspectors assigned to this production order"
+      );
+    }
+
+    // Check delivery assignment (optional but recommended)
+    if (!assignmentData.delivery) {
+      issues.push(
+        "No delivery personnel assigned (recommended for order fulfillment tracking)"
+      );
+    }
+
+    const isReady = issues.length === 0;
+
+    return {
+      isReady,
+      issues,
+      assignmentData,
+      validation: {
+        hasWorkCenters: assignmentData.workCenters.length > 0,
+        hasWorkers: assignmentData.workCenters.every(
+          (wc) => wc.assignedUsers.length > 0
+        ),
+        hasInspectors: assignmentData.inspectors.length > 0,
+        hasDelivery: !!assignmentData.delivery,
+        workCenterCount: assignmentData.workCenters.length,
+        workerCount: assignmentData.workCenters.reduce(
+          (acc, wc) => acc + wc.assignedUsers.length,
+          0
+        ),
+        inspectorCount: assignmentData.inspectors.length,
+      },
+    };
+  } catch (error) {
+    console.error("Error validating production order readiness:", error);
+    throw new Error("Failed to validate production order readiness");
+  }
+}
+
+/**
+ * Starts production for a production order with pre-validation of role assignments
+ * @param productionOrderId The ID of the production order to start
+ * @param notes Optional notes for the status change
+ * @returns The updated production order
+ */
+export async function startProductionWithValidation(
+  productionOrderId: string,
+  notes?: string
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    // First, validate that the production order has all required assignments
+    const validation =
+      await validateProductionOrderReadiness(productionOrderId);
+
+    if (!validation.isReady) {
+      const errorMessage = `Cannot start production due to missing role assignments:\n${validation.issues.join(
+        "\n"
+      )}`;
+      throw new Error(errorMessage);
+    }
+
+    // If validation passes, update the status to IN_PROGRESS
+    const order = await updateProductionOrderStatus(
+      productionOrderId,
+      Status.IN_PROGRESS,
+      notes || "Production started after role assignment validation"
+    );
+
+    // Log successful production start
+    try {
+      if (prisma.activityLog) {
+        await prisma.activityLog.create({
+          data: {
+            type: "PRODUCTION_STARTED",
+            userId: session.user.id,
+            details: {
+              productionOrderId,
+              validation: validation.validation,
+              notes: notes || null,
+              startedAt: new Date().toISOString(),
+            },
+          },
+        });
+      }
+    } catch (logError) {
+      console.error(
+        "Failed to create production start activity log:",
+        logError
+      );
+      // Continue even if logging fails
+    }
+
+    revalidatePath("/admin/production");
+    revalidatePath(`/admin/production/${productionOrderId}`);
+
+    return {
+      success: true,
+      order,
+      validation,
+      message:
+        "Production started successfully with all required roles assigned",
+    };
+  } catch (error) {
+    console.error("Error starting production with validation:", error);
+    throw error;
+  }
+}
+
 // Update the updateProductionOrderStatus function to handle errors when creating ActivityLog entries
 export async function updateProductionOrderStatus(
   productionOrderId: string,
@@ -829,5 +973,712 @@ export async function createInitialProductionLog(productionOrderId: string) {
   } catch (error) {
     console.error("Error creating initial production log:", error);
     return { success: false, error: String(error) };
+  }
+}
+
+export async function getProductionOrderWithAssignments(id: string) {
+  try {
+    const order = await prisma.productionOrder.findUnique({
+      where: { id },
+      include: {
+        product: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+          },
+        },
+        productVariant: {
+          select: {
+            id: true,
+            sku: true,
+            displayName: true,
+            sizeName: true,
+            colorName: true,
+          },
+        },
+        customerOrder: {
+          select: {
+            id: true,
+            orderNumber: true,
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+              },
+            },
+          },
+        },
+        // Work Center Operations with assigned workers
+        operations: {
+          include: {
+            workCenter: {
+              include: {
+                userAssignments: {
+                  include: {
+                    user: {
+                      include: {
+                        profile: {
+                          select: {
+                            firstName: true,
+                            lastName: true,
+                            phoneNumber: true,
+                            department: true,
+                            position: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                  where: {
+                    status: "ACTIVE",
+                  },
+                },
+                UserWorkCenter: {
+                  include: {
+                    user: {
+                      include: {
+                        profile: {
+                          select: {
+                            firstName: true,
+                            lastName: true,
+                            phoneNumber: true,
+                            department: true,
+                            position: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            assignedTo: {
+              include: {
+                profile: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                    phoneNumber: true,
+                    department: true,
+                    position: true,
+                  },
+                },
+              },
+            },
+            performedBy: {
+              include: {
+                profile: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                    phoneNumber: true,
+                    department: true,
+                    position: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        // Quality Checks with Inspector assignments
+        qualityChecks: {
+          include: {
+            inspector: {
+              include: {
+                profile: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                    phoneNumber: true,
+                    department: true,
+                    position: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        // Delivery Assignment
+        delivery: {
+          include: {
+            user: {
+              include: {
+                profile: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                    phoneNumber: true,
+                    department: true,
+                    position: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new Error("Production order not found");
+    }
+
+    // Get all inspectors assigned to this production order (through quality checks or operations)
+    const inspectorAssignments = await prisma.user.findMany({
+      where: {
+        role: "INSPECTOR",
+        OR: [
+          {
+            // Inspectors assigned through quality checks
+            inspections: {
+              some: {
+                productionOrderId: id,
+              },
+            },
+          },
+          {
+            // Inspectors assigned through operations
+            assignedOperations: {
+              some: {
+                productionOrderId: id,
+              },
+            },
+          },
+        ],
+      },
+      include: {
+        profile: {
+          select: {
+            firstName: true,
+            lastName: true,
+            phoneNumber: true,
+            department: true,
+            position: true,
+          },
+        },
+        inspector: {
+          select: {
+            specialization: true,
+            certificationLevel: true,
+            yearsOfExperience: true,
+          },
+        },
+      },
+    });
+
+    // Get work centers and their assigned users for this production order
+    const workCenterAssignments = await prisma.workCenter.findMany({
+      where: {
+        operations: {
+          some: {
+            productionOrderId: id,
+          },
+        },
+      },
+      include: {
+        userAssignments: {
+          include: {
+            user: {
+              include: {
+                profile: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                    phoneNumber: true,
+                    department: true,
+                    position: true,
+                  },
+                },
+              },
+            },
+          },
+          where: {
+            status: "ACTIVE",
+          },
+        },
+        UserWorkCenter: {
+          include: {
+            user: {
+              include: {
+                profile: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                    phoneNumber: true,
+                    department: true,
+                    position: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        operations: {
+          where: {
+            productionOrderId: id,
+          },
+          select: {
+            id: true,
+            status: true,
+            startTime: true,
+            endTime: true,
+            assignedTo: {
+              include: {
+                profile: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Process and format the assignment data
+    const assignmentData = {
+      productionOrder: order,
+      workCenters: workCenterAssignments.map((wc) => ({
+        id: wc.id,
+        name: wc.name,
+        description: wc.description,
+        capacityPerHour: wc.capacityPerHour,
+        efficiencyRate: wc.efficiencyRate,
+        status: wc.status,
+        assignedUsers: [
+          // From WorkCenterAssignment (newer model)
+          ...wc.userAssignments.map((assignment) => ({
+            id: assignment.user.id,
+            email: assignment.user.email,
+            role: assignment.user.role,
+            name: assignment.user.profile
+              ? `${assignment.user.profile.firstName} ${assignment.user.profile.lastName}`
+              : assignment.user.email,
+            phoneNumber: assignment.user.profile?.phoneNumber,
+            department: assignment.user.profile?.department,
+            position: assignment.user.profile?.position,
+            isPrimary: assignment.isPrimary,
+            assignmentType: "WorkCenterAssignment",
+          })),
+          // From UserWorkCenter (legacy model)
+          ...wc.UserWorkCenter.map((userWorkCenter) => ({
+            id: userWorkCenter.user.id,
+            email: userWorkCenter.user.email,
+            role: userWorkCenter.user.role,
+            name: userWorkCenter.user.profile
+              ? `${userWorkCenter.user.profile.firstName} ${userWorkCenter.user.profile.lastName}`
+              : userWorkCenter.user.email,
+            phoneNumber: userWorkCenter.user.profile?.phoneNumber,
+            department: userWorkCenter.user.profile?.department,
+            position: userWorkCenter.user.profile?.position,
+            isResponsible: userWorkCenter.isResponsible,
+            assignmentType: "UserWorkCenter",
+          })),
+        ],
+        operations: wc.operations,
+      })),
+      inspectors: inspectorAssignments.map((inspector) => ({
+        id: inspector.id,
+        email: inspector.email,
+        role: inspector.role,
+        name: inspector.profile
+          ? `${inspector.profile.firstName} ${inspector.profile.lastName}`
+          : inspector.email,
+        phoneNumber: inspector.profile?.phoneNumber,
+        department: inspector.profile?.department,
+        position: inspector.profile?.position,
+        specialization: inspector.inspector?.specialization,
+        certificationLevel: inspector.inspector?.certificationLevel,
+        yearsOfExperience: inspector.inspector?.yearsOfExperience,
+      })),
+      delivery: order.delivery
+        ? {
+            id: order.delivery.id,
+            userId: order.delivery.userId,
+            scheduledDate: order.delivery.scheduledDate,
+            status: order.delivery.status,
+            deliveryAddress: order.delivery.deliveryAddress,
+            notes: order.delivery.notes,
+            user: {
+              id: order.delivery.user.id,
+              email: order.delivery.user.email,
+              role: order.delivery.user.role,
+              name: order.delivery.user.profile
+                ? `${order.delivery.user.profile.firstName} ${order.delivery.user.profile.lastName}`
+                : order.delivery.user.email,
+              phoneNumber: order.delivery.user.profile?.phoneNumber,
+              department: order.delivery.user.profile?.department,
+              position: order.delivery.user.profile?.position,
+            },
+          }
+        : null,
+    };
+
+    return assignmentData;
+  } catch (error) {
+    console.error("Error fetching production order with assignments:", error);
+    throw error;
+  }
+}
+
+/**
+ * Checks if all work center operations are completed for a production order
+ * @param productionOrderId The ID of the production order to check
+ * @returns Object containing completion status and details
+ */
+export async function checkWorkCenterCompletion(productionOrderId: string) {
+  try {
+    const operations = await prisma.operation.findMany({
+      where: { productionOrderId },
+      include: {
+        workCenter: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    const totalOperations = operations.length;
+    const completedOperations = operations.filter(
+      (op) => op.status === "COMPLETED"
+    );
+    const inProgressOperations = operations.filter(
+      (op) => op.status === "IN_PROGRESS"
+    );
+    const pendingOperations = operations.filter(
+      (op) => op.status === "PENDING"
+    );
+
+    const allCompleted =
+      totalOperations > 0 && completedOperations.length === totalOperations;
+    const completionPercentage =
+      totalOperations > 0
+        ? Math.round((completedOperations.length / totalOperations) * 100)
+        : 0;
+
+    return {
+      allCompleted,
+      totalOperations,
+      completedCount: completedOperations.length,
+      inProgressCount: inProgressOperations.length,
+      pendingCount: pendingOperations.length,
+      completionPercentage,
+      operations: operations.map((op) => ({
+        id: op.id,
+        status: op.status,
+        workCenterId: op.workCenterId,
+        workCenterName: op.workCenter.name,
+        startTime: op.startTime,
+        endTime: op.endTime,
+      })),
+    };
+  } catch (error) {
+    console.error("Error checking work center completion:", error);
+    throw new Error("Failed to check work center completion");
+  }
+}
+
+/**
+ * Checks if all quality checks/inspections are completed for a production order
+ * @param productionOrderId The ID of the production order to check
+ * @returns Object containing inspection completion status and details
+ */
+export async function checkInspectionCompletion(productionOrderId: string) {
+  try {
+    const qualityChecks = await prisma.qualityCheck.findMany({
+      where: { productionOrderId },
+      include: {
+        inspector: {
+          include: {
+            profile: true,
+          },
+        },
+      },
+    });
+
+    const totalChecks = qualityChecks.length;
+    const completedChecks = qualityChecks.filter(
+      (qc) => qc.status === "COMPLETED"
+    );
+    const inProgressChecks = qualityChecks.filter(
+      (qc) => qc.status === "IN_PROGRESS"
+    );
+    const pendingChecks = qualityChecks.filter((qc) => qc.status === "PENDING");
+
+    const allCompleted =
+      totalChecks > 0 && completedChecks.length === totalChecks;
+    const completionPercentage =
+      totalChecks > 0
+        ? Math.round((completedChecks.length / totalChecks) * 100)
+        : 0;
+
+    return {
+      allCompleted,
+      totalChecks,
+      completedCount: completedChecks.length,
+      inProgressCount: inProgressChecks.length,
+      pendingCount: pendingChecks.length,
+      completionPercentage,
+      qualityChecks: qualityChecks.map((qc) => ({
+        id: qc.id,
+        status: qc.status,
+        inspectorId: qc.inspectorId,
+        inspectorName: qc.inspector.profile
+          ? `${qc.inspector.profile.firstName} ${qc.inspector.profile.lastName}`
+          : qc.inspector.email,
+        checkDate: qc.checkDate,
+        defectsFound: qc.defectsFound,
+        actionTaken: qc.actionTaken,
+        notes: qc.notes,
+      })),
+    };
+  } catch (error) {
+    console.error("Error checking inspection completion:", error);
+    throw new Error("Failed to check inspection completion");
+  }
+}
+
+/**
+ * Gets comprehensive production phase completion status
+ * @param productionOrderId The ID of the production order to check
+ * @returns Object containing all phase completion statuses
+ */
+export async function getProductionPhaseStatus(productionOrderId: string) {
+  try {
+    const [workCenterStatus, inspectionStatus] = await Promise.all([
+      checkWorkCenterCompletion(productionOrderId),
+      checkInspectionCompletion(productionOrderId),
+    ]);
+
+    // Check if delivery can be started (both work centers and inspections must be complete)
+    const canStartDelivery =
+      workCenterStatus.allCompleted && inspectionStatus.allCompleted;
+
+    // Determine current phase
+    let currentPhase: "work_centers" | "inspection" | "delivery" | "completed";
+    if (!workCenterStatus.allCompleted) {
+      currentPhase = "work_centers";
+    } else if (!inspectionStatus.allCompleted) {
+      currentPhase = "inspection";
+    } else {
+      currentPhase = "delivery";
+    }
+
+    return {
+      workCenters: workCenterStatus,
+      inspections: inspectionStatus,
+      canStartDelivery,
+      currentPhase,
+      overallProgress: {
+        workCentersComplete: workCenterStatus.allCompleted,
+        inspectionsComplete: inspectionStatus.allCompleted,
+        readyForDelivery: canStartDelivery,
+      },
+    };
+  } catch (error) {
+    console.error("Error getting production phase status:", error);
+    throw new Error("Failed to get production phase status");
+  }
+}
+
+/**
+ * Validates if delivery status can be updated based on production phase dependencies
+ * @param productionOrderId The ID of the production order
+ * @param newStatus The proposed new delivery status
+ * @returns Validation result with allowed status and blocking issues
+ */
+export async function validateDeliveryStatusDependencies(
+  productionOrderId: string,
+  newStatus: Status
+) {
+  try {
+    const phaseStatus = await getProductionPhaseStatus(productionOrderId);
+    const issues: string[] = [];
+    let isAllowed = true;
+
+    // Get current delivery assignment
+    const deliveryAssignment = await prisma.deliveryAssignment.findUnique({
+      where: { productionOrderId },
+      select: { status: true },
+    });
+
+    const currentDeliveryStatus = deliveryAssignment?.status || "PENDING";
+
+    // Define delivery status progression rules
+    switch (newStatus) {
+      case "IN_PROGRESS":
+        // Can start delivery only if work centers and inspections are completed
+        if (!phaseStatus.canStartDelivery) {
+          isAllowed = false;
+          if (!phaseStatus.workCenters.allCompleted) {
+            issues.push(
+              `Work center operations must be completed first. Progress: ${phaseStatus.workCenters.completedCount}/${phaseStatus.workCenters.totalOperations} (${phaseStatus.workCenters.completionPercentage}%)`
+            );
+          }
+          if (!phaseStatus.inspections.allCompleted) {
+            issues.push(
+              `Quality inspections must be completed first. Progress: ${phaseStatus.inspections.completedCount}/${phaseStatus.inspections.totalChecks} (${phaseStatus.inspections.completionPercentage}%)`
+            );
+          }
+        }
+        break;
+
+      case "COMPLETED":
+        // Can complete delivery only if it was previously in progress AND dependencies are met
+        if (currentDeliveryStatus !== "IN_PROGRESS") {
+          isAllowed = false;
+          issues.push(
+            "Delivery must be in progress before it can be completed"
+          );
+        }
+        if (!phaseStatus.canStartDelivery) {
+          isAllowed = false;
+          issues.push(
+            "Cannot complete delivery while work centers or inspections are incomplete"
+          );
+        }
+        break;
+
+      case "PENDING":
+        // Can always set back to pending (allows reset/reassignment)
+        break;
+
+      case "CANCELLED":
+        // Can always cancel
+        break;
+
+      default:
+        isAllowed = false;
+        issues.push(`Invalid delivery status: ${newStatus}`);
+    }
+
+    return {
+      isAllowed,
+      issues,
+      currentPhase: phaseStatus.currentPhase,
+      phaseStatus,
+      currentDeliveryStatus,
+      proposedStatus: newStatus,
+      blockingReasons: issues,
+      recommendations: generateDeliveryRecommendations(phaseStatus, newStatus),
+    };
+  } catch (error) {
+    console.error("Error validating delivery status dependencies:", error);
+    throw new Error("Failed to validate delivery status dependencies");
+  }
+}
+
+/**
+ * Helper function to generate recommendations for delivery status updates
+ */
+function generateDeliveryRecommendations(
+  phaseStatus: any,
+  proposedStatus: Status
+): string[] {
+  const recommendations: string[] = [];
+
+  if (proposedStatus === "IN_PROGRESS" && !phaseStatus.canStartDelivery) {
+    if (!phaseStatus.workCenters.allCompleted) {
+      recommendations.push(
+        "Complete all work center operations before starting delivery"
+      );
+      recommendations.push(
+        `Remaining operations: ${phaseStatus.workCenters.totalOperations - phaseStatus.workCenters.completedCount}`
+      );
+    }
+    if (!phaseStatus.inspections.allCompleted) {
+      recommendations.push(
+        "Complete all quality inspections before starting delivery"
+      );
+      recommendations.push(
+        `Remaining inspections: ${phaseStatus.inspections.totalChecks - phaseStatus.inspections.completedCount}`
+      );
+    }
+  }
+
+  if (phaseStatus.canStartDelivery && proposedStatus === "PENDING") {
+    recommendations.push(
+      "Production is ready for delivery - consider starting delivery process"
+    );
+  }
+
+  return recommendations;
+}
+
+/**
+ * Gets enhanced production order details with phase status for UI display
+ * @param productionOrderId The ID of the production order
+ * @returns Enhanced production order data with phase status
+ */
+export async function getProductionOrderWithPhaseStatus(
+  productionOrderId: string
+) {
+  try {
+    // Get basic production order data
+    const productionOrder = await getProductionOrder(productionOrderId);
+    if (!productionOrder) {
+      throw new Error("Production order not found");
+    }
+
+    // Get phase status
+    const phaseStatus = await getProductionPhaseStatus(productionOrderId);
+
+    // Get delivery assignment
+    const deliveryAssignment = await prisma.deliveryAssignment.findUnique({
+      where: { productionOrderId },
+      include: {
+        user: {
+          include: {
+            profile: true,
+          },
+        },
+      },
+    });
+
+    // Enhanced delivery info
+    const deliveryInfo = deliveryAssignment
+      ? {
+          id: deliveryAssignment.id,
+          userId: deliveryAssignment.userId,
+          userName: deliveryAssignment.user.profile
+            ? `${deliveryAssignment.user.profile.firstName} ${deliveryAssignment.user.profile.lastName}`
+            : deliveryAssignment.user.email,
+          status: deliveryAssignment.status,
+          scheduledDate: deliveryAssignment.scheduledDate,
+          deliveryAddress: deliveryAssignment.deliveryAddress,
+          notes: deliveryAssignment.notes,
+          canStart:
+            phaseStatus.canStartDelivery &&
+            deliveryAssignment.status === "PENDING",
+          canComplete:
+            phaseStatus.canStartDelivery &&
+            deliveryAssignment.status === "IN_PROGRESS",
+          createdAt: deliveryAssignment.createdAt,
+          updatedAt: deliveryAssignment.updatedAt,
+        }
+      : null;
+
+    return {
+      ...productionOrder,
+      phaseStatus,
+      deliveryInfo,
+      workflowProgress: {
+        currentPhase: phaseStatus.currentPhase,
+        workCentersComplete: phaseStatus.workCenters.allCompleted,
+        inspectionsComplete: phaseStatus.inspections.allCompleted,
+        readyForDelivery: phaseStatus.canStartDelivery,
+        deliveryStatus: deliveryAssignment?.status || "NOT_ASSIGNED",
+      },
+    };
+  } catch (error) {
+    console.error("Error getting production order with phase status:", error);
+    throw new Error("Failed to get production order with phase status");
   }
 }

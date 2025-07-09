@@ -42,6 +42,7 @@ import { useToast } from "@/hooks/use-toast"
 import { deleteProductionOrder } from "@/lib/actions/production-order"
 import { ProductionOrderColumn } from "@/types/admin/production-order"
 import { ProductionOrderActionDialog } from './production-order-action-dialog'
+import { PreProductionVerificationDialog } from './pre-production-verification-dialog'
 import { formatDate } from "@/lib/utils"
 
 interface DataTableRowActionsProps {
@@ -54,6 +55,7 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [verificationDialogOpen, setVerificationDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [confirmationText, setConfirmationText] = useState("")
@@ -62,6 +64,28 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
 
   const handleView = () => {
     router.push(`/admin/production/${productionOrder.id}`)
+  }
+
+  const handleStartProduction = async () => {
+    // This will be called from the verification dialog
+    try {
+      const { updateProductionOrderStatus } = await import("@/lib/actions/production-order")
+      await updateProductionOrderStatus(productionOrder.id, "IN_PROGRESS")
+      
+      toast({
+        title: "✅ Production Started",
+        description: `Production for "${productionOrder.productName}" has been started successfully`,
+      })
+      
+      // Refresh the page to update the list
+      if (onSuccess) {
+        await onSuccess()
+      } else {
+        window.location.reload()
+      }
+    } catch (error) {
+      throw error // Re-throw to let the dialog handle it
+    }
   }
 
   const handleDelete = async () => {
@@ -133,11 +157,22 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-[160px]">
+        <DropdownMenuContent align="end" className="w-[180px]">
           <DropdownMenuItem onClick={handleView}>
             <EyeIcon className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
             View Details
           </DropdownMenuItem>
+          
+          {/* Pre-Production Verification - Only show for PENDING orders */}
+          {productionOrder.status === "PENDING" && (
+            <DropdownMenuItem
+              disabled={isLoading}
+              onClick={() => setVerificationDialogOpen(true)}
+            >
+              <ShieldAlert className="mr-2 h-3.5 w-3.5 text-blue-600" />
+              Verify & Start
+            </DropdownMenuItem>
+          )}
           
           <DropdownMenuItem
             disabled={isLoading}
@@ -160,6 +195,14 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Pre-Production Verification Dialog */}
+      <PreProductionVerificationDialog
+        open={verificationDialogOpen}
+        onOpenChange={setVerificationDialogOpen}
+        productionOrderId={productionOrder.id}
+        onProceedToProduction={handleStartProduction}
+      />
 
       {/* Production Order Action Dialog */}
       <ProductionOrderActionDialog

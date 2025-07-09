@@ -1,17 +1,20 @@
 import { Status } from '@prisma/client';
 import { Button } from '@/components/ui/button';
-import { Loader2, Play, Pause, CheckCircle, HelpCircle, AlertTriangle } from 'lucide-react';
+import { Loader2, Play, Pause, CheckCircle, HelpCircle, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { startProductionWithValidation } from '@/lib/actions/production-order';
 
 interface ProductionOrderControlButtonsProps {
   order: any;
   updating: boolean;
-  onStart: () => void;
+  onStart?: () => void;
   onPause: () => void;
   onComplete: () => void;
+  onRefresh?: () => void;
 }
 
 export const ProductionOrderControlButtons: React.FC<ProductionOrderControlButtonsProps> = ({
@@ -20,11 +23,48 @@ export const ProductionOrderControlButtons: React.FC<ProductionOrderControlButto
   onStart,
   onPause,
   onComplete,
+  onRefresh,
 }) => {
+  const [validationStarting, setValidationStarting] = useState(false);
+  const { toast } = useToast();
+  
   const hasBOM = order.bom && order.bom.entries && order.bom.entries.length > 0;
   const canStartProduction = order.status === Status.PENDING && hasBOM;
   const canPauseProduction = order.status === Status.IN_PROGRESS;
   const nextStatus = order.status === Status.PENDING ? Status.IN_PROGRESS : order.status === Status.IN_PROGRESS ? Status.COMPLETED : null;
+
+  // New function to handle production start with validation
+  const handleValidatedStart = async () => {
+    try {
+      setValidationStarting(true);
+      
+      // Use the new validation function to start production
+      const result = await startProductionWithValidation(order.id);
+      
+      toast({
+        title: "✅ Production Started",
+        description: result.message || "Production order has been started successfully",
+      });
+      
+      // Call the optional refresh callback if provided
+      if (onRefresh) {
+        await onRefresh();
+      }
+      
+      // Call the original onStart callback if provided (for backward compatibility)
+      if (onStart) {
+        onStart();
+      }
+    } catch (err: any) {
+      toast({
+        title: "❌ Cannot Start Production",
+        description: err?.message || "Failed to start production",
+        variant: "destructive",
+      });
+    } finally {
+      setValidationStarting(false);
+    }
+  };
 
   return (
     <Card className="bg-muted/10 border-none">
@@ -89,28 +129,40 @@ export const ProductionOrderControlButtons: React.FC<ProductionOrderControlButto
               <TooltipTrigger asChild>
                 <div>
                   <Button
-                    onClick={onStart}
-                    disabled={updating || !canStartProduction}
+                    onClick={handleValidatedStart}
+                    disabled={updating || validationStarting || !canStartProduction}
                     className="bg-green-600 hover:bg-green-700 h-14 px-6 gap-2 rounded-xl"
                   >
-                    {updating && canStartProduction ? (
+                    {(updating && canStartProduction) || validationStarting ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
-                      <Play className="h-5 w-5" />
+                      <ShieldAlert className="h-5 w-5" />
                     )}
-                    <span className="font-medium">Start Production</span>
+                    <span className="font-medium">
+                      {validationStarting ? "Validating..." : "Start Production"}
+                    </span>
                   </Button>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="w-64 p-3">
+              <TooltipContent side="bottom" className="w-80 p-3">
                 <div className="space-y-2">
-                  <p className="font-medium">Start Production</p>
-                  <p className="text-sm">Activates the production order and makes all tasks visible to workers.</p>
+                  <p className="font-medium">Start Production with Validation</p>
+                  <p className="text-sm">Validates role assignments (work centers, workers, inspectors) and starts production if all requirements are met.</p>
                   {!hasBOM && (
-                    <p className="text-xs text-amber-600">Cannot start: No Bill of Materials (BOM) is defined for this product.</p>
+                    <p className="text-xs text-amber-600">⚠️ Cannot start: No Bill of Materials (BOM) is defined for this product.</p>
                   )}
-                  {!(!hasBOM) && !canStartProduction && (
-                    <p className="text-xs text-amber-600">This order cannot be started in its current state.</p>
+                  {hasBOM && !canStartProduction && (
+                    <p className="text-xs text-amber-600">⚠️ This order cannot be started in its current state.</p>
+                  )}
+                  {canStartProduction && (
+                    <div className="text-xs text-blue-600 space-y-1">
+                      <p>✓ Will validate:</p>
+                      <ul className="list-disc list-inside ml-2 space-y-1">
+                        <li>Work centers with assigned workers</li>
+                        <li>Quality control inspectors</li>
+                        <li>Delivery personnel (recommended)</li>
+                      </ul>
+                    </div>
                   )}
                 </div>
               </TooltipContent>
@@ -178,9 +230,29 @@ export const ProductionOrderControlButtons: React.FC<ProductionOrderControlButto
         {!hasBOM && (
           <div className="mt-4 flex items-center gap-2 justify-center sm:justify-start bg-amber-50 text-amber-700 border border-amber-200 rounded-md p-3">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
-            <p className="text-sm font-medium">
-              Cannot start production: No Bill of Materials (BOM) is defined for this product.
-            </p>
+            <div>
+              <p className="text-sm font-medium">
+                Cannot start production: No Bill of Materials (BOM) is defined for this product.
+              </p>
+              <p className="text-xs mt-1">
+                Please define a BOM for this product before starting production.
+              </p>
+            </div>
+          </div>
+        )}
+        
+        {/* Show info about validation when BOM exists */}
+        {hasBOM && canStartProduction && (
+          <div className="mt-4 flex items-center gap-2 justify-center sm:justify-start bg-blue-50 text-blue-700 border border-blue-200 rounded-md p-3">
+            <ShieldAlert className="h-5 w-5 text-blue-500" />
+            <div>
+              <p className="text-sm font-medium">
+                Starting production will validate role assignments
+              </p>
+              <p className="text-xs mt-1">
+                System will check for assigned work centers, workers, inspectors, and delivery personnel before allowing production to start.
+              </p>
+            </div>
           </div>
         )}
       </CardContent>

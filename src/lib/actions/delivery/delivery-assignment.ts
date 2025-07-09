@@ -9,6 +9,7 @@ import {
   UpdateDeliveryAssignmentInput,
 } from "@/types/admin/production-order";
 import { DeliveryAssignment, Status } from "@prisma/client";
+import { validateDeliveryStatusDependencies } from "@/lib/actions/production-order";
 
 // Helper function to serialize Prisma Decimal values
 function serializeDecimal(value: any) {
@@ -217,7 +218,7 @@ export async function getDeliveryAssignmentById(id: string) {
   }
 }
 
-// Update delivery assignment status
+// Update delivery assignment status with dependency validation
 export async function updateDeliveryAssignmentStatus(
   id: string,
   status: Status
@@ -227,6 +228,34 @@ export async function updateDeliveryAssignmentStatus(
     const validStatuses = ["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
     if (!validStatuses.includes(status)) {
       throw new Error("Invalid status");
+    }
+
+    // Get the delivery assignment to validate dependencies
+    const deliveryAssignment = await prisma.deliveryAssignment.findUnique({
+      where: { id },
+      select: { productionOrderId: true, status: true },
+    });
+
+    if (!deliveryAssignment) {
+      throw new Error("Delivery assignment not found");
+    }
+
+    // Validate delivery status dependencies
+    const validation = await validateDeliveryStatusDependencies(
+      deliveryAssignment.productionOrderId,
+      status
+    );
+
+    if (!validation.isAllowed) {
+      const errorMessage = [
+        `Cannot update delivery status to ${status}.`,
+        ...validation.blockingReasons,
+        ...(validation.recommendations.length > 0
+          ? ["Recommendations:", ...validation.recommendations]
+          : []),
+      ].join(" ");
+
+      throw new Error(errorMessage);
     }
 
     const assignment = await prisma.deliveryAssignment.update({
@@ -257,7 +286,11 @@ export async function updateDeliveryAssignmentStatus(
     return serializeObject(assignment);
   } catch (error) {
     console.error("Error updating delivery assignment status:", error);
-    throw new Error("Failed to update delivery assignment status");
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "Failed to update delivery assignment status"
+    );
   }
 }
 

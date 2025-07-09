@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, Play, CheckCircle } from 'lucide-react';
 import { Status } from '@prisma/client';
-import { getProductionOrder, updateProductionOrderStatus } from '@/lib/actions/production-order';
+import { getProductionOrder, updateProductionOrderStatus, startProductionWithValidation } from '@/lib/actions/production-order';
 import { ProductBOM } from '@/types/admin/bom';
 import { useToast } from '@/hooks/use-toast';
 import { ProductionOrderControlButtons } from './ProductionOrderControlButtons';
@@ -147,18 +147,19 @@ export const ProductionOrderActionDialog: React.FC<ProductionOrderActionDialogPr
                   setStatusLoading(Status.IN_PROGRESS);
                   setError(null);
                   try {
-                    await updateProductionOrderStatus(order.id, Status.IN_PROGRESS);
+                    // Use the new validation function to start production
+                    const result = await startProductionWithValidation(order.id);
                     toast({
-                      title: 'Status Updated',
-                      description: `Production order status updated to in progress`,
+                      title: '✅ Production Started',
+                      description: result.message || 'Production order started successfully with role validation',
                     });
                     if (onSuccess) await onSuccess();
                     onOpenChange(false);
                   } catch (err: any) {
-                    setError(err?.message || 'Failed to update status');
+                    setError(err?.message || 'Failed to start production');
                     toast({
-                      title: 'Error',
-                      description: err?.message || 'Failed to update status',
+                      title: '❌ Cannot Start Production',
+                      description: err?.message || 'Failed to start production - role assignments may be incomplete',
                       variant: 'destructive',
                     });
                   } finally {

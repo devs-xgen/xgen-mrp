@@ -845,9 +845,16 @@ export function ProductionOrderDetails({
             <ProductionOrderControlButtons
               order={order}
               updating={updating}
-              onStart={() => handleProductionControl('start')}
               onPause={() => handleProductionControl('pause')}
               onComplete={() => handleStatusUpdate(Status.COMPLETED)}
+              onRefresh={async () => {
+                // Refresh the order data after validation-based start
+                const updatedOrder = await getProductionOrder(order.id);
+                if (updatedOrder) {
+                  const processedOrder = convertPrismaOrderToTypescript(updatedOrder);
+                  setOrder(processedOrder);
+                }
+              }}
             />
           </div>
 

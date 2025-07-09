@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { validateDeliveryStatusDependencies } from "@/lib/actions/production-order";
 
 // Helper function to serialize Prisma Decimal values
 function serializeDecimal(value: any) {
@@ -190,11 +191,42 @@ export async function updateDeliveryOrderNotes(orderId: string, notes: string) {
   }
 }
 
-// Mark delivery order as started
+// Mark delivery order as started with dependency validation
 export async function startDeliveryOrder(orderId: string) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) throw new Error("Unauthorized");
+
+    // Get the delivery assignment to validate dependencies
+    const deliveryAssignment = await prisma.deliveryAssignment.findUnique({
+      where: {
+        id: orderId,
+        userId: session.user.id,
+      },
+      select: { productionOrderId: true, status: true },
+    });
+
+    if (!deliveryAssignment) {
+      throw new Error("Delivery order not found or unauthorized");
+    }
+
+    // Validate delivery status dependencies
+    const validation = await validateDeliveryStatusDependencies(
+      deliveryAssignment.productionOrderId,
+      "IN_PROGRESS"
+    );
+
+    if (!validation.isAllowed) {
+      const errorMessage = [
+        "Cannot start delivery.",
+        ...validation.blockingReasons,
+        ...(validation.recommendations.length > 0
+          ? ["Recommendations:", ...validation.recommendations]
+          : []),
+      ].join(" ");
+
+      throw new Error(errorMessage);
+    }
 
     const updatedOrder = await prisma.deliveryAssignment.update({
       where: {
@@ -215,11 +247,13 @@ export async function startDeliveryOrder(orderId: string) {
     return { success: true, order: serializeObject(updatedOrder) };
   } catch (error) {
     console.error("Error starting delivery order:", error);
-    throw new Error("Failed to start delivery order");
+    throw new Error(
+      error instanceof Error ? error.message : "Failed to start delivery order"
+    );
   }
 }
 
-// Complete delivery order
+// Complete delivery order with dependency validation
 export async function completeDeliveryOrder(
   orderId: string,
   completionNotes?: string
@@ -227,6 +261,37 @@ export async function completeDeliveryOrder(
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) throw new Error("Unauthorized");
+
+    // Get the delivery assignment to validate dependencies
+    const deliveryAssignment = await prisma.deliveryAssignment.findUnique({
+      where: {
+        id: orderId,
+        userId: session.user.id,
+      },
+      select: { productionOrderId: true, status: true },
+    });
+
+    if (!deliveryAssignment) {
+      throw new Error("Delivery order not found or unauthorized");
+    }
+
+    // Validate delivery status dependencies
+    const validation = await validateDeliveryStatusDependencies(
+      deliveryAssignment.productionOrderId,
+      "COMPLETED"
+    );
+
+    if (!validation.isAllowed) {
+      const errorMessage = [
+        "Cannot complete delivery.",
+        ...validation.blockingReasons,
+        ...(validation.recommendations.length > 0
+          ? ["Recommendations:", ...validation.recommendations]
+          : []),
+      ].join(" ");
+
+      throw new Error(errorMessage);
+    }
 
     const updatedOrder = await prisma.deliveryAssignment.update({
       where: {
@@ -249,7 +314,11 @@ export async function completeDeliveryOrder(
     return { success: true, order: serializeObject(updatedOrder) };
   } catch (error) {
     console.error("Error completing delivery order:", error);
-    throw new Error("Failed to complete delivery order");
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "Failed to complete delivery order"
+    );
   }
 }
 

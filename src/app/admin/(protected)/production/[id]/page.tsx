@@ -6,10 +6,11 @@ import { notFound } from "next/navigation";
 
 import { ProductionOrderDetails } from "@/components/module/admin/production/production-order-details";
 import { ProductionQRGenerator } from "@/components/module/admin/production/production-qr-generator";
+import { ProductionWorkflowProgress } from "@/components/module/admin/production/production-workflow-progress";
 import { Button } from "@/components/ui/button";
 import { getDeliveryUsers, getDeliveryAssignment } from "@/lib/actions/delivery/delivery-assignment";
 import { getActiveInspectors } from "@/lib/actions/inspector";
-import { getProductionOrder, getAvailableWorkCenters } from "@/lib/actions/production-order";
+import { getProductionOrderWithPhaseStatus, getAvailableWorkCenters } from "@/lib/actions/production-order";
 import { convertDecimals } from "@/lib/convertDecimals";
 
 interface ProductionOrderPageProps {
@@ -22,12 +23,12 @@ export async function generateMetadata({
   params,
 }: ProductionOrderPageProps): Promise<Metadata> {
   const { id } = await params;
-  const order = await getProductionOrder(id);
-  if (!order) return { title: "Production Order Not Found" };
+  const orderData = await getProductionOrderWithPhaseStatus(id);
+  if (!orderData) return { title: "Production Order Not Found" };
 
   return {
-    title: `Production Order - ${order.product.name}`,
-    description: `Details for production order of ${order.quantity} units of ${order.product.name}`,
+    title: `Production Order - ${orderData.product.name}`,
+    description: `Details for production order of ${orderData.quantity} units of ${orderData.product.name}`,
   };
 }
 
@@ -35,24 +36,20 @@ export default async function ProductionOrderPage({
   params,
 }: ProductionOrderPageProps) {
   const { id } = await params;
-  const [orderDataRaw, workCenters, deliveryUsers, deliveryAssignment] =
-    await Promise.all([
-      getProductionOrder(id),
-      getAvailableWorkCenters(),
-      getDeliveryUsers(),
-      getDeliveryAssignment(id),
-    ]);
+  
+  // Get enhanced production order data with phase status
+  const [orderDataRaw, workCenters, deliveryUsers] = await Promise.all([
+    getProductionOrderWithPhaseStatus(id),
+    getAvailableWorkCenters(),
+    getDeliveryUsers(),
+  ]);
 
   if (!orderDataRaw) notFound();
 
   // Convert Decimal fields to numbers for client component compatibility
   const orderData = convertDecimals(orderDataRaw);
 
-  // Remove debug logs
-  console.log(
-    "Original quality checks data:",
-    JSON.stringify(orderData.qualityChecks, null, 2)
-  );
+  console.log("Enhanced order data with phase status:", JSON.stringify(orderData, null, 2));
 
   const allInspectors = await getActiveInspectors(); // fetch once
   const inspectorsMap = new Map();
@@ -85,7 +82,9 @@ export default async function ProductionOrderPage({
         },
       },
     })),
-    deliveryAssignment: deliveryAssignment,
+    
+    // Use the enhanced delivery info
+    deliveryAssignment: orderData.deliveryInfo,
   };
 
   return (
@@ -135,26 +134,39 @@ export default async function ProductionOrderPage({
             status: orderData.status,
             priority: orderData.priority,
             delivery: {
-              address: deliveryAssignment?.deliveryAddress || "Not Assigned",
-              contactName: deliveryAssignment?.userName || "Not Assigned",
+              address: orderData.deliveryInfo?.deliveryAddress || "Not Assigned",
+              contactName: orderData.deliveryInfo?.userName || "Not Assigned",
               contactPhone: "Not Assigned",
-              estimatedDelivery: deliveryAssignment?.scheduledDate || new Date(),
-              instructions: deliveryAssignment?.notes || "Not Assigned"
+              estimatedDelivery: orderData.deliveryInfo?.scheduledDate || new Date(),
+              instructions: orderData.deliveryInfo?.notes || "Not Assigned"
             },
             assignments: {
               qualityInspector: order.qualityChecks?.[0]?.inspectorName || "Not Assigned",
-              logisticsCoordinator: deliveryAssignment?.userName || "Not Assigned"
+              logisticsCoordinator: orderData.deliveryInfo?.userName || "Not Assigned"
             }
           }}
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        <ProductionOrderDetails
-          order={order as any}
-          workCenters={workCenters}
-          deliveryUsers={deliveryUsers}
-        />
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        {/* Workflow Progress - Responsive positioning */}
+        <div className="xl:col-span-1 order-1">
+          <div className="sticky top-6">
+            <ProductionWorkflowProgress 
+              phaseStatus={orderData.phaseStatus}
+              deliveryInfo={orderData.deliveryInfo}
+            />
+          </div>
+        </div>
+        
+        {/* Production Order Details - Takes remaining space */}
+        <div className="xl:col-span-3 order-2">
+          <ProductionOrderDetails
+            order={order as any}
+            workCenters={workCenters}
+            deliveryUsers={deliveryUsers}
+          />
+        </div>
       </div>
     </div>
   );

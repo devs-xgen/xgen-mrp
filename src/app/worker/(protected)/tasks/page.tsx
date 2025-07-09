@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { getMyTasks, getTaskStatistics } from "@/lib/actions/worker/tasks";
+import { getMyTasks, getTaskStatistics, getProductionOrderDetailsWithPhases } from "@/lib/actions/worker/tasks";
 import { TasksList, TaskAnalyticsModal } from "@/components/module/worker/tasks";
 import { Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +16,42 @@ export const metadata: Metadata = {
 
 export default async function TasksPage() {
   const [tasks, stats] = await Promise.all([getMyTasks(), getTaskStatistics()]);
+
+  // Get unique production order IDs from tasks
+  const productionOrderIds = [...new Set(
+    tasks
+      .filter(task => task.productionOrderId)
+      .map(task => task.productionOrderId!)
+  )];
+
+  // Fetch workflow data for each production order
+  const workflowDataPromises = productionOrderIds.map(async (orderId) => {
+    try {
+      const orderDetails = await getProductionOrderDetailsWithPhases(orderId);
+      return {
+        productionOrderId: orderId,
+        workflowData: {
+          phaseStatus: orderDetails.phaseStatus,
+          workCenterStatus: orderDetails.workCenterStatus,
+          inspectionStatus: orderDetails.inspectionStatus,
+          currentPhase: orderDetails.currentPhase,
+          canStartInspection: orderDetails.canStartInspection,
+          canStartDelivery: orderDetails.canStartDelivery,
+        }
+      };
+    } catch (error) {
+      console.error(`Failed to fetch workflow data for order ${orderId}:`, error);
+      return {
+        productionOrderId: orderId,
+        workflowData: null
+      };
+    }
+  });
+
+  const workflowResults = await Promise.all(workflowDataPromises);
+  const workflowDataMap = new Map(
+    workflowResults.map(result => [result.productionOrderId, result.workflowData])
+  );
 
   // Count inactive tasks
   const inactiveTasks = tasks.filter(task => task.isActive === false);
@@ -51,7 +87,7 @@ export default async function TasksPage() {
 
       {/* Task List - Show immediately */}
       <Suspense fallback={<div>Loading tasks...</div>}>
-        <TasksList tasks={tasks} />
+        <TasksList tasks={tasks} workflowDataMap={workflowDataMap} />
       </Suspense>
     </div>
   );

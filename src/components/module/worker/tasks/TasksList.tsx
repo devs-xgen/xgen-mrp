@@ -9,9 +9,10 @@ import { TaskCard } from "./TaskCard";
 
 interface TasksListProps {
   tasks: WorkerTask[];
+  workflowDataMap?: Map<string, any>;
 }
 
-export function TasksList({ tasks }: TasksListProps) {
+export function TasksList({ tasks, workflowDataMap }: TasksListProps) {
   const [activeTab, setActiveTab] = useState<string>("all");
 
   // Group tasks by status
@@ -42,6 +43,14 @@ export function TasksList({ tasks }: TasksListProps) {
   };
 
   const filteredTasks = getFilteredTasks();
+
+  // Helper function to get workflow data for a task
+  const getWorkflowDataForTask = (task: WorkerTask) => {
+    if (!workflowDataMap || !task.productionOrderId) {
+      return undefined;
+    }
+    return workflowDataMap.get(task.productionOrderId);
+  };
 
   return (
     <Card>
@@ -82,7 +91,11 @@ export function TasksList({ tasks }: TasksListProps) {
                 </div>
               ) : (
                 filteredTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} />
+                  <TaskCard 
+                    key={task.id} 
+                    task={task} 
+                    workflowData={getWorkflowDataForTask(task)}
+                  />
                 ))
               )}
             </div>
@@ -96,7 +109,11 @@ export function TasksList({ tasks }: TasksListProps) {
                 </div>
               ) : (
                 filteredTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} />
+                  <TaskCard 
+                    key={task.id} 
+                    task={task} 
+                    workflowData={getWorkflowDataForTask(task)}
+                  />
                 ))
               )}
             </div>
@@ -110,7 +127,11 @@ export function TasksList({ tasks }: TasksListProps) {
                 </div>
               ) : (
                 filteredTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} />
+                  <TaskCard 
+                    key={task.id} 
+                    task={task} 
+                    workflowData={getWorkflowDataForTask(task)}
+                  />
                 ))
               )}
             </div>
@@ -124,7 +145,11 @@ export function TasksList({ tasks }: TasksListProps) {
                 </div>
               ) : (
                 filteredTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} />
+                  <TaskCard 
+                    key={task.id} 
+                    task={task} 
+                    workflowData={getWorkflowDataForTask(task)}
+                  />
                 ))
               )}
             </div>
@@ -138,7 +163,11 @@ export function TasksList({ tasks }: TasksListProps) {
                 </div>
               ) : (
                 filteredTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} />
+                  <TaskCard 
+                    key={task.id} 
+                    task={task} 
+                    workflowData={getWorkflowDataForTask(task)}
+                  />
                 ))
               )}
             </div>
@@ -159,7 +188,11 @@ export function TasksList({ tasks }: TasksListProps) {
                     </p>
                   </div>
                   {filteredTasks.map((task) => (
-                    <TaskCard key={task.id} task={task} />
+                    <TaskCard 
+                      key={task.id} 
+                      task={task} 
+                      workflowData={getWorkflowDataForTask(task)}
+                    />
                   ))}
                 </>
               )}
