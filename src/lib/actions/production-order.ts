@@ -737,6 +737,34 @@ export async function startProductionWithValidation(
       // Continue even if logging fails
     }
 
+    // Send notifications to all assigned personnel
+    try {
+      const { notifyProductionStarted } = await import(
+        "@/lib/actions/notifications"
+      );
+      const notificationResult = await notifyProductionStarted(
+        productionOrderId,
+        session.user.id
+      );
+
+      if (notificationResult.success) {
+        console.log(
+          "Successfully notified production team:",
+          notificationResult.message
+        );
+      } else {
+        console.error(
+          "Failed to notify production team:",
+          notificationResult.error
+        );
+      }
+    } catch (notificationError) {
+      console.error(
+        "Error sending production start notifications:",
+        notificationError
+      );
+    }
+
     revalidatePath("/admin/production");
     revalidatePath(`/admin/production/${productionOrderId}`);
 
@@ -1680,5 +1708,395 @@ export async function getProductionOrderWithPhaseStatus(
   } catch (error) {
     console.error("Error getting production order with phase status:", error);
     throw new Error("Failed to get production order with phase status");
+  }
+}
+
+/**
+ * Admin override function to bypass workflow dependencies in exceptional cases
+ * @param productionOrderId The ID of the production order
+ * @param overrideType The type of override being performed
+ * @param overrideReason Admin's reason for the override
+ * @param targetStatus The status to set regardless of dependencies
+ * @param adminUserId The admin performing the override
+ * @returns Result of the override operation
+ */
+export async function adminWorkflowOverride(
+  productionOrderId: string,
+  overrideType:
+    | "START_PRODUCTION"
+    | "BYPASS_WORK_CENTERS"
+    | "BYPASS_INSPECTIONS"
+    | "FORCE_STATUS",
+  overrideReason: string,
+  targetStatus?: Status,
+  adminUserId?: string
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    // Verify admin role
+    if (session.user.role !== "ADMIN") {
+      throw new Error("Only administrators can perform workflow overrides");
+    }
+
+    const userId = adminUserId || session.user.id;
+
+    // Get current production order and validation status
+    const productionOrder = await prisma.productionOrder.findUnique({
+      where: { id: productionOrderId },
+      include: {
+        product: true,
+        operations: true,
+        qualityChecks: true,
+        deliveryAssignment: true,
+      },
+    });
+
+    if (!productionOrder) {
+      throw new Error("Production order not found");
+    }
+
+    // Get current validation status for audit
+    const validation =
+      await validateProductionOrderReadiness(productionOrderId);
+    const phaseStatus = await getProductionPhaseStatus(productionOrderId);
+
+    let result: any = {};
+    const overrideDetails: any = {
+      type: overrideType,
+      reason: overrideReason,
+      timestamp: new Date().toISOString(),
+      adminUserId: userId,
+      productionOrderId,
+      originalValidation: validation,
+      originalPhaseStatus: phaseStatus,
+      beforeStatus: productionOrder.status,
+    };
+
+    switch (overrideType) {
+      case "START_PRODUCTION":
+        // Force start production without role assignment validation
+        if (targetStatus && targetStatus !== Status.IN_PROGRESS) {
+          throw new Error(
+            "START_PRODUCTION override can only set status to IN_PROGRESS"
+          );
+        }
+
+        result = await prisma.productionOrder.update({
+          where: { id: productionOrderId },
+          data: {
+            status: Status.IN_PROGRESS,
+            modifiedBy: userId,
+            notes: `Admin override: ${overrideReason}`,
+          },
+        });
+
+        overrideDetails.afterStatus = Status.IN_PROGRESS;
+        overrideDetails.bypassedValidations = validation.issues;
+        break;
+
+      case "BYPASS_WORK_CENTERS":
+        // Allow inspections to start even if work centers aren't complete
+        if (!targetStatus) {
+          throw new Error(
+            "Target status required for BYPASS_WORK_CENTERS override"
+          );
+        }
+
+        result = await updateProductionOrderStatus(
+          productionOrderId,
+          targetStatus,
+          `Admin override (bypass work centers): ${overrideReason}`
+        );
+
+        overrideDetails.afterStatus = targetStatus;
+        overrideDetails.bypassedDependency = "work_center_completion";
+        overrideDetails.workCenterStatus = phaseStatus.workCenters;
+        break;
+
+      case "BYPASS_INSPECTIONS":
+        // Allow delivery to start even if inspections aren't complete
+        if (!targetStatus) {
+          throw new Error(
+            "Target status required for BYPASS_INSPECTIONS override"
+          );
+        }
+
+        result = await updateProductionOrderStatus(
+          productionOrderId,
+          targetStatus,
+          `Admin override (bypass inspections): ${overrideReason}`
+        );
+
+        overrideDetails.afterStatus = targetStatus;
+        overrideDetails.bypassedDependency = "inspection_completion";
+        overrideDetails.inspectionStatus = phaseStatus.inspections;
+        break;
+
+      case "FORCE_STATUS":
+        // Force any status change regardless of normal rules
+        if (!targetStatus) {
+          throw new Error("Target status required for FORCE_STATUS override");
+        }
+
+        result = await updateProductionOrderStatus(
+          productionOrderId,
+          targetStatus,
+          `Admin override (force status): ${overrideReason}`
+        );
+
+        overrideDetails.afterStatus = targetStatus;
+        overrideDetails.bypassedValidations = "all_status_validations";
+        break;
+
+      default:
+        throw new Error(`Invalid override type: ${overrideType}`);
+    }
+
+    // Create comprehensive audit log
+    try {
+      await prisma.activityLog.create({
+        data: {
+          type: "ADMIN_WORKFLOW_OVERRIDE",
+          userId,
+          details: overrideDetails,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to create admin override audit log:", logError);
+      // Don't fail the override if logging fails, but warn
+    }
+
+    // Create a separate critical audit entry for security
+    try {
+      await prisma.activityLog.create({
+        data: {
+          type: "SECURITY_ADMIN_ACTION",
+          userId,
+          details: {
+            action: "WORKFLOW_OVERRIDE",
+            resource: "ProductionOrder",
+            resourceId: productionOrderId,
+            severity: "HIGH",
+            overrideType,
+            reason: overrideReason,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to create security audit log:", logError);
+    }
+
+    revalidatePath("/admin/production");
+    revalidatePath(`/admin/production/${productionOrderId}`);
+
+    return {
+      success: true,
+      result,
+      overrideDetails,
+      message: `Admin override completed: ${overrideType} for production order ${productionOrderId}`,
+      warning:
+        "This action bypassed normal workflow validations. Review audit logs for compliance.",
+    };
+  } catch (error) {
+    console.error("Error performing admin workflow override:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get audit trail for workflow overrides on a production order
+ * @param productionOrderId The ID of the production order
+ * @returns List of override audit entries
+ */
+export async function getWorkflowOverrideAuditTrail(productionOrderId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    // Only admins can view override audit trails
+    if (session.user.role !== "ADMIN") {
+      throw new Error("Only administrators can view override audit trails");
+    }
+
+    const overrideLogs = await prisma.activityLog.findMany({
+      where: {
+        type: "ADMIN_WORKFLOW_OVERRIDE",
+        details: {
+          path: ["productionOrderId"],
+          equals: productionOrderId,
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return overrideLogs.map((log) => ({
+      id: log.id,
+      type: log.details.type,
+      reason: log.details.reason,
+      timestamp: log.details.timestamp,
+      adminUser: {
+        id: log.user.id,
+        email: log.user.email,
+        name: log.user.profile
+          ? `${log.user.profile.firstName} ${log.user.profile.lastName}`
+          : "Unknown",
+      },
+      overrideDetails: {
+        beforeStatus: log.details.beforeStatus,
+        afterStatus: log.details.afterStatus,
+        bypassedValidations: log.details.bypassedValidations,
+        bypassedDependency: log.details.bypassedDependency,
+        originalValidation: log.details.originalValidation,
+        originalPhaseStatus: log.details.originalPhaseStatus,
+      },
+      createdAt: log.createdAt,
+    }));
+  } catch (error) {
+    console.error("Error getting workflow override audit trail:", error);
+    throw error;
+  }
+}
+
+/**
+ * Admin function to check if a workflow override is recommended
+ * @param productionOrderId The ID of the production order
+ * @returns Recommendation for potential overrides
+ */
+export async function getWorkflowOverrideRecommendations(
+  productionOrderId: string
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    if (session.user.role !== "ADMIN") {
+      throw new Error("Only administrators can get override recommendations");
+    }
+
+    const validation =
+      await validateProductionOrderReadiness(productionOrderId);
+    const phaseStatus = await getProductionPhaseStatus(productionOrderId);
+
+    const productionOrder = await prisma.productionOrder.findUnique({
+      where: { id: productionOrderId },
+      select: {
+        status: true,
+        dueDate: true,
+        priority: true,
+        createdAt: true,
+      },
+    });
+
+    if (!productionOrder) {
+      throw new Error("Production order not found");
+    }
+
+    const recommendations: any[] = [];
+    const now = new Date();
+    const isOverdue = productionOrder.dueDate < now;
+    const isUrgent =
+      productionOrder.priority === "URGENT" ||
+      productionOrder.priority === "HIGH";
+    const daysSinceCreated = Math.floor(
+      (now.getTime() - productionOrder.createdAt.getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+
+    // Analyze issues and suggest overrides
+    if (!validation.isReady && productionOrder.status === "PENDING") {
+      if (isOverdue || isUrgent) {
+        recommendations.push({
+          type: "START_PRODUCTION",
+          severity: isOverdue ? "HIGH" : "MEDIUM",
+          reason: isOverdue
+            ? "Production order is overdue - consider emergency start"
+            : "High priority order - role assignments may be expedited during production",
+          suggestedReason: isOverdue
+            ? `Emergency start due to overdue status (due: ${productionOrder.dueDate.toISOString().split("T")[0]})`
+            : `Priority production order requires immediate start`,
+          blockedBy: validation.issues,
+        });
+      }
+
+      if (daysSinceCreated >= 3) {
+        recommendations.push({
+          type: "START_PRODUCTION",
+          severity: "MEDIUM",
+          reason: "Production order has been pending for over 3 days",
+          suggestedReason: `Long-pending order - expedite role assignments or override to prevent further delays`,
+          blockedBy: validation.issues,
+        });
+      }
+    }
+
+    // Check for inspection bottlenecks
+    if (
+      phaseStatus.workCenters.allCompleted &&
+      !phaseStatus.inspections.allCompleted
+    ) {
+      const daysSinceWorkCentersComplete = 1; // Simplified - would need actual completion date
+      if (daysSinceWorkCentersComplete >= 1 && (isUrgent || isOverdue)) {
+        recommendations.push({
+          type: "BYPASS_INSPECTIONS",
+          severity: isOverdue ? "HIGH" : "MEDIUM",
+          reason:
+            "Work centers complete but inspections delayed - consider expedited quality check",
+          suggestedReason: `${isOverdue ? "Overdue" : "Priority"} order - approve for delivery with post-delivery quality verification`,
+          blockedBy: ["Incomplete quality inspections"],
+        });
+      }
+    }
+
+    // Check for delivery bottlenecks
+    if (
+      phaseStatus.workCenters.allCompleted &&
+      phaseStatus.inspections.allCompleted &&
+      isOverdue
+    ) {
+      recommendations.push({
+        type: "FORCE_STATUS",
+        severity: "HIGH",
+        reason: "All phases complete but delivery delayed",
+        suggestedReason: `Force delivery completion for overdue order`,
+        targetStatus: "COMPLETED",
+      });
+    }
+
+    return {
+      productionOrderId,
+      currentStatus: productionOrder.status,
+      isOverdue,
+      isUrgent,
+      daysSinceCreated,
+      validation,
+      phaseStatus,
+      recommendations,
+      warningMessage:
+        recommendations.length > 0
+          ? "Override recommendations available - use with caution and document thoroughly"
+          : "No workflow overrides recommended at this time",
+    };
+  } catch (error) {
+    console.error("Error getting workflow override recommendations:", error);
+    throw error;
   }
 }

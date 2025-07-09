@@ -68,6 +68,7 @@ import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ProductBOM } from '@/types/admin/bom';
 import { ProductionOrderControlButtons } from './ProductionOrderControlButtons';
+import { ProductionWorkflowProgress } from './production-workflow-progress';
 import { formatCurrencyPHP } from '@/lib/constant';
 import {
   Tabs,
@@ -840,8 +841,29 @@ export function ProductionOrderDetails({
             </Card>
           </div>
 
-          {/* Production Control Buttons */}
-          <div className="mt-8">
+          {/* Workflow Progress with Override Controls */}
+          <div className="mt-8 space-y-6">
+            <ProductionWorkflowProgress
+              productionOrderId={order.id}
+              currentStatus={order.status}
+              showOverrideControls={true}
+              onRefresh={async () => {
+                // Refresh the order data after any changes
+                const updatedOrder = await getProductionOrder(order.id);
+                if (updatedOrder) {
+                  const processedOrder = convertPrismaOrderToTypescript(updatedOrder);
+                  setOrder(processedOrder);
+                }
+                // Also refresh all sections
+                await Promise.all([
+                  refreshOperations(),
+                  refreshQualityChecks(),
+                  refreshDelivery(),
+                ]);
+              }}
+            />
+            
+            {/* Production Control Buttons */}
             <ProductionOrderControlButtons
               order={order}
               updating={updating}

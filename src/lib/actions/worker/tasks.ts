@@ -282,6 +282,34 @@ export async function updateTaskStatus(
         } catch (logError) {
           console.error("Failed to log work center completion:", logError);
         }
+
+        // Send notifications to inspectors
+        try {
+          const { notifyInspectorsWorkCentersCompleted } = await import(
+            "@/lib/actions/notifications"
+          );
+          const notificationResult = await notifyInspectorsWorkCentersCompleted(
+            productionOrderId,
+            session.user.id
+          );
+
+          if (notificationResult.success) {
+            console.log(
+              "Successfully notified inspectors:",
+              notificationResult.message
+            );
+          } else {
+            console.error(
+              "Failed to notify inspectors:",
+              notificationResult.error
+            );
+          }
+        } catch (notificationError) {
+          console.error(
+            "Error sending work center completion notifications:",
+            notificationError
+          );
+        }
       }
     }
 

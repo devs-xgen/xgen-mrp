@@ -252,6 +252,34 @@ export async function updateQualityCheck(
         } catch (logError) {
           console.error("Failed to log inspection completion:", logError);
         }
+
+        // Send notifications to delivery personnel
+        try {
+          const { notifyDeliveryInspectionsCompleted } = await import(
+            "@/lib/actions/notifications"
+          );
+          const notificationResult = await notifyDeliveryInspectionsCompleted(
+            productionOrderId,
+            session.user.id
+          );
+
+          if (notificationResult.success) {
+            console.log(
+              "Successfully notified delivery personnel:",
+              notificationResult.message
+            );
+          } else {
+            console.error(
+              "Failed to notify delivery personnel:",
+              notificationResult.error
+            );
+          }
+        } catch (notificationError) {
+          console.error(
+            "Error sending inspection completion notifications:",
+            notificationError
+          );
+        }
       }
     }
 
