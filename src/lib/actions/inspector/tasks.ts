@@ -1016,3 +1016,162 @@ export async function getInspectorTasksWithDependencies() {
     throw new Error("Failed to fetch inspector tasks with dependencies");
   }
 }
+
+
+export async function getInspectorTasks() {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) throw new Error("Unauthorized")
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    // Find the inspector's work centers
+    const userWorkCenters = await prisma.userWorkCenter.findMany({
+      where: { userId: session.user.id },
+      select: { workCenterId: true },
+    })
+
+    const workCenterIds = userWorkCenters.map((uwc) => uwc.workCenterId)
+
+    // Get operations for these work centers that are due today
+    const operations = await prisma.operation.findMany({
+      where: {
+        workCenterId: { in: workCenterIds },
+        OR: [
+          { startTime: { gte: today, lt: tomorrow } },
+          { endTime: { gte: today, lt: tomorrow } },
+          { status: Status.IN_PROGRESS },
+        ],
+      },
+      include: {
+        productionOrder: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                sku: true,
+              },
+            },
+          },
+        },
+        workCenter: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: [{ status: "asc" }, { startTime: "asc" }],
+      take: 5, // Limit to top 5 for dashboard
+    })
+
+    return operations.map((op) => ({
+      id: op.id,
+      title: op.productionOrder.product.name,
+      description: `${op.productionOrder.product.name} (${op.productionOrder.product.sku})`,
+      startDate: op.startTime,
+      dueDate: op.endTime,
+      status: op.status,
+      priority: op.productionOrder.priority,
+      notes: op.notes,
+      productionOrderId: op.productionOrderId,
+      workCenterId: op.workCenterId,
+      workCenterName: op.workCenter.name,
+      quantity: op.productionOrder.quantity,
+      productionStatus: op.productionOrder.status,
+      isActive: true, // Default to true for simplicity
+    }))
+  } catch (error) {
+    console.error("Error fetching inspector tasks:", error)
+    throw new Error("Failed to fetch inspector tasks")
+  }
+}
+
+
+// Update task status function
+export async function updatesTaskStatus({
+  id,
+  status,
+  notes,
+}: {
+  id: string
+  status: Status
+  notes?: string
+}) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) throw new Error("Unauthorized")
+
+    // Update the operation status
+    const updatedOperation = await prisma.operation.update({
+      where: { id },
+      data: {
+        status,
+        notes: notes || undefined,
+        // Update timestamps based on status
+        ...(status === Status.IN_PROGRESS && {
+          actualStartTime: new Date(),
+        }),
+        ...(status === Status.COMPLETED && {
+          actualEndTime: new Date(),
+        }),
+      },
+      include: {
+        productionOrder: true,
+      },
+    })
+
+    // If operation is completed, check if we should update production order status
+    if (status === Status.COMPLETED) {
+      // Check if all operations for this production order are completed
+      const allOperations = await prisma.operation.findMany({
+        where: {
+          productionOrderId: updatedOperation.productionOrderId,
+        },
+      })
+
+      const allCompleted = allOperations.every((op) => op.status === Status.COMPLETED)
+
+      if (allCompleted) {
+        // Update production order status to completed
+        await prisma.productionOrder.update({
+          where: { id: updatedOperation.productionOrderId },
+          data: {
+            status: Status.COMPLETED,
+            actualEndDate: new Date(),
+          },
+        })
+      } else {
+        // If at least one operation is in progress, update production order to in progress
+        const hasInProgress = allOperations.some((op) => op.status === Status.IN_PROGRESS)
+        if (hasInProgress && updatedOperation.productionOrder.status === Status.PENDING) {
+          await prisma.productionOrder.update({
+            where: { id: updatedOperation.productionOrderId },
+            data: {
+              status: Status.IN_PROGRESS,
+              actualStartDate: new Date(),
+            },
+          })
+        }
+      }
+    }
+
+    // If operation is started, update production order to in progress if it's still pending
+    if (status === Status.IN_PROGRESS && updatedOperation.productionOrder.status === Status.PENDING) {
+      await prisma.productionOrder.update({
+        where: { id: updatedOperation.productionOrderId },
+        data: {
+          status: Status.IN_PROGRESS,
+          actualStartDate: new Date(),
+        },
+      })
+    }
+
+    return { success: true, operation: updatedOperation }
+  } catch (error) {
+    console.error("Error updating task status:", error)
+    return { success: false, error: "Failed to update task status" }
+  }
+}

@@ -25,28 +25,28 @@ import {
 import { Status } from "@prisma/client"
 import Link from "next/link"
 import { useNotifications } from "@/hooks/use-notification"
-import { UpdateFormData } from "@/types/inspector/inspector"
+import { InspectorsTask, UpdateFormData } from "@/types/inspector/inspector"
 import { TaskStatistics } from "@/types/worker"
 
 // Define the task type based on your server action return
-interface TodaysTask {
-  id: string
-  description: string
-  startDate: Date | null
-  dueDate: Date | null
-  status: Status
-  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT"
-  workCenterName: string
-  quantity: number
-}
+// interface TodaysTask {
+//   id: string
+//   description: string
+//   startDate: Date | null
+//   dueDate: Date | null
+//   status: Status
+//   priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT"
+//   workCenterName: string
+//   quantity: number
+// }
 
 interface InspectorDashboardClientProps {
-  initialTodaysTasks: TodaysTask[]
+  initialTodaysTasks: InspectorsTask[]
   initialStats: TaskStatistics
 }
 
 export function InspectorDashboardClient({ initialTodaysTasks, initialStats }: InspectorDashboardClientProps) {
-  const [todaysTasks, setTodaysTasks] = useState<TodaysTask[]>(initialTodaysTasks)
+  const [todaysTasks, setTodaysTasks] = useState<InspectorsTask[]>(initialTodaysTasks)
   const [stats, setStats] = useState<TaskStatistics>(initialStats)
   const [selectedTask, setSelectedTask] = useState<string | null>(null)
   const [showUpdateForm, setShowUpdateForm] = useState(false)
@@ -70,9 +70,9 @@ export function InspectorDashboardClient({ initialTodaysTasks, initialStats }: I
 
     try {
       // Dynamic import to avoid SSR issues
-      const { getTodaysTasks, getTaskStatistics } = await import("@/lib/actions/inspector/tasks")
+      const { getInspectorTasks, getTaskStatistics } = await import("@/lib/actions/inspector/tasks")
 
-      const [newTodaysTasks, newStats] = await Promise.all([getTodaysTasks(), getTaskStatistics()])
+      const [newTodaysTasks, newStats] = await Promise.all([getInspectorTasks(), getTaskStatistics()])
 
       setTodaysTasks(newTodaysTasks)
       setStats(newStats)

@@ -1,8 +1,9 @@
 // src/app/inspector/(protected)/dashboard/page.tsx
 import type { Metadata } from "next"
-import { getTodaysTasks, getTaskStatistics } from "@/lib/actions/inspector/tasks"
+import { getInspectorTasks, getTaskStatistics } from "@/lib/actions/inspector/tasks"
 import { Suspense } from "react"
-import { InspectorDashboardClient } from "@/components/module/inspectors/dashboard/inspector-dashboard-client"
+import { InspectorDashboardClient } from "@/components/module/inspectors/dashboard/InspectorDashboardClient"
+// import { InspectorDashboardClient } from "@/components/module/inspectors/dashboard/inspector-dashboard-client"
 
 // Force dynamic rendering since this page uses authentication
 export const dynamic = 'force-dynamic'
@@ -14,12 +15,13 @@ export const metadata: Metadata = {
 
 export default async function InspectorDashboard() {
   // Server-side data fetching using your existing server actions
-  const [todaysTasks, stats] = await Promise.all([getTodaysTasks(), getTaskStatistics()])
+  const [todaysTasks, stats] = await Promise.all([getInspectorTasks(), getTaskStatistics()])
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Suspense fallback={<div className="p-6">Loading dashboard...</div>}>
-        <InspectorDashboardClient initialTodaysTasks={todaysTasks} initialStats={stats} />
+        <InspectorDashboardClient initialInspectorTasks={todaysTasks} initialStats={stats} />
+        {/* <InspectorDashboardClient initialTodaysTasks={todaysTasks} initialStats={stats} /> */}
       </Suspense>
     </div>
   )
