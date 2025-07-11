@@ -3,8 +3,10 @@ import { getMyTasks, getTaskStatistics, getProductionOrderDetailsWithPhases } fr
 import { TasksList, TaskAnalyticsModal } from "@/components/module/worker/tasks";
 import { Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, Settings } from "lucide-react";
 import { Status } from "@prisma/client";
+import Link from "next/link";
 
 // Force dynamic rendering since this page uses authentication
 export const dynamic = 'force-dynamic'
@@ -66,7 +68,15 @@ export default async function TasksPage() {
             View and manage your assigned production tasks
           </p>
         </div>
-        <TaskAnalyticsModal tasks={tasks} stats={stats} />
+        <div className="flex gap-2">
+          <Link href="/worker/tasks/operations">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Task Operations
+            </Button>
+          </Link>
+          <TaskAnalyticsModal tasks={tasks} stats={stats} />
+        </div>
       </div>
 
       {/* Inactive Tasks Warning - Only show if there are inactive tasks */}

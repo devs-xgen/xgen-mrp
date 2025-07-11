@@ -136,8 +136,20 @@ export const workerNavItems: NavItem[] = [
   {
     icon: ClipboardList,
     label: "Tasks",
-    href: "/worker/tasks",
-    description: "View and manage your assigned tasks",
+    items: [
+      {
+        icon: ClipboardList,
+        label: "My Tasks",
+        href: "/worker/tasks",
+        description: "View and manage your assigned tasks",
+      },
+      {
+        icon: Settings,
+        label: "Task Operations",
+        href: "/worker/tasks/operations",
+        description: "Manage production order operations",
+      },
+    ],
   },
   {
     icon: QrCode,

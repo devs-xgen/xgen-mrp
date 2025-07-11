@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 @import "react-day-picker/dist/style.css";
+@import "../styles/task-operations.css";
 
 body {
   font-family: Arial, Helvetica, sans-serif;

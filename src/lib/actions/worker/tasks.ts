@@ -798,8 +798,21 @@ export async function getProductionOrderDetailsWithPhases(
     );
     const phaseStatus = await getProductionPhaseStatus(productionOrderId);
 
-    return {
+    // Convert Decimal fields to numbers for client component compatibility
+    const convertedProductionOrder = {
       ...productionOrder,
+      plannedMaterialCost: Number(productionOrder.plannedMaterialCost),
+      actualMaterialCost: Number(productionOrder.actualMaterialCost),
+      materialVariance: Number(productionOrder.materialVariance),
+      // Convert operations array with Decimal cost fields
+      operations: productionOrder.operations.map((operation) => ({
+        ...operation,
+        cost: Number(operation.cost),
+      })),
+    };
+
+    return {
+      ...convertedProductionOrder,
       phaseStatus,
       workCenterStatus: phaseStatus.workCenters,
       inspectionStatus: phaseStatus.inspections,
@@ -881,5 +894,105 @@ export async function notifyInspectionReadiness(
   } catch (error) {
     console.error("Error notifying inspection readiness:", error);
     throw new Error("Failed to notify inspection readiness");
+  }
+}
+
+// Get operation details for a specific operation
+export async function getOperationDetails(operationId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const operation = await prisma.operation.findUnique({
+      where: { id: operationId },
+      include: {
+        productionOrder: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                description: true,
+              },
+            },
+            productVariant: {
+              select: {
+                id: true,
+                sku: true,
+                displayName: true,
+                sizeName: true,
+                colorName: true,
+              },
+            },
+            customerOrder: {
+              select: {
+                id: true,
+                orderNumber: true,
+                customer: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        workCenter: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+          },
+        },
+        assignedTo: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+        performedBy: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!operation) {
+      throw new Error("Operation not found");
+    }
+
+    // Check if user has access to this operation
+    const userWorkCenters = await prisma.userWorkCenter.findMany({
+      where: { userId: session.user.id },
+      select: { workCenterId: true },
+    });
+
+    const workCenterIds = userWorkCenters.map((uwc) => uwc.workCenterId);
+
+    if (!workCenterIds.includes(operation.workCenterId)) {
+      throw new Error(
+        "Access denied: You are not assigned to this work center"
+      );
+    }
+
+    return operation;
+  } catch (error) {
+    console.error("Error fetching operation details:", error);
+    throw new Error("Failed to fetch operation details");
   }
 }

@@ -9,7 +9,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-    const { id } = await params;
+  const { id } = await params;
   try {
     const productionOrderId = id;
     const session = await getServerSession(authOptions);
@@ -58,9 +58,10 @@ export async function POST(
 
     if (operations.length === 0) {
       return NextResponse.json(
-        { 
-          error: "No operations found for this production order in your work centers",
-          workCenters: workCenterIds
+        {
+          error:
+            "No operations found for this production order in your work centers",
+          workCenters: workCenterIds,
         },
         { status: 404 }
       );
@@ -87,8 +88,8 @@ export async function POST(
     });
 
     // Check if all operations have the same status now
-    const allSameStatus = allOperations.every(op => op.status === status);
-    
+    const allSameStatus = allOperations.every((op) => op.status === status);
+
     if (allSameStatus) {
       await prisma.productionOrder.update({
         where: { id: productionOrderId },
@@ -99,12 +100,24 @@ export async function POST(
       });
     }
 
-    revalidatePath("/worker/tasks");
-    revalidatePath("/worker/dashboard");
-    
-    return NextResponse.json({ 
+    // More specific revalidation - only revalidate if needed and be more targeted
+    try {
+      revalidatePath("/worker/tasks", "page");
+      revalidatePath("/worker/dashboard", "page");
+    } catch (revalidationError) {
+      console.warn("Revalidation warning:", revalidationError);
+      // Don't fail the request if revalidation fails
+    }
+
+    return NextResponse.json({
       success: true,
-      message: `Updated ${updates.length} operations for production order ${productionOrderId}`
+      message: `Updated ${updates.length} operations for production order ${productionOrderId}`,
+      data: {
+        productionOrderId,
+        updatedOperations: updates.length,
+        newStatus: status,
+        allOperationsUpdated: allSameStatus,
+      },
     });
   } catch (error) {
     console.error("Error updating production order status:", error);
@@ -113,4 +126,4 @@ export async function POST(
       { status: 500 }
     );
   }
-} 
+}

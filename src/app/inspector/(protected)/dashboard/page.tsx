@@ -4,6 +4,9 @@ import { getTodaysTasks, getTaskStatistics } from "@/lib/actions/inspector/tasks
 import { Suspense } from "react"
 import { InspectorDashboardClient } from "@/components/module/inspectors/dashboard/inspector-dashboard-client"
 
+// Force dynamic rendering since this page uses authentication
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: "Inspector Dashboard",
   description: "Your work overview and daily tasks",
