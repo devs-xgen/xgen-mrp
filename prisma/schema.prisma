@@ -36,10 +36,16 @@ model User {
   activityLogs             ActivityLog[] // Add relation to ActivityLog
 
   // MRP Enhancement Relations
-  materialConsumptions  ProductionMaterialConsumption[]
-  performedMovements    InventoryMovement[]             @relation("PerformedMovements")
-  approvedMovements     InventoryMovement[]             @relation("ApprovedMovements")
-  investigatedVariances CostVariance[]
+  materialConsumptions      ProductionMaterialConsumption[]
+  performedMovements        InventoryMovement[]             @relation("PerformedMovements")
+  approvedMovements         InventoryMovement[]             @relation("ApprovedMovements")
+  investigatedVariances     CostVariance[]
+  BillingStatement          BillingStatement[]              @relation("CreatedBillingStatements")
+  modifiedBillingStatements BillingStatement[]              @relation("ModifiedBillingStatements")
+  createdDeliveryReceipts   DeliveryReceipt[]               @relation("CreatedDeliveryReceipts")
+  modifiedDeliveryReceipts  DeliveryReceipt[]               @relation("ModifiedDeliveryReceipts")
+  createdSalesInvoices      SalesInvoice[]                  @relation("CreatedSalesInvoices")
+  modifiedSalesInvoices     SalesInvoice[]                  @relation("ModifiedSalesInvoices")
 }
 
 model WorkCenterAssignment {
@@ -175,6 +181,7 @@ model Product {
   ProductSizeVariant       ProductSizeVariant[]
   ProductVariantTemplate   ProductVariantTemplate? @relation(fields: [productVariantTemplateId], references: [id])
   productVariantTemplateId String?
+  salesInvoiceItems        SalesInvoiceItem[] // 🆕 ADD: Sales invoice items relation
 }
 
 // New ProductVariantTemplate model for variant configuration
@@ -389,6 +396,7 @@ model Material {
   ProductionBOM         ProductionBOM[]
   ProductSizeVariantBOM ProductSizeVariantBOM[]
   ProductVariantBOM     ProductVariantBOM[] // New relation
+  SalesInvoiceItem      SalesInvoiceItem[]
 }
 
 model BOM {
@@ -479,6 +487,7 @@ model ProductionOrder {
   productionBatches    ProductionBatch[]
   costVariances        CostVariance[]
   ProductionBOM        ProductionBOM[]
+  billingStatements    BillingStatement[] // 🆕 ADD: Billing statements relation
 
   @@index([productVariantId]) // 🆕 ADD: Index for performance
 }
@@ -600,48 +609,50 @@ model PurchaseOrderLine {
 }
 
 model Customer {
-  id            String          @id @default(cuid())
-  name          String
-  code          String          @unique
-  contactPerson String
-  email         String
-  phone         String
-  address       String?
-  city          String?
-  state         String?
-  country       String?
-  postalCode    String?
-  tinNumber     String?         @unique
-  creditLimit   Decimal?        @db.Decimal(10, 2)
-  paymentTerms  String?
-  status        Status          @default(ACTIVE)
-  notes         String?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  createdBy     String?
-  modifiedBy    String?
-  orders        CustomerOrder[]
+  id                String             @id @default(cuid())
+  name              String
+  code              String             @unique
+  contactPerson     String
+  email             String
+  phone             String
+  address           String?
+  city              String?
+  state             String?
+  country           String?
+  postalCode        String?
+  tinNumber         String?            @unique
+  creditLimit       Decimal?           @db.Decimal(10, 2)
+  paymentTerms      String?
+  status            Status             @default(ACTIVE)
+  notes             String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  createdBy         String?
+  modifiedBy        String?
+  orders            CustomerOrder[]
+  billingStatements BillingStatement[] // 🆕 ADD: Billing statements relation
 }
 
 model CustomerOrder {
-  id               String            @id @default(cuid())
-  orderNumber      String            @unique
-  customerId       String
-  orderDate        DateTime
-  requiredDate     DateTime
-  status           Status            @default(ACTIVE)
-  totalAmount      Decimal           @db.Decimal(10, 2)
-  shippingAddress  String?
-  billingAddress   String?
-  notes            String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  createdBy        String?
-  modifiedBy       String?
-  customer         Customer          @relation(fields: [customerId], references: [id])
-  orderLines       OrderLine[]
-  productionOrders ProductionOrder[]
-  transaction      Transaction[]
+  id                String             @id @default(cuid())
+  orderNumber       String             @unique
+  customerId        String
+  orderDate         DateTime
+  requiredDate      DateTime
+  status            Status             @default(ACTIVE)
+  totalAmount       Decimal            @db.Decimal(10, 2)
+  shippingAddress   String?
+  billingAddress    String?
+  notes             String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  createdBy         String?
+  modifiedBy        String?
+  customer          Customer           @relation(fields: [customerId], references: [id])
+  orderLines        OrderLine[]
+  productionOrders  ProductionOrder[]
+  transaction       Transaction[]
+  billingStatements BillingStatement[] // 🆕 ADD: Billing statements relation
 }
 
 model OrderLine {
@@ -839,6 +850,7 @@ model InventoryItem {
   materialRequestItems MaterialRequestItem[]
   location             Location               @relation(fields: [locationId], references: [id])
   issueReports         InventoryIssueReport[]
+  SalesInvoiceItem     SalesInvoiceItem[]
 }
 
 model Location {
@@ -1126,4 +1138,198 @@ enum VarianceType {
   LABOR_EFFICIENCY // Labor efficiency variance
   OVERHEAD // Overhead variance
   TOTAL_COST // Total cost variance
+}
+
+// ==============================================
+// 🆕 BILLING SYSTEM MODELS
+// ==============================================
+
+// Main Billing Statement that ties everything together
+model BillingStatement {
+  id                String  @id @default(cuid())
+  statementNumber   String  @unique
+  customerId        String
+  customerOrderId   String? // Optional - for customer order billing
+  productionOrderId String? // Optional - for direct production billing
+  deliveryReceiptId String? // Optional - delivery receipt reference
+  salesInvoiceId    String // Required - the actual invoice
+
+  // Billing details
+  totalAmount    Decimal @db.Decimal(12, 2)
+  taxAmount      Decimal @default(0) @db.Decimal(12, 2)
+  discountAmount Decimal @default(0) @db.Decimal(12, 2)
+  netAmount      Decimal @db.Decimal(12, 2)
+
+  // Status and dates
+  status      BillingStatus @default(DRAFT)
+  billingDate DateTime      @default(now())
+  dueDate     DateTime?
+  paidDate    DateTime?
+
+  // Metadata
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  createdByUser  User?    @relation("CreatedBillingStatements", fields: [createdBy], references: [id])
+  modifiedBy     String?
+  modifiedByUser User?    @relation("ModifiedBillingStatements", fields: [modifiedBy], references: [id])
+
+  // Relations
+  customer        Customer         @relation(fields: [customerId], references: [id])
+  customerOrder   CustomerOrder?   @relation(fields: [customerOrderId], references: [id])
+  productionOrder ProductionOrder? @relation(fields: [productionOrderId], references: [id])
+  deliveryReceipt DeliveryReceipt? @relation(fields: [deliveryReceiptId], references: [id])
+  salesInvoice    SalesInvoice     @relation(fields: [salesInvoiceId], references: [id])
+
+  @@index([customerId])
+  @@index([customerOrderId])
+  @@index([productionOrderId])
+  @@index([status])
+  @@index([billingDate])
+}
+
+// Delivery Receipt for tracking deliveries
+model DeliveryReceipt {
+  id              String   @id @default(cuid())
+  receiptNumber   String   @unique
+  deliveryDate    DateTime
+  receivedBy      String // Person who received the delivery
+  receivedByTitle String? // Title/position of receiver
+  deliveryAddress String
+  deliveryNotes   String?
+
+  // Delivery details
+  itemsDelivered Json // Details of what was delivered
+  deliveryStatus DeliveryStatus @default(DELIVERED)
+
+  // Signature/confirmation
+  signatureImage String? // Base64 or file path to signature
+  photoEvidence  String? // Photo of delivered items
+
+  // Tracking information
+  trackingNumber String?
+  courierService String?
+  deliveryMethod String? // "PICKUP", "DELIVERY", "COURIER"
+
+  // Metadata
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  createdByUser  User?    @relation("CreatedDeliveryReceipts", fields: [createdBy], references: [id])
+  modifiedBy     String?
+  modifiedByUser User?    @relation("ModifiedDeliveryReceipts", fields: [modifiedBy], references: [id])
+
+  // Relations
+  billingStatements BillingStatement[]
+
+  @@index([deliveryDate])
+  @@index([deliveryStatus])
+}
+
+// Sales Invoice for detailed billing
+model SalesInvoice {
+  id            String   @id @default(cuid())
+  invoiceNumber String   @unique
+  invoiceDate   DateTime @default(now())
+
+  // Invoice details
+  subtotal       Decimal @db.Decimal(12, 2)
+  taxRate        Decimal @default(0) @db.Decimal(5, 2)
+  taxAmount      Decimal @default(0) @db.Decimal(12, 2)
+  discountAmount Decimal @default(0) @db.Decimal(12, 2)
+  totalAmount    Decimal @db.Decimal(12, 2)
+
+  // Payment terms
+  paymentTerms String?
+  dueDate      DateTime?
+
+  // Status
+  status InvoiceStatus @default(DRAFT)
+
+  // Additional details
+  poNumber    String? // Customer's PO number
+  terms       String? // Terms and conditions
+  footerNotes String? // Additional notes at bottom
+
+  // Metadata
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String?
+  createdByUser  User?    @relation("CreatedSalesInvoices", fields: [createdBy], references: [id])
+  modifiedBy     String?
+  modifiedByUser User?    @relation("ModifiedSalesInvoices", fields: [modifiedBy], references: [id])
+
+  // Relations
+  billingStatements BillingStatement[]
+  invoiceItems      SalesInvoiceItem[]
+
+  @@index([invoiceDate])
+  @@index([status])
+  @@index([dueDate])
+}
+
+// Individual line items in sales invoice
+model SalesInvoiceItem {
+  id             String  @id @default(cuid())
+  salesInvoiceId String
+  productId      String?
+  description    String
+  quantity       Decimal @db.Decimal(10, 3)
+  unitPrice      Decimal @db.Decimal(10, 2)
+  totalPrice     Decimal @db.Decimal(12, 2)
+
+  // Optional details
+  productCode     String? // Product code/SKU
+  unit            String? // Unit of measure
+  discountPercent Decimal? @default(0) @db.Decimal(5, 2)
+  taxable         Boolean  @default(true)
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  salesInvoice    SalesInvoice   @relation(fields: [salesInvoiceId], references: [id], onDelete: Cascade)
+  product         Product?       @relation(fields: [productId], references: [id])
+  Material        Material?      @relation(fields: [materialId], references: [id])
+  materialId      String?
+  InventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+  inventoryItemId String?
+
+  @@index([salesInvoiceId])
+  @@index([productId])
+}
+
+// ==============================================
+// 🆕 BILLING SYSTEM ENUMS
+// ==============================================
+
+enum BillingStatus {
+  DRAFT // Being prepared
+  SENT // Sent to customer
+  PAID // Payment received
+  OVERDUE // Past due date
+  CANCELLED // Cancelled
+  DISPUTED // Under dispute
+  PARTIAL // Partially paid
+}
+
+enum DeliveryStatus {
+  PENDING // Delivery scheduled
+  IN_TRANSIT // On the way
+  DELIVERED // Successfully delivered
+  FAILED // Delivery failed
+  RETURNED // Returned to sender
+  CANCELLED // Delivery cancelled
+}
+
+enum InvoiceStatus {
+  DRAFT // Being prepared
+  SENT // Sent to customer
+  PAID // Payment received
+  OVERDUE // Past due date
+  CANCELLED // Cancelled
+  DISPUTED // Under dispute
+  PARTIAL // Partially paid
 }

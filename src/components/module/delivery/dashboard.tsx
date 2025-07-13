@@ -16,6 +16,25 @@ interface DeliveryDashboardProps {
   assignments: any[]; // Use any[] to accept the data structure from getDeliveryAssignments
 }
 
+// Helper function to safely format dates
+function formatDate(dateValue: any): string {
+  if (!dateValue) return "Not scheduled";
+  
+  try {
+    const date = new Date(dateValue);
+    
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      return "Invalid date";
+    }
+    
+    return format(date, "PPP");
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return "Invalid date";
+  }
+}
+
 export function DeliveryDashboard({ assignments }: DeliveryDashboardProps) {
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -55,9 +74,7 @@ export function DeliveryDashboard({ assignments }: DeliveryDashboardProps) {
               <div>
                 <p className="text-sm font-medium">Scheduled Date</p>
                 <p className="text-sm text-muted-foreground">
-                  {assignment.scheduledDate
-                    ? format(new Date(assignment.scheduledDate), "PPP")
-                    : "Not scheduled"}
+                  {formatDate(assignment.scheduledDate)}
                 </p>
               </div>
               <Button asChild className="w-full">

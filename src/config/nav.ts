@@ -21,6 +21,10 @@ import {
   Hammer,
   LineChart,
   QrCode,
+  Receipt,
+  FileText,
+  TrendingUp,
+  CreditCard,
 } from "lucide-react";
 
 interface NavItem {
@@ -85,6 +89,36 @@ export const adminNavItems: NavItem[] = [
         label: "Customer Orders",
         href: "/admin/customer-orders",
         description: "View and manage customer orders",
+      },
+    ],
+  },
+  {
+    icon: CreditCard,
+    label: "Billing",
+    items: [
+      {
+        icon: FileText,
+        label: "Billing Statements",
+        href: "/admin/billing/billing-statements",
+        description: "Manage customer billing statements",
+      },
+      {
+        icon: Receipt,
+        label: "Sales Invoices",
+        href: "/admin/billing/sales-invoices",
+        description: "Create and manage sales invoices",
+      },
+      {
+        icon: Truck,
+        label: "Delivery Receipts",
+        href: "/admin/billing/delivery-receipts",
+        description: "Track delivery confirmations",
+      },
+      {
+        icon: TrendingUp,
+        label: "Billing Reports",
+        href: "/admin/billing/billing-reports",
+        description: "Sales analytics and reports",
       },
     ],
   },
