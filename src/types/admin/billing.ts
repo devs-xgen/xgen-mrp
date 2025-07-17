@@ -178,7 +178,8 @@ export enum InvoiceStatus {
 // ==============================================
 
 export interface BillingStatementFormData {
-  customerId: string;
+  customerId?: string; // Optional - for existing customers
+  customerName: string; // Required - customer name input
   customerOrderId?: string;
   productionOrderId?: string;
   deliveryReceiptId?: string;
@@ -462,7 +463,8 @@ export interface DeliveryReceiptFilters {
 // ==============================================
 
 export const billingStatementSchema = z.object({
-  customerId: z.string().min(1, "Customer is required"),
+  customerId: z.string().optional(), // Optional - for existing customers
+  customerName: z.string().min(1, "Customer name is required"), // Required - customer name input
   customerOrderId: z.string().optional(),
   productionOrderId: z.string().optional(),
   deliveryReceiptId: z.string().optional(),

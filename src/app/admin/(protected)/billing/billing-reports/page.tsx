@@ -9,7 +9,7 @@ import {
   Filter, 
   TrendingUp, 
   TrendingDown, 
-  DollarSign, 
+  CreditCard, 
   Users, 
   AlertCircle, 
   BarChart3, 
@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,34 +64,54 @@ import {
 import { 
   BillingReportFilters,
   billingReportFiltersSchema,
-  SalesAnalytics,
+  BillingAnalytics,
   MonthlyBillingReport,
   CustomerBillingReport,
   OverduePaymentReport,
   Customer,
 } from "@/types/admin/billing";
 import {
-  getSalesAnalytics,
-  getMonthlyBillingReport,
+  getComprehensiveBillingAnalytics,
+  getAdvancedSalesReport,
   getCustomerBillingReport,
   getOverduePaymentsReport,
-  getBillingTrendAnalysis,
-  getTopCustomersByRevenue,
-  getPaymentStatusDistribution,
 } from "@/lib/actions/billing-reports";
 import { getAllCustomers } from "@/lib/actions/customers";
+
+// Helper function to convert Decimal values to numbers
+function convertDecimalsToNumbers(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  
+  if (typeof obj === 'object' && obj !== null && 'toNumber' in obj) {
+    return obj.toNumber();
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(convertDecimalsToNumbers);
+  }
+  
+  if (typeof obj === 'object' && obj !== null) {
+    const result: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = convertDecimalsToNumbers(value);
+    }
+    return result;
+  }
+  
+  return obj;
+}
 
 export default function BillingReportsPage() {
   // States
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [salesAnalytics, setSalesAnalytics] = useState<SalesAnalytics | null>(null);
+  const [salesAnalytics, setSalesAnalytics] = useState<BillingAnalytics | null>(null);
   const [monthlyReport, setMonthlyReport] = useState<MonthlyBillingReport | null>(null);
   const [customerReport, setCustomerReport] = useState<CustomerBillingReport[]>([]);
   const [overdueReport, setOverdueReport] = useState<OverduePaymentReport[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState("30"); // days
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("all-customers");
 
   // Form setup for filters
   const form = useForm<BillingReportFilters>({
@@ -114,27 +135,27 @@ export default function BillingReportsPage() {
       // Load all data in parallel
       const [
         analyticsResult,
-        monthlyResult,
         overdueResult,
         customersResult,
       ] = await Promise.all([
-        getSalesAnalytics(),
-        getMonthlyBillingReport(new Date().getMonth() + 1, new Date().getFullYear()),
+        getComprehensiveBillingAnalytics(),
         getOverduePaymentsReport(),
         getAllCustomers(),
       ]);
 
-      if (analyticsResult.success && analyticsResult.data) {
-        setSalesAnalytics(analyticsResult.data);
+      // Convert Decimal values to numbers to prevent serialization errors
+      const convertedAnalytics = convertDecimalsToNumbers(analyticsResult);
+      const convertedOverdue = convertDecimalsToNumbers(overdueResult);
+      const convertedCustomers = convertDecimalsToNumbers(customersResult);
+
+      if (convertedAnalytics) {
+        setSalesAnalytics(convertedAnalytics);
       }
-      if (monthlyResult.success && monthlyResult.data) {
-        setMonthlyReport(monthlyResult.data);
+      if (convertedOverdue?.statements) {
+        setOverdueReport(convertedOverdue.statements);
       }
-      if (overdueResult.success && overdueResult.data) {
-        setOverdueReport(overdueResult.data);
-      }
-      if (customersResult.success && customersResult.data) {
-        setCustomers(customersResult.data);
+      if (convertedCustomers) {
+        setCustomers(convertedCustomers);
       }
     } catch (error) {
       console.error("Error loading report data:", error);
@@ -158,8 +179,10 @@ export default function BillingReportsPage() {
     
     try {
       const result = await getCustomerBillingReport(customerId);
-      if (result.success && result.data) {
-        setCustomerReport([result.data]);
+      // Convert Decimal values to numbers to prevent serialization errors
+      const convertedResult = convertDecimalsToNumbers(result);
+      if (convertedResult?.success && convertedResult.data) {
+        setCustomerReport([convertedResult.data]);
       }
     } catch (error) {
       console.error("Error loading customer report:", error);
@@ -192,12 +215,12 @@ export default function BillingReportsPage() {
     }
   };
 
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
+  // Format currency - handle undefined/null values
+  const formatCurrency = (amount: number | undefined | null) => {
+    if (amount === undefined || amount === null || isNaN(amount)) {
+      return formatCurrencyPHP(0);
+    }
+    return formatCurrencyPHP(amount);
   };
 
   // Loading state
@@ -310,14 +333,14 @@ export default function BillingReportsPage() {
                   value={selectedCustomerId} 
                   onValueChange={(value) => {
                     setSelectedCustomerId(value);
-                    if (value) loadCustomerReport(value);
+                    if (value && value !== "all-customers") loadCustomerReport(value);
                   }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="All customers" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All customers</SelectItem>
+                    <SelectItem value="all-customers">All customers</SelectItem>
                     {customers.map((customer) => (
                       <SelectItem key={customer.id} value={customer.id}>
                         {customer.name}
@@ -341,11 +364,11 @@ export default function BillingReportsPage() {
                   <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
                   <p className="text-2xl font-bold">{formatCurrency(salesAnalytics.totalRevenue)}</p>
                 </div>
-                <DollarSign className="h-8 w-8 text-green-500" />
+                <CreditCard className="h-8 w-8 text-green-500" />
               </div>
               <div className="flex items-center text-sm text-green-600 mt-2">
                 <TrendingUp className="h-4 w-4 mr-1" />
-                +{salesAnalytics.revenueGrowthPercent.toFixed(1)}% from last period
+                +{salesAnalytics.revenueGrowthPercent?.toFixed(1) || 0}% from last period
               </div>
             </CardContent>
           </Card>
@@ -361,7 +384,7 @@ export default function BillingReportsPage() {
               </div>
               <div className="flex items-center text-sm text-blue-600 mt-2">
                 <TrendingUp className="h-4 w-4 mr-1" />
-                +{salesAnalytics.invoiceGrowthPercent.toFixed(1)}% from last period
+                +{salesAnalytics.invoiceGrowthPercent?.toFixed(1) || 0}% from last period
               </div>
             </CardContent>
           </Card>
@@ -376,7 +399,7 @@ export default function BillingReportsPage() {
                 <AlertCircle className="h-8 w-8 text-orange-500" />
               </div>
               <div className="text-sm text-muted-foreground mt-2">
-                {salesAnalytics.overdueCount} overdue invoices
+                {salesAnalytics.overdueCount || 0} overdue invoices
               </div>
             </CardContent>
           </Card>
@@ -391,7 +414,7 @@ export default function BillingReportsPage() {
                 <Users className="h-8 w-8 text-purple-500" />
               </div>
               <div className="text-sm text-muted-foreground mt-2">
-                {salesAnalytics.newCustomers} new this period
+                {salesAnalytics.newCustomers || 0} new this period
               </div>
             </CardContent>
           </Card>
@@ -459,19 +482,19 @@ export default function BillingReportsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="text-center">
                     <p className="text-2xl font-bold text-green-600">
-                      {salesAnalytics.paymentSuccessRate.toFixed(1)}%
+                      {salesAnalytics.paymentSuccessRate?.toFixed(1) || 0}%
                     </p>
                     <p className="text-sm text-muted-foreground">Payment Success Rate</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-blue-600">
-                      {salesAnalytics.averageInvoiceValue.toFixed(0)}
+                      {formatCurrency(salesAnalytics.averageInvoiceValue || 0)}
                     </p>
                     <p className="text-sm text-muted-foreground">Average Invoice Value</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-purple-600">
-                      {salesAnalytics.averagePaymentTime.toFixed(0)} days
+                      {salesAnalytics.averagePaymentTime?.toFixed(0) || 0} days
                     </p>
                     <p className="text-sm text-muted-foreground">Average Payment Time</p>
                   </div>
@@ -510,22 +533,22 @@ export default function BillingReportsPage() {
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h4 className="font-medium">Top Customers This Month</h4>
-                  <div className="space-y-2">
-                    {monthlyReport.topCustomers.map((customer, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{customer.customerName}</p>
-                          <p className="text-sm text-muted-foreground">{customer.invoiceCount} invoices</p>
+                                  <div className="space-y-4">
+                    <h4 className="font-medium">Top Customers This Month</h4>
+                    <div className="space-y-2">
+                      {monthlyReport.topCustomers?.map((customer, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium">{customer.customerName}</p>
+                            <p className="text-sm text-muted-foreground">{customer.invoiceCount} invoices</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium">{formatCurrency(customer.totalRevenue)}</p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium">{formatCurrency(customer.totalRevenue)}</p>
-                        </div>
-                      </div>
-                    ))}
+                      )) || <p className="text-muted-foreground">No data available</p>}
+                    </div>
                   </div>
-                </div>
               </CardContent>
             </Card>
           ) : (
@@ -543,7 +566,7 @@ export default function BillingReportsPage() {
             <CardHeader className="pb-4">
               <CardTitle className="text-lg">Customer Billing Analysis</CardTitle>
               <p className="text-sm text-muted-foreground">
-                {selectedCustomerId ? "Showing data for selected customer" : "Select a customer from the filters above to view detailed analysis"}
+                {selectedCustomerId && selectedCustomerId !== "all-customers" ? "Showing data for selected customer" : "Select a customer from the filters above to view detailed analysis"}
               </p>
             </CardHeader>
             <CardContent>

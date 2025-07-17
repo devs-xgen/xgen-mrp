@@ -35,6 +35,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Import server actions and types
 import { getAllSalesInvoices, getSalesReportData } from "@/lib/actions/sales-invoices";
 import { SalesInvoiceWithItems, InvoiceStatus } from "@/types/admin/billing";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 export const metadata: Metadata = {
   title: "Sales Invoices",
@@ -126,16 +127,16 @@ function SalesInvoicesList({ invoices }: SalesInvoicesListProps) {
               <TableCell className="p-4 align-middle">
                 <div className="text-right">
                   <div className="font-medium">
-                    ${invoice.totalAmount.toLocaleString()}
+                    {formatCurrencyPHP(invoice.totalAmount)}
                   </div>
                   {invoice.discountAmount > 0 && (
                     <div className="text-sm text-muted-foreground">
-                      Discount: -${invoice.discountAmount.toLocaleString()}
+                      Discount: -{formatCurrencyPHP(invoice.discountAmount)}
                     </div>
                   )}
                   {invoice.taxAmount > 0 && (
                     <div className="text-xs text-muted-foreground">
-                      Tax: ${invoice.taxAmount.toLocaleString()}
+                      Tax: {formatCurrencyPHP(invoice.taxAmount)}
                     </div>
                   )}
                 </div>
@@ -281,7 +282,7 @@ async function SalesInvoicesContent() {
                   {reportData.paidInvoices}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  ${reportData.totalSales.toLocaleString()}
+                  {formatCurrencyPHP(reportData.totalSales)}
                 </p>
               </div>
             </div>
@@ -312,7 +313,7 @@ async function SalesInvoicesContent() {
                   Pending Amount
                 </p>
                 <p className="text-2xl font-bold text-foreground mt-1">
-                  ${pendingAmount.toLocaleString()}
+                  {formatCurrencyPHP(pendingAmount)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Awaiting Payment

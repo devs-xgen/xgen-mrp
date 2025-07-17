@@ -1148,8 +1148,9 @@ enum VarianceType {
 model BillingStatement {
   id                String  @id @default(cuid())
   statementNumber   String  @unique
-  customerId        String
-  customerOrderId   String? // Optional - for customer order billing
+  customerId        String? // Optional - for existing customers
+  customerName      String // Required - customer name input
+  customerOrderId   String? // Optional - for customer order billinzg
   productionOrderId String? // Optional - for direct production billing
   deliveryReceiptId String? // Optional - delivery receipt reference
   salesInvoiceId    String // Required - the actual invoice
@@ -1176,13 +1177,14 @@ model BillingStatement {
   modifiedByUser User?    @relation("ModifiedBillingStatements", fields: [modifiedBy], references: [id])
 
   // Relations
-  customer        Customer         @relation(fields: [customerId], references: [id])
+  customer        Customer?        @relation(fields: [customerId], references: [id])
   customerOrder   CustomerOrder?   @relation(fields: [customerOrderId], references: [id])
   productionOrder ProductionOrder? @relation(fields: [productionOrderId], references: [id])
   deliveryReceipt DeliveryReceipt? @relation(fields: [deliveryReceiptId], references: [id])
   salesInvoice    SalesInvoice     @relation(fields: [salesInvoiceId], references: [id])
 
   @@index([customerId])
+  @@index([customerName])
   @@index([customerOrderId])
   @@index([productionOrderId])
   @@index([status])

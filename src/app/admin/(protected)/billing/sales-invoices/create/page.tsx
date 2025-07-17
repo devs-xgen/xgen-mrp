@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Save, X, Plus, Calculator, Loader2, Trash2, Search } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -512,7 +513,7 @@ export default function CreateSalesInvoicePage() {
                             <SelectContent>
                               {customerOrders.map((order) => (
                                 <SelectItem key={order.id} value={order.id}>
-                                  {order.orderNumber} - ${order.totalAmount.toLocaleString()}
+                                  {order.orderNumber} - {formatCurrencyPHP(order.totalAmount)}
                                 </SelectItem>
                               ))}
                             </SelectContent>

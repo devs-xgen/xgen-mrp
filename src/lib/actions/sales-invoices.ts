@@ -103,14 +103,14 @@ export async function getAllSalesInvoices(
                 sku: true,
               },
             },
-            material: {
+            Material: {
               select: {
                 id: true,
                 name: true,
                 sku: true,
               },
             },
-            inventoryItem: {
+            InventoryItem: {
               select: {
                 id: true,
                 name: true,
@@ -160,8 +160,27 @@ export async function getAllSalesInvoices(
       take: pageSize,
     });
 
+    // Convert Decimal fields to numbers for client component compatibility
+    const convertedInvoices = invoices.map((invoice) => ({
+      ...invoice,
+      subtotal: Number(invoice.subtotal),
+      taxRate: Number(invoice.taxRate),
+      taxAmount: Number(invoice.taxAmount),
+      discountAmount: Number(invoice.discountAmount),
+      totalAmount: Number(invoice.totalAmount),
+      invoiceItems: invoice.invoiceItems.map((item) => ({
+        ...item,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice),
+        totalPrice: Number(item.totalPrice),
+        discountPercent: item.discountPercent
+          ? Number(item.discountPercent)
+          : null,
+      })),
+    }));
+
     return {
-      data: invoices as SalesInvoiceWithItems[],
+      data: convertedInvoices as SalesInvoiceWithItems[],
       pagination: {
         page,
         pageSize,
@@ -196,14 +215,14 @@ export async function getSalesInvoiceById(
                 sku: true,
               },
             },
-            material: {
+            Material: {
               select: {
                 id: true,
                 name: true,
                 sku: true,
               },
             },
-            inventoryItem: {
+            InventoryItem: {
               select: {
                 id: true,
                 name: true,
@@ -250,7 +269,30 @@ export async function getSalesInvoiceById(
       },
     });
 
-    return invoice as SalesInvoiceWithItems | null;
+    if (!invoice) {
+      return null;
+    }
+
+    // Convert Decimal fields to numbers for client component compatibility
+    const convertedInvoice = {
+      ...invoice,
+      subtotal: Number(invoice.subtotal),
+      taxRate: Number(invoice.taxRate),
+      taxAmount: Number(invoice.taxAmount),
+      discountAmount: Number(invoice.discountAmount),
+      totalAmount: Number(invoice.totalAmount),
+      invoiceItems: invoice.invoiceItems.map((item) => ({
+        ...item,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice),
+        totalPrice: Number(item.totalPrice),
+        discountPercent: item.discountPercent
+          ? Number(item.discountPercent)
+          : null,
+      })),
+    };
+
+    return convertedInvoice as SalesInvoiceWithItems;
   } catch (error) {
     console.error("Error fetching sales invoice:", error);
     throw new Error("Failed to fetch sales invoice");
