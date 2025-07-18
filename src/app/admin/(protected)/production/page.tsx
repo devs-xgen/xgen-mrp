@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { AnalyticsCard, analyticsCardVariants } from "@/components/ui/analytics-card";
 import { convertDecimals } from "@/lib/convertDecimals";
 import { getAvailableProducts, getAvailableWorkCenters } from "@/lib/actions/inspector/production-order";
+import { FloatingChatbox } from "@/components/global/floating-chatbox";
 
 export const metadata: Metadata = {
   title: "Production Orders",
@@ -151,6 +152,9 @@ export default async function ProductionOrdersPage() {
           <DataTable columns={columns} data={tableData} />
         </CardContent>
       </Card>
+
+      {/* Floating Chat Support */}
+      <FloatingChatbox />
     </div>
   );
 }

@@ -55,16 +55,16 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   BillingStatement,
   BillingStatus,
-  BillingStatementWithDetails,
+  BillingStatementWithRelations,
   BillingStatementFormData, 
   billingStatementSchema,
 } from "@/types/admin/billing";
+import { formatCurrencyPHP } from "@/lib/constant";
 import { 
   getBillingStatementById,
   updateBillingStatement,
   deleteBillingStatement,
-  markBillingStatementAsPaid,
-  markBillingStatementAsOverdue,
+  updateBillingStatementStatus,
 } from "@/lib/actions/billing-statements";
 
 interface BillingStatementPageProps {
@@ -76,7 +76,7 @@ export default function BillingStatementPage({ params }: BillingStatementPagePro
   const { id } = params;
   
   // States
-  const [billingStatement, setBillingStatement] = useState<BillingStatementWithDetails | null>(null);
+  const [billingStatement, setBillingStatement] = useState<BillingStatementWithRelations | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -110,21 +110,21 @@ export default function BillingStatementPage({ params }: BillingStatementPagePro
       try {
         const result = await getBillingStatementById(id);
         
-        if (result.success && result.data) {
-          setBillingStatement(result.data);
+        if (result) {
+          setBillingStatement(result);
           
           // Populate form with current data
           form.reset({
-            customerId: result.data.customerId,
-            customerOrderId: result.data.customerOrderId || "",
-            productionOrderId: result.data.productionOrderId || "",
-            deliveryReceiptId: result.data.deliveryReceiptId || "",
-            subtotal: result.data.salesInvoice.subtotal,
-            taxRate: result.data.salesInvoice.taxRate,
-            discountAmount: result.data.discountAmount,
-            paymentTerms: result.data.salesInvoice.paymentTerms || "",
-            dueDate: result.data.dueDate ? new Date(result.data.dueDate) : undefined,
-            invoiceItems: result.data.salesInvoice.invoiceItems.map(item => ({
+            customerId: result.customerId,
+            customerOrderId: result.customerOrderId || "",
+            productionOrderId: result.productionOrderId || "",
+            deliveryReceiptId: result.deliveryReceiptId || "",
+            subtotal: result.salesInvoice.subtotal,
+            taxRate: result.salesInvoice.taxRate,
+            discountAmount: result.discountAmount,
+            paymentTerms: result.salesInvoice.paymentTerms || "",
+            dueDate: result.dueDate ? new Date(result.dueDate) : undefined,
+            invoiceItems: result.salesInvoice.invoiceItems.map(item => ({
               productId: item.productId || "",
               materialId: item.materialId || "",
               inventoryItemId: item.inventoryItemId || "",
@@ -136,13 +136,13 @@ export default function BillingStatementPage({ params }: BillingStatementPagePro
               discountPercent: item.discountPercent || 0,
               taxable: item.taxable,
             })),
-            notes: result.data.notes || "",
-            poNumber: result.data.salesInvoice.poNumber || "",
-            terms: result.data.salesInvoice.terms || "",
-            footerNotes: result.data.salesInvoice.footerNotes || "",
+            notes: result.notes || "",
+            poNumber: result.salesInvoice.poNumber || "",
+            terms: result.salesInvoice.terms || "",
+            footerNotes: result.salesInvoice.footerNotes || "",
           });
         } else {
-          toast.error(result.error || "Failed to load billing statement");
+          toast.error("Failed to load billing statement");
           router.push("/admin/billing/billing-statements");
         }
       } catch (error) {
@@ -192,14 +192,14 @@ export default function BillingStatementPage({ params }: BillingStatementPagePro
     if (!billingStatement) return;
     
     try {
-      const result = await markBillingStatementAsPaid(billingStatement.id);
+      const result = await updateBillingStatementStatus(billingStatement.id, "PAID");
       
       if (result.success) {
         toast.success("Billing statement marked as paid");
         // Refresh data
         const refreshResult = await getBillingStatementById(id);
-        if (refreshResult.success && refreshResult.data) {
-          setBillingStatement(refreshResult.data);
+        if (refreshResult) {
+          setBillingStatement(refreshResult);
         }
       } else {
         toast.error(result.error || "Failed to mark as paid");
@@ -288,7 +288,7 @@ export default function BillingStatementPage({ params }: BillingStatementPagePro
           <div className="text-center">
             <h2 className="text-2xl font-semibold mb-2">Billing Statement Not Found</h2>
             <p className="text-muted-foreground mb-4">
-              The billing statement you're looking for doesn't exist or has been deleted.
+              The billing statement you&apos;re looking for doesn&apos;t exist or has been deleted.
             </p>
             <Button asChild>
               <Link href="/admin/billing/billing-statements">
@@ -545,10 +545,10 @@ export default function BillingStatementPage({ params }: BillingStatementPagePro
                           {item.quantity} {item.unit || 'PCS'}
                         </TableCell>
                         <TableCell className="text-right">
-                          ${item.unitPrice.toFixed(2)}
+                          {formatCurrencyPHP(item.unitPrice)}
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          ${item.totalPrice.toFixed(2)}
+                          {formatCurrencyPHP(item.totalPrice)}
                         </TableCell>
                       </TableRow>
                     ))}

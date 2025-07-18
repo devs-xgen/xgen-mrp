@@ -310,3 +310,98 @@ src/app/admin/(protected)/billing/
 **Dependencies**: Existing customer orders and production order systems
 
 **Architecture**: Server Actions pattern (NO API routes)
+
+## 📄 Implemented Pages Documentation
+
+This section documents the implemented billing pages based on the current codebase. It covers the structure, components, data flow, fields, and input data for each page.
+
+### Billing Dashboard (src/app/admin/(protected)/billing/page.tsx)
+
+#### Purpose
+Provides an overview of billing metrics, status breakdowns, recent activities, quick actions, and lists of recent billing statements and sales invoices.
+
+#### Key Components
+- **Analytics Cards**: Display Total Revenue, Paid Amount, Pending Amount, and Overdue using `AnalyticsCard` component.
+- **Status Overview**: Card showing breakdown of billing statement statuses (e.g., PAID, OVERDUE) with badges.
+- **Recent Activity**: List of recent actions with descriptions, user names, and timestamps.
+- **Quick Actions**: Buttons linking to create billing statement, sales invoice, delivery receipt, and view reports.
+- **Recent Billing Statements**: List of recent statements with statement number, customer, amount, and status.
+- **Recent Sales Invoices**: Similar list for invoices with invoice number, customer, amount, and status.
+- **Floating Chatbox**: Integrated for support.
+
+#### Data Flow
+- Fetches data asynchronously using server actions: `getComprehensiveBillingAnalytics`, `getAllBillingStatements`, `getAllSalesInvoices`, `getAllDeliveryReceipts`.
+- Handles errors by displaying skeletons or error messages.
+- Uses Suspense for loading states with skeleton placeholders.
+- No direct user inputs; serves as a navigational and overview page.
+- Data inputted/derived: Analytics values (e.g., totalRevenue, paidAmount) formatted as currency.
+
+#### Fields and Inputs
+- This is a read-only dashboard; no form fields. Links navigate to creation pages.
+
+### Billing Statements List (src/app/admin/(protected)/billing/billing-statements/page.tsx)
+
+#### Purpose
+Lists all billing statements with search, filtering, summary analytics, and actions like view, download, edit, mark paid, delete.
+
+#### Key Components
+- **Summary Cards**: Display Total Statements, Paid Amount, Overdue Amount, Total Revenue.
+- **Search and Filters**: Input for search, Select for status filter (All, Draft, Sent, Paid, Overdue, Cancelled), More Filters button.
+- **Table**: Columns include Statement #, Customer (name and email), Order Info (order number, production details, delivery), Amount (net and total), Status (badge), Billing Date, Due Date, Actions (dropdown).
+- **Actions Dropdown**: View Details, Download PDF, Edit (if draft), Mark as Paid (if sent), Delete (if draft).
+- **Empty State**: Message and button to create new statement if no data.
+
+#### Data Flow
+- Fetches statements using `getAllBillingStatements` (paginated to 50 items) and analytics using `getBillingAnalytics`.
+- Supports client-side search and status filtering.
+- Uses Suspense for loading with table skeleton.
+- Error handling shows refresh button.
+- Data inputted/derived: Statement details from database, formatted dates and currency.
+
+#### Fields and Inputs
+- **Search Input**: Text search for statements.
+- **Status Select**: Filters by billing status.
+- No creation forms; actions link to detail/edit pages.
+
+### Create Billing Statement (src/app/admin/(protected)/billing/billing-statements/create/page.tsx)
+
+#### Purpose
+Form-based page to create a new billing statement, linking to sources like orders and receipts, adding invoice items, and calculating totals.
+
+#### Key Components
+- **Form Sections**:
+  - Basic Information: Statement Number (disabled), Customer Name*, Billing Date*, Due Date, Notes.
+  - Source Information: Customer Order (select), Production Order (select), Delivery Receipt (select).
+  - Invoice Items: Multiple addable items with Description*, Quantity*, Unit Price*, Product Code, Unit (select), Discount %, Taxable checkbox. Buttons to add/remove items.
+  - Additional Details: PO Number, Payment Terms (select), Terms & Conditions, Footer Notes.
+- **Billing Summary Sidebar**: Displays Subtotal, Tax, Discount, Net Amount; fields for Tax Rate, Discount Amount.
+- **Quick Actions**: Preview Statement, Save as Draft (disabled in code).
+- **Status Information**: Shows Draft status, created date, created by.
+- **Buttons**: Back, Cancel, Save Statement.
+
+#### Data Flow
+- Loads data on mount: customer orders, production orders, delivery receipts, sales invoices using respective server actions.
+- Auto-populates fields on selection (e.g., customer name from order, amounts calculated).
+- Real-time calculations for totals on changes to quantity, price, tax, discount.
+- Submits form data to `createBillingStatement` server action.
+- Uses React Hook Form with Zod validation.
+- Handles loading with spinner, errors with toasts.
+
+#### Fields and Inputs
+- **Required (*)**: Customer Name, Billing Date, Description/Quantity/Unit Price per item.
+- **Selects**: Customer Order (from loaded orders), Production Order, Delivery Receipt, Unit (PCS, KG, etc.), Payment Terms (Net 30, etc.).
+- **Numbers**: Quantity (decimal), Unit Price (decimal), Discount % (0-100), Tax Rate (%), Discount Amount.
+- **Dates**: Billing Date, Due Date (date inputs).
+- **Textareas**: Notes, Terms & Conditions, Footer Notes.
+- **Checkbox**: Taxable per item.
+- **Derived**: Subtotal (sum of items), Tax Amount (subtotal * taxRate/100), Net Amount (subtotal + tax - discount).
+- Validation ensures required fields, positive numbers, valid dates.
+
+#### Creation Flow
+1. Select sources (order/production/delivery) to auto-fill data.
+2. Add/edit invoice items; totals update automatically.
+3. Set tax, discount, terms.
+4. Add notes and details.
+5. Submit to create statement and redirect to list.
+
+Note: The detail view page ([id]/page.tsx) appears not fully implemented yet based on available code; it may follow similar patterns to the list and create pages.

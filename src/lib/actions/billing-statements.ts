@@ -165,14 +165,14 @@ export async function getAllBillingStatements(
                     sku: true,
                   },
                 },
-                material: {
+                Material: {
                   select: {
                     id: true,
                     name: true,
                     sku: true,
                   },
                 },
-                inventoryItem: {
+                InventoryItem: {
                   select: {
                     id: true,
                     name: true,
@@ -303,14 +303,14 @@ export async function getBillingStatementById(
                     sku: true,
                   },
                 },
-                material: {
+                Material: {
                   select: {
                     id: true,
                     name: true,
                     sku: true,
                   },
                 },
-                inventoryItem: {
+                InventoryItem: {
                   select: {
                     id: true,
                     name: true,
@@ -416,6 +416,7 @@ export async function createBillingStatement(
       data: {
         statementNumber,
         customerId: validatedData.customerId,
+        customerName: validatedData.customerName,
         customerOrderId: validatedData.customerOrderId,
         productionOrderId: validatedData.productionOrderId,
         deliveryReceiptId: validatedData.deliveryReceiptId,
@@ -867,6 +868,7 @@ export async function createBillingStatementFromCustomerOrder(
     // Create billing statement from order data
     const formData: BillingStatementFormData = {
       customerId: customerOrder.customerId,
+      customerName: customerOrder.customer.name,
       customerOrderId: customerOrderId,
       subtotal: customerOrder.totalAmount.toNumber(),
       taxRate: 12, // Default tax rate
@@ -938,6 +940,7 @@ export async function createBillingStatementFromProductionOrder(
     // Create billing statement from production order data
     const formData: BillingStatementFormData = {
       customerId: productionOrder.customerOrder.customerId,
+      customerName: productionOrder.customerOrder.customer.name,
       customerOrderId: productionOrder.customerOrderId,
       productionOrderId: productionOrderId,
       subtotal: totalAmount,

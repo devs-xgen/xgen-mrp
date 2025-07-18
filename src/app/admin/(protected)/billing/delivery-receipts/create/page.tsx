@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Save, X, Camera, Upload, Loader2, Package, Truck, MapPin, User } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -470,7 +471,7 @@ export default function CreateDeliveryReceiptPage() {
                             <SelectContent>
                               {customerOrders.map((order) => (
                                 <SelectItem key={order.id} value={order.id}>
-                                  {order.orderNumber} - ${order.totalAmount.toLocaleString()}
+                                  {order.orderNumber} - {formatCurrencyPHP(order.totalAmount)}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -744,7 +745,7 @@ export default function CreateDeliveryReceiptPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Total Amount:</span>
-                      <span className="text-sm font-medium">${selectedCustomerOrder.totalAmount.toLocaleString()}</span>
+                      <span className="text-sm font-medium">{formatCurrencyPHP(selectedCustomerOrder.totalAmount)}</span>
                     </div>
                   </CardContent>
                 </Card>

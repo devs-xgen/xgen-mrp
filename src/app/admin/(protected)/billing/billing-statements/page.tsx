@@ -35,6 +35,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Import server actions and types
 import { getAllBillingStatements, getBillingAnalytics } from "@/lib/actions/billing-statements";
 import { BillingStatementWithRelations, BillingStatus } from "@/types/admin/billing";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 export const metadata: Metadata = {
   title: "Billing Statements",
@@ -132,16 +133,16 @@ function BillingStatementsList({ statements }: BillingStatementsListProps) {
               <TableCell className="p-4 align-middle">
                 <div className="text-right">
                   <div className="font-medium">
-                    ${statement.netAmount.toLocaleString()}
+                    {formatCurrencyPHP(statement.netAmount)}
                   </div>
                   {statement.totalAmount !== statement.netAmount && (
                     <div className="text-sm text-muted-foreground">
-                      Total: ${statement.totalAmount.toLocaleString()}
+                      Total: {formatCurrencyPHP(statement.totalAmount)}
                     </div>
                   )}
                   {statement.taxAmount > 0 && (
                     <div className="text-xs text-muted-foreground">
-                      Tax: ${statement.taxAmount.toLocaleString()}
+                      Tax: {formatCurrencyPHP(statement.taxAmount)}
                     </div>
                   )}
                 </div>
@@ -258,7 +259,7 @@ async function BillingStatementsContent() {
                   Paid Amount
                 </p>
                 <p className="text-2xl font-bold text-foreground mt-1">
-                  ${analytics.paidAmount.toLocaleString()}
+                  {formatCurrencyPHP(analytics.paidAmount)}
                 </p>
               </div>
             </div>
@@ -272,7 +273,7 @@ async function BillingStatementsContent() {
                   Overdue Amount
                 </p>
                 <p className="text-2xl font-bold text-foreground mt-1">
-                  ${analytics.overdueAmount.toLocaleString()}
+                  {formatCurrencyPHP(analytics.overdueAmount)}
                 </p>
               </div>
             </div>
@@ -286,7 +287,7 @@ async function BillingStatementsContent() {
                   Total Revenue
                 </p>
                 <p className="text-2xl font-bold text-foreground mt-1">
-                  ${analytics.totalRevenue.toLocaleString()}
+                  {formatCurrencyPHP(analytics.totalRevenue)}
                 </p>
               </div>
             </div>

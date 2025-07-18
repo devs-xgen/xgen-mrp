@@ -106,6 +106,7 @@ export const adminNavItems: NavItem[] = [
   {
     icon: CreditCard,
     label: "Billing",
+    href: "/admin/billing",
     items: [
       {
         icon: FileText,

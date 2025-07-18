@@ -8,6 +8,7 @@ import { Metadata } from "next";
 import { ArrowLeft, Save, X, Search, Plus, Calculator, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +49,6 @@ import {
   BillingStatementFormData, 
   billingStatementSchema,
   SalesInvoiceItemFormData,
-  Customer,
   DeliveryReceipt,
   SalesInvoice,
 } from "@/types/admin/billing";
@@ -57,7 +57,6 @@ import { ProductionOrder } from "@/types/admin/production-order";
 import { Product } from "@/types/admin/product";
 import { Material } from "@/types/admin/materials";
 import { createBillingStatement } from "@/lib/actions/billing-statements";
-import { getAllCustomers } from "@/lib/actions/customers";
 import { getCustomerOrders } from "@/lib/actions/customer-order";
 import { getProductionOrders } from "@/lib/actions/production-order";
 import { getAllDeliveryReceipts } from "@/lib/actions/delivery-receipts";
@@ -69,7 +68,6 @@ export default function CreateBillingStatementPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Data states
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>([]);
   const [productionOrders, setProductionOrders] = useState<ProductionOrder[]>([]);
   const [deliveryReceipts, setDeliveryReceipts] = useState<DeliveryReceipt[]>([]);
@@ -78,7 +76,6 @@ export default function CreateBillingStatementPage() {
   const [materials, setMaterials] = useState<Material[]>([]);
   
   // Form states
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [selectedCustomerOrder, setSelectedCustomerOrder] = useState<CustomerOrder | null>(null);
   const [selectedProductionOrder, setSelectedProductionOrder] = useState<ProductionOrder | null>(null);
   const [selectedDeliveryReceipt, setSelectedDeliveryReceipt] = useState<DeliveryReceipt | null>(null);
@@ -99,7 +96,7 @@ export default function CreateBillingStatementPage() {
   const form = useForm<BillingStatementFormData>({
     resolver: zodResolver(billingStatementSchema),
     defaultValues: {
-      customerId: "",
+      customerName: "",
       customerOrderId: "",
       productionOrderId: "",
       deliveryReceiptId: "",
@@ -123,22 +120,17 @@ export default function CreateBillingStatementPage() {
       try {
         // Load all required data in parallel
         const [
-          customersResult,
           customerOrdersResult,
           productionOrdersResult,
           deliveryReceiptsResult,
           salesInvoicesResult,
         ] = await Promise.all([
-          getAllCustomers(),
           getCustomerOrders(),
           getProductionOrders(),
           getAllDeliveryReceipts(),
           getAllSalesInvoices(),
         ]);
 
-        if (customersResult.success && customersResult.data) {
-          setCustomers(customersResult.data);
-        }
         if (customerOrdersResult && Array.isArray(customerOrdersResult)) {
           setCustomerOrders(customerOrdersResult);
         }
@@ -162,34 +154,15 @@ export default function CreateBillingStatementPage() {
     loadData();
   }, []);
 
-  // Handle customer selection
-  const handleCustomerSelect = (customerId: string) => {
-    const customer = customers.find(c => c.id === customerId);
-    setSelectedCustomer(customer || null);
-    form.setValue("customerId", customerId);
-    
-    // Reset dependent fields
-    form.setValue("customerOrderId", "");
-    form.setValue("productionOrderId", "");
-    setSelectedCustomerOrder(null);
-    setSelectedProductionOrder(null);
-  };
-
   // Handle customer order selection
   const handleCustomerOrderSelect = async (orderId: string) => {
     const order = customerOrders.find(o => o.id === orderId);
     setSelectedCustomerOrder(order || null);
     form.setValue("customerOrderId", orderId);
     
-    if (order) {
-      // Auto-populate customer if not already selected
-      if (!selectedCustomer && order.customerId) {
-        const customer = customers.find(c => c.id === order.customerId);
-        if (customer) {
-          setSelectedCustomer(customer);
-          form.setValue("customerId", customer.id);
-        }
-      }
+    if (order && order.customer) {
+      // Auto-populate customer name from order
+      form.setValue("customerName", order.customer.name);
       
       // Auto-populate amounts from order
       form.setValue("subtotal", order.totalAmount);
@@ -207,15 +180,10 @@ export default function CreateBillingStatementPage() {
       // Auto-populate customer from linked customer order
       if (order.customerOrderId) {
         const customerOrder = customerOrders.find(co => co.id === order.customerOrderId);
-        if (customerOrder) {
+        if (customerOrder && customerOrder.customer) {
           setSelectedCustomerOrder(customerOrder);
           form.setValue("customerOrderId", customerOrder.id);
-          
-          const customer = customers.find(c => c.id === customerOrder.customerId);
-          if (customer) {
-            setSelectedCustomer(customer);
-            form.setValue("customerId", customer.id);
-          }
+          form.setValue("customerName", customerOrder.customer.name);
         }
       }
       
@@ -405,24 +373,16 @@ export default function CreateBillingStatementPage() {
                     </div>
                     <FormField
                       control={form.control}
-                      name="customerId"
+                      name="customerName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Customer *</FormLabel>
-                          <Select onValueChange={handleCustomerSelect} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select customer" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {customers.map((customer) => (
-                                <SelectItem key={customer.id} value={customer.id}>
-                                  {customer.name} ({customer.code})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>Customer Name *</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Enter customer name or full name"
+                              {...field}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -502,7 +462,7 @@ export default function CreateBillingStatementPage() {
                             <SelectContent>
                               {customerOrders.map((order) => (
                                 <SelectItem key={order.id} value={order.id}>
-                                  {order.orderNumber} - ${order.totalAmount.toLocaleString()}
+                                  {order.orderNumber} - {formatCurrencyPHP(order.totalAmount)}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -673,7 +633,7 @@ export default function CreateBillingStatementPage() {
                             <Label htmlFor={`taxable-${index}`}>Taxable</Label>
                           </div>
                           <div className="text-sm font-medium">
-                            Total: ${(item.quantity * item.unitPrice).toFixed(2)}
+                            Total: {formatCurrencyPHP(item.quantity * item.unitPrice)}
                           </div>
                         </div>
                       </div>
@@ -790,20 +750,20 @@ export default function CreateBillingStatementPage() {
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Subtotal:</span>
-                      <span className="font-medium">${subtotal.toFixed(2)}</span>
+                      <span className="font-medium">{formatCurrencyPHP(subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Tax ({taxRate}%):</span>
-                      <span className="font-medium">${taxAmount.toFixed(2)}</span>
+                      <span className="font-medium">{formatCurrencyPHP(taxAmount)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Discount:</span>
-                      <span className="font-medium">-${discountAmount.toFixed(2)}</span>
+                      <span className="font-medium">-{formatCurrencyPHP(discountAmount)}</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between">
                       <span className="font-medium">Net Amount:</span>
-                      <span className="font-bold text-lg">${netAmount.toFixed(2)}</span>
+                      <span className="font-bold text-lg">{formatCurrencyPHP(netAmount)}</span>
                     </div>
                   </div>
 

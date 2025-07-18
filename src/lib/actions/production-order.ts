@@ -2340,9 +2340,14 @@ export async function getProductionOrders() {
           },
         },
         customerOrder: {
-          select: {
-            id: true,
-            orderNumber: true,
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
           },
         },
         operations: {
@@ -2364,8 +2369,20 @@ export async function getProductionOrders() {
         },
       },
       orderBy: [{ status: "asc" }, { startDate: "asc" }],
-    })
-    return orders
+    });
+
+    // Convert Decimal fields to numbers for client component compatibility
+    return orders.map((order) => ({
+      ...order,
+      plannedMaterialCost: Number(order.plannedMaterialCost),
+      actualMaterialCost: Number(order.actualMaterialCost),
+      materialVariance: Number(order.materialVariance),
+      // Convert operations array with Decimal cost fields
+      operations: order.operations.map((operation) => ({
+        ...operation,
+        cost: Number(operation.cost),
+      })),
+    }));
   } catch (error) {
     console.error("Error fetching production orders:", error)
     throw new Error("Failed to fetch production orders")
@@ -2388,7 +2405,17 @@ export async function getProductionOrder(id: string) {
             colorName: true,
           },
         },
-        customerOrder: true,
+        customerOrder: {
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
         operations: {
           include: {
             workCenter: true,
@@ -2435,7 +2462,21 @@ export async function getProductionOrder(id: string) {
       // Fall back to Product BOM template
       bom = await getBOMForProduct(order.productId)
     }
-    return { ...order, bom, productionBOM }
+
+    // Convert Decimal fields to numbers for client component compatibility
+    const convertedOrder = {
+      ...order,
+      plannedMaterialCost: Number(order.plannedMaterialCost),
+      actualMaterialCost: Number(order.actualMaterialCost),
+      materialVariance: Number(order.materialVariance),
+      // Convert operations array with Decimal cost fields
+      operations: order.operations.map((operation) => ({
+        ...operation,
+        cost: Number(operation.cost),
+      })),
+    };
+
+    return { ...convertedOrder, bom, productionBOM };
   } catch (error) {
     console.error("Error fetching production order:", error)
     throw error
@@ -2456,8 +2497,15 @@ export async function getProductionOrdersByCustomerOrder(customerOrderId: string
         },
       },
       orderBy: [{ status: "asc" }, { startDate: "asc" }],
-    })
-    return orders
+    });
+
+    // Convert Decimal fields to numbers for client component compatibility
+    return orders.map((order) => ({
+      ...order,
+      plannedMaterialCost: Number(order.plannedMaterialCost),
+      actualMaterialCost: Number(order.actualMaterialCost),
+      materialVariance: Number(order.materialVariance),
+    }));
   } catch (error) {
     console.error("Error fetching production orders by customer order:", error)
     throw new Error("Failed to fetch production orders")
