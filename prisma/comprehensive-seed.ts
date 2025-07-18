@@ -6,7 +6,9 @@ import {
   UserStatus,
   Gender,
 } from "@prisma/client";
-import { hash } from "bcrypt";
+import { Decimal } from "@prisma/client/runtime/library";
+import { hash } from 'bcryptjs';
+
 
 const prisma = new PrismaClient();
 
@@ -15,29 +17,63 @@ async function main() {
 
   // Clear existing data (optional - comment out if you want to preserve existing data)
   console.log("🧹 Cleaning existing data...");
+  // Delete most dependent entities first (children)
+  await prisma.operation.deleteMany();
+  await prisma.qualityCheck.deleteMany();
+
   await prisma.productionBOM.deleteMany();
   await prisma.productVariantBOM.deleteMany();
   await prisma.productSizeVariantBOM.deleteMany();
-  await prisma.bOM.deleteMany();
+
+  await prisma.orderLine.deleteMany();
+  await prisma.productionOrder.deleteMany();
+
   await prisma.productVariant.deleteMany();
   await prisma.productSizeVariant.deleteMany();
-  await prisma.orderLine.deleteMany();
-  await prisma.customerOrder.deleteMany();
-  await prisma.productionOrder.deleteMany();
-  await prisma.operation.deleteMany();
-  await prisma.qualityCheck.deleteMany();
+
   await prisma.product.deleteMany();
   await prisma.material.deleteMany();
+
   await prisma.purchaseOrderLine.deleteMany();
   await prisma.purchaseOrder.deleteMany();
+
   await prisma.supplier.deleteMany();
+  await prisma.customerOrder.deleteMany();
   await prisma.customer.deleteMany();
+
   await prisma.workCenter.deleteMany();
   await prisma.materialType.deleteMany();
   await prisma.unitOfMeasure.deleteMany();
   await prisma.productCategory.deleteMany();
-  await prisma.userProfile.deleteMany();
-  await prisma.user.deleteMany();
+
+  await prisma.activityLog.deleteMany();  // delete logs first
+  await prisma.userProfile.deleteMany();  // then profiles
+  await prisma.user.deleteMany();         // finally users
+
+
+  // await prisma.productionBOM.deleteMany();
+  // await prisma.productVariantBOM.deleteMany();
+  // await prisma.productSizeVariantBOM.deleteMany();
+  // await prisma.bOM.deleteMany();
+  // await prisma.productVariant.deleteMany();
+  // await prisma.productSizeVariant.deleteMany();
+  // await prisma.orderLine.deleteMany();
+  // await prisma.customerOrder.deleteMany();
+  // await prisma.productionOrder.deleteMany();
+  // await prisma.operation.deleteMany();
+  // await prisma.qualityCheck.deleteMany();
+  // await prisma.product.deleteMany();
+  // await prisma.material.deleteMany();
+  // await prisma.purchaseOrderLine.deleteMany();
+  // await prisma.purchaseOrder.deleteMany();
+  // await prisma.supplier.deleteMany();
+  // await prisma.customer.deleteMany();
+  // await prisma.workCenter.deleteMany();
+  // await prisma.materialType.deleteMany();
+  // await prisma.unitOfMeasure.deleteMany();
+  // await prisma.productCategory.deleteMany();
+  // await prisma.userProfile.deleteMany();
+  // await prisma.user.deleteMany();
 
   // 1. Create Users
   console.log("👥 Creating users...");
@@ -430,8 +466,8 @@ async function main() {
           colorName: color.name,
           colorCode: color.code,
           displayName: `${size} ${color.name}`,
-          unitCost: tshirtProduct.unitCost + (size === "XXL" ? 1.0 : 0),
-          sellingPrice: tshirtProduct.sellingPrice + (size === "XXL" ? 2.0 : 0),
+          unitCost: tshirtProduct.unitCost.add(new Decimal(size === "XXL" ? 1.0 : 0)),
+          sellingPrice: tshirtProduct.sellingPrice.add(new Decimal(size === "XXL" ? 2.0 : 0)),
           currentStock: Math.floor(Math.random() * 20) + 5,
           minimumStockLevel: 10,
           sortOrder: sizes.indexOf(size),
@@ -455,9 +491,8 @@ async function main() {
           colorName: color.name,
           colorCode: color.code,
           displayName: `${size} ${color.name}`,
-          unitCost: poloShirtProduct.unitCost + (size === "XL" ? 1.5 : 0),
-          sellingPrice:
-            poloShirtProduct.sellingPrice + (size === "XL" ? 3.0 : 0),
+          unitCost: poloShirtProduct.unitCost.add(new Decimal(size === "XL" ? 1.5 : 0)),
+          sellingPrice: poloShirtProduct.sellingPrice.add(new Decimal(size === "XL" ? 3.0 : 0)),
           currentStock: Math.floor(Math.random() * 15) + 3,
           minimumStockLevel: 8,
           sortOrder: sizes.indexOf(size),

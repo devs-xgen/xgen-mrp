@@ -17,6 +17,8 @@ import {
   LucideTimerOff,
 } from "lucide-react";
 import { prisma } from "@/lib/db"; // Ensure you have access to Prisma instance
+import ProductionHistoryDashboard from "@/components/module/history-logs/production-history-dashboard";
+import ProductionHistoryTimeline from "@/components/module/history-logs/production-history-timeline";
 
 export const metadata: Metadata = {
   title: "Production Orders",
@@ -171,6 +173,27 @@ export default async function ProductionOrdersPage() {
           <DataTable columns={columns} data={tableData} />
         </CardContent>
       </Card>
+      <Card>
+        {/* Production Order History Section */}
+        <div>
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Production Order History</h1>
+            <p className="text-muted-foreground mb-6">
+              Comprehensive tracking and visualization of production activities
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="xl:col-span-2">
+              <ProductionHistoryDashboard productionOrderId={""} />
+            </div>
+            <div>
+              <ProductionHistoryTimeline productionOrderId={""} />
+            </div>
+          </div>
+        </div>
+      </Card>
     </div>
+
   );
 }

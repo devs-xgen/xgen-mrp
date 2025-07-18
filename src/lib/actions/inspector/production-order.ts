@@ -781,3 +781,136 @@ export async function getProductionOrderWithMaterialRequests(id: string) {
     throw error;
   }
 }
+
+export async function updateProductionOrderWithLog(data: UpdateProductionOrderInput) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    // Fetch current order to compare changes
+    const currentOrder = await prisma.productionOrder.findUnique({
+      where: { id: data.id },
+    });
+    if (!currentOrder) throw new Error("Production order not found");
+
+    // Prepare update data dynamically from input
+    const updateData: any = {
+      ...(data.productId && { productId: data.productId }),
+      ...(typeof data.quantity === "number" && { quantity: data.quantity }),
+      ...(data.startDate && { startDate: data.startDate }),
+      ...(data.dueDate && { dueDate: data.dueDate }),
+      ...(data.priority && { priority: data.priority }),
+      ...(data.customerOrderId !== undefined && { customerOrderId: data.customerOrderId }),
+      ...(data.notes !== undefined && { notes: data.notes }),
+      ...(data.status && { status: data.status }),
+      ...(typeof data.plannedMaterialCost === "number" && { plannedMaterialCost: data.plannedMaterialCost }),
+      ...(typeof data.actualMaterialCost === "number" && { actualMaterialCost: data.actualMaterialCost }),
+      ...(typeof data.completedQuantity === "number" && { completedQuantity: data.completedQuantity }),
+      modifiedBy: session.user.id,
+    };
+
+    // Update the production order
+    const order = await prisma.productionOrder.update({
+      where: { id: data.id },
+      data: updateData,
+    });
+
+    // Build change descriptions
+    const changes: string[] = [];
+
+    if (data.status && data.status !== currentOrder.status) {
+      changes.push(`Status changed from "${currentOrder.status}" to "${data.status}"`);
+    }
+    if (typeof data.quantity === "number" && data.quantity !== currentOrder.quantity) {
+      changes.push(`Quantity changed from ${currentOrder.quantity} to ${data.quantity}`);
+    }
+    if (data.notes !== undefined && data.notes !== currentOrder.notes) {
+      changes.push(`Notes updated`);
+    }
+    if (data.priority && data.priority !== currentOrder.priority) {
+      changes.push(`Priority changed from "${currentOrder.priority}" to "${data.priority}"`);
+    }
+    if (data.startDate && data.startDate.toISOString() !== currentOrder.startDate?.toISOString()) {
+      changes.push(`Start date changed`);
+    }
+    if (data.dueDate && data.dueDate.toISOString() !== currentOrder.dueDate?.toISOString()) {
+      changes.push(`Due date changed`);
+    }
+    if (data.productId && data.productId !== currentOrder.productId) {
+      changes.push(`Product changed`);
+    }
+    if (data.customerOrderId !== undefined && data.customerOrderId !== currentOrder.customerOrderId) {
+      changes.push(`Customer order changed`);
+    }
+    if (typeof data.plannedMaterialCost === "number" && data.plannedMaterialCost !== currentOrder.plannedMaterialCost) {
+      changes.push(`Planned material cost changed from ${currentOrder.plannedMaterialCost ?? "N/A"} to ${data.plannedMaterialCost}`);
+    }
+    if (typeof data.actualMaterialCost === "number" && data.actualMaterialCost !== currentOrder.actualMaterialCost) {
+      changes.push(`Actual material cost changed from ${currentOrder.actualMaterialCost ?? "N/A"} to ${data.actualMaterialCost}`);
+    }
+    if (typeof data.completedQuantity === "number" && data.completedQuantity !== currentOrder.completedQuantity) {
+      changes.push(`Completed quantity changed from ${currentOrder.completedQuantity ?? 0} to ${data.completedQuantity}`);
+    }
+
+    const changeDescription = changes.length > 0 ? changes.join("; ") : "Production order updated";
+
+    // Create a history log entry
+    await prisma.productionOrderHistoryLog.create({
+      data: {
+        productionOrderId: data.id,
+        userId: session.user.id,
+        timestamp: new Date(),
+        status: data.status || currentOrder.status,
+        changeType: "update",
+        notes: changeDescription,
+      },
+    });
+
+    // Revalidate cache or paths as needed
+    revalidatePath("/admin/production");
+
+    return order;
+  } catch (error) {
+    console.error("Error updating production order:", error);
+    throw error;
+  }
+}
+
+
+export async function getProductionOrderwithLogs(id: string) {
+  try {
+    const order = await prisma.productionOrder.findUnique({
+      where: { id },
+      include: {
+        product: true,
+        customerOrder: true,
+        operations: {
+          include: {
+            workCenter: true,
+          },
+        },
+        qualityChecks: true,
+        productionOrderHistoryLog: {
+          orderBy: {
+            timestamp: 'desc',
+          },
+          include: {
+            user: true, // Include user who made the change
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new Error('Production order not found');
+    }
+
+    // Fetch BOM/materials for the product
+    const bom = await getBOMForProduct(order.productId);
+
+    return { ...order, bom };
+  } catch (error) {
+    console.error('Error fetching production order:', error);
+    throw error;
+  }
+}

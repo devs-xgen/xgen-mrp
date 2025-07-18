@@ -17,7 +17,6 @@ import { Separator } from "@/components/ui/separator"
 import { Loader2, Factory, Package, AlertTriangle, CheckCircle2, Calendar, Settings } from "lucide-react"
 import { analyzeCustomerOrder, createProductionOrdersWithDecisions } from "@/lib/actions/customer-order"
 import { CustomerOrderAnalysis, ProductionDecisionInput, OrderLineAnalysis, StockStatus } from "@/types/admin/customer-order"
-import { getAvailableWorkCenters } from "@/lib/actions/production-order"
 import { formatDate } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -29,6 +28,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert"
+import { getAvailableWorkCenters } from "@/lib/actions/inspector/production-order"
 
 interface CreateProductionOrdersDialogProps {
   customerOrderId: string

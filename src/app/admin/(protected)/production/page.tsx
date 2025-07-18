@@ -2,8 +2,6 @@
 import { Metadata } from "next";
 import {
   getProductionOrders,
-  getAvailableProducts,
-  getAvailableWorkCenters,
 } from "@/lib/actions/production-order";
 import { columns } from "@/components/module/admin/production/columns";
 import { DataTable } from "@/components/module/admin/production/data-table";
@@ -12,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AnalyticsCard, analyticsCardVariants } from "@/components/ui/analytics-card";
 import { convertDecimals } from "@/lib/convertDecimals";
+import { getAvailableProducts, getAvailableWorkCenters } from "@/lib/actions/inspector/production-order";
 
 export const metadata: Metadata = {
   title: "Production Orders",

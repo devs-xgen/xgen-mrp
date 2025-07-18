@@ -46,6 +46,24 @@ model User {
   modifiedDeliveryReceipts  DeliveryReceipt[]               @relation("ModifiedDeliveryReceipts")
   createdSalesInvoices      SalesInvoice[]                  @relation("CreatedSalesInvoices")
   modifiedSalesInvoices     SalesInvoice[]                  @relation("ModifiedSalesInvoices")
+
+// Simplified Production History Log Relation
+  productionHistoryLogs     ProductionOrderHistoryLog[]
+}
+
+// Simplified ProductionOrderHistoryLog
+model ProductionOrderHistoryLog {
+  id                String          @id @default(cuid())
+  productionOrderId String
+  productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User            @relation(fields: [userId], references: [id])
+  timestamp         DateTime        @default(now())
+  status            Status?         // New status after update (optional)
+  changeType        String          // e.g. "status_update", "quantity_update", "note_update"
+  notes             String?         // Optional description of the change
+  @@index([productionOrderId])
+  @@index([userId])
 }
 
 model WorkCenterAssignment {
@@ -489,6 +507,9 @@ model ProductionOrder {
   ProductionBOM        ProductionBOM[]
   billingStatements    BillingStatement[] // 🆕 ADD: Billing statements relation
 
+  // Simplified Production History Log Relation
+  productionHistoryLogs     ProductionOrderHistoryLog[]
+
   @@index([productVariantId]) // 🆕 ADD: Index for performance
 }
 
@@ -763,6 +784,8 @@ enum Status {
   INACTIVE
   SUSPENDED
   ARCHIVED
+  ON_HOLD // Added from previous schema
+  FAILED // Added from previous schema
 }
 
 enum Priority {
@@ -770,6 +793,7 @@ enum Priority {
   MEDIUM
   HIGH
   URGENT
+  CRITICAL // Added from previous schema
 }
 
 model UserWorkCenter {

@@ -76,6 +76,17 @@ export const adminNavItems: NavItem[] = [
       },
     ],
   },
+    {
+    icon: Factory,
+    label: "Production-History",
+    items: [
+      {
+        label: "Production History Log",
+        href: "/admin/production-history",
+        description: "Production history and its log",
+      }
+    ],
+  },
   {
     icon: ShoppingCart,
     label: "Orders",
