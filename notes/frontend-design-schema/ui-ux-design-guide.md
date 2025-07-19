@@ -1,7 +1,10 @@
-# UI/UX Design Guide for xgen-MRP
+# UI/UX Design Guide for XGen MRP
 
-## Overview
-This guide establishes consistent patterns for UI/UX design across the xgen-MRP manufacturing system. It covers component usage, loading states, data fetching patterns, and user experience best practices.
+**Purpose:** Comprehensive UI/UX design patterns and best practices  
+**Moved from:** Root notes directory  
+**Last Updated:** January 20, 2025
+
+This guide establishes consistent patterns for UI/UX design across the XGen MRP manufacturing system. It covers component usage, loading states, data fetching patterns, and user experience best practices.
 
 ---
 
@@ -905,4 +908,4 @@ All date pickers automatically adapt to screen size:
 
 ---
 
-This guide ensures consistency across the xgen-MRP system and provides a foundation for scalable, maintainable UI/UX development. 
+This guide ensures consistency across the XGen MRP system and provides a foundation for scalable, maintainable UI/UX development.

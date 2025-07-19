@@ -1,11 +1,62 @@
 # XGen MRP System Documentation
 
-**Last Updated:** 2024-12-19  
-**Status:** ✅ STREAMLINED & CURRENT
+**Last Updated:** January 20, 2025  
+**Status:** ✅ COMPREHENSIVE & ORGANIZED  
+**Version:** 2.0
 
-## Documentation Overview
+## 📚 Documentation Overview
 
-This directory contains the essential documentation for the XGen MRP system, organized for maximum clarity and utility for both developers and AI assistants.
+This directory contains comprehensive documentation for the XGen MRP (Manufacturing Resource Planning) system, organized by user role and function for maximum clarity and utility. The documentation serves both technical and non-technical users, from shop floor workers to senior management.
+
+## 🏭 System Overview
+
+**[Complete System Overview](./SYSTEM_OVERVIEW.md)** - Start here for a comprehensive understanding of the XGen MRP system, its purpose, users, and capabilities.
+
+## 🎯 Quick Navigation
+
+### **👥 Role-Based Documentation**
+Perfect for users who need to understand their specific role and responsibilities:
+
+- **[Admin Documentation](./admin/)** - Complete admin user guide and management tools
+  - Production management, user administration, system oversight
+  - Dashboard analytics, reporting, and business intelligence
+  - Material planning, quality oversight, and performance monitoring
+
+- **[Worker Documentation](./worker/)** - Production worker interface and procedures  
+  - Task management, production execution, material handling
+  - Mobile interface, QR scanning, progress tracking
+  - Quality procedures, safety protocols, team coordination
+
+- **[Inspector Documentation](./inspector/)** - Quality control and inspection management
+  - Quality inspections, standards compliance, issue resolution
+  - Mobile inspection tools, documentation, certification
+  - Performance metrics, continuous improvement, regulatory compliance
+
+- **[Delivery Documentation](./delivery/)** - Logistics and delivery coordination
+  - Order fulfillment, route planning, customer service
+  - Fleet management, mobile delivery tools, performance tracking
+  - Quality verification, documentation, customer satisfaction
+
+### **🔧 Technical Documentation**
+For developers, system administrators, and IT personnel:
+
+- **[Technical Guide](./technical/)** - System architecture, development, and integration
+- **[System Architecture](./System_Architecture_Code_Guide.md)** - Detailed technical architecture
+- **[Development Guidelines](./Development_Guidelines.md)** - Coding standards and practices
+- **[UI/UX Design Guide](./UI_UX_Design_Guide.md)** - Design patterns and standards
+
+### **📋 Business Process Documentation**
+Understanding how work flows through the system:
+
+- **[Business Processes](./processes/)** - Key business workflows and procedures
+- **[Key Workflows](./Key_Workflows.md)** - Essential business process flows
+- **[Customer Order Process](./processes/customer-order-process.md)** - Order management workflow
+
+### **🎓 Training and Support**
+Comprehensive training for all system users:
+
+- **[Training Materials](./training/)** - Comprehensive training program for all users
+- **[User Certification Programs](./training/)** - Role-specific training and certification
 
 ## 📋 **Core Documentation Files**
 
