@@ -786,6 +786,7 @@ enum Status {
   ARCHIVED
   ON_HOLD // Added from previous schema
   FAILED // Added from previous schema
+  SUBCON  // Added from previous schema
 }
 
 enum Priority {

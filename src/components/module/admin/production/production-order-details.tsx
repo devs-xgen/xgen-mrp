@@ -1331,7 +1331,8 @@ import { formatCurrencyPHP } from "@/lib/constant"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { getAvailableWorkCenters } from "@/lib/actions/inspector/production-order"
-import { ProductionHistory } from "./production-history" // Import the new ProductionHistory component
+import { ProductionHistory } from "./production-history"
+// Import the new ProductionHistory component
 
 // Utility function to render JSON details for ActivityLog
 const renderDetails = (details: any) => {
