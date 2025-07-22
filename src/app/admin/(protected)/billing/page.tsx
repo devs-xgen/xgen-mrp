@@ -138,8 +138,14 @@ async function BillingDashboardContent() {
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <Button asChild className="h-auto p-4 flex flex-col items-center space-y-2">
+                <Link href="/admin/billing/simple-billing-statements">
+                  <FileText className="h-6 w-6" />
+                  <span>Simple Billing</span>
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
                 <Link href="/admin/billing/billing-statements/create">
                   <FileText className="h-6 w-6" />
                   <span>Create Billing Statement</span>
@@ -319,4 +325,4 @@ export default function BillingDashboard() {
       <FloatingChatbox />
     </div>
   );
-} 
+}

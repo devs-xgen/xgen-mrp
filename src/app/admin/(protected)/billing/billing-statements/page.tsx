@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { Metadata } from "next";
 import Link from "next/link";
-import { Plus, FileText, Search, Filter, Download, MoreHorizontal } from "lucide-react";
+import { Plus, FileText, Search, Filter, Download, MoreHorizontal, Receipt } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getAllBillingStatements, getBillingAnalytics } from "@/lib/actions/billing-statements";
 import { BillingStatementWithRelations, BillingStatus } from "@/types/admin/billing";
 import { formatCurrencyPHP } from "@/lib/constant";
+import { ManualBillingDialog } from "@/components/module/admin/billing/manual-billing-dialog";
 
 export const metadata: Metadata = {
   title: "Billing Statements",
@@ -367,6 +368,7 @@ export default function BillingStatementsPage() {
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
+          <ManualBillingDialog />
           <Button size="sm" asChild>
             <Link href="/admin/billing/billing-statements/create">
               <Plus className="mr-2 h-4 w-4" />
@@ -382,4 +384,4 @@ export default function BillingStatementsPage() {
       </Suspense>
     </div>
   );
-} 
+}

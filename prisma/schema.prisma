@@ -8,60 +8,55 @@ datasource db {
 }
 
 model User {
-  id                       String                 @id @default(cuid())
-  email                    String                 @unique
-  password                 String
-  role                     Role                   @default(WORKER) // Updated default
-  createdAt                DateTime               @default(now())
-  updatedAt                DateTime               @updatedAt
-  createdBy                String?
-  lastLoginAt              DateTime?
-  modifiedBy               String?
-  status                   UserStatus             @default(ACTIVE)
-  Transaction              Transaction[]
-  profile                  UserProfile?
-  // New relationships
-  workCenterAssignments    WorkCenterAssignment[]
-  assignedOperations       Operation[]            @relation("AssignedOperations")
-  performedOperations      Operation[]            @relation("PerformedOperations")
-  inspections              QualityCheck[]         @relation("Inspections")
-  createdProductionOrders  ProductionOrder[]      @relation("CreatedBy")
-  modifiedProductionOrders ProductionOrder[]      @relation("ModifiedBy")
-  UserWorkCenter           UserWorkCenter[]
-  inspector                Inspector?
-  requestedMaterials       MaterialRequest[]      @relation("RequestedMaterials")
-  approvedMaterials        MaterialRequest[]      @relation("ApprovedMaterials")
-  reportedIssues           InventoryIssueReport[]
-  deliveryAssignments      DeliveryAssignment[]
-  activityLogs             ActivityLog[] // Add relation to ActivityLog
-
-  // MRP Enhancement Relations
-  materialConsumptions      ProductionMaterialConsumption[]
-  performedMovements        InventoryMovement[]             @relation("PerformedMovements")
-  approvedMovements         InventoryMovement[]             @relation("ApprovedMovements")
-  investigatedVariances     CostVariance[]
+  id                        String                          @id @default(cuid())
+  email                     String                          @unique
+  password                  String
+  role                      Role                            @default(WORKER)
+  createdAt                 DateTime                        @default(now())
+  updatedAt                 DateTime                        @updatedAt
+  createdBy                 String?
+  lastLoginAt               DateTime?
+  modifiedBy                String?
+  status                    UserStatus                      @default(ACTIVE)
+  activityLogs              ActivityLog[]
   BillingStatement          BillingStatement[]              @relation("CreatedBillingStatements")
   modifiedBillingStatements BillingStatement[]              @relation("ModifiedBillingStatements")
+  investigatedVariances     CostVariance[]
+  deliveryAssignments       DeliveryAssignment[]
   createdDeliveryReceipts   DeliveryReceipt[]               @relation("CreatedDeliveryReceipts")
   modifiedDeliveryReceipts  DeliveryReceipt[]               @relation("ModifiedDeliveryReceipts")
+  inspector                 Inspector?
+  reportedIssues            InventoryIssueReport[]
+  approvedMovements         InventoryMovement[]             @relation("ApprovedMovements")
+  performedMovements        InventoryMovement[]             @relation("PerformedMovements")
+  approvedMaterials         MaterialRequest[]               @relation("ApprovedMaterials")
+  requestedMaterials        MaterialRequest[]               @relation("RequestedMaterials")
+  assignedOperations        Operation[]                     @relation("AssignedOperations")
+  performedOperations       Operation[]                     @relation("PerformedOperations")
+  materialConsumptions      ProductionMaterialConsumption[]
+  createdProductionOrders   ProductionOrder[]               @relation("CreatedBy")
+  modifiedProductionOrders  ProductionOrder[]               @relation("ModifiedBy")
+  productionHistoryLogs     ProductionOrderHistoryLog[]
+  inspections               QualityCheck[]                  @relation("Inspections")
   createdSalesInvoices      SalesInvoice[]                  @relation("CreatedSalesInvoices")
   modifiedSalesInvoices     SalesInvoice[]                  @relation("ModifiedSalesInvoices")
-
-// Simplified Production History Log Relation
-  productionHistoryLogs     ProductionOrderHistoryLog[]
+  Transaction               Transaction[]
+  profile                   UserProfile?
+  UserWorkCenter            UserWorkCenter[]
+  workCenterAssignments     WorkCenterAssignment[]
 }
 
-// Simplified ProductionOrderHistoryLog
 model ProductionOrderHistoryLog {
   id                String          @id @default(cuid())
   productionOrderId String
-  productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
   userId            String
-  user              User            @relation(fields: [userId], references: [id])
   timestamp         DateTime        @default(now())
-  status            Status?         // New status after update (optional)
-  changeType        String          // e.g. "status_update", "quantity_update", "note_update"
-  notes             String?         // Optional description of the change
+  status            Status?
+  changeType        String
+  notes             String?
+  productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
+  user              User            @relation(fields: [userId], references: [id])
+
   @@index([productionOrderId])
   @@index([userId])
 }
@@ -156,131 +151,98 @@ model UnitOfMeasure {
 }
 
 model Product {
-  id                String   @id @default(cuid())
-  sku               String   @unique
-  name              String
-  description       String?
-  categoryId        String
-  sizeRange         String[] // Keep for legacy/simple products
-  colorOptions      String[] // Keep for legacy/simple products
-  unitCost          Decimal  @db.Decimal(10, 2) // Base cost
-  sellingPrice      Decimal  @db.Decimal(10, 2) // Base price
-  minimumStockLevel Int
-  currentStock      Int
-  expectedStock     Int      @default(0)
-  committedStock    Int      @default(0)
-  calculatedStock   Int      @default(0)
-  leadTime          Int
-  hasVariants       Boolean  @default(false) // Changed from hasSizeVariants to hasVariants
-  status            Status   @default(ACTIVE)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  createdBy         String?
-  modifiedBy        String?
-
-  // Enhanced Variant Management
-  isVariantTemplate Boolean @default(false) // Master product for variants
-  parentProductId   String? // Link to parent product for variants
-  variantAttributes Json? // Flexible variant properties storage
-
-  boms             BOM[]
-  orderLines       OrderLine[]
-  category         ProductCategory   @relation(fields: [categoryId], references: [id])
-  productionOrders ProductionOrder[]
-  variants         ProductVariant[] // Enhanced relation for all variants
-
-  // Enhanced Variant Relations
-  parentProduct Product?  @relation("ProductVariants", fields: [parentProductId], references: [id])
-  childVariants Product[] @relation("ProductVariants")
-
-  // MRP Enhancement Relations
-  inventoryMovements       InventoryMovement[]
-  productionBatches        ProductionBatch[]
-  ProductSizeVariant       ProductSizeVariant[]
-  ProductVariantTemplate   ProductVariantTemplate? @relation(fields: [productVariantTemplateId], references: [id])
+  id                       String                  @id @default(cuid())
+  sku                      String                  @unique
+  name                     String
+  description              String?
+  categoryId               String
+  sizeRange                String[]
+  colorOptions             String[]
+  unitCost                 Decimal                 @db.Decimal(10, 2)
+  sellingPrice             Decimal                 @db.Decimal(10, 2)
+  minimumStockLevel        Int
+  currentStock             Int
+  expectedStock            Int                     @default(0)
+  committedStock           Int                     @default(0)
+  calculatedStock          Int                     @default(0)
+  leadTime                 Int
+  hasVariants              Boolean                 @default(false)
+  status                   Status                  @default(ACTIVE)
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  createdBy                String?
+  modifiedBy               String?
+  isVariantTemplate        Boolean                 @default(false)
+  parentProductId          String?
+  variantAttributes        Json?
   productVariantTemplateId String?
-  salesInvoiceItems        SalesInvoiceItem[] // 🆕 ADD: Sales invoice items relation
+  boms                     BOM[]
+  inventoryMovements       InventoryMovement[]
+  orderLines               OrderLine[]
+  category                 ProductCategory         @relation(fields: [categoryId], references: [id])
+  parentProduct            Product?                @relation("ProductVariants", fields: [parentProductId], references: [id])
+  childVariants            Product[]               @relation("ProductVariants")
+  ProductVariantTemplate   ProductVariantTemplate? @relation(fields: [productVariantTemplateId], references: [id])
+  ProductSizeVariant       ProductSizeVariant[]
+  variants                 ProductVariant[]
+  productionBatches        ProductionBatch[]
+  productionOrders         ProductionOrder[]
+  salesInvoiceItems        SalesInvoiceItem[]
 }
 
-// New ProductVariantTemplate model for variant configuration
 model ProductVariantTemplate {
-  id          String  @id @default(cuid())
-  name        String
-  description String?
-
-  // Size Configuration
-  availableSizes Json // ["XS", "S", "M", "L", "XL", "XXL"]
-  sizeMapping    Json // Size-specific multipliers/overrides
-
-  // Color Configuration  
-  availableColors Json // [{"name": "Red", "code": "#FF0000"}, ...]
-  colorMapping    Json // Color-specific pricing/materials
-
-  // BOM Configuration
-  baseBOMId      String?
-  bomInheritance Json // Rules for BOM inheritance
-
-  // Pricing Rules
-  pricingRules Json // Size/color-based pricing rules
-
-  // Metadata
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  createdBy  String?
-  modifiedBy String?
-
-  // Relations
-  products Product[]
-  baseBOM  BOM?      @relation("TemplateBOM", fields: [baseBOMId], references: [id])
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  availableSizes  Json
+  sizeMapping     Json
+  availableColors Json
+  colorMapping    Json
+  baseBOMId       String?
+  bomInheritance  Json
+  pricingRules    Json
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdBy       String?
+  modifiedBy      String?
+  products        Product[]
+  baseBOM         BOM?      @relation("TemplateBOM", fields: [baseBOMId], references: [id])
 }
 
-// Enhanced model for comprehensive product variants (size + color + other attributes)
 model ProductVariant {
-  id        String @id @default(cuid())
-  productId String
-  sku       String @unique // Unique SKU for each variant (e.g., SHIRT-001-M-RED)
+  id                   String              @id @default(cuid())
+  productId            String
+  sku                  String              @unique
+  sizeName             String?
+  sizeCode             String?
+  colorName            String?
+  colorCode            String?
+  styleName            String?
+  materialName         String?
+  unitCost             Decimal             @db.Decimal(10, 2)
+  sellingPrice         Decimal             @db.Decimal(10, 2)
+  currentStock         Int                 @default(0)
+  minimumStockLevel    Int                 @default(0)
+  expectedStock        Int                 @default(0)
+  committedStock       Int                 @default(0)
+  displayName          String
+  isActive             Boolean             @default(true)
+  sortOrder            Int                 @default(0)
+  inheritBOMFromParent Boolean             @default(true)
+  bomOverrides         Json?
+  variantGroup         String?
+  isTemplate           Boolean             @default(false)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  createdBy            String?
+  modifiedBy           String?
+  OrderLine            OrderLine[]
+  orderLines           OrderLineVariant[]
+  product              Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  boms                 ProductVariantBOM[]
+  ProductionOrder      ProductionOrder[]
 
-  // Variant Attributes
-  sizeName     String? // XS, S, M, L, XL, XXL, etc.
-  sizeCode     String? // Size code for processing
-  colorName    String? // Red, Blue, Green, etc.
-  colorCode    String? // Color code (hex, pantone, etc.)
-  styleName    String? // Optional: Style variant (Regular, Slim, etc.)
-  materialName String? // Optional: Material variant (Cotton, Polyester, etc.)
-
-  // Pricing and Stock
-  unitCost          Decimal @db.Decimal(10, 2) // Variant-specific cost
-  sellingPrice      Decimal @db.Decimal(10, 2) // Variant-specific price
-  currentStock      Int     @default(0)
-  minimumStockLevel Int     @default(0)
-  expectedStock     Int     @default(0)
-  committedStock    Int     @default(0)
-
-  // Display and Organization
-  displayName String // Friendly display name (e.g., "Medium Red")
-  isActive    Boolean @default(true)
-  sortOrder   Int     @default(0) // For ordering variants
-
-  // Enhanced BOM Management
-  inheritBOMFromParent Boolean @default(true) // Whether to inherit BOM from parent product
-  bomOverrides         Json? // JSON field for BOM modifications and overrides
-  variantGroup         String? // Group related variants together
-  isTemplate           Boolean @default(false) // Whether this variant is a template for others
-
-  // Metadata
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  createdBy  String?
-  modifiedBy String?
-
-  // Relations
-  product         Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
-  boms            ProductVariantBOM[] // Variant-specific BOMs
-  orderLines      OrderLineVariant[] // Orders for specific variants
-  OrderLine       OrderLine[]
-  ProductionOrder ProductionOrder[]
-
-  @@unique([productId, sizeName, colorName]) // Ensure unique size+color combinations per product
+  @@unique([productId, sizeName, colorName])
   @@index([productId])
   @@index([sizeName])
   @@index([colorName])
@@ -288,93 +250,78 @@ model ProductVariant {
   @@index([variantGroup])
 }
 
-// Variant-specific BOM (replaces ProductSizeVariantBOM)
 model ProductVariantBOM {
-  id               String   @id @default(cuid())
+  id               String         @id @default(cuid())
   productVariantId String
   materialId       String
-  quantityNeeded   Decimal  @db.Decimal(10, 3)
-  wastePercentage  Decimal  @db.Decimal(5, 2)
-  notes            String? // Notes about material usage for this variant
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  quantityNeeded   Decimal        @db.Decimal(10, 3)
+  wastePercentage  Decimal        @db.Decimal(5, 2)
+  notes            String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
   createdBy        String?
   modifiedBy       String?
-
-  // Relations
-  productVariant ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
-  material       Material       @relation(fields: [materialId], references: [id])
+  material         Material       @relation(fields: [materialId], references: [id])
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
 
   @@unique([productVariantId, materialId])
   @@index([productVariantId])
   @@index([materialId])
 }
 
-// Enhanced OrderLine to support specific variants
 model OrderLineVariant {
-  id          String   @id @default(cuid())
+  id          String         @id @default(cuid())
   orderLineId String
   variantId   String
   quantity    Int
-  unitPrice   Decimal  @db.Decimal(10, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  orderLine OrderLine      @relation(fields: [orderLineId], references: [id], onDelete: Cascade)
-  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  unitPrice   Decimal        @db.Decimal(10, 2)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  orderLine   OrderLine      @relation(fields: [orderLineId], references: [id], onDelete: Cascade)
+  variant     ProductVariant @relation(fields: [variantId], references: [id])
 
   @@unique([orderLineId, variantId])
   @@index([orderLineId])
   @@index([variantId])
 }
 
-// DEPRECATED: Keep for backward compatibility, but mark as deprecated
-// Will be migrated to ProductVariant gradually
 model ProductSizeVariant {
-  id                String   @id @default(cuid())
+  id                String                  @id @default(cuid())
   productId         String
-  sizeName          String // XS, S, M, L, XL, XXL, etc.
-  sizeCode          String // Size code for SKU generation
-  unitCost          Decimal  @db.Decimal(10, 2) // Size-specific cost
-  sellingPrice      Decimal  @db.Decimal(10, 2) // Size-specific price
-  currentStock      Int      @default(0)
-  minimumStockLevel Int      @default(0)
-  isActive          Boolean  @default(true)
-  sortOrder         Int      @default(0) // For ordering sizes (XS=1, S=2, etc.)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  sizeName          String
+  sizeCode          String
+  unitCost          Decimal                 @db.Decimal(10, 2)
+  sellingPrice      Decimal                 @db.Decimal(10, 2)
+  currentStock      Int                     @default(0)
+  minimumStockLevel Int                     @default(0)
+  isActive          Boolean                 @default(true)
+  sortOrder         Int                     @default(0)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
   createdBy         String?
   modifiedBy        String?
-  // DEPRECATED: Will be migrated to ProductVariant
-  isDeprecated      Boolean  @default(false)
-
-  // Relations
-  product Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
-  boms    ProductSizeVariantBOM[] // Size-specific BOMs
+  isDeprecated      Boolean                 @default(false)
+  product           Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
+  boms              ProductSizeVariantBOM[]
 
   @@unique([productId, sizeName])
   @@index([productId])
   @@index([sizeName])
 }
 
-// DEPRECATED: Keep for backward compatibility
 model ProductSizeVariantBOM {
-  id                   String   @id @default(cuid())
+  id                   String             @id @default(cuid())
   productSizeVariantId String
   materialId           String
-  quantityNeeded       Decimal  @db.Decimal(10, 3)
-  wastePercentage      Decimal  @db.Decimal(5, 2)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  quantityNeeded       Decimal            @db.Decimal(10, 3)
+  wastePercentage      Decimal            @db.Decimal(5, 2)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
   createdBy            String?
   modifiedBy           String?
-  // DEPRECATED: Will be migrated to ProductVariantBOM
-  isDeprecated         Boolean  @default(false)
-
-  // Relations
-  productSizeVariant ProductSizeVariant @relation(fields: [productSizeVariantId], references: [id], onDelete: Cascade)
-  material           Material           @relation(fields: [materialId], references: [id])
+  isDeprecated         Boolean            @default(false)
+  material             Material           @relation(fields: [materialId], references: [id])
+  productSizeVariant   ProductSizeVariant @relation(fields: [productSizeVariantId], references: [id], onDelete: Cascade)
 
   @@unique([productSizeVariantId, materialId])
   @@index([productSizeVariantId])
@@ -382,38 +329,36 @@ model ProductSizeVariantBOM {
 }
 
 model Material {
-  id                 String              @id @default(cuid())
-  name               String
-  typeId             String
-  unitOfMeasureId    String
-  costPerUnit        Decimal             @db.Decimal(10, 2)
-  currentStock       Int
-  minimumStockLevel  Int
-  committedStock     Int                 @default(0)
-  availableStock     Int                 @default(0) // currentStock - committedStock (calculated)
-  leadTime           Int
-  supplierId         String
-  status             Status              @default(ACTIVE)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  createdBy          String?
-  modifiedBy         String?
-  notes              String?
-  sku                String              @unique
-  boms               BOM[]
-  supplier           Supplier            @relation(fields: [supplierId], references: [id])
-  type               MaterialType        @relation(fields: [typeId], references: [id])
-  unitOfMeasure      UnitOfMeasure       @relation(fields: [unitOfMeasureId], references: [id])
-  purchaseOrderLines PurchaseOrderLine[]
-
-  // MRP Enhancement Relations
-  reservations          MaterialReservation[]
-  consumptions          ProductionMaterialConsumption[]
-  inventoryMovements    InventoryMovement[]
+  id                    String                          @id @default(cuid())
+  name                  String
+  typeId                String
+  unitOfMeasureId       String
+  costPerUnit           Decimal                         @db.Decimal(10, 2)
+  currentStock          Int
+  minimumStockLevel     Int
+  committedStock        Int                             @default(0)
+  availableStock        Int                             @default(0)
+  leadTime              Int
+  supplierId            String
+  status                Status                          @default(ACTIVE)
+  createdAt             DateTime                        @default(now())
+  updatedAt             DateTime                        @updatedAt
+  createdBy             String?
+  modifiedBy            String?
+  notes                 String?
+  sku                   String                          @unique
+  boms                  BOM[]
   costVariances         CostVariance[]
-  ProductionBOM         ProductionBOM[]
+  inventoryMovements    InventoryMovement[]
+  supplier              Supplier                        @relation(fields: [supplierId], references: [id])
+  type                  MaterialType                    @relation(fields: [typeId], references: [id])
+  unitOfMeasure         UnitOfMeasure                   @relation(fields: [unitOfMeasureId], references: [id])
+  reservations          MaterialReservation[]
   ProductSizeVariantBOM ProductSizeVariantBOM[]
-  ProductVariantBOM     ProductVariantBOM[] // New relation
+  ProductVariantBOM     ProductVariantBOM[]
+  ProductionBOM         ProductionBOM[]
+  consumptions          ProductionMaterialConsumption[]
+  purchaseOrderLines    PurchaseOrderLine[]
   SalesInvoiceItem      SalesInvoiceItem[]
 }
 
@@ -429,35 +374,32 @@ model BOM {
   modifiedBy             String?
   material               Material                 @relation(fields: [materialId], references: [id])
   product                Product                  @relation(fields: [productId], references: [id])
-  ProductionBOM          ProductionBOM[]
   ProductVariantTemplate ProductVariantTemplate[] @relation("TemplateBOM")
+  ProductionBOM          ProductionBOM[]
 
   @@index([productId])
   @@index([materialId])
 }
 
-// Production-specific BOM (Working Copy)
 model ProductionBOM {
-  id                String   @id @default(cuid())
+  id                String          @id @default(cuid())
   productionOrderId String
   materialId        String
-  originalBOMId     String? // Reference to the original BOM entry
-  quantityNeeded    Decimal  @db.Decimal(10, 3)
-  wastePercentage   Decimal  @db.Decimal(5, 2)
-  adjustedQuantity  Decimal? @db.Decimal(10, 3) // Adjusted quantity for this production
-  adjustmentReason  String? // Reason for quantity adjustment
-  isAdjusted        Boolean  @default(false) // Flag to track if quantity was modified
-  unitCost          Decimal  @db.Decimal(10, 4) // Cost at time of production
-  totalCost         Decimal  @db.Decimal(12, 2) // Calculated total cost
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  originalBOMId     String?
+  quantityNeeded    Decimal         @db.Decimal(10, 3)
+  wastePercentage   Decimal         @db.Decimal(5, 2)
+  adjustedQuantity  Decimal?        @db.Decimal(10, 3)
+  adjustmentReason  String?
+  isAdjusted        Boolean         @default(false)
+  unitCost          Decimal         @db.Decimal(10, 4)
+  totalCost         Decimal         @db.Decimal(12, 2)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
   createdBy         String?
   modifiedBy        String?
-
-  // Relations
-  productionOrder ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
-  material        Material        @relation(fields: [materialId], references: [id])
-  originalBOM     BOM?            @relation(fields: [originalBOMId], references: [id])
+  material          Material        @relation(fields: [materialId], references: [id])
+  originalBOM       BOM?            @relation(fields: [originalBOMId], references: [id])
+  productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
 
   @@unique([productionOrderId, materialId])
   @@index([productionOrderId])
@@ -466,51 +408,42 @@ model ProductionBOM {
 }
 
 model ProductionOrder {
-  id               String   @id @default(cuid())
-  productId        String
-  productVariantId String? // 🆕 ADD: Optional variant tracking for variant-specific production
-  quantity         Int
-  startDate        DateTime
-  dueDate          DateTime
-  status           Status   @default(ACTIVE)
-  priority         Priority @default(MEDIUM)
-  customerOrderId  String?
-  notes            String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  createdBy        String?
-  createdByUser    User?    @relation("CreatedBy", fields: [createdBy], references: [id])
-  modifiedBy       String?
-  modifiedByUser   User?    @relation("ModifiedBy", fields: [modifiedBy], references: [id])
+  id                    String                          @id @default(cuid())
+  productId             String
+  productVariantId      String?
+  quantity              Int
+  startDate             DateTime
+  dueDate               DateTime
+  status                Status                          @default(ACTIVE)
+  priority              Priority                        @default(MEDIUM)
+  customerOrderId       String?
+  notes                 String?
+  createdAt             DateTime                        @default(now())
+  updatedAt             DateTime                        @updatedAt
+  createdBy             String?
+  modifiedBy            String?
+  plannedMaterialCost   Decimal                         @default(0) @db.Decimal(12, 2)
+  actualMaterialCost    Decimal                         @default(0) @db.Decimal(12, 2)
+  materialVariance      Decimal                         @default(0) @db.Decimal(12, 2)
+  completedQuantity     Int                             @default(0)
+  completedAt           DateTime?
+  billingStatements     BillingStatement[]
+  costVariances         CostVariance[]
+  delivery              DeliveryAssignment?
+  materialReservations  MaterialReservation[]
+  operations            Operation[]
+  ProductionBOM         ProductionBOM[]
+  productionBatches     ProductionBatch[]
+  materialConsumptions  ProductionMaterialConsumption[]
+  createdByUser         User?                           @relation("CreatedBy", fields: [createdBy], references: [id])
+  customerOrder         CustomerOrder?                  @relation(fields: [customerOrderId], references: [id])
+  modifiedByUser        User?                           @relation("ModifiedBy", fields: [modifiedBy], references: [id])
+  product               Product                         @relation(fields: [productId], references: [id])
+  productVariant        ProductVariant?                 @relation(fields: [productVariantId], references: [id])
+  productionHistoryLogs ProductionOrderHistoryLog[]
+  qualityChecks         QualityCheck[]
 
-  // Material Cost Tracking
-  plannedMaterialCost Decimal @default(0) @db.Decimal(12, 2)
-  actualMaterialCost  Decimal @default(0) @db.Decimal(12, 2)
-  materialVariance    Decimal @default(0) @db.Decimal(12, 2)
-
-  // Production Tracking
-  completedQuantity Int       @default(0)
-  completedAt       DateTime?
-
-  operations     Operation[]
-  customerOrder  CustomerOrder?      @relation(fields: [customerOrderId], references: [id])
-  product        Product             @relation(fields: [productId], references: [id])
-  productVariant ProductVariant?     @relation(fields: [productVariantId], references: [id]) // 🆕 ADD: Variant relation
-  qualityChecks  QualityCheck[]
-  delivery       DeliveryAssignment?
-
-  // MRP Enhancement Relations
-  materialReservations MaterialReservation[]
-  materialConsumptions ProductionMaterialConsumption[]
-  productionBatches    ProductionBatch[]
-  costVariances        CostVariance[]
-  ProductionBOM        ProductionBOM[]
-  billingStatements    BillingStatement[] // 🆕 ADD: Billing statements relation
-
-  // Simplified Production History Log Relation
-  productionHistoryLogs     ProductionOrderHistoryLog[]
-
-  @@index([productVariantId]) // 🆕 ADD: Index for performance
+  @@index([productVariantId])
 }
 
 model WorkCenter {
@@ -525,11 +458,11 @@ model WorkCenter {
   updatedAt        DateTime               @updatedAt
   createdBy        String?
   modifiedBy       String?
+  locations        Location[]
+  materialRequests MaterialRequest[]
   operations       Operation[]
   UserWorkCenter   UserWorkCenter[]
   userAssignments  WorkCenterAssignment[]
-  materialRequests MaterialRequest[]
-  locations        Location[]
 }
 
 model Operation {
@@ -544,15 +477,13 @@ model Operation {
   updatedAt         DateTime        @updatedAt
   createdBy         String?
   modifiedBy        String?
-  // New fields for worker assignments
   assignedToId      String?
   performedById     String?
-  // Relations
-  productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id])
-  workCenter        WorkCenter      @relation(fields: [workCenterId], references: [id])
+  cost              Decimal         @db.Decimal(10, 2)
   assignedTo        User?           @relation("AssignedOperations", fields: [assignedToId], references: [id])
   performedBy       User?           @relation("PerformedOperations", fields: [performedById], references: [id])
-  cost              Decimal         @db.Decimal(10, 2)
+  productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id])
+  workCenter        WorkCenter      @relation(fields: [workCenterId], references: [id])
 }
 
 model QualityCheck {
@@ -568,8 +499,8 @@ model QualityCheck {
   updatedAt         DateTime        @updatedAt
   createdBy         String?
   modifiedBy        String?
-  productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id])
   inspector         User            @relation("Inspections", fields: [inspectorId], references: [id])
+  productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id])
 }
 
 model Supplier {
@@ -650,8 +581,8 @@ model Customer {
   updatedAt         DateTime           @updatedAt
   createdBy         String?
   modifiedBy        String?
+  billingStatements BillingStatement[]
   orders            CustomerOrder[]
-  billingStatements BillingStatement[] // 🆕 ADD: Billing statements relation
 }
 
 model CustomerOrder {
@@ -669,18 +600,18 @@ model CustomerOrder {
   updatedAt         DateTime           @updatedAt
   createdBy         String?
   modifiedBy        String?
+  billingStatements BillingStatement[]
   customer          Customer           @relation(fields: [customerId], references: [id])
   orderLines        OrderLine[]
   productionOrders  ProductionOrder[]
   transaction       Transaction[]
-  billingStatements BillingStatement[] // 🆕 ADD: Billing statements relation
 }
 
 model OrderLine {
   id               String             @id @default(cuid())
   orderId          String
   productId        String
-  productVariantId String? // Optional field for variant orders
+  productVariantId String?
   quantity         Int
   unitPrice        Decimal            @db.Decimal(10, 2)
   status           Status             @default(ACTIVE)
@@ -691,8 +622,8 @@ model OrderLine {
   modifiedBy       String?
   customerOrder    CustomerOrder      @relation(fields: [orderId], references: [id])
   product          Product            @relation(fields: [productId], references: [id])
-  productVariant   ProductVariant?    @relation(fields: [productVariantId], references: [id]) // Direct variant relation
-  variants         OrderLineVariant[] // Keep for backward compatibility
+  productVariant   ProductVariant?    @relation(fields: [productVariantId], references: [id])
+  variants         OrderLineVariant[]
 }
 
 model Transaction {
@@ -747,56 +678,6 @@ model Alert {
   modifiedBy String?
 }
 
-enum PaymentMethod {
-  CASH
-  CREDIT_CARD
-  DEBIT_CARD
-  ONLINE
-  OTHER
-}
-
-enum Role {
-  ADMIN // Administrators and managers
-  WORKER // Production workers
-  INSPECTOR // Quality control personnel
-  DELIVERY // Logistics and delivery personnel
-}
-
-enum UserStatus {
-  ACTIVE
-  INACTIVE
-  SUSPENDED
-}
-
-enum Gender {
-  MALE
-  FEMALE
-  OTHER
-  PREFER_NOT_TO_SAY
-}
-
-enum Status {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-  ACTIVE
-  INACTIVE
-  SUSPENDED
-  ARCHIVED
-  ON_HOLD // Added from previous schema
-  FAILED // Added from previous schema
-  SUBCON  // Added from previous schema
-}
-
-enum Priority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-  CRITICAL // Added from previous schema
-}
-
 model UserWorkCenter {
   id            String     @id @default(cuid())
   userId        String
@@ -825,8 +706,8 @@ model MaterialRequest {
   productionOrderId String?
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
-  requestedBy       User                  @relation("RequestedMaterials", fields: [requestedById], references: [id])
   approvedBy        User?                 @relation("ApprovedMaterials", fields: [approvedById], references: [id])
+  requestedBy       User                  @relation("RequestedMaterials", fields: [requestedById], references: [id])
   workCenter        WorkCenter            @relation(fields: [workCenterId], references: [id])
   items             MaterialRequestItem[]
 }
@@ -843,81 +724,72 @@ model MaterialRequestItem {
   status            String          @default("PENDING")
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
-  materialRequest   MaterialRequest @relation(fields: [materialRequestId], references: [id], onDelete: Cascade)
   inventoryItem     InventoryItem   @relation(fields: [inventoryItemId], references: [id])
+  materialRequest   MaterialRequest @relation(fields: [materialRequestId], references: [id], onDelete: Cascade)
 }
 
 model InventoryItem {
-  id                 String   @id @default(cuid())
-  sku                String   @unique
-  name               String
-  description        String?
-  materialType       String   @default("COMPONENT")
-  locationId         String
-  unit               String
-  currentStock       Int      @default(0)
-  minimumStockLevel  Int      @default(0)
-  criticalStockLevel Int      @default(0)
-  reorderQuantity    Int?
-  leadTime           Int?
-  cost               Decimal  @db.Decimal(10, 2)
-  qrCode             String?
-  barcode            String?
-  image              String?
-  notes              String?
-  isActive           Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  createdBy          String?
-  modifiedBy         String?
-
-  // Relations
-  materialRequestItems MaterialRequestItem[]
-  location             Location               @relation(fields: [locationId], references: [id])
+  id                   String                 @id @default(cuid())
+  sku                  String                 @unique
+  name                 String
+  description          String?
+  materialType         String                 @default("COMPONENT")
+  locationId           String
+  unit                 String
+  currentStock         Int                    @default(0)
+  minimumStockLevel    Int                    @default(0)
+  criticalStockLevel   Int                    @default(0)
+  reorderQuantity      Int?
+  leadTime             Int?
+  cost                 Decimal                @db.Decimal(10, 2)
+  qrCode               String?
+  barcode              String?
+  image                String?
+  notes                String?
+  isActive             Boolean                @default(true)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  createdBy            String?
+  modifiedBy           String?
   issueReports         InventoryIssueReport[]
+  location             Location               @relation(fields: [locationId], references: [id])
+  materialRequestItems MaterialRequestItem[]
   SalesInvoiceItem     SalesInvoiceItem[]
 }
 
 model Location {
-  id           String   @id @default(cuid())
-  name         String
-  description  String?
-  locationType String   @default("STORAGE")
-  isPublic     Boolean  @default(false)
-  workCenterId String?
-  capacity     Int?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  createdBy    String?
-  modifiedBy   String?
-
-  // Relation to WorkCenter
-  workCenter WorkCenter? @relation(fields: [workCenterId], references: [id])
-
-  // Relation to InventoryItem
+  id             String          @id @default(cuid())
+  name           String
+  description    String?
+  locationType   String          @default("STORAGE")
+  isPublic       Boolean         @default(false)
+  workCenterId   String?
+  capacity       Int?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  createdBy      String?
+  modifiedBy     String?
   inventoryItems InventoryItem[]
+  workCenter     WorkCenter?     @relation(fields: [workCenterId], references: [id])
 }
 
 model InventoryIssueReport {
-  id              String    @id @default(cuid())
+  id              String        @id @default(cuid())
   inventoryItemId String
-  reportType      String // "LOW_STOCK", "DISCREPANCY", "DAMAGE", "QUALITY", "OTHER"
-  reportDate      DateTime  @default(now())
+  reportType      String
+  reportDate      DateTime      @default(now())
   reportedById    String
   description     String
-  severity        String // "LOW", "MEDIUM", "HIGH"
-  status          String    @default("OPEN") // "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"
+  severity        String
+  status          String        @default("OPEN")
   resolvedDate    DateTime?
   resolution      String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  // Relations
-  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
-  reportedBy    User          @relation(fields: [reportedById], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  reportedBy      User          @relation(fields: [reportedById], references: [id])
 }
 
-// New model for delivery assignments
 model DeliveryAssignment {
   id                String          @id @default(cuid())
   productionOrderId String          @unique
@@ -925,22 +797,20 @@ model DeliveryAssignment {
   scheduledDate     DateTime?
   status            Status          @default(PENDING)
   notes             String?
-  deliveryAddress   String? // Add specific delivery address
+  deliveryAddress   String?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   createdBy         String?
   modifiedBy        String?
-  // Relations
   productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id])
   user              User            @relation(fields: [userId], references: [id])
 }
 
-// Activity log for tracking system events
 model ActivityLog {
   id        String   @id @default(cuid())
-  type      String // Type of activity (e.g., PRODUCTION_STATUS_CHANGE, TASK_UPDATE)
-  userId    String // User who performed the action
-  details   Json // JSON details of the activity
+  type      String
+  userId    String
+  details   Json
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
 
@@ -949,11 +819,6 @@ model ActivityLog {
   @@index([createdAt])
 }
 
-// ==============================================
-// MRP ENHANCEMENT MODELS - Material Tracking
-// ==============================================
-
-// Material Reservations for Production Orders
 model MaterialReservation {
   id                String            @id @default(cuid())
   productionOrderId String
@@ -970,46 +835,40 @@ model MaterialReservation {
   updatedAt         DateTime          @updatedAt
   createdBy         String?
   modifiedBy        String?
-
-  // Relations
-  productionOrder ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
-  material        Material        @relation(fields: [materialId], references: [id])
+  material          Material          @relation(fields: [materialId], references: [id])
+  productionOrder   ProductionOrder   @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
 
   @@unique([productionOrderId, materialId])
   @@index([status])
   @@index([reservedAt])
 }
 
-// Production Material Consumption Tracking
 model ProductionMaterialConsumption {
-  id                String    @id @default(cuid())
+  id                String          @id @default(cuid())
   productionOrderId String
   materialId        String
-  plannedQuantity   Decimal   @db.Decimal(10, 3)
-  actualQuantity    Decimal   @db.Decimal(10, 3)
-  wasteQuantity     Decimal   @default(0) @db.Decimal(10, 3)
-  unitCost          Decimal   @db.Decimal(10, 4)
-  totalCost         Decimal   @db.Decimal(12, 2)
+  plannedQuantity   Decimal         @db.Decimal(10, 3)
+  actualQuantity    Decimal         @db.Decimal(10, 3)
+  wasteQuantity     Decimal         @default(0) @db.Decimal(10, 3)
+  unitCost          Decimal         @db.Decimal(10, 4)
+  totalCost         Decimal         @db.Decimal(12, 2)
   consumedBy        String
-  consumedAt        DateTime  @default(now())
+  consumedAt        DateTime        @default(now())
   batchNumber       String?
   lotNumber         String?
   expiryDate        DateTime?
   notes             String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  // Relations
-  productionOrder ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
-  material        Material        @relation(fields: [materialId], references: [id])
-  consumedByUser  User            @relation(fields: [consumedBy], references: [id])
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  consumedByUser    User            @relation(fields: [consumedBy], references: [id])
+  material          Material        @relation(fields: [materialId], references: [id])
+  productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
 
   @@index([productionOrderId])
   @@index([materialId])
   @@index([consumedAt])
 }
 
-// Comprehensive Inventory Movement Tracking
 model InventoryMovement {
   id              String       @id @default(cuid())
   materialId      String?
@@ -1020,8 +879,8 @@ model InventoryMovement {
   newStock        Decimal      @db.Decimal(10, 3)
   unitCost        Decimal?     @db.Decimal(10, 4)
   totalValue      Decimal?     @db.Decimal(12, 2)
-  referenceId     String? // production order, purchase order, adjustment ID, etc.
-  referenceType   String? // 'PRODUCTION_ORDER', 'PURCHASE_ORDER', 'ADJUSTMENT', etc.
+  referenceId     String?
+  referenceType   String?
   locationFrom    String?
   locationTo      String?
   performedBy     String
@@ -1032,12 +891,10 @@ model InventoryMovement {
   lotNumber       String?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
-
-  // Relations
-  material        Material? @relation(fields: [materialId], references: [id])
-  product         Product?  @relation(fields: [productId], references: [id])
-  performedByUser User      @relation("PerformedMovements", fields: [performedBy], references: [id])
-  approvedByUser  User?     @relation("ApprovedMovements", fields: [approvedBy], references: [id])
+  approvedByUser  User?        @relation("ApprovedMovements", fields: [approvedBy], references: [id])
+  material        Material?    @relation(fields: [materialId], references: [id])
+  performedByUser User         @relation("PerformedMovements", fields: [performedBy], references: [id])
+  product         Product?     @relation(fields: [productId], references: [id])
 
   @@index([movementType])
   @@index([transactionDate])
@@ -1046,167 +903,88 @@ model InventoryMovement {
   @@index([referenceId, referenceType])
 }
 
-// Production Batch Tracking
 model ProductionBatch {
-  id                String        @id @default(cuid())
-  batchNumber       String        @unique
+  id                String          @id @default(cuid())
+  batchNumber       String          @unique
   productionOrderId String
   productId         String
   plannedQuantity   Int
-  producedQuantity  Int           @default(0)
+  producedQuantity  Int             @default(0)
   startedAt         DateTime?
   completedAt       DateTime?
-  status            BatchStatus   @default(PLANNED)
-  qualityStatus     QualityStatus @default(PENDING)
-  totalMaterialCost Decimal       @default(0) @db.Decimal(12, 2)
-  totalLaborCost    Decimal       @default(0) @db.Decimal(12, 2)
-  totalOverheadCost Decimal       @default(0) @db.Decimal(12, 2)
-  unitCost          Decimal       @default(0) @db.Decimal(10, 4)
+  status            BatchStatus     @default(PLANNED)
+  qualityStatus     QualityStatus   @default(PENDING)
+  totalMaterialCost Decimal         @default(0) @db.Decimal(12, 2)
+  totalLaborCost    Decimal         @default(0) @db.Decimal(12, 2)
+  totalOverheadCost Decimal         @default(0) @db.Decimal(12, 2)
+  unitCost          Decimal         @default(0) @db.Decimal(10, 4)
   notes             String?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
   createdBy         String?
   modifiedBy        String?
-
-  // Relations
-  productionOrder ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
-  product         Product         @relation(fields: [productId], references: [id])
+  product           Product         @relation(fields: [productId], references: [id])
+  productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
 
   @@index([batchNumber])
   @@index([status])
   @@index([productionOrderId])
 }
 
-// Cost Variance Tracking
 model CostVariance {
-  id                String       @id @default(cuid())
+  id                String          @id @default(cuid())
   productionOrderId String
   materialId        String?
   varianceType      VarianceType
-  plannedCost       Decimal      @db.Decimal(12, 2)
-  actualCost        Decimal      @db.Decimal(12, 2)
-  variance          Decimal      @db.Decimal(12, 2)
-  variancePercent   Decimal      @db.Decimal(8, 4)
+  plannedCost       Decimal         @db.Decimal(12, 2)
+  actualCost        Decimal         @db.Decimal(12, 2)
+  variance          Decimal         @db.Decimal(12, 2)
+  variancePercent   Decimal         @db.Decimal(8, 4)
   explanation       String?
   investigatedBy    String?
   investigatedAt    DateTime?
   resolution        String?
   resolvedAt        DateTime?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-
-  // Relations
-  productionOrder ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
-  material        Material?       @relation(fields: [materialId], references: [id])
-  investigator    User?           @relation(fields: [investigatedBy], references: [id])
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  investigator      User?           @relation(fields: [investigatedBy], references: [id])
+  material          Material?       @relation(fields: [materialId], references: [id])
+  productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
 
   @@index([varianceType])
   @@index([productionOrderId])
 }
 
-// ==============================================
-// ENUMS FOR NEW FUNCTIONALITY
-// ==============================================
-
-enum ReservationStatus {
-  RESERVED // Materials reserved for production
-  PARTIAL // Partially consumed
-  CONSUMED // Fully consumed
-  RELEASED // Reservation released (cancelled production)
-  EXPIRED // Reservation expired
-}
-
-enum MovementType {
-  // Material movements
-  MATERIAL_RESERVATION // Reserve material for production
-  MATERIAL_CONSUMPTION // Consume material in production
-  MATERIAL_RETURN // Return unused material
-  MATERIAL_RECEIPT // Receive material from supplier
-  MATERIAL_TRANSFER // Transfer between locations
-  MATERIAL_ADJUSTMENT // Manual stock adjustment
-  MATERIAL_WASTE // Record material waste
-
-  // Product movements
-  PRODUCTION_COMPLETE // Add finished product to inventory
-  PRODUCT_SHIPMENT // Ship product to customer
-  PRODUCT_RETURN // Product return from customer
-  PRODUCT_ADJUSTMENT // Manual product stock adjustment
-  PRODUCT_TRANSFER // Transfer between locations
-
-  // Other movements
-  CYCLE_COUNT // Physical inventory count adjustment
-  DAMAGE_WRITE_OFF // Write off damaged inventory
-  EXPIRY_WRITE_OFF // Write off expired inventory
-}
-
-enum BatchStatus {
-  PLANNED // Batch planned but not started
-  IN_PROGRESS // Production in progress
-  COMPLETED // Production completed
-  ON_HOLD // Production on hold
-  CANCELLED // Production cancelled
-  QUALITY_HOLD // On hold for quality issues
-}
-
-enum QualityStatus {
-  PENDING // Quality check pending
-  PASSED // Quality check passed
-  FAILED // Quality check failed
-  CONDITIONAL // Passed with conditions
-  REWORK // Requires rework
-}
-
-enum VarianceType {
-  MATERIAL_PRICE // Material price variance
-  MATERIAL_USAGE // Material usage variance
-  LABOR_RATE // Labor rate variance
-  LABOR_EFFICIENCY // Labor efficiency variance
-  OVERHEAD // Overhead variance
-  TOTAL_COST // Total cost variance
-}
-
-// ==============================================
-// 🆕 BILLING SYSTEM MODELS
-// ==============================================
-
-// Main Billing Statement that ties everything together
 model BillingStatement {
-  id                String  @id @default(cuid())
-  statementNumber   String  @unique
-  customerId        String? // Optional - for existing customers
-  customerName      String // Required - customer name input
-  customerOrderId   String? // Optional - for customer order billinzg
-  productionOrderId String? // Optional - for direct production billing
-  deliveryReceiptId String? // Optional - delivery receipt reference
-  salesInvoiceId    String // Required - the actual invoice
-
-  // Billing details
-  totalAmount    Decimal @db.Decimal(12, 2)
-  taxAmount      Decimal @default(0) @db.Decimal(12, 2)
-  discountAmount Decimal @default(0) @db.Decimal(12, 2)
-  netAmount      Decimal @db.Decimal(12, 2)
-
-  // Status and dates
-  status      BillingStatus @default(DRAFT)
-  billingDate DateTime      @default(now())
-  dueDate     DateTime?
-  paidDate    DateTime?
-
-  // Metadata
-  notes          String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  createdBy      String?
-  createdByUser  User?    @relation("CreatedBillingStatements", fields: [createdBy], references: [id])
-  modifiedBy     String?
-  modifiedByUser User?    @relation("ModifiedBillingStatements", fields: [modifiedBy], references: [id])
-
-  // Relations
-  customer        Customer?        @relation(fields: [customerId], references: [id])
-  customerOrder   CustomerOrder?   @relation(fields: [customerOrderId], references: [id])
-  productionOrder ProductionOrder? @relation(fields: [productionOrderId], references: [id])
-  deliveryReceipt DeliveryReceipt? @relation(fields: [deliveryReceiptId], references: [id])
-  salesInvoice    SalesInvoice     @relation(fields: [salesInvoiceId], references: [id])
+  id                String           @id @default(cuid())
+  statementNumber   String           @unique
+  customerId        String?
+  customerOrderId   String?
+  productionOrderId String?
+  deliveryReceiptId String?
+  salesInvoiceId    String?
+  totalAmount       Decimal          @db.Decimal(12, 2)
+  taxAmount         Decimal          @default(0) @db.Decimal(12, 2)
+  discountAmount    Decimal          @default(0) @db.Decimal(12, 2)
+  netAmount         Decimal          @db.Decimal(12, 2)
+  status            BillingStatus    @default(DRAFT)
+  billingDate       DateTime         @default(now())
+  dueDate           DateTime?
+  paidDate          DateTime?
+  notes             String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  createdBy         String?
+  modifiedBy        String?
+  customerName      String
+  modifiedAt        DateTime?
+  createdByUser     User?            @relation("CreatedBillingStatements", fields: [createdBy], references: [id])
+  customer          Customer?        @relation(fields: [customerId], references: [id])
+  customerOrder     CustomerOrder?   @relation(fields: [customerOrderId], references: [id])
+  deliveryReceipt   DeliveryReceipt? @relation(fields: [deliveryReceiptId], references: [id])
+  modifiedByUser    User?            @relation("ModifiedBillingStatements", fields: [modifiedBy], references: [id])
+  productionOrder   ProductionOrder? @relation(fields: [productionOrderId], references: [id])
+  salesInvoice      SalesInvoice?    @relation(fields: [salesInvoiceId], references: [id])
 
   @@index([customerId])
   @@index([customerName])
@@ -1216,79 +994,55 @@ model BillingStatement {
   @@index([billingDate])
 }
 
-// Delivery Receipt for tracking deliveries
 model DeliveryReceipt {
-  id              String   @id @default(cuid())
-  receiptNumber   String   @unique
-  deliveryDate    DateTime
-  receivedBy      String // Person who received the delivery
-  receivedByTitle String? // Title/position of receiver
-  deliveryAddress String
-  deliveryNotes   String?
-
-  // Delivery details
-  itemsDelivered Json // Details of what was delivered
-  deliveryStatus DeliveryStatus @default(DELIVERED)
-
-  // Signature/confirmation
-  signatureImage String? // Base64 or file path to signature
-  photoEvidence  String? // Photo of delivered items
-
-  // Tracking information
-  trackingNumber String?
-  courierService String?
-  deliveryMethod String? // "PICKUP", "DELIVERY", "COURIER"
-
-  // Metadata
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  createdBy      String?
-  createdByUser  User?    @relation("CreatedDeliveryReceipts", fields: [createdBy], references: [id])
-  modifiedBy     String?
-  modifiedByUser User?    @relation("ModifiedDeliveryReceipts", fields: [modifiedBy], references: [id])
-
-  // Relations
+  id                String             @id @default(cuid())
+  receiptNumber     String             @unique
+  deliveryDate      DateTime
+  receivedBy        String
+  receivedByTitle   String?
+  deliveryAddress   String
+  deliveryNotes     String?
+  itemsDelivered    Json
+  deliveryStatus    DeliveryStatus     @default(DELIVERED)
+  signatureImage    String?
+  photoEvidence     String?
+  trackingNumber    String?
+  courierService    String?
+  deliveryMethod    String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  createdBy         String?
+  modifiedBy        String?
   billingStatements BillingStatement[]
+  createdByUser     User?              @relation("CreatedDeliveryReceipts", fields: [createdBy], references: [id])
+  modifiedByUser    User?              @relation("ModifiedDeliveryReceipts", fields: [modifiedBy], references: [id])
 
   @@index([deliveryDate])
   @@index([deliveryStatus])
 }
 
-// Sales Invoice for detailed billing
 model SalesInvoice {
-  id            String   @id @default(cuid())
-  invoiceNumber String   @unique
-  invoiceDate   DateTime @default(now())
-
-  // Invoice details
-  subtotal       Decimal @db.Decimal(12, 2)
-  taxRate        Decimal @default(0) @db.Decimal(5, 2)
-  taxAmount      Decimal @default(0) @db.Decimal(12, 2)
-  discountAmount Decimal @default(0) @db.Decimal(12, 2)
-  totalAmount    Decimal @db.Decimal(12, 2)
-
-  // Payment terms
-  paymentTerms String?
-  dueDate      DateTime?
-
-  // Status
-  status InvoiceStatus @default(DRAFT)
-
-  // Additional details
-  poNumber    String? // Customer's PO number
-  terms       String? // Terms and conditions
-  footerNotes String? // Additional notes at bottom
-
-  // Metadata
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  createdBy      String?
-  createdByUser  User?    @relation("CreatedSalesInvoices", fields: [createdBy], references: [id])
-  modifiedBy     String?
-  modifiedByUser User?    @relation("ModifiedSalesInvoices", fields: [modifiedBy], references: [id])
-
-  // Relations
+  id                String             @id @default(cuid())
+  invoiceNumber     String             @unique
+  invoiceDate       DateTime           @default(now())
+  subtotal          Decimal            @db.Decimal(12, 2)
+  taxRate           Decimal            @default(0) @db.Decimal(5, 2)
+  taxAmount         Decimal            @default(0) @db.Decimal(12, 2)
+  discountAmount    Decimal            @default(0) @db.Decimal(12, 2)
+  totalAmount       Decimal            @db.Decimal(12, 2)
+  paymentTerms      String?
+  dueDate           DateTime?
+  status            InvoiceStatus      @default(DRAFT)
+  poNumber          String?
+  terms             String?
+  footerNotes       String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  createdBy         String?
+  modifiedBy        String?
   billingStatements BillingStatement[]
+  createdByUser     User?              @relation("CreatedSalesInvoices", fields: [createdBy], references: [id])
+  modifiedByUser    User?              @relation("ModifiedSalesInvoices", fields: [modifiedBy], references: [id])
   invoiceItems      SalesInvoiceItem[]
 
   @@index([invoiceDate])
@@ -1296,67 +1050,158 @@ model SalesInvoice {
   @@index([dueDate])
 }
 
-// Individual line items in sales invoice
 model SalesInvoiceItem {
-  id             String  @id @default(cuid())
-  salesInvoiceId String
-  productId      String?
-  description    String
-  quantity       Decimal @db.Decimal(10, 3)
-  unitPrice      Decimal @db.Decimal(10, 2)
-  totalPrice     Decimal @db.Decimal(12, 2)
-
-  // Optional details
-  productCode     String? // Product code/SKU
-  unit            String? // Unit of measure
-  discountPercent Decimal? @default(0) @db.Decimal(5, 2)
-  taxable         Boolean  @default(true)
-
-  // Metadata
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  salesInvoice    SalesInvoice   @relation(fields: [salesInvoiceId], references: [id], onDelete: Cascade)
-  product         Product?       @relation(fields: [productId], references: [id])
-  Material        Material?      @relation(fields: [materialId], references: [id])
+  id              String         @id @default(cuid())
+  salesInvoiceId  String
+  productId       String?
+  description     String
+  quantity        Decimal        @db.Decimal(10, 3)
+  unitPrice       Decimal        @db.Decimal(10, 2)
+  totalPrice      Decimal        @db.Decimal(12, 2)
+  productCode     String?
+  unit            String?
+  discountPercent Decimal?       @default(0) @db.Decimal(5, 2)
+  taxable         Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
   materialId      String?
-  InventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
   inventoryItemId String?
+  InventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+  Material        Material?      @relation(fields: [materialId], references: [id])
+  product         Product?       @relation(fields: [productId], references: [id])
+  salesInvoice    SalesInvoice   @relation(fields: [salesInvoiceId], references: [id], onDelete: Cascade)
 
   @@index([salesInvoiceId])
   @@index([productId])
 }
 
-// ==============================================
-// 🆕 BILLING SYSTEM ENUMS
-// ==============================================
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  ONLINE
+  OTHER
+}
+
+enum Role {
+  ADMIN
+  WORKER
+  INSPECTOR
+  DELIVERY
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum Status {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  ARCHIVED
+  ON_HOLD
+  FAILED
+  SUBCON
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+  CRITICAL
+}
+
+enum ReservationStatus {
+  RESERVED
+  PARTIAL
+  CONSUMED
+  RELEASED
+  EXPIRED
+}
+
+enum MovementType {
+  MATERIAL_RESERVATION
+  MATERIAL_CONSUMPTION
+  MATERIAL_RETURN
+  MATERIAL_RECEIPT
+  MATERIAL_TRANSFER
+  MATERIAL_ADJUSTMENT
+  MATERIAL_WASTE
+  PRODUCTION_COMPLETE
+  PRODUCT_SHIPMENT
+  PRODUCT_RETURN
+  PRODUCT_ADJUSTMENT
+  PRODUCT_TRANSFER
+  CYCLE_COUNT
+  DAMAGE_WRITE_OFF
+  EXPIRY_WRITE_OFF
+}
+
+enum BatchStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+  QUALITY_HOLD
+}
+
+enum QualityStatus {
+  PENDING
+  PASSED
+  FAILED
+  CONDITIONAL
+  REWORK
+}
+
+enum VarianceType {
+  MATERIAL_PRICE
+  MATERIAL_USAGE
+  LABOR_RATE
+  LABOR_EFFICIENCY
+  OVERHEAD
+  TOTAL_COST
+}
 
 enum BillingStatus {
-  DRAFT // Being prepared
-  SENT // Sent to customer
-  PAID // Payment received
-  OVERDUE // Past due date
-  CANCELLED // Cancelled
-  DISPUTED // Under dispute
-  PARTIAL // Partially paid
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+  DISPUTED
+  PARTIAL
 }
 
 enum DeliveryStatus {
-  PENDING // Delivery scheduled
-  IN_TRANSIT // On the way
-  DELIVERED // Successfully delivered
-  FAILED // Delivery failed
-  RETURNED // Returned to sender
-  CANCELLED // Delivery cancelled
+  PENDING
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+  RETURNED
+  CANCELLED
 }
 
 enum InvoiceStatus {
-  DRAFT // Being prepared
-  SENT // Sent to customer
-  PAID // Payment received
-  OVERDUE // Past due date
-  CANCELLED // Cancelled
-  DISPUTED // Under dispute
-  PARTIAL // Partially paid
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+  DISPUTED
+  PARTIAL
 }

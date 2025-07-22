@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Row } from "@tanstack/react-table"
-import { Eye, MoreHorizontal, Trash, Factory, Plus } from "lucide-react"
+import { Eye, MoreHorizontal, Trash, Factory, Plus, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -27,6 +27,7 @@ import {
 import { CustomerOrderSheet } from "./customer-order-sheet"
 import { ProductionOrdersDialog } from "./production-orders-dialog"
 import { CreateProductionOrdersDialog } from "./create-production-orders-dialog"
+import { CreateBillingStatementDialog } from "./create-billing-statement-dialog"
 
 interface DataTableRowActionsProps {
   row: Row<CustomerOrderColumn>
@@ -37,6 +38,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const [showViewSheet, setShowViewSheet] = useState(false)
   const [showProductionDialog, setShowProductionDialog] = useState(false)
   const [showCreateProductionDialog, setShowCreateProductionDialog] = useState(false)
+  const [showCreateBillingDialog, setShowCreateBillingDialog] = useState(false)
   const { toast } = useToast()
   const customerOrder = row.original
 
@@ -75,6 +77,11 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           <DropdownMenuItem onClick={() => setShowViewSheet(true)}>
             <Eye className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
             View Details
+          </DropdownMenuItem>
+          
+          <DropdownMenuItem onClick={() => setShowCreateBillingDialog(true)}>
+            <FileText className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+            Create Billing Statement
           </DropdownMenuItem>
           
           {customerOrder.productionOrderCount > 0 ? (
@@ -139,6 +146,12 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         customerOrderNumber={customerOrder.orderNumber}
         open={showCreateProductionDialog}
         onOpenChange={setShowCreateProductionDialog}
+      />
+
+      <CreateBillingStatementDialog
+        customerOrder={customerOrder}
+        open={showCreateBillingDialog}
+        onOpenChange={setShowCreateBillingDialog}
       />
     </>
   )
