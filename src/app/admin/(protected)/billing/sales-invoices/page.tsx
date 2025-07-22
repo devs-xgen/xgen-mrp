@@ -108,13 +108,13 @@ function SalesInvoicesList({ invoices }: SalesInvoicesListProps) {
               </TableCell>
               <TableCell className="p-4 align-middle">
                 <div>
-                  {invoice.billingStatements && invoice.billingStatements.length > 0 ? (
+                  {invoice.billingStatement ? (
                     <>
-                      <div className="font-medium">{invoice.billingStatements[0].customer?.name}</div>
-                      <div className="text-sm text-muted-foreground">{invoice.billingStatements[0].customer?.email}</div>
+                      <div className="font-medium">{invoice.billingStatement.customerName}</div>
+                      <div className="text-sm text-muted-foreground">{invoice.billingStatement.customer?.email || 'No email'}</div>
                     </>
                   ) : (
-                    <span className="text-muted-foreground">No customer linked</span>
+                    <span className="text-muted-foreground">No billing statement linked</span>
                   )}
                 </div>
               </TableCell>
@@ -148,12 +148,24 @@ function SalesInvoicesList({ invoices }: SalesInvoicesListProps) {
                 <span className="text-sm">{invoice.paymentTerms || 'Net 30'}</span>
               </TableCell>
               <TableCell className="p-4 align-middle">
-                {invoice.billingStatements && invoice.billingStatements.length > 0 ? (
-                  <Badge variant="outline" className="bg-blue-50 text-blue-600">
-                    {invoice.billingStatements.length} Statement{invoice.billingStatements.length > 1 ? 's' : ''}
-                  </Badge>
+                {invoice.billingStatement ? (
+                  <div className="space-y-1">
+                    <Badge variant="outline" className="bg-blue-50 text-blue-600">
+                      {invoice.billingStatement.statementNumber}
+                    </Badge>
+                    {invoice.billingStatement.customerOrder && (
+                      <div className="text-xs text-muted-foreground">
+                        Order: {invoice.billingStatement.customerOrder.orderNumber}
+                      </div>
+                    )}
+                    {invoice.billingStatement.productionOrder && (
+                      <div className="text-xs text-muted-foreground">
+                        Production: {invoice.billingStatement.productionOrder.orderNumber}
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  <span className="text-muted-foreground text-sm">None</span>
+                  <span className="text-muted-foreground text-sm">No billing statement</span>
                 )}
               </TableCell>
               <TableCell className="p-4 align-middle">
@@ -190,11 +202,9 @@ function SalesInvoicesList({ invoices }: SalesInvoicesListProps) {
                         Send Invoice
                       </DropdownMenuItem>
                     )}
-                    {(!invoice.billingStatements || invoice.billingStatements.length === 0) && (
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/billing/billing-statements/create?invoiceId=${invoice.id}`}>
-                          Create Billing Statement
-                        </Link>
+                    {!invoice.billingStatement && (
+                      <DropdownMenuItem disabled>
+                        <span className="text-muted-foreground">No billing statement linked</span>
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />

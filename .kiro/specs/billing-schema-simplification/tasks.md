@@ -50,7 +50,7 @@
   - Update getAllDeliveryReceipts to include billing statement data
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 7. Update React components for billing statements
+- [x] 7. Update React components for billing statements
   - Modify BillingStatementForm to handle either customer or customerOrder selection
   - Update form validation to require either customerId or customerOrderId
   - Add automatic customerName population based on selection
@@ -58,7 +58,7 @@
   - Modify BillingStatementCard to show simplified relationship information
   - _Requirements: 1.1, 1.2, 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 8. Update React components for sales invoices
+- [x] 8. Update React components for sales invoices
   - Modify SalesInvoiceForm to work with required billingStatementId
   - Update SalesInvoiceList to display billing statement relationship
   - Modify SalesInvoicePreview to include billing statement information

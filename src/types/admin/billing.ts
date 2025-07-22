@@ -499,7 +499,13 @@ export const billingStatementSchema = z.object({
   poNumber: z.string().optional(),
   terms: z.string().optional(),
   footerNotes: z.string().optional(),
-});
+}).refine(
+  (data) => data.customerId || data.customerOrderId,
+  {
+    message: "Either customer or customer order must be selected",
+    path: ["customerId"],
+  }
+);
 
 export const salesInvoiceSchema = z.object({
   billingStatementId: z.string().min(1, "Billing statement is required"),

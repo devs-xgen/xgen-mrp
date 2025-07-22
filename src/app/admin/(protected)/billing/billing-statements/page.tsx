@@ -37,173 +37,14 @@ import { getAllBillingStatements, getBillingAnalytics } from "@/lib/actions/bill
 import { BillingStatementWithRelations, BillingStatus } from "@/types/admin/billing";
 import { formatCurrencyPHP } from "@/lib/constant";
 import { ManualBillingDialog } from "@/components/module/admin/billing/manual-billing-dialog";
+import { BillingStatementList } from "@/components/module/admin/billing/billing-statement-list";
 
 export const metadata: Metadata = {
   title: "Billing Statements",
   description: "Manage customer billing statements and track payments",
 };
 
-interface BillingStatementsListProps {
-  statements: BillingStatementWithRelations[];
-}
 
-function BillingStatementsList({ statements }: BillingStatementsListProps) {
-  const getStatusBadge = (status: BillingStatus) => {
-    switch (status) {
-      case "DRAFT":
-        return <Badge variant="secondary">Draft</Badge>;
-      case "SENT":
-        return <Badge variant="outline" className="bg-blue-500 text-white">Sent</Badge>;
-      case "PAID":
-        return <Badge variant="default" className="bg-green-500 text-white">Paid</Badge>;
-      case "OVERDUE":
-        return <Badge variant="destructive">Overdue</Badge>;
-      case "CANCELLED":
-        return <Badge variant="destructive">Cancelled</Badge>;
-      case "DISPUTED":
-        return <Badge variant="secondary" className="bg-orange-500 text-white">Disputed</Badge>;
-      case "PARTIAL":
-        return <Badge variant="outline" className="bg-yellow-500 text-white">Partial</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  if (statements.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-semibold mb-2">No billing statements found</h3>
-        <p className="text-muted-foreground mb-4">Get started by creating your first billing statement.</p>
-        <Button asChild>
-          <Link href="/admin/billing/billing-statements/create">
-            <Plus className="mr-2 h-4 w-4" />
-            Create Statement
-          </Link>
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="overflow-auto">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/50 border-b">
-            <TableHead className="p-4 text-left font-medium">Statement #</TableHead>
-            <TableHead className="p-4 text-left font-medium">Customer</TableHead>
-            <TableHead className="p-4 text-left font-medium">Order Info</TableHead>
-            <TableHead className="p-4 text-left font-medium">Amount</TableHead>
-            <TableHead className="p-4 text-left font-medium">Status</TableHead>
-            <TableHead className="p-4 text-left font-medium">Billing Date</TableHead>
-            <TableHead className="p-4 text-left font-medium">Due Date</TableHead>
-            <TableHead className="p-4 text-left font-medium w-10">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {statements.map((statement) => (
-            <TableRow key={statement.id} className="border-b hover:bg-muted/30 transition-colors">
-              <TableCell className="p-4 align-middle font-medium">
-                {statement.statementNumber}
-              </TableCell>
-              <TableCell className="p-4 align-middle">
-                <div>
-                  <div className="font-medium">{statement.customer.name}</div>
-                  <div className="text-sm text-muted-foreground">{statement.customer.email}</div>
-                </div>
-              </TableCell>
-              <TableCell className="p-4 align-middle">
-                <div className="space-y-1">
-                  {statement.customerOrder && (
-                    <div className="text-sm text-blue-600">
-                      Order: {statement.customerOrder.orderNumber}
-                    </div>
-                  )}
-                  {statement.productionOrder && (
-                    <div className="text-sm text-purple-600">
-                      Production: {statement.productionOrder.quantity}x {statement.productionOrder.product?.name}
-                    </div>
-                  )}
-                  {statement.deliveryReceipt && (
-                    <div className="text-sm text-green-600">
-                      Delivery: {statement.deliveryReceipt.receiptNumber}
-                    </div>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell className="p-4 align-middle">
-                <div className="text-right">
-                  <div className="font-medium">
-                    {formatCurrencyPHP(statement.netAmount)}
-                  </div>
-                  {statement.totalAmount !== statement.netAmount && (
-                    <div className="text-sm text-muted-foreground">
-                      Total: {formatCurrencyPHP(statement.totalAmount)}
-                    </div>
-                  )}
-                  {statement.taxAmount > 0 && (
-                    <div className="text-xs text-muted-foreground">
-                      Tax: {formatCurrencyPHP(statement.taxAmount)}
-                    </div>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell className="p-4 align-middle">
-                {getStatusBadge(statement.status)}
-              </TableCell>
-              <TableCell className="p-4 align-middle">
-                {new Date(statement.billingDate).toLocaleDateString()}
-              </TableCell>
-              <TableCell className="p-4 align-middle">
-                {statement.dueDate ? new Date(statement.dueDate).toLocaleDateString() : '-'}
-              </TableCell>
-              <TableCell className="p-4 align-middle">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuItem asChild>
-                      <Link href={`/admin/billing/billing-statements/${statement.id}`}>
-                        <FileText className="mr-2 h-4 w-4" />
-                        View Details
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download PDF
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {statement.status === 'DRAFT' && (
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/billing/billing-statements/${statement.id}/edit`}>
-                          Edit Statement
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
-                    {statement.status === 'SENT' && (
-                      <DropdownMenuItem>
-                        Mark as Paid
-                      </DropdownMenuItem>
-                    )}
-                    {statement.status === 'DRAFT' && (
-                      <DropdownMenuItem className="text-destructive">
-                        Delete Statement
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
 
 function BillingStatementsTableSkeleton() {
   return (
@@ -330,7 +171,7 @@ async function BillingStatementsContent() {
           </div>
 
           {/* Table Content */}
-          <BillingStatementsList statements={statements} />
+          <BillingStatementList statements={statements} />
         </Card>
       </>
     );

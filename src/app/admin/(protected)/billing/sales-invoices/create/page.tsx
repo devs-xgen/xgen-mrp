@@ -47,6 +47,7 @@ import {
   salesInvoiceSchema,
   SalesInvoiceItemFormData,
   Customer,
+  BillingStatement,
 } from "@/types/admin/billing";
 import { CustomerOrder } from "@/types/admin/customer-order";
 import { ProductionOrder } from "@/types/admin/production-order";
@@ -55,6 +56,7 @@ import { createSalesInvoice } from "@/lib/actions/sales-invoices";
 import { getAllCustomers } from "@/lib/actions/customers";
 import { getCustomerOrders } from "@/lib/actions/customer-order";
 import { getProductionOrders } from "@/lib/actions/production-order";
+import { getAllBillingStatements } from "@/lib/actions/billing-statements";
 
 export default function CreateSalesInvoicePage() {
   const router = useRouter();
@@ -62,12 +64,10 @@ export default function CreateSalesInvoicePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Data states
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>([]);
-  const [productionOrders, setProductionOrders] = useState<ProductionOrder[]>([]);
+  const [billingStatements, setBillingStatements] = useState<BillingStatement[]>([]);
+  const [selectedBillingStatement, setSelectedBillingStatement] = useState<BillingStatement | null>(null);
   
   // Form states
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [invoiceItems, setInvoiceItems] = useState<SalesInvoiceItemFormData[]>([
     {
       description: "",
@@ -84,16 +84,12 @@ export default function CreateSalesInvoicePage() {
   const form = useForm<SalesInvoiceFormData>({
     resolver: zodResolver(salesInvoiceSchema),
     defaultValues: {
-      customerId: "",
-      customerOrderId: "",
-      productionOrderId: "",
-      invoiceDate: new Date(),
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      billingStatementId: "", // Required field
       subtotal: 0,
       taxRate: 12, // Default 12% tax
       discountAmount: 0,
       paymentTerms: "Net 30",
-      status: "DRAFT",
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
       invoiceItems: invoiceItems,
       poNumber: "",
       terms: "",
@@ -106,29 +102,19 @@ export default function CreateSalesInvoicePage() {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        // Load all required data in parallel
-        const [
-          customersResult,
-          customerOrdersResult,
-          productionOrdersResult,
-        ] = await Promise.all([
-          getAllCustomers(),
-          getCustomerOrders(),
-          getProductionOrders(),
-        ]);
-
-        if (customersResult.success && customersResult.data) {
-          setCustomers(customersResult.data);
-        }
-        if (customerOrdersResult && Array.isArray(customerOrdersResult)) {
-          setCustomerOrders(customerOrdersResult);
-        }
-        if (productionOrdersResult && Array.isArray(productionOrdersResult)) {
-          setProductionOrders(productionOrdersResult);
+        // Load billing statements that don't have invoices yet
+        const billingStatementsResult = await getAllBillingStatements({}, 1, 100);
+        
+        if (billingStatementsResult.success && billingStatementsResult.data) {
+          // Filter out billing statements that already have sales invoices
+          const availableStatements = billingStatementsResult.data.filter(
+            statement => !statement.salesInvoice
+          );
+          setBillingStatements(availableStatements);
         }
       } catch (error) {
         console.error("Error loading data:", error);
-        toast.error("Failed to load required data");
+        toast.error("Failed to load billing statements");
       } finally {
         setIsLoading(false);
       }
@@ -137,95 +123,36 @@ export default function CreateSalesInvoicePage() {
     loadData();
   }, []);
 
-  // Handle customer selection
-  const handleCustomerSelect = (customerId: string) => {
-    const customer = customers.find(c => c.id === customerId);
-    setSelectedCustomer(customer || null);
-    form.setValue("customerId", customerId);
+  // Handle billing statement selection
+  const handleBillingStatementSelect = (billingStatementId: string) => {
+    const statement = billingStatements.find(s => s.id === billingStatementId);
+    setSelectedBillingStatement(statement || null);
+    form.setValue("billingStatementId", billingStatementId);
     
-    // Reset dependent fields
-    form.setValue("customerOrderId", "");
-    form.setValue("productionOrderId", "");
-  };
-
-  // Handle customer order selection
-  const handleCustomerOrderSelect = async (orderId: string) => {
-    const order = customerOrders.find(o => o.id === orderId);
-    form.setValue("customerOrderId", orderId);
-    
-    if (order) {
-      // Auto-populate customer if not already selected
-      if (!selectedCustomer && order.customerId) {
-        const customer = customers.find(c => c.id === order.customerId);
-        if (customer) {
-          setSelectedCustomer(customer);
-          form.setValue("customerId", customer.id);
-        }
-      }
+    if (statement) {
+      // Auto-populate form values from billing statement
+      form.setValue("subtotal", statement.totalAmount);
+      form.setValue("taxRate", (statement.taxAmount / statement.totalAmount) * 100);
+      form.setValue("discountAmount", statement.discountAmount);
       
-      // Auto-populate invoice items from order lines
-      if (order.orderLines && order.orderLines.length > 0) {
-        const orderItems: SalesInvoiceItemFormData[] = order.orderLines.map((line) => ({
-          productId: line.productId,
-          description: line.product?.name || "Order Item",
-          quantity: line.quantity,
-          unitPrice: line.unitPrice,
-          productCode: line.product?.sku || "",
-          unit: "PCS",
-          discountPercent: 0,
-          taxable: true,
-        }));
-        
-        setInvoiceItems(orderItems);
-        form.setValue("invoiceItems", orderItems);
-        
-        // Calculate subtotal
-        const subtotal = orderItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-        form.setValue("subtotal", subtotal);
-        calculateTotals(subtotal, form.getValues("taxRate"), form.getValues("discountAmount"));
-      }
-    }
-  };
-
-  // Handle production order selection
-  const handleProductionOrderSelect = async (orderId: string) => {
-    const order = productionOrders.find(o => o.id === orderId);
-    form.setValue("productionOrderId", orderId);
-    
-    if (order) {
-      // Auto-populate customer from linked customer order
-      if (order.customerOrderId) {
-        const customerOrder = customerOrders.find(co => co.id === order.customerOrderId);
-        if (customerOrder) {
-          form.setValue("customerOrderId", customerOrder.id);
-          
-          const customer = customers.find(c => c.id === customerOrder.customerId);
-          if (customer) {
-            setSelectedCustomer(customer);
-            form.setValue("customerId", customer.id);
-          }
-        }
-      }
+      // Set default payment terms and due date
+      const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+      form.setValue("dueDate", dueDate);
+      form.setValue("paymentTerms", "Net 30");
       
-      // Create invoice item from production order
-      const productionItem: SalesInvoiceItemFormData = {
-        productId: order.productId,
-        description: order.product?.name || "Production Item",
-        quantity: order.quantity,
-        unitPrice: 100, // Default price, would need to be calculated properly
-        productCode: order.product?.sku || "",
-        unit: "PCS",
+      // Create default invoice item from billing statement
+      const defaultItem: SalesInvoiceItemFormData = {
+        description: `Billing for ${statement.customerName}`,
+        quantity: 1,
+        unitPrice: statement.totalAmount,
+        productCode: "",
+        unit: "LOT",
         discountPercent: 0,
         taxable: true,
       };
       
-      setInvoiceItems([productionItem]);
-      form.setValue("invoiceItems", [productionItem]);
-      
-      // Calculate subtotal
-      const subtotal = productionItem.quantity * productionItem.unitPrice;
-      form.setValue("subtotal", subtotal);
-      calculateTotals(subtotal, form.getValues("taxRate"), form.getValues("discountAmount"));
+      setInvoiceItems([defaultItem]);
+      form.setValue("invoiceItems", [defaultItem]);
     }
   };
 
@@ -375,31 +302,23 @@ export default function CreateSalesInvoicePage() {
                   <CardTitle className="text-lg">Invoice Information</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="invoiceNumber">Invoice Number</Label>
-                      <Input
-                        id="invoiceNumber"
-                        placeholder="Auto-generated"
-                        disabled
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 gap-4">
                     <FormField
                       control={form.control}
-                      name="customerId"
+                      name="billingStatementId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Customer *</FormLabel>
-                          <Select onValueChange={handleCustomerSelect} value={field.value}>
+                          <FormLabel>Billing Statement *</FormLabel>
+                          <Select onValueChange={handleBillingStatementSelect} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select customer" />
+                                <SelectValue placeholder="Select billing statement" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {customers.map((customer) => (
-                                <SelectItem key={customer.id} value={customer.id}>
-                                  {customer.name} ({customer.code})
+                              {billingStatements.map((statement) => (
+                                <SelectItem key={statement.id} value={statement.id}>
+                                  {statement.statementNumber} - {statement.customerName} - {formatCurrencyPHP(statement.totalAmount)}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -410,24 +329,46 @@ export default function CreateSalesInvoicePage() {
                     />
                   </div>
 
+                  {/* Display selected billing statement info */}
+                  {selectedBillingStatement && (
+                    <Alert>
+                      <AlertDescription>
+                        <div className="space-y-2">
+                          <div><strong>Customer:</strong> {selectedBillingStatement.customerName}</div>
+                          <div><strong>Statement Number:</strong> {selectedBillingStatement.statementNumber}</div>
+                          <div><strong>Total Amount:</strong> {formatCurrencyPHP(selectedBillingStatement.totalAmount)}</div>
+                          {selectedBillingStatement.customerOrder && (
+                            <div><strong>Customer Order:</strong> {selectedBillingStatement.customerOrder.orderNumber}</div>
+                          )}
+                          {selectedBillingStatement.productionOrder && (
+                            <div><strong>Production Order:</strong> {selectedBillingStatement.productionOrder.orderNumber}</div>
+                          )}
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="invoiceDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Invoice Date *</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="date"
-                              value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
-                              onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : new Date())}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="invoiceNumber">Invoice Number</Label>
+                      <Input
+                        id="invoiceNumber"
+                        placeholder="Auto-generated"
+                        disabled
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="invoiceDate">Invoice Date</Label>
+                      <Input
+                        id="invoiceDate"
+                        type="date"
+                        value={new Date().toISOString().split('T')[0]}
+                        disabled
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="dueDate"
@@ -440,22 +381,6 @@ export default function CreateSalesInvoicePage() {
                               value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
                               onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
                             />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="poNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>PO Number</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Customer PO number" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -485,63 +410,17 @@ export default function CreateSalesInvoicePage() {
                       )}
                     />
                   </div>
-                </CardContent>
-              </Card>
 
-              {/* Source Information */}
-              <Card className="bg-card border rounded-lg">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg">Source Information (Optional)</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Link this invoice to a customer order or production order
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="customerOrderId"
+                      name="poNumber"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Customer Order</FormLabel>
-                          <Select onValueChange={handleCustomerOrderSelect} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select customer order" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {customerOrders.map((order) => (
-                                <SelectItem key={order.id} value={order.id}>
-                                  {order.orderNumber} - {formatCurrencyPHP(order.totalAmount)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="productionOrderId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Production Order</FormLabel>
-                          <Select onValueChange={handleProductionOrderSelect} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select production order" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {productionOrders.map((order) => (
-                                <SelectItem key={order.id} value={order.id}>
-                                  {order.product?.name || "Unknown Product"} - Qty: {order.quantity}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>PO Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Customer PO number" {...field} />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -549,6 +428,8 @@ export default function CreateSalesInvoicePage() {
                   </div>
                 </CardContent>
               </Card>
+
+
 
               {/* Invoice Items */}
               <Card className="bg-card border rounded-lg">
