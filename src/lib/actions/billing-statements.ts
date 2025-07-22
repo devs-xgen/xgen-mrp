@@ -67,10 +67,17 @@ export async function getAllBillingStatements(
       };
     }
 
+    // Optimized search using new schema structure with customerName field (Requirements 2.1, 2.2, 4.4)
     if (validatedFilters.search) {
       whereClause.OR = [
         {
           statementNumber: {
+            contains: validatedFilters.search,
+            mode: "insensitive",
+          },
+        },
+        {
+          customerName: {
             contains: validatedFilters.search,
             mode: "insensitive",
           },
@@ -98,7 +105,7 @@ export async function getAllBillingStatements(
     // Get total count
     const total = await prisma.billingStatement.count({ where: whereClause });
 
-    // Get statements with relations
+    // Get statements with optimized relations using new schema structure (Requirements 4.1, 4.2, 4.4)
     const statements = await prisma.billingStatement.findMany({
       where: whereClause,
       include: {
@@ -144,6 +151,7 @@ export async function getAllBillingStatements(
             },
           },
         },
+        // One-to-many relationship with delivery receipts (Requirement 4.4)
         deliveryReceipts: {
           select: {
             id: true,
@@ -152,8 +160,12 @@ export async function getAllBillingStatements(
             receivedBy: true,
             deliveryStatus: true,
             deliveryAddress: true,
+            trackingNumber: true,
+            courierService: true,
           },
+          orderBy: { deliveryDate: "desc" },
         },
+        // One-to-one relationship with sales invoice (Requirement 4.4)
         salesInvoice: {
           include: {
             invoiceItems: {
@@ -237,6 +249,7 @@ export async function getBillingStatementById(
       throw new Error("Unauthorized");
     }
 
+    // Optimized query using new relationship structure (Requirements 4.1, 4.2, 4.4)
     const statement = await prisma.billingStatement.findUnique({
       where: { id },
       include: {
@@ -282,6 +295,7 @@ export async function getBillingStatementById(
             },
           },
         },
+        // One-to-many relationship with delivery receipts (Requirement 4.4)
         deliveryReceipts: {
           select: {
             id: true,
@@ -290,8 +304,14 @@ export async function getBillingStatementById(
             receivedBy: true,
             deliveryStatus: true,
             deliveryAddress: true,
+            trackingNumber: true,
+            courierService: true,
+            signatureImage: true,
+            photoEvidence: true,
           },
+          orderBy: { deliveryDate: "desc" },
         },
+        // One-to-one relationship with sales invoice (Requirement 4.4)
         salesInvoice: {
           include: {
             invoiceItems: {
@@ -782,9 +802,10 @@ async function getStatusBreakdown() {
   }));
 }
 
+// Optimized top customers query using new schema structure (Requirements 4.1, 4.2, 4.4)
 async function getTopCustomers() {
   const results = await prisma.billingStatement.groupBy({
-    by: ["customerId"],
+    by: ["customerId", "customerName"],
     _count: true,
     _sum: {
       totalAmount: true,
@@ -797,24 +818,37 @@ async function getTopCustomers() {
     take: 10,
   });
 
-  // Get customer details
-  const customerIds = results.map((result) => result.customerId);
-  const customers = await prisma.customer.findMany({
-    where: { id: { in: customerIds } },
-    select: { id: true, name: true },
-  });
+  // Enhanced query with additional customer analytics
+  const enhancedResults = await Promise.all(
+    results.map(async (result) => {
+      // Get outstanding amount for this customer
+      const outstandingAmount = await prisma.billingStatement.aggregate({
+        where: {
+          customerId: result.customerId,
+          status: { in: ["DRAFT", "SENT", "OVERDUE"] },
+        },
+        _sum: { totalAmount: true },
+      });
 
-  return results.map((result) => {
-    const customer = customers.find((c) => c.id === result.customerId);
-    return {
-      customerId: result.customerId,
-      customerName: customer?.name || "Unknown",
-      totalAmount: result._sum.totalAmount?.toNumber() || 0,
-      statementCount: result._count,
-      lastBillingDate: new Date(), // Would need more complex query for actual last billing date
-      outstandingAmount: 0, // Would need to calculate based on unpaid statements
-    };
-  });
+      // Get last billing date
+      const lastBilling = await prisma.billingStatement.findFirst({
+        where: { customerId: result.customerId },
+        orderBy: { billingDate: "desc" },
+        select: { billingDate: true },
+      });
+
+      return {
+        customerId: result.customerId,
+        customerName: result.customerName || "Unknown",
+        totalAmount: result._sum.totalAmount?.toNumber() || 0,
+        statementCount: result._count,
+        lastBillingDate: lastBilling?.billingDate || new Date(),
+        outstandingAmount: outstandingAmount._sum.totalAmount?.toNumber() || 0,
+      };
+    })
+  );
+
+  return enhancedResults;
 }
 
 async function getRecentBillingActivity() {

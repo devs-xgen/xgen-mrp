@@ -62,6 +62,7 @@ export async function getAllSalesInvoices(
       };
     }
 
+    // Optimized search using new schema structure with billing statement customerName (Requirements 2.1, 2.2, 4.4)
     if (validatedFilters.search) {
       whereClause.OR = [
         {
@@ -72,6 +73,22 @@ export async function getAllSalesInvoices(
         },
         {
           poNumber: { contains: validatedFilters.search, mode: "insensitive" },
+        },
+        {
+          billingStatement: {
+            customerName: {
+              contains: validatedFilters.search,
+              mode: "insensitive",
+            },
+          },
+        },
+        {
+          billingStatement: {
+            statementNumber: {
+              contains: validatedFilters.search,
+              mode: "insensitive",
+            },
+          },
         },
       ];
     }
@@ -90,7 +107,7 @@ export async function getAllSalesInvoices(
     // Get total count
     const total = await prisma.salesInvoice.count({ where: whereClause });
 
-    // Get invoices with items and billing statement data
+    // Get invoices with optimized billing statement relationship data (Requirements 4.1, 4.2, 4.4)
     const invoices = await prisma.salesInvoice.findMany({
       where: whereClause,
       include: {
@@ -119,8 +136,14 @@ export async function getAllSalesInvoices(
             },
           },
         },
+        // Optimized billing statement relationship with customer data (Requirements 4.4, 2.1, 2.2)
         billingStatement: {
-          include: {
+          select: {
+            id: true,
+            statementNumber: true,
+            customerName: true, // Use cached customerName field for better performance
+            billingDate: true,
+            status: true,
             customer: {
               select: {
                 id: true,
@@ -139,8 +162,14 @@ export async function getAllSalesInvoices(
             productionOrder: {
               select: {
                 id: true,
-                orderNumber: true,
+                quantity: true,
                 status: true,
+                product: {
+                  select: {
+                    name: true,
+                    sku: true,
+                  },
+                },
               },
             },
           },
@@ -218,6 +247,7 @@ export async function getSalesInvoiceById(
       throw new Error("Unauthorized");
     }
 
+    // Optimized query using new relationship structure (Requirements 4.1, 4.2, 4.4)
     const invoice = await prisma.salesInvoice.findUnique({
       where: { id },
       include: {
@@ -246,14 +276,25 @@ export async function getSalesInvoiceById(
             },
           },
         },
+        // Optimized billing statement relationship with customer data (Requirements 4.4, 2.1, 2.2)
         billingStatement: {
-          include: {
+          select: {
+            id: true,
+            statementNumber: true,
+            customerName: true, // Use cached customerName field for better performance
+            billingDate: true,
+            status: true,
+            totalAmount: true,
             customer: {
               select: {
                 id: true,
                 name: true,
                 email: true,
                 code: true,
+                address: true,
+                city: true,
+                state: true,
+                country: true,
               },
             },
             customerOrder: {
@@ -261,13 +302,29 @@ export async function getSalesInvoiceById(
                 id: true,
                 orderNumber: true,
                 orderDate: true,
+                shippingAddress: true,
               },
             },
             productionOrder: {
               select: {
                 id: true,
-                orderNumber: true,
+                quantity: true,
                 status: true,
+                product: {
+                  select: {
+                    name: true,
+                    sku: true,
+                  },
+                },
+              },
+            },
+            // Include delivery receipts for complete billing context
+            deliveryReceipts: {
+              select: {
+                id: true,
+                receiptNumber: true,
+                deliveryDate: true,
+                deliveryStatus: true,
               },
             },
           },
