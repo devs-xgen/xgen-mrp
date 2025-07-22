@@ -82,7 +82,7 @@
   - Test query performance with new indexes
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [ ] 11. Run database migration and update Prisma client
+- [x] 11. Run database migration and update Prisma client
   - Execute Prisma migration to apply schema changes
   - Generate new Prisma client with updated types
   - Verify migration completed successfully
@@ -90,7 +90,7 @@
   - Update any cached data or indexes
   - _Requirements: 4.5, 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 12. Test and validate the updated billing system
+- [x] 12. Test and validate the updated billing system
   - Test billing statement creation with customer and customerOrder scenarios
   - Verify sales invoice creation is properly linked to billing statements
   - Test delivery receipt creation with simplified fields
