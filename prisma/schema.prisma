@@ -958,34 +958,47 @@ model CostVariance {
 model BillingStatement {
   id                String           @id @default(cuid())
   statementNumber   String           @unique
-  customerId        String?
-  customerOrderId   String?
-  productionOrderId String?
-  deliveryReceiptId String?
-  salesInvoiceId    String?
+  
+  // Customer Information (Required - at least one must be provided)
+  customerId        String?          // Direct customer reference
+  customerOrderId   String?          // Or reference via customer order
+  customerName      String           // Derived/cached customer name
+  
+  // Optional Production Link
+  productionOrderId String?          // Optional production order link
+  
+  // Financial Information
   totalAmount       Decimal          @db.Decimal(12, 2)
   taxAmount         Decimal          @default(0) @db.Decimal(12, 2)
   discountAmount    Decimal          @default(0) @db.Decimal(12, 2)
   netAmount         Decimal          @db.Decimal(12, 2)
+  
+  // Status and Dates
   status            BillingStatus    @default(DRAFT)
   billingDate       DateTime         @default(now())
   dueDate           DateTime?
   paidDate          DateTime?
+  
+  // Metadata
   notes             String?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   createdBy         String?
   modifiedBy        String?
-  customerName      String
-  modifiedAt        DateTime?
-  createdByUser     User?            @relation("CreatedBillingStatements", fields: [createdBy], references: [id])
+  
+  // Relationships
   customer          Customer?        @relation(fields: [customerId], references: [id])
   customerOrder     CustomerOrder?   @relation(fields: [customerOrderId], references: [id])
-  deliveryReceipt   DeliveryReceipt? @relation(fields: [deliveryReceiptId], references: [id])
-  modifiedByUser    User?            @relation("ModifiedBillingStatements", fields: [modifiedBy], references: [id])
   productionOrder   ProductionOrder? @relation(fields: [productionOrderId], references: [id])
-  salesInvoice      SalesInvoice?    @relation(fields: [salesInvoiceId], references: [id])
-
+  createdByUser     User?            @relation("CreatedBillingStatements", fields: [createdBy], references: [id])
+  modifiedByUser    User?            @relation("ModifiedBillingStatements", fields: [modifiedBy], references: [id])
+  
+  // One-to-One with SalesInvoice
+  salesInvoice      SalesInvoice?    @relation("BillingToInvoice")
+  
+  // One-to-Many with DeliveryReceipts
+  deliveryReceipts  DeliveryReceipt[]
+  
   @@index([customerId])
   @@index([customerName])
   @@index([customerOrderId])
@@ -995,59 +1008,87 @@ model BillingStatement {
 }
 
 model DeliveryReceipt {
-  id                String             @id @default(cuid())
-  receiptNumber     String             @unique
+  id                String           @id @default(cuid())
+  receiptNumber     String           @unique
+  
+  // Link to billing statement (Required)
+  billingStatementId String
+  
+  // Essential Delivery Information
   deliveryDate      DateTime
+  deliveryAddress   String
   receivedBy        String
   receivedByTitle   String?
-  deliveryAddress   String
-  deliveryNotes     String?
-  itemsDelivered    Json
-  deliveryStatus    DeliveryStatus     @default(DELIVERED)
+  
+  // Optional Proof
   signatureImage    String?
   photoEvidence     String?
+  
+  // Optional Tracking
   trackingNumber    String?
   courierService    String?
-  deliveryMethod    String?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  
+  // Status and Notes
+  deliveryStatus    DeliveryStatus   @default(DELIVERED)
+  deliveryNotes     String?
+  
+  // Metadata
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
   createdBy         String?
   modifiedBy        String?
-  billingStatements BillingStatement[]
-  createdByUser     User?              @relation("CreatedDeliveryReceipts", fields: [createdBy], references: [id])
-  modifiedByUser    User?              @relation("ModifiedDeliveryReceipts", fields: [modifiedBy], references: [id])
-
+  
+  // Relationships
+  billingStatement  BillingStatement @relation(fields: [billingStatementId], references: [id], onDelete: Cascade)
+  createdByUser     User?            @relation("CreatedDeliveryReceipts", fields: [createdBy], references: [id])
+  modifiedByUser    User?            @relation("ModifiedDeliveryReceipts", fields: [modifiedBy], references: [id])
+  
   @@index([deliveryDate])
   @@index([deliveryStatus])
+  @@index([billingStatementId])
 }
 
 model SalesInvoice {
   id                String             @id @default(cuid())
   invoiceNumber     String             @unique
+  
+  // Direct link to billing statement (Required)
+  billingStatementId String            @unique
+  
+  // Invoice Details
   invoiceDate       DateTime           @default(now())
   subtotal          Decimal            @db.Decimal(12, 2)
   taxRate           Decimal            @default(0) @db.Decimal(5, 2)
   taxAmount         Decimal            @default(0) @db.Decimal(12, 2)
   discountAmount    Decimal            @default(0) @db.Decimal(12, 2)
   totalAmount       Decimal            @db.Decimal(12, 2)
+  
+  // Payment Information
   paymentTerms      String?
   dueDate           DateTime?
   status            InvoiceStatus      @default(DRAFT)
+  
+  // Additional Information
   poNumber          String?
   terms             String?
   footerNotes       String?
+  
+  // Metadata
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   createdBy         String?
   modifiedBy        String?
-  billingStatements BillingStatement[]
+  
+  // Relationships
+  billingStatement  BillingStatement   @relation("BillingToInvoice", fields: [billingStatementId], references: [id], onDelete: Cascade)
   createdByUser     User?              @relation("CreatedSalesInvoices", fields: [createdBy], references: [id])
   modifiedByUser    User?              @relation("ModifiedSalesInvoices", fields: [modifiedBy], references: [id])
   invoiceItems      SalesInvoiceItem[]
-
+  
   @@index([invoiceDate])
   @@index([status])
   @@index([dueDate])
+  @@index([billingStatementId])
 }
 
 model SalesInvoiceItem {

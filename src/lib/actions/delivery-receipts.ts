@@ -17,6 +17,7 @@ import {
   deliveryReceiptFiltersSchema,
 } from "@/types/admin/billing";
 import { DeliveryStatus as PrismaDeliveryStatus } from "@prisma/client";
+import { z } from "zod";
 
 // ==============================================
 // DELIVERY RECEIPT CRUD OPERATIONS
@@ -45,20 +46,6 @@ export async function getAllDeliveryReceipts(
       whereClause.deliveryStatus = {
         in: validatedFilters.status as PrismaDeliveryStatus[],
       };
-    }
-
-    if (
-      validatedFilters.deliveryMethod &&
-      validatedFilters.deliveryMethod.length > 0
-    ) {
-      whereClause.deliveryMethod = { in: validatedFilters.deliveryMethod };
-    }
-
-    if (
-      validatedFilters.courierService &&
-      validatedFilters.courierService.length > 0
-    ) {
-      whereClause.courierService = { in: validatedFilters.courierService };
     }
 
     if (validatedFilters.dateRange) {
@@ -94,6 +81,14 @@ export async function getAllDeliveryReceipts(
             mode: "insensitive",
           },
         },
+        {
+          billingStatement: {
+            customerName: {
+              contains: validatedFilters.search,
+              mode: "insensitive",
+            },
+          },
+        },
       ];
     }
 
@@ -111,11 +106,11 @@ export async function getAllDeliveryReceipts(
     // Get total count
     const total = await prisma.deliveryReceipt.count({ where: whereClause });
 
-    // Get receipts with billing statements
+    // Get receipts with billing statement data - includes billing statement relationship (Requirement 4.4)
     const receipts = await prisma.deliveryReceipt.findMany({
       where: whereClause,
       include: {
-        billingStatements: {
+        billingStatement: {
           include: {
             customer: {
               select: {
@@ -201,10 +196,11 @@ export async function getDeliveryReceiptById(
       throw new Error("Unauthorized");
     }
 
+    // Get delivery receipt with billing statement relationship data (Requirement 4.4)
     const receipt = await prisma.deliveryReceipt.findUnique({
       where: { id },
       include: {
-        billingStatements: {
+        billingStatement: {
           include: {
             customer: {
               select: {
@@ -279,31 +275,49 @@ export async function createDeliveryReceipt(
       return { success: false, error: "Unauthorized" };
     }
 
-    // Validate input data
+    // Validate input data - billingStatementId is required (Requirement 3.1, 3.5)
     const validatedData = deliveryReceiptSchema.parse(data);
+
+    // Verify billing statement exists and maintain relationship integrity (Requirement 4.1, 4.2)
+    const billingStatement = await prisma.billingStatement.findUnique({
+      where: { id: validatedData.billingStatementId },
+      include: {
+        customer: true,
+        customerOrder: true,
+      },
+    });
+
+    if (!billingStatement) {
+      return { success: false, error: "Billing statement not found" };
+    }
 
     // Generate unique receipt number
     const receiptNumber = await generateReceiptNumber();
 
-    // Create delivery receipt
+    // Create delivery receipt with required billingStatementId and simplified fields only (Requirements 3.1, 3.2, 3.3, 3.4)
     const deliveryReceipt = await prisma.deliveryReceipt.create({
       data: {
         receiptNumber,
+        billingStatementId: validatedData.billingStatementId, // Required field (Requirement 3.5)
+        // Essential delivery information (Requirement 3.1, 3.2)
         deliveryDate: validatedData.deliveryDate,
         receivedBy: validatedData.receivedBy,
         receivedByTitle: validatedData.receivedByTitle,
         deliveryAddress: validatedData.deliveryAddress,
         deliveryNotes: validatedData.deliveryNotes,
-        itemsDelivered: validatedData.itemsDelivered,
         deliveryStatus: validatedData.deliveryStatus as PrismaDeliveryStatus,
+        // Optional proof fields (Requirement 3.3)
+        signatureImage: validatedData.signatureImage,
+        photoEvidence: validatedData.photoEvidence,
+        // Optional tracking fields (Requirement 3.4)
         trackingNumber: validatedData.trackingNumber,
         courierService: validatedData.courierService,
-        deliveryMethod: validatedData.deliveryMethod,
         createdBy: session.user.id,
       },
     });
 
     revalidatePath("/admin/billing/delivery-receipts");
+    revalidatePath(`/admin/billing/statements/${validatedData.billingStatementId}`);
 
     return {
       success: true,
@@ -312,6 +326,12 @@ export async function createDeliveryReceipt(
     };
   } catch (error) {
     console.error("Error creating delivery receipt:", error);
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: `Validation error: ${error.errors.map(e => e.message).join(", ")}`,
+      };
+    }
     return {
       success: false,
       error: "Failed to create delivery receipt",
@@ -329,20 +349,39 @@ export async function updateDeliveryReceipt(
       return { success: false, error: "Unauthorized" };
     }
 
-    // Get existing receipt
+    // Get existing receipt with billing statement to maintain relationship integrity (Requirement 4.2, 4.3)
     const existingReceipt = await prisma.deliveryReceipt.findUnique({
       where: { id },
+      include: {
+        billingStatement: true,
+      },
     });
 
     if (!existingReceipt) {
       return { success: false, error: "Delivery receipt not found" };
     }
 
-    // Prepare update data
+    // If billingStatementId is being changed, verify the new billing statement exists (Requirement 4.1, 4.2)
+    if (data.billingStatementId && data.billingStatementId !== existingReceipt.billingStatementId) {
+      const newBillingStatement = await prisma.billingStatement.findUnique({
+        where: { id: data.billingStatementId },
+      });
+
+      if (!newBillingStatement) {
+        return { success: false, error: "New billing statement not found" };
+      }
+    }
+
+    // Prepare update data with simplified fields only - no itemsDelivered JSON handling (Requirements 3.1, 3.2, 3.3, 3.4)
     const updateData: any = {
       modifiedBy: session.user.id,
       updatedAt: new Date(),
     };
+
+    // Essential delivery information (Requirements 3.1, 3.2)
+    if (data.billingStatementId !== undefined) {
+      updateData.billingStatementId = data.billingStatementId;
+    }
 
     if (data.deliveryDate !== undefined) {
       updateData.deliveryDate = data.deliveryDate;
@@ -364,14 +403,20 @@ export async function updateDeliveryReceipt(
       updateData.deliveryNotes = data.deliveryNotes;
     }
 
-    if (data.itemsDelivered !== undefined) {
-      updateData.itemsDelivered = data.itemsDelivered;
-    }
-
     if (data.deliveryStatus !== undefined) {
       updateData.deliveryStatus = data.deliveryStatus as PrismaDeliveryStatus;
     }
 
+    // Optional proof fields (Requirement 3.3)
+    if (data.signatureImage !== undefined) {
+      updateData.signatureImage = data.signatureImage;
+    }
+
+    if (data.photoEvidence !== undefined) {
+      updateData.photoEvidence = data.photoEvidence;
+    }
+
+    // Optional tracking fields (Requirement 3.4)
     if (data.trackingNumber !== undefined) {
       updateData.trackingNumber = data.trackingNumber;
     }
@@ -380,11 +425,7 @@ export async function updateDeliveryReceipt(
       updateData.courierService = data.courierService;
     }
 
-    if (data.deliveryMethod !== undefined) {
-      updateData.deliveryMethod = data.deliveryMethod;
-    }
-
-    // Update delivery receipt
+    // Update delivery receipt while maintaining relationship integrity (Requirement 4.3, 4.4)
     const updatedReceipt = await prisma.deliveryReceipt.update({
       where: { id },
       data: updateData,
@@ -392,6 +433,7 @@ export async function updateDeliveryReceipt(
 
     revalidatePath("/admin/billing/delivery-receipts");
     revalidatePath(`/admin/billing/delivery-receipts/${id}`);
+    revalidatePath(`/admin/billing/statements/${updatedReceipt.billingStatementId}`);
 
     return {
       success: true,
@@ -428,6 +470,7 @@ export async function updateDeliveryReceiptStatus(
 
     revalidatePath("/admin/billing/delivery-receipts");
     revalidatePath(`/admin/billing/delivery-receipts/${id}`);
+    revalidatePath(`/admin/billing/statements/${updatedReceipt.billingStatementId}`);
 
     return {
       success: true,
@@ -452,30 +495,30 @@ export async function deleteDeliveryReceipt(
       return { success: false, error: "Unauthorized" };
     }
 
-    // Get the receipt to check if it can be deleted
+    // Get the receipt to check if it can be deleted - maintain relationship integrity
     const receipt = await prisma.deliveryReceipt.findUnique({
       where: { id },
-      include: { billingStatements: true },
+      include: { billingStatement: true },
     });
 
     if (!receipt) {
       return { success: false, error: "Delivery receipt not found" };
     }
 
-    // Check if receipt is linked to billing statements
-    if (receipt.billingStatements.length > 0) {
-      return {
-        success: false,
-        error:
-          "Cannot delete delivery receipt that is linked to billing statements",
-      };
-    }
-
-    // Only allow deletion of pending or cancelled receipts
+    // Since billingStatementId is required, all receipts are linked to billing statements
+    // Only allow deletion of pending or cancelled receipts to maintain data integrity
     if (!["PENDING", "CANCELLED"].includes(receipt.deliveryStatus)) {
       return {
         success: false,
         error: "Only pending or cancelled delivery receipts can be deleted",
+      };
+    }
+
+    // Additional check: ensure billing statement allows receipt deletion
+    if (receipt.billingStatement && receipt.billingStatement.status === "PAID") {
+      return {
+        success: false,
+        error: "Cannot delete delivery receipt for paid billing statements",
       };
     }
 
@@ -485,6 +528,7 @@ export async function deleteDeliveryReceipt(
     });
 
     revalidatePath("/admin/billing/delivery-receipts");
+    revalidatePath(`/admin/billing/statements/${receipt.billingStatementId}`);
 
     return {
       success: true,
@@ -535,6 +579,7 @@ export async function confirmDelivery(
 
     revalidatePath("/admin/billing/delivery-receipts");
     revalidatePath(`/admin/billing/delivery-receipts/${id}`);
+    revalidatePath(`/admin/billing/statements/${updatedReceipt.billingStatementId}`);
 
     return {
       success: true,
@@ -572,6 +617,7 @@ export async function markDeliveryFailed(
 
     revalidatePath("/admin/billing/delivery-receipts");
     revalidatePath(`/admin/billing/delivery-receipts/${id}`);
+    revalidatePath(`/admin/billing/statements/${updatedReceipt.billingStatementId}`);
 
     return {
       success: true,
@@ -601,15 +647,14 @@ export async function createDeliveryReceiptFromCustomerOrder(
       return { success: false, error: "Unauthorized" };
     }
 
-    // Get customer order with details
+    // Get customer order with details and find associated billing statement
     const customerOrder = await prisma.customerOrder.findUnique({
       where: { id: customerOrderId },
       include: {
         customer: true,
-        orderLines: {
-          include: {
-            product: true,
-          },
+        billingStatements: {
+          take: 1,
+          orderBy: { createdAt: "desc" },
         },
       },
     });
@@ -618,8 +663,18 @@ export async function createDeliveryReceiptFromCustomerOrder(
       return { success: false, error: "Customer order not found" };
     }
 
-    // Create delivery receipt from order data
+    // Find the billing statement for this customer order
+    const billingStatement = customerOrder.billingStatements[0];
+    if (!billingStatement) {
+      return { 
+        success: false, 
+        error: "No billing statement found for this customer order. Please create a billing statement first." 
+      };
+    }
+
+    // Create delivery receipt from order data with simplified fields
     const formData: DeliveryReceiptFormData = {
+      billingStatementId: billingStatement.id,
       deliveryDate: deliveryData.deliveryDate || new Date(),
       receivedBy: deliveryData.receivedBy || "",
       receivedByTitle: deliveryData.receivedByTitle,
@@ -629,18 +684,11 @@ export async function createDeliveryReceiptFromCustomerOrder(
         customerOrder.customer.address ||
         "",
       deliveryNotes: deliveryData.deliveryNotes,
-      itemsDelivered: customerOrder.orderLines.map((line) => ({
-        productId: line.productId,
-        productName: line.product.name,
-        quantity: line.quantity,
-        unit: "PCS",
-        condition: "GOOD",
-        notes: "",
-      })),
       deliveryStatus: deliveryData.deliveryStatus || DeliveryStatus.PENDING,
+      signatureImage: deliveryData.signatureImage,
+      photoEvidence: deliveryData.photoEvidence,
       trackingNumber: deliveryData.trackingNumber,
       courierService: deliveryData.courierService,
-      deliveryMethod: deliveryData.deliveryMethod || "DELIVERY",
     };
 
     return await createDeliveryReceipt(formData);
@@ -666,11 +714,15 @@ export async function createDeliveryReceiptFromProductionOrder(
       return { success: false, error: "Unauthorized" };
     }
 
-    // Get production order with details
+    // Get production order with details and find associated billing statement
     const productionOrder = await prisma.productionOrder.findUnique({
       where: { id: productionOrderId },
       include: {
         product: true,
+        billingStatements: {
+          take: 1,
+          orderBy: { createdAt: "desc" },
+        },
         customerOrder: {
           include: {
             customer: true,
@@ -683,38 +735,33 @@ export async function createDeliveryReceiptFromProductionOrder(
       return { success: false, error: "Production order not found" };
     }
 
-    if (!productionOrder.customerOrder) {
-      return {
-        success: false,
-        error: "Production order must be linked to a customer order",
+    // Find the billing statement for this production order
+    const billingStatement = productionOrder.billingStatements[0];
+    if (!billingStatement) {
+      return { 
+        success: false, 
+        error: "No billing statement found for this production order. Please create a billing statement first." 
       };
     }
 
-    // Create delivery receipt from production order data
+    // Create delivery receipt from production order data with simplified fields
     const formData: DeliveryReceiptFormData = {
+      billingStatementId: billingStatement.id,
       deliveryDate: deliveryData.deliveryDate || new Date(),
       receivedBy: deliveryData.receivedBy || "",
       receivedByTitle: deliveryData.receivedByTitle,
       deliveryAddress:
         deliveryData.deliveryAddress ||
-        productionOrder.customerOrder.shippingAddress ||
-        productionOrder.customerOrder.customer.address ||
+        productionOrder.customerOrder?.shippingAddress ||
+        productionOrder.customerOrder?.customer.address ||
         "",
-      deliveryNotes: deliveryData.deliveryNotes,
-      itemsDelivered: [
-        {
-          productId: productionOrder.productId,
-          productName: productionOrder.product.name,
-          quantity: productionOrder.quantity,
-          unit: "PCS",
-          condition: "GOOD",
-          notes: `Produced under order ${productionOrder.customerOrder.orderNumber}`,
-        },
-      ],
+      deliveryNotes: deliveryData.deliveryNotes || 
+        `Delivery for production order - ${productionOrder.product.name} (Qty: ${productionOrder.quantity})`,
       deliveryStatus: deliveryData.deliveryStatus || DeliveryStatus.PENDING,
+      signatureImage: deliveryData.signatureImage,
+      photoEvidence: deliveryData.photoEvidence,
       trackingNumber: deliveryData.trackingNumber,
       courierService: deliveryData.courierService,
-      deliveryMethod: deliveryData.deliveryMethod || "DELIVERY",
     };
 
     return await createDeliveryReceipt(formData);
@@ -756,8 +803,15 @@ export async function getDeliveryAnalytics(): Promise<DeliveryAnalytics> {
     const successRate =
       totalDeliveries > 0 ? (successfulDeliveries / totalDeliveries) * 100 : 0;
 
-    // Get delivery method breakdown
-    const deliveryMethodBreakdown = await getDeliveryMethodBreakdown();
+    // Get simplified delivery method breakdown (no longer tracking specific methods)
+    const deliveryMethodBreakdown = [
+      {
+        method: "Standard Delivery",
+        count: totalDeliveries,
+        successRate: successRate,
+        averageDeliveryTime: 0, // Would need timestamp tracking
+      },
+    ];
 
     // Get courier performance
     const courierPerformance = await getCourierPerformance();
@@ -802,22 +856,7 @@ async function generateReceiptNumber(): Promise<string> {
   return `DR-${year}${month}-${sequence}`;
 }
 
-async function getDeliveryMethodBreakdown() {
-  const results = await prisma.deliveryReceipt.groupBy({
-    by: ["deliveryMethod"],
-    _count: true,
-    where: {
-      deliveryMethod: { not: null },
-    },
-  });
 
-  return results.map((result) => ({
-    method: result.deliveryMethod || "Unknown",
-    count: result._count,
-    successRate: 0, // Would need more complex query to calculate
-    averageDeliveryTime: 0, // Would need timestamp tracking
-  }));
-}
 
 async function getCourierPerformance() {
   const results = await prisma.deliveryReceipt.groupBy({
@@ -841,7 +880,7 @@ async function getRecentDeliveries() {
     take: 10,
     orderBy: { deliveryDate: "desc" },
     include: {
-      billingStatements: {
+      billingStatement: {
         include: {
           customer: {
             select: {
@@ -858,8 +897,8 @@ async function getRecentDeliveries() {
     receiptNumber: receipt.receiptNumber,
     deliveryDate: receipt.deliveryDate,
     status: receipt.deliveryStatus as DeliveryStatus,
-    customerName: receipt.billingStatements[0]?.customer?.name || "Unknown",
-    deliveryMethod: receipt.deliveryMethod || "Unknown",
+    customerName: receipt.billingStatement?.customer?.name || receipt.billingStatement?.customerName || "Unknown",
+    deliveryMethod: "Standard", // Simplified - no longer tracking delivery method
   }));
 }
 

@@ -144,7 +144,7 @@ export async function getAllBillingStatements(
             },
           },
         },
-        deliveryReceipt: {
+        deliveryReceipts: {
           select: {
             id: true,
             receiptNumber: true,
@@ -282,7 +282,7 @@ export async function getBillingStatementById(
             },
           },
         },
-        deliveryReceipt: {
+        deliveryReceipts: {
           select: {
             id: true,
             receiptNumber: true,
@@ -367,6 +367,26 @@ export async function createBillingStatement(
     // Validate input data
     const validatedData = billingStatementSchema.parse(data);
 
+    // Derive customer name if not provided
+    let customerName = validatedData.customerName;
+    if (!customerName && validatedData.customerId) {
+      const customer = await prisma.customer.findUnique({
+        where: { id: validatedData.customerId },
+        select: { name: true },
+      });
+      customerName = customer?.name || "Unknown Customer";
+    } else if (!customerName && validatedData.customerOrderId) {
+      const customerOrder = await prisma.customerOrder.findUnique({
+        where: { id: validatedData.customerOrderId },
+        include: { customer: { select: { name: true } } },
+      });
+      customerName = customerOrder?.customer.name || "Unknown Customer";
+    }
+
+    if (!customerName) {
+      return { success: false, error: "Customer name is required" };
+    }
+
     // Calculate amounts
     const subtotal = validatedData.subtotal;
     const taxAmount = (subtotal * validatedData.taxRate) / 100;
@@ -376,61 +396,65 @@ export async function createBillingStatement(
     // Generate unique statement number
     const statementNumber = await generateStatementNumber();
 
-    // Create sales invoice first
-    const salesInvoice = await prisma.salesInvoice.create({
-      data: {
-        invoiceNumber: await generateInvoiceNumber(),
-        invoiceDate: new Date(),
-        subtotal: new Decimal(subtotal),
-        taxRate: new Decimal(validatedData.taxRate),
-        taxAmount: new Decimal(taxAmount),
-        discountAmount: new Decimal(validatedData.discountAmount),
-        totalAmount: new Decimal(totalAmount),
-        paymentTerms: validatedData.paymentTerms,
-        dueDate: validatedData.dueDate,
-        status: "DRAFT" as InvoiceStatus,
-        poNumber: validatedData.poNumber,
-        terms: validatedData.terms,
-        footerNotes: validatedData.footerNotes,
-        createdBy: session.user.id,
-        invoiceItems: {
-          create: validatedData.invoiceItems.map((item) => ({
-            productId: item.productId,
-            description: item.description,
-            quantity: new Decimal(item.quantity),
-            unitPrice: new Decimal(item.unitPrice),
-            totalPrice: new Decimal(item.quantity * item.unitPrice),
-            productCode: item.productCode,
-            unit: item.unit,
-            discountPercent: item.discountPercent
-              ? new Decimal(item.discountPercent)
-              : null,
-            taxable: item.taxable,
-          })),
+    // Use transaction to create both billing statement and sales invoice
+    const result = await prisma.$transaction(async (tx) => {
+      // Create billing statement first
+      const billingStatement = await tx.billingStatement.create({
+        data: {
+          statementNumber,
+          customerId: validatedData.customerId,
+          customerName,
+          customerOrderId: validatedData.customerOrderId,
+          productionOrderId: validatedData.productionOrderId,
+          totalAmount: new Decimal(totalAmount),
+          taxAmount: new Decimal(taxAmount),
+          discountAmount: new Decimal(validatedData.discountAmount),
+          netAmount: new Decimal(netAmount),
+          status: "DRAFT" as PrismaBillingStatus,
+          billingDate: new Date(),
+          dueDate: validatedData.dueDate,
+          notes: validatedData.notes,
+          createdBy: session.user.id,
         },
-      },
-    });
+      });
 
-    // Create billing statement
-    const billingStatement = await prisma.billingStatement.create({
-      data: {
-        statementNumber,
-        customerId: validatedData.customerId,
-        customerName: validatedData.customerName,
-        customerOrderId: validatedData.customerOrderId,
-        productionOrderId: validatedData.productionOrderId,
-        deliveryReceiptId: validatedData.deliveryReceiptId,
-        salesInvoiceId: salesInvoice.id,
-        totalAmount: new Decimal(totalAmount),
-        taxAmount: new Decimal(taxAmount),
-        discountAmount: new Decimal(validatedData.discountAmount),
-        netAmount: new Decimal(netAmount),
-        status: "DRAFT" as PrismaBillingStatus,
-        billingDate: new Date(),
-        dueDate: validatedData.dueDate,
-        notes: validatedData.notes,
-        createdBy: session.user.id,
-      },
+      // Create sales invoice linked to billing statement
+      const salesInvoice = await tx.salesInvoice.create({
+        data: {
+          invoiceNumber: await generateInvoiceNumber(),
+          billingStatementId: billingStatement.id,
+          invoiceDate: new Date(),
+          subtotal: new Decimal(subtotal),
+          taxRate: new Decimal(validatedData.taxRate),
+          taxAmount: new Decimal(taxAmount),
+          discountAmount: new Decimal(validatedData.discountAmount),
+          totalAmount: new Decimal(totalAmount),
+          paymentTerms: validatedData.paymentTerms,
+          dueDate: validatedData.dueDate,
+          status: "DRAFT" as InvoiceStatus,
+          poNumber: validatedData.poNumber,
+          terms: validatedData.terms,
+          footerNotes: validatedData.footerNotes,
+          createdBy: session.user.id,
+          invoiceItems: {
+            create: validatedData.invoiceItems.map((item) => ({
+              productId: item.productId,
+              description: item.description,
+              quantity: new Decimal(item.quantity),
+              unitPrice: new Decimal(item.unitPrice),
+              totalPrice: new Decimal(item.quantity * item.unitPrice),
+              productCode: item.productCode,
+              unit: item.unit,
+              discountPercent: item.discountPercent
+                ? new Decimal(item.discountPercent)
+                : null,
+              taxable: item.taxable,
+            })),
+          },
+        },
+      });
+
+      return billingStatement;
     });
 
     revalidatePath("/admin/billing/billing-statements");
@@ -438,7 +462,7 @@ export async function createBillingStatement(
 
     return {
       success: true,
-      data: billingStatement as BillingStatement,
+      data: result as BillingStatement,
       message: "Billing statement created successfully",
     };
   } catch (error) {
@@ -577,21 +601,10 @@ export async function deleteBillingStatement(
       };
     }
 
-    // Delete in transaction
-    await prisma.$transaction([
-      // Delete invoice items first
-      prisma.salesInvoiceItem.deleteMany({
-        where: { salesInvoiceId: statement.salesInvoiceId },
-      }),
-      // Delete sales invoice
-      prisma.salesInvoice.delete({
-        where: { id: statement.salesInvoiceId },
-      }),
-      // Delete billing statement
-      prisma.billingStatement.delete({
-        where: { id },
-      }),
-    ]);
+    // Delete in transaction - cascade delete will handle sales invoice and items
+    await prisma.billingStatement.delete({
+      where: { id },
+    });
 
     revalidatePath("/admin/billing/billing-statements");
     revalidatePath("/admin/billing/sales-invoices");

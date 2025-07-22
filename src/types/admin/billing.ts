@@ -8,13 +8,16 @@ import { z } from "zod";
 export interface BillingStatement {
   id: string;
   statementNumber: string;
-  customerId: string;
-  customerOrderId: string | null;
-  productionOrderId: string | null;
-  deliveryReceiptId: string | null;
-  salesInvoiceId: string;
+  
+  // Customer Information (Required - at least one must be provided)
+  customerId: string | null;          // Direct customer reference
+  customerOrderId: string | null;     // Or reference via customer order
+  customerName: string;               // Derived/cached customer name
+  
+  // Optional Production Link
+  productionOrderId: string | null;   // Optional production order link
 
-  // Billing details
+  // Financial Information
   totalAmount: number;
   taxAmount: number;
   discountAmount: number;
@@ -37,8 +40,8 @@ export interface BillingStatement {
   customer?: Customer;
   customerOrder?: CustomerOrder;
   productionOrder?: ProductionOrder;
-  deliveryReceipt?: DeliveryReceipt;
-  salesInvoice?: SalesInvoice;
+  salesInvoice?: SalesInvoice;        // One-to-One relationship
+  deliveryReceipts?: DeliveryReceipt[]; // One-to-Many relationship
   createdByUser?: User;
   modifiedByUser?: User;
 }
@@ -46,24 +49,27 @@ export interface BillingStatement {
 export interface DeliveryReceipt {
   id: string;
   receiptNumber: string;
+  
+  // Link to billing statement (Required)
+  billingStatementId: string;
+  
+  // Essential Delivery Information
   deliveryDate: Date;
+  deliveryAddress: string;
   receivedBy: string;
   receivedByTitle: string | null;
-  deliveryAddress: string;
-  deliveryNotes: string | null;
-
-  // Delivery details
-  itemsDelivered: any; // JSON field
-  deliveryStatus: DeliveryStatus;
-
-  // Signature/confirmation
+  
+  // Optional Proof
   signatureImage: string | null;
   photoEvidence: string | null;
-
-  // Tracking information
+  
+  // Optional Tracking
   trackingNumber: string | null;
   courierService: string | null;
-  deliveryMethod: string | null;
+  
+  // Status and Notes
+  deliveryStatus: DeliveryStatus;
+  deliveryNotes: string | null;
 
   // Metadata
   createdAt: Date;
@@ -72,7 +78,7 @@ export interface DeliveryReceipt {
   modifiedBy: string | null;
 
   // Relations
-  billingStatements?: BillingStatement[];
+  billingStatement?: BillingStatement;
   createdByUser?: User;
   modifiedByUser?: User;
 }
@@ -80,23 +86,24 @@ export interface DeliveryReceipt {
 export interface SalesInvoice {
   id: string;
   invoiceNumber: string;
+  
+  // Direct link to billing statement (Required)
+  billingStatementId: string;
+  
+  // Invoice Details
   invoiceDate: Date;
-
-  // Invoice details
   subtotal: number;
   taxRate: number;
   taxAmount: number;
   discountAmount: number;
   totalAmount: number;
 
-  // Payment terms
+  // Payment Information
   paymentTerms: string | null;
   dueDate: Date | null;
-
-  // Status
   status: InvoiceStatus;
 
-  // Additional details
+  // Additional Information
   poNumber: string | null;
   terms: string | null;
   footerNotes: string | null;
@@ -108,7 +115,7 @@ export interface SalesInvoice {
   modifiedBy: string | null;
 
   // Relations
-  billingStatements?: BillingStatement[];
+  billingStatement?: BillingStatement;  // One-to-One relationship
   invoiceItems?: SalesInvoiceItem[];
   createdByUser?: User;
   modifiedByUser?: User;
@@ -204,10 +211,8 @@ export interface BillingStatementFormData {
 }
 
 export interface SalesInvoiceFormData {
-  customerId: string;
-  customerOrderId?: string;
-  productionOrderId?: string;
-
+  billingStatementId: string; // Required - link to billing statement
+  
   // Invoice details
   subtotal: number;
   taxRate: number;
@@ -240,29 +245,23 @@ export interface SalesInvoiceItemFormData {
 }
 
 export interface DeliveryReceiptFormData {
+  billingStatementId: string; // Required link to billing statement
   deliveryDate: Date;
   receivedBy: string;
   receivedByTitle?: string;
   deliveryAddress: string;
   deliveryNotes?: string;
 
-  // Delivery details
-  itemsDelivered: DeliveryItem[];
+  // Status
   deliveryStatus: DeliveryStatus;
 
-  // Tracking information
+  // Optional proof
+  signatureImage?: string;
+  photoEvidence?: string;
+
+  // Optional tracking information
   trackingNumber?: string;
   courierService?: string;
-  deliveryMethod?: string;
-}
-
-export interface DeliveryItem {
-  productId?: string;
-  productName: string;
-  quantity: number;
-  unit: string;
-  condition: string; // 'GOOD', 'DAMAGED', 'PARTIAL'
-  notes?: string;
 }
 
 // ==============================================
@@ -447,7 +446,6 @@ export interface SalesInvoiceFilters {
 
 export interface DeliveryReceiptFilters {
   status?: DeliveryStatus[];
-  deliveryMethod?: string[];
   courierService?: string[];
   dateRange?: {
     start: Date;
@@ -504,9 +502,7 @@ export const billingStatementSchema = z.object({
 });
 
 export const salesInvoiceSchema = z.object({
-  customerId: z.string().min(1, "Customer is required"),
-  customerOrderId: z.string().optional(),
-  productionOrderId: z.string().optional(),
+  billingStatementId: z.string().min(1, "Billing statement is required"),
 
   // Invoice details
   subtotal: z.number().min(0, "Subtotal must be positive"),
@@ -542,26 +538,14 @@ export const salesInvoiceSchema = z.object({
 });
 
 export const deliveryReceiptSchema = z.object({
+  billingStatementId: z.string().min(1, "Billing statement is required"),
   deliveryDate: z.date(),
   receivedBy: z.string().min(1, "Receiver name is required"),
   receivedByTitle: z.string().optional(),
   deliveryAddress: z.string().min(1, "Delivery address is required"),
   deliveryNotes: z.string().optional(),
 
-  // Delivery details
-  itemsDelivered: z
-    .array(
-      z.object({
-        productId: z.string().optional(),
-        productName: z.string().min(1, "Product name is required"),
-        quantity: z.number().min(0.001, "Quantity must be positive"),
-        unit: z.string().min(1, "Unit is required"),
-        condition: z.enum(["GOOD", "DAMAGED", "PARTIAL"]),
-        notes: z.string().optional(),
-      })
-    )
-    .min(1, "At least one item is required"),
-
+  // Status
   deliveryStatus: z.enum([
     "PENDING",
     "IN_TRANSIT",
@@ -571,10 +555,13 @@ export const deliveryReceiptSchema = z.object({
     "CANCELLED",
   ]),
 
-  // Tracking information
+  // Optional proof
+  signatureImage: z.string().optional(),
+  photoEvidence: z.string().optional(),
+
+  // Optional tracking information
   trackingNumber: z.string().optional(),
   courierService: z.string().optional(),
-  deliveryMethod: z.string().optional(),
 });
 
 export const billingStatementFiltersSchema = z.object({
@@ -658,7 +645,6 @@ export const deliveryReceiptFiltersSchema = z.object({
       ])
     )
     .optional(),
-  deliveryMethod: z.array(z.string()).optional(),
   courierService: z.array(z.string()).optional(),
   dateRange: z
     .object({
@@ -678,13 +664,13 @@ export const deliveryReceiptFiltersSchema = z.object({
 // ==============================================
 
 export type BillingStatementWithRelations = BillingStatement & {
-  customer: Customer;
+  customer?: Customer;
   customerOrder?: CustomerOrder;
   productionOrder?: ProductionOrder;
-  deliveryReceipt?: DeliveryReceipt;
-  salesInvoice: SalesInvoice & {
+  salesInvoice?: SalesInvoice & {
     invoiceItems: SalesInvoiceItem[];
   };
+  deliveryReceipts?: DeliveryReceipt[];
 };
 
 export type SalesInvoiceWithItems = SalesInvoice & {
@@ -692,7 +678,7 @@ export type SalesInvoiceWithItems = SalesInvoice & {
 };
 
 export type DeliveryReceiptWithBilling = DeliveryReceipt & {
-  billingStatements: BillingStatement[];
+  billingStatement?: BillingStatement;
 };
 
 // Action response types

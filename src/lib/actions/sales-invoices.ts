@@ -90,7 +90,7 @@ export async function getAllSalesInvoices(
     // Get total count
     const total = await prisma.salesInvoice.count({ where: whereClause });
 
-    // Get invoices with items
+    // Get invoices with items and billing statement data
     const invoices = await prisma.salesInvoice.findMany({
       where: whereClause,
       include: {
@@ -119,13 +119,28 @@ export async function getAllSalesInvoices(
             },
           },
         },
-        billingStatements: {
+        billingStatement: {
           include: {
             customer: {
               select: {
                 id: true,
                 name: true,
                 email: true,
+                code: true,
+              },
+            },
+            customerOrder: {
+              select: {
+                id: true,
+                orderNumber: true,
+                orderDate: true,
+              },
+            },
+            productionOrder: {
+              select: {
+                id: true,
+                orderNumber: true,
+                status: true,
               },
             },
           },
@@ -231,13 +246,28 @@ export async function getSalesInvoiceById(
             },
           },
         },
-        billingStatements: {
+        billingStatement: {
           include: {
             customer: {
               select: {
                 id: true,
                 name: true,
                 email: true,
+                code: true,
+              },
+            },
+            customerOrder: {
+              select: {
+                id: true,
+                orderNumber: true,
+                orderDate: true,
+              },
+            },
+            productionOrder: {
+              select: {
+                id: true,
+                orderNumber: true,
+                status: true,
               },
             },
           },
@@ -311,6 +341,35 @@ export async function createSalesInvoice(
     // Validate input data
     const validatedData = salesInvoiceSchema.parse(data);
 
+    // Validate that billingStatementId is provided (required)
+    if (!validatedData.billingStatementId) {
+      return {
+        success: false,
+        error: "Billing statement ID is required",
+      };
+    }
+
+    // Check if billing statement exists and validate one-to-one relationship
+    const billingStatement = await prisma.billingStatement.findUnique({
+      where: { id: validatedData.billingStatementId },
+      include: { salesInvoice: true },
+    });
+
+    if (!billingStatement) {
+      return {
+        success: false,
+        error: "Billing statement not found",
+      };
+    }
+
+    // Prevent duplicate invoices for same billing statement (one-to-one relationship)
+    if (billingStatement.salesInvoice) {
+      return {
+        success: false,
+        error: "A sales invoice already exists for this billing statement. Each billing statement can only have one sales invoice.",
+      };
+    }
+
     // Calculate amounts
     const subtotal = validatedData.subtotal;
     const taxAmount = (subtotal * validatedData.taxRate) / 100;
@@ -319,10 +378,11 @@ export async function createSalesInvoice(
     // Generate unique invoice number
     const invoiceNumber = await generateInvoiceNumber();
 
-    // Create sales invoice
+    // Create sales invoice with required billingStatementId
     const salesInvoice = await prisma.salesInvoice.create({
       data: {
         invoiceNumber,
+        billingStatementId: validatedData.billingStatementId, // Required field
         invoiceDate: new Date(),
         subtotal: new Decimal(subtotal),
         taxRate: new Decimal(validatedData.taxRate),
@@ -354,6 +414,25 @@ export async function createSalesInvoice(
           })),
         },
       },
+      include: {
+        billingStatement: {
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            customerOrder: {
+              select: {
+                id: true,
+                orderNumber: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     revalidatePath("/admin/billing/sales-invoices");
@@ -382,10 +461,13 @@ export async function updateSalesInvoice(
       return { success: false, error: "Unauthorized" };
     }
 
-    // Get existing invoice
+    // Get existing invoice with billing statement relationship
     const existingInvoice = await prisma.salesInvoice.findUnique({
       where: { id },
-      include: { invoiceItems: true },
+      include: { 
+        invoiceItems: true,
+        billingStatement: true 
+      },
     });
 
     if (!existingInvoice) {
@@ -397,6 +479,15 @@ export async function updateSalesInvoice(
       return {
         success: false,
         error: "Only draft invoices can be edited",
+      };
+    }
+
+    // Validate one-to-one relationship integrity
+    // billingStatementId cannot be changed after creation to maintain relationship integrity
+    if (data.billingStatementId && data.billingStatementId !== existingInvoice.billingStatementId) {
+      return {
+        success: false,
+        error: "Cannot change billing statement for existing invoice. Create a new invoice instead.",
       };
     }
 
@@ -533,7 +624,7 @@ export async function deleteSalesInvoice(
     // Get the invoice to check if it can be deleted
     const invoice = await prisma.salesInvoice.findUnique({
       where: { id },
-      include: { billingStatements: true },
+      include: { billingStatement: true },
     });
 
     if (!invoice) {
@@ -548,13 +639,8 @@ export async function deleteSalesInvoice(
       };
     }
 
-    // Check if invoice is linked to billing statements
-    if (invoice.billingStatements.length > 0) {
-      return {
-        success: false,
-        error: "Cannot delete invoice that is linked to billing statements",
-      };
-    }
+    // Note: Invoice is always linked to a billing statement in the new schema
+    // We allow deletion only if the invoice is in DRAFT status (already checked above)
 
     // Delete in transaction
     await prisma.$transaction([
@@ -606,6 +692,7 @@ export async function generateInvoiceFromCustomerOrder(
             product: true,
           },
         },
+        billingStatements: true, // Check if billing statement already exists
       },
     });
 
@@ -613,10 +700,44 @@ export async function generateInvoiceFromCustomerOrder(
       return { success: false, error: "Customer order not found" };
     }
 
-    // Create invoice from order data
+    // Check if a billing statement already exists for this customer order
+    let billingStatement = customerOrder.billingStatements?.[0];
+    
+    if (!billingStatement) {
+      // Create a billing statement first (required for sales invoice)
+      const billingStatementResult = await prisma.billingStatement.create({
+        data: {
+          statementNumber: `BS-${Date.now()}`, // Generate unique statement number
+          customerOrderId: customerOrderId,
+          customerId: customerOrder.customerId,
+          customerName: customerOrder.customer.name,
+          totalAmount: customerOrder.totalAmount,
+          taxAmount: new Decimal((customerOrder.totalAmount.toNumber() * 12) / 100), // 12% tax
+          discountAmount: new Decimal(0),
+          netAmount: new Decimal(customerOrder.totalAmount.toNumber() + (customerOrder.totalAmount.toNumber() * 12) / 100),
+          status: "DRAFT",
+          billingDate: new Date(),
+          createdBy: session.user.id,
+        },
+      });
+      billingStatement = billingStatementResult;
+    }
+
+    // Check if invoice already exists for this billing statement
+    const existingInvoice = await prisma.salesInvoice.findFirst({
+      where: { billingStatementId: billingStatement.id },
+    });
+
+    if (existingInvoice) {
+      return {
+        success: false,
+        error: "Sales invoice already exists for this customer order",
+      };
+    }
+
+    // Create invoice from order data with required billingStatementId
     const formData: SalesInvoiceFormData = {
-      customerId: customerOrder.customerId,
-      customerOrderId: customerOrderId,
+      billingStatementId: billingStatement.id, // Required field
       subtotal: customerOrder.totalAmount.toNumber(),
       taxRate: 12, // Default tax rate
       discountAmount: 0,
@@ -660,8 +781,10 @@ export async function generateInvoiceFromProductionOrder(
         customerOrder: {
           include: {
             customer: true,
+            billingStatements: true, // Check if billing statement already exists
           },
         },
+        billingStatements: true, // Check if billing statement exists for production order
       },
     });
 
@@ -681,11 +804,46 @@ export async function generateInvoiceFromProductionOrder(
       productionOrder.product.sellingPrice.toNumber() *
       productionOrder.quantity;
 
-    // Create invoice from production order data
+    // Check if a billing statement already exists for this production order or customer order
+    let billingStatement = productionOrder.billingStatements?.[0] || 
+                          productionOrder.customerOrder.billingStatements?.[0];
+    
+    if (!billingStatement) {
+      // Create a billing statement first (required for sales invoice)
+      const billingStatementResult = await prisma.billingStatement.create({
+        data: {
+          statementNumber: `BS-${Date.now()}`, // Generate unique statement number
+          customerOrderId: productionOrder.customerOrderId,
+          customerId: productionOrder.customerOrder.customerId,
+          customerName: productionOrder.customerOrder.customer.name,
+          productionOrderId: productionOrderId, // Link to production order
+          totalAmount: new Decimal(totalAmount),
+          taxAmount: new Decimal((totalAmount * 12) / 100), // 12% tax
+          discountAmount: new Decimal(0),
+          netAmount: new Decimal(totalAmount + (totalAmount * 12) / 100),
+          status: "DRAFT",
+          billingDate: new Date(),
+          createdBy: session.user.id,
+        },
+      });
+      billingStatement = billingStatementResult;
+    }
+
+    // Check if invoice already exists for this billing statement
+    const existingInvoice = await prisma.salesInvoice.findFirst({
+      where: { billingStatementId: billingStatement.id },
+    });
+
+    if (existingInvoice) {
+      return {
+        success: false,
+        error: "Sales invoice already exists for this production order",
+      };
+    }
+
+    // Create invoice from production order data with required billingStatementId
     const formData: SalesInvoiceFormData = {
-      customerId: productionOrder.customerOrder.customerId,
-      customerOrderId: productionOrder.customerOrderId,
-      productionOrderId: productionOrderId,
+      billingStatementId: billingStatement.id, // Required field
       subtotal: totalAmount,
       taxRate: 12, // Default tax rate
       discountAmount: 0,

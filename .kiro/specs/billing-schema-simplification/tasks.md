@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Update Prisma schema with simplified billing models
+- [x] 1. Update Prisma schema with simplified billing models
   - Modify BillingStatement model to remove salesInvoiceId and deliveryReceiptId foreign keys
   - Add one-to-one relationship between BillingStatement and SalesInvoice
   - Add one-to-many relationship between BillingStatement and DeliveryReceipt
@@ -10,7 +10,7 @@
   - Add proper indexes for new foreign key relationships
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 2. Create database migration script
+- [x] 2. Create database migration script
   - Write Prisma migration to update existing schema
   - Add data migration logic to populate new billingStatementId fields in SalesInvoice and DeliveryReceipt
   - Handle existing nullable relationships and convert them to new structure
@@ -18,7 +18,7 @@
   - Test migration script with sample data
   - _Requirements: 4.5, 4.1, 4.2, 4.3_
 
-- [ ] 3. Update TypeScript types and interfaces
+- [x] 3. Update TypeScript types and interfaces
   - Update billing types in src/types/admin/billing.ts to match new schema
   - Remove references to old foreign key fields
   - Add new relationship types for one-to-one and one-to-many relationships
@@ -26,7 +26,7 @@
   - Update API response types to match new data structure
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 4. Update server actions for billing statements
+- [x] 4. Update server actions for billing statements
   - Modify createBillingStatement to handle either customerId or customerOrderId
   - Add logic to automatically derive customerName from customer or customerOrder
   - Update getBillingStatementById to include new relationship data
@@ -34,7 +34,7 @@
   - Update getAllBillingStatements to use new relationship structure
   - _Requirements: 1.1, 1.2, 2.1, 2.2, 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 5. Update server actions for sales invoices
+- [x] 5. Update server actions for sales invoices
   - Modify createSalesInvoice to require billingStatementId
   - Update getSalesInvoiceById to use billingStatement relationship
   - Modify updateSalesInvoice to maintain one-to-one relationship integrity
@@ -42,7 +42,7 @@
   - Add validation to prevent duplicate invoices for same billing statement
   - _Requirements: 1.4, 2.1, 2.2, 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 6. Update server actions for delivery receipts
+- [x] 6. Update server actions for delivery receipts
   - Modify createDeliveryReceipt to require billingStatementId
   - Remove itemsDelivered JSON handling and use simplified fields
   - Update getDeliveryReceiptById to use billingStatement relationship

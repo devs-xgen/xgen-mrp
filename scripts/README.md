@@ -1,95 +1,114 @@
-# XGen MRP Database Seeder
+# Billing Schema Migration Scripts
 
-This directory contains scripts for populating the XGen MRP database with test data.
+This directory contains scripts for migrating the billing system to the new simplified schema structure.
 
-## Comprehensive Seeder
+## Overview
 
-The `comprehensive-seed.ts` file creates a complete set of test data for the XGen MRP system, including:
+The billing schema simplification involves:
+- Streamlining relationships between BillingStatement, SalesInvoice, and DeliveryReceipt
+- Ensuring proper data integrity and foreign key relationships
+- Populating customer names from related customer records
+- Handling orphaned records by creating appropriate billing statements
 
-### What Gets Created
+## Scripts
 
-- **3 Test Users** with different roles (Admin, Worker, Inspector)
-- **4 Units of Measure** (Pieces, Meters, Kilograms, Liters)
-- **4 Material Types** (Fabric, Thread, Accessories, Packaging)
-- **2 Product Categories** (Clothing, Accessories)
-- **2 Suppliers** with contact information
-- **5 Materials** with stock levels and costs
-- **4 Work Centers** for production operations
-- **2 Products** with variant support (T-Shirt, Polo Shirt)
-- **42 Product Variants** (combinations of sizes and colors)
-- **Complete BOMs** (both product-level and variant-specific)
-- **2 Customers** with complete business information
-- **2 Customer Orders** with line items
-- **4 Order Lines** referencing specific product variants
-- **2 Production Orders** linked to customer orders and variants
-- **2 Operations** with work center assignments
-- **1 Quality Check** with inspection results
-- **1 Purchase Order** with line items
+### 1. `billing-schema-migration.ts`
+The main migration script that handles:
+- Updating existing BillingStatement records with proper customer names
+- Creating billing statements for orphaned SalesInvoice records
+- Creating billing statements for orphaned DeliveryReceipt records
+- Validating data integrity
+- Updating financial calculations
 
-### Running the Seeder
+### 2. `test-billing-migration.ts`
+A comprehensive test script that:
+- Creates sample data for testing
+- Runs the migration process
+- Validates the results
+- Cleans up test data
+
+### 3. `run-billing-migration.ts`
+A production-ready script to run the migration with:
+- Safety confirmations for production environments
+- Comprehensive error reporting
+- Migration statistics
+
+## Usage
+
+### Testing the Migration
+Before running on production data, test the migration:
 
 ```bash
-# Run the comprehensive seeder
-npm run seed:comprehensive
+npx tsx scripts/test-billing-migration.ts
 ```
 
-**⚠️ Warning**: This script will **DELETE ALL EXISTING DATA** in the database before creating new test data. Only run this on development/test databases.
+This will:
+1. Create sample billing data
+2. Run the migration
+3. Validate the results
+4. Clean up test data
 
-### Test Login Credentials
+### Running the Migration
+To run the actual migration on your database:
 
-After running the seeder, you can login with these credentials:
+```bash
+npx tsx scripts/run-billing-migration.ts
+```
 
-- **Admin**: `admin@xgenmrp.com` / `password123`
-- **Worker**: `worker@xgenmrp.com` / `password123`
-- **Inspector**: `inspector@xgenmrp.com` / `password123`
+**⚠️ Important:** Make sure to backup your database before running the migration!
 
-### What This Enables You to Test
+### Manual SQL Migration
+If you prefer to run the SQL migration manually:
 
-1. **Production Variant Tracking**: Production orders are created with specific variants (e.g., "T-Shirt Medium White")
-2. **Variant-Specific BOMs**: Different material requirements based on size and color
-3. **Customer Order Processing**: Complete workflow from customer order to production
-4. **Material Management**: Stock levels, suppliers, and procurement
-5. **Work Center Operations**: Production operations across different work centers
-6. **Quality Control**: Inspection processes and quality checks
-7. **User Role Management**: Different access levels and permissions
+```bash
+psql -d your_database -f prisma/migrations/billing-schema-data-migration.sql
+```
 
-### Key Features Demonstrated
+## Migration Process
 
-- **Product Variants**: T-shirts in 6 sizes × 5 colors = 30 variants, Polo shirts in 4 sizes × 3 colors = 12 variants
-- **Size-Based Material Calculations**: Different material quantities based on garment size
-- **Production Tracking**: Complete traceability from customer order to production completion
-- **Multi-Role System**: Admin, Worker, and Inspector roles with appropriate permissions
+The migration follows these steps:
 
-### Modifying the Seeder
+1. **Update Customer Names**: Ensures all BillingStatement records have proper customer names derived from related Customer or CustomerOrder records.
 
-To customize the test data:
+2. **Handle Orphaned Invoices**: Creates billing statements for any SalesInvoice records that don't have proper billing statement references.
 
-1. **Add More Products**: Extend the product creation section with new product types
-2. **Change Variants**: Modify the `sizes` and `colors` arrays to create different combinations
-3. **Adjust Stock Levels**: Update the `currentStock` and `minimumStockLevel` values
-4. **Add More Customers/Orders**: Create additional customer scenarios
-5. **Configure Work Centers**: Add more work centers or modify capacities
+3. **Handle Orphaned Receipts**: Creates billing statements for any DeliveryReceipt records that don't have proper billing statement references.
 
-### Safety Features
+4. **Data Validation**: Checks for data integrity issues and reports them.
 
-The seeder includes proper:
-- **Foreign Key Constraint Handling**: Deletes data in the correct order
-- **Error Handling**: Catches and reports any seeding failures
-- **Type Safety**: Uses Prisma types to ensure data consistency
-- **Decimal Handling**: Properly handles Prisma Decimal types for prices and costs
+5. **Financial Calculations**: Updates net amounts to ensure consistency.
 
-### Troubleshooting
+6. **Final Validation**: Performs comprehensive checks to ensure all relationships are properly established.
 
-If the seeder fails:
+## Data Integrity Checks
 
-1. **Check Database Connection**: Ensure your `.env` file has the correct `DATABASE_URL`
-2. **Verify Schema**: Run `npx prisma db push` to ensure schema is up to date
-3. **Check Dependencies**: Ensure `bcryptjs` is installed for password hashing
-4. **Foreign Key Errors**: The script handles deletion order, but check for any new relationships
+The migration includes several validation steps:
 
-### Alternative Seeders
+- All BillingStatement records have meaningful customer names
+- All SalesInvoice records are linked to valid billing statements
+- All DeliveryReceipt records are linked to valid billing statements
+- Financial calculations are consistent
+- Relationship integrity is maintained
 
-- `prisma/seed.ts` - Original Prisma seeder (basic data)
-- `scripts/link-inspectors.ts` - Links existing inspectors to user accounts
+## Error Handling
 
-Choose the appropriate seeder based on your testing needs. 
+The migration script includes comprehensive error handling:
+- Individual record failures don't stop the entire migration
+- All errors are logged and reported
+- Migration statistics provide visibility into the process
+- Validation ensures data integrity after migration
+
+## Rollback
+
+If you need to rollback the migration:
+1. Restore from your database backup
+2. Review the migration logs to understand what changes were made
+3. Consider running only specific parts of the migration if needed
+
+## Support
+
+If you encounter issues with the migration:
+1. Check the error logs for specific issues
+2. Verify your database schema matches the expected structure
+3. Ensure all required relationships exist in your data
+4. Test with the test script first to identify potential issues
