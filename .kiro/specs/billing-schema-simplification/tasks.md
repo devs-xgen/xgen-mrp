@@ -66,7 +66,7 @@
   - Add validation to prevent duplicate invoice creation
   - _Requirements: 1.4, 2.1, 2.2, 4.1, 4.2, 4.3_
 
-- [ ] 9. Update React components for delivery receipts
+- [x] 9. Update React components for delivery receipts
   - Modify DeliveryReceiptForm to require billingStatementId selection
   - Remove itemsDelivered JSON field handling from components
   - Update DeliveryReceiptList to display billing statement relationship
