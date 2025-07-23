@@ -1,11 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, User, Mail, Phone, MapPin, X, CreditCard } from "lucide-react";
+import { Search, User, Mail, Phone, MapPin, CreditCard, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Customer } from "@/types/admin/billing";
 
 interface DirectCustomerSelectorProps {
@@ -14,7 +29,7 @@ interface DirectCustomerSelectorProps {
   onCustomerSelect: (customer: Customer) => void;
   onClear: () => void;
   disabled?: boolean;
-  className?: string;
+  loading?: boolean;
 }
 
 export function DirectCustomerSelector({
@@ -23,221 +38,222 @@ export function DirectCustomerSelector({
   onCustomerSelect,
   onClear,
   disabled = false,
-  className = "",
+  loading = false,
 }: DirectCustomerSelectorProps) {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>(customers);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Filter customers based on search term
+  // Filter customers based on search
   useEffect(() => {
-    if (!searchTerm.trim()) {
+    if (!searchValue.trim()) {
       setFilteredCustomers(customers);
       return;
     }
 
     const filtered = customers.filter((customer) => {
-      const searchLower = searchTerm.toLowerCase();
+      const searchLower = searchValue.toLowerCase();
       return (
         customer.name.toLowerCase().includes(searchLower) ||
         customer.email.toLowerCase().includes(searchLower) ||
-        customer.phone.toLowerCase().includes(searchLower) ||
-        (customer.code && customer.code.toLowerCase().includes(searchLower))
+        customer.code.toLowerCase().includes(searchLower) ||
+        customer.phone.toLowerCase().includes(searchLower)
       );
     });
 
     setFilteredCustomers(filtered);
-  }, [searchTerm, customers]);
+  }, [searchValue, customers]);
 
   const handleCustomerSelect = (customer: Customer) => {
     onCustomerSelect(customer);
-    setIsDropdownOpen(false);
-    setSearchTerm("");
+    setOpen(false);
+    setSearchValue("");
   };
 
-  const handleClear = () => {
-    onClear();
-    setSearchTerm("");
-    setIsDropdownOpen(false);
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'inactive':
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'suspended':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+    }
   };
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      {/* Search Input */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search by name, email, phone, or customer code..."
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setIsDropdownOpen(true);
-          }}
-          onFocus={() => setIsDropdownOpen(true)}
-          className="pl-10"
-          disabled={disabled}
-        />
-        {selectedCustomer && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleClear}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-            disabled={disabled}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        )}
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="direct-customer-selector">Direct Customer</Label>
+        <div className="flex gap-2">
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={open}
+                className="flex-1 justify-between"
+                disabled={disabled || loading}
+              >
+                {selectedCustomer ? (
+                  <span className="truncate">
+                    {selectedCustomer.name} - {selectedCustomer.email}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">Select customer...</span>
+                )}
+                <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[400px] p-0" align="start">
+              <Command>
+                <CommandInput
+                  placeholder="Search customers by name, email, or code..."
+                  value={searchValue}
+                  onValueChange={setSearchValue}
+                />
+                <CommandList>
+                  <CommandEmpty>
+                    {loading ? "Loading customers..." : "No customers found."}
+                  </CommandEmpty>
+                  <CommandGroup>
+                    {filteredCustomers.map((customer) => (
+                      <CommandItem
+                        key={customer.id}
+                        value={customer.id}
+                        onSelect={() => handleCustomerSelect(customer)}
+                        className="flex flex-col items-start p-3 space-y-2"
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{customer.name}</span>
+                            <Badge className={getStatusColor(customer.status)}>
+                              {customer.status}
+                            </Badge>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {customer.code}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground w-full">
+                          <div className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            <span className="truncate">{customer.email}</span>
+                          </div>
+                          {customer.phone && (
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              <span>{customer.phone}</span>
+                            </div>
+                          )}
+                        </div>
+                        {customer.address && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <MapPin className="h-3 w-3" />
+                            <span className="truncate">
+                              {customer.address}
+                              {customer.city && `, ${customer.city}`}
+                              {customer.state && `, ${customer.state}`}
+                            </span>
+                          </div>
+                        )}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          
+          {selectedCustomer && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onClear}
+              disabled={disabled}
+              title="Clear selection"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Selected Customer Preview */}
       {selectedCustomer && (
-        <Card className="border-primary/20 bg-primary/5">
+        <Card className="bg-green-50 border-green-200">
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <User className="mr-2 h-4 w-4" />
-                Selected Customer
-              </CardTitle>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleClear}
-                disabled={disabled}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Selected Customer Details
+            </CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{selectedCustomer.name}</span>
-                {selectedCustomer.status && (
-                  <Badge variant={selectedCustomer.status === 'ACTIVE' ? 'default' : 'secondary'}>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-muted-foreground">Customer Name:</span>
+                <div className="font-semibold">{selectedCustomer.name}</div>
+              </div>
+              <div>
+                <span className="font-medium text-muted-foreground">Customer Code:</span>
+                <div className="font-mono">{selectedCustomer.code}</div>
+              </div>
+              <div>
+                <span className="font-medium text-muted-foreground">Email:</span>
+                <div>{selectedCustomer.email}</div>
+              </div>
+              <div>
+                <span className="font-medium text-muted-foreground">Phone:</span>
+                <div>{selectedCustomer.phone}</div>
+              </div>
+              <div>
+                <span className="font-medium text-muted-foreground">Status:</span>
+                <div>
+                  <Badge className={getStatusColor(selectedCustomer.status)}>
                     {selectedCustomer.status}
                   </Badge>
-                )}
+                </div>
               </div>
-              
-              {selectedCustomer.code && (
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Customer Code: {selectedCustomer.code}
-                </div>
-              )}
-              
-              {selectedCustomer.email && (
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Mail className="mr-2 h-4 w-4" />
-                  {selectedCustomer.email}
-                </div>
-              )}
-              
-              {selectedCustomer.phone && (
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Phone className="mr-2 h-4 w-4" />
-                  {selectedCustomer.phone}
-                </div>
-              )}
-              
-              {selectedCustomer.address && (
-                <div className="flex items-start text-sm text-muted-foreground">
-                  <MapPin className="mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <div className="space-y-1">
-                    <div>{selectedCustomer.address}</div>
-                    {(selectedCustomer.city || selectedCustomer.state || selectedCustomer.country) && (
-                      <div>
-                        {[selectedCustomer.city, selectedCustomer.state, selectedCustomer.country]
-                          .filter(Boolean)
-                          .join(", ")}
-                        {selectedCustomer.postalCode && ` ${selectedCustomer.postalCode}`}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
               {selectedCustomer.tinNumber && (
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground">
-                    TIN: {selectedCustomer.tinNumber}
-                  </p>
+                <div>
+                  <span className="font-medium text-muted-foreground">TIN Number:</span>
+                  <div className="font-mono">{selectedCustomer.tinNumber}</div>
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Dropdown Results */}
-      {isDropdownOpen && !selectedCustomer && (
-        <Card className="absolute z-50 w-full max-h-96 overflow-y-auto border shadow-lg">
-          <CardContent className="p-0">
-            {filteredCustomers.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground">
-                {searchTerm ? "No customers found matching your search" : "No customers available"}
-              </div>
-            ) : (
-              <div className="divide-y">
-                {filteredCustomers.map((customer) => (
-                  <button
-                    key={customer.id}
-                    type="button"
-                    onClick={() => handleCustomerSelect(customer)}
-                    className="w-full p-4 text-left hover:bg-muted/50 transition-colors"
-                    disabled={disabled}
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{customer.name}</span>
-                        {customer.status && (
-                          <Badge 
-                            variant={customer.status === 'ACTIVE' ? 'default' : 'secondary'}
-                            className="text-xs"
-                          >
-                            {customer.status}
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      {customer.code && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <CreditCard className="mr-2 h-3 w-3" />
-                          {customer.code}
-                        </div>
-                      )}
-                      
-                      {customer.email && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Mail className="mr-2 h-3 w-3" />
-                          {customer.email}
-                        </div>
-                      )}
-                      
-                      {customer.phone && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Phone className="mr-2 h-3 w-3" />
-                          {customer.phone}
-                        </div>
-                      )}
+            {/* Address Information */}
+            {selectedCustomer.address && (
+              <div className="pt-2 border-t">
+                <span className="font-medium text-muted-foreground text-sm">Address:</span>
+                <div className="text-sm mt-1">
+                  <div>{selectedCustomer.address}</div>
+                  {(selectedCustomer.city || selectedCustomer.state || selectedCustomer.postalCode) && (
+                    <div className="text-muted-foreground">
+                      {[selectedCustomer.city, selectedCustomer.state, selectedCustomer.postalCode]
+                        .filter(Boolean)
+                        .join(', ')}
+                      {selectedCustomer.country && `, ${selectedCustomer.country}`}
                     </div>
-                  </button>
-                ))}
+                  )}
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
       )}
 
-      {/* Click outside to close dropdown */}
-      {isDropdownOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setIsDropdownOpen(false)}
-        />
+      {/* Auto-population Notice */}
+      {selectedCustomer && (
+        <Alert>
+          <AlertDescription className="text-sm">
+            <strong>Auto-populated:</strong> Customer name will be automatically filled in the billing form. 
+            You can manually add invoice items for this customer.
+          </AlertDescription>
+        </Alert>
       )}
     </div>
   );

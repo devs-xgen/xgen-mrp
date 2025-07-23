@@ -9,7 +9,7 @@
   - Create unit tests for billing type selection functionality
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 3.1, 3.2, 5.1, 5.4_
 
-- [-] 2. Implement enhanced customer selection components
+- [x] 2. Implement enhanced customer selection components
   - Create CustomerOrderSelector component with searchable dropdown
   - Implement DirectCustomerSelector component with customer search
   - Create ManualCustomerEntry component for free text input
@@ -19,7 +19,7 @@
   - Create unit tests for all customer selection components
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 3.3, 5.2_
 
-- [ ] 3. Update billing form layout and structure
+- [x] 3. Update billing form layout and structure
   - Refactor BillingStatementForm to use step-based flow
   - Implement responsive grid layout with main form and sidebar
   - Create CustomerInformationCard component with conditional rendering

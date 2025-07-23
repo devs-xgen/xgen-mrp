@@ -1,4 +1,5 @@
 export { BillingStatementForm } from "./billing-statement-form";
+export { EnhancedBillingStatementForm } from "./enhanced-billing-statement-form";
 export { BillingStatementList } from "./billing-statement-list";
 export { BillingStatementCard } from "./billing-statement-card";
 export { ManualBillingDialog } from "./manual-billing-dialog";
@@ -14,3 +15,12 @@ export { DeliveryReceiptCard } from "./delivery-receipt-card";
 export { BillingTypeSelector } from "./billing-type-selector";
 export { BillingTypeCard } from "./billing-type-card";
 export { billingTypeOptions, getBillingTypeOption, getRecommendedBillingType } from "./billing-type-data";
+
+// Form steps and sections
+export { BillingFormProgress } from "./form-steps/billing-form-progress";
+export { BillingFormNavigation } from "./form-steps/billing-form-navigation";
+export { CustomerInformationCard } from "./form-sections/customer-information-card";
+
+// Enhanced customer selection
+export { EnhancedCustomerSelection } from "./enhanced-customer-selection";
+export type { CustomerSelectionData } from "./enhanced-customer-selection";

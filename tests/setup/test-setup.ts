@@ -37,6 +37,7 @@ vi.mock('lucide-react', () => ({
   ChevronDown: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'chevron-down-icon', className, ...props }),
   ChevronRight: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'chevron-right-icon', className, ...props }),
   Info: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'info-icon', className, ...props }),
+  RotateCcw: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'rotate-ccw-icon', className, ...props }),
 }))
 
 // Global test utilities
@@ -45,3 +46,6 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
   unobserve: vi.fn(),
   disconnect: vi.fn(),
 }))
+
+// Mock scrollIntoView for JSDOM
+Element.prototype.scrollIntoView = vi.fn()

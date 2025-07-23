@@ -1,394 +1,399 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { EnhancedCustomerSelection } from '@/components/module/admin/billing/enhanced-customer-selection'
-import { Customer } from '@/types/admin/billing'
-import { CustomerOrder } from '@/types/admin/customer-order'
-import { BillingTypeId } from '@/types/admin/billing-types'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { EnhancedCustomerSelection } from '@/components/module/admin/billing/enhanced-customer-selection';
+import { Customer } from '@/types/admin/billing';
+import { CustomerOrder } from '@/types/admin/customer-order';
 
 // Mock the formatCurrencyPHP function
 vi.mock('@/lib/constant', () => ({
-  formatCurrencyPHP: (amount: number) => `₱${amount.toLocaleString()}`
-}))
+  formatCurrencyPHP: (amount: number) => `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`,
+}));
+
+const mockCustomers: Customer[] = [
+  {
+    id: '1',
+    name: 'John Doe',
+    code: 'CUST-001',
+    email: 'john@example.com',
+    phone: '+63 912 345 6789',
+    status: 'ACTIVE',
+  },
+  {
+    id: '2',
+    name: 'Jane Smith',
+    code: 'CUST-002',
+    email: 'jane@example.com',
+    phone: '+63 917 123 4567',
+    status: 'ACTIVE',
+  },
+];
+
+const mockCustomerOrders: CustomerOrder[] = [
+  {
+    id: '1',
+    orderNumber: 'ORD-001',
+    customerId: 'cust-1',
+    orderDate: new Date('2024-01-15'),
+    requiredDate: new Date('2024-02-15'),
+    status: 'CONFIRMED' as any,
+    totalAmount: 15000,
+    customer: {
+      id: 'cust-1',
+      name: 'John Doe',
+      email: 'john@example.com',
+    },
+    orderLines: [],
+  },
+];
 
 describe('EnhancedCustomerSelection', () => {
-  const mockOnCustomerSelect = vi.fn()
-  const mockOnCustomerOrderSelect = vi.fn()
-  const mockOnManualCustomerChange = vi.fn()
-  const mockOnClearSelection = vi.fn()
-
-  const mockCustomers: Customer[] = [
-    {
-      id: '1',
-      name: 'John Doe',
-      code: 'CUST-001',
-      email: 'john@example.com',
-      phone: '+63 912 345 6789',
-      address: '123 Main St',
-      city: 'Manila',
-      state: 'NCR',
-      country: 'Philippines',
-      postalCode: '1000',
-      tinNumber: '123-456-789-000',
-      status: 'ACTIVE'
-    }
-  ]
-
-  const mockCustomerOrders: CustomerOrder[] = [
-    {
-      id: '1',
-      orderNumber: 'CO-2024-0001',
-      customerId: 'customer-1',
-      orderDate: new Date('2024-01-15'),
-      requiredDate: new Date('2024-02-15'),
-      status: 'PENDING',
-      totalAmount: 15000,
-      notes: null,
-      customer: {
-        id: 'customer-1',
-        name: 'John Doe',
-        email: 'john@example.com'
-      },
-      orderLines: []
-    }
-  ]
+  const mockOnSelectionChange = vi.fn();
 
   beforeEach(() => {
-    mockOnCustomerSelect.mockClear()
-    mockOnCustomerOrderSelect.mockClear()
-    mockOnManualCustomerChange.mockClear()
-    mockOnClearSelection.mockClear()
-  })
+    vi.clearAllMocks();
+  });
 
-  test('renders customer information header', () => {
+  it('renders correctly with default state', () => {
     render(
       <EnhancedCustomerSelection
         customers={mockCustomers}
         customerOrders={mockCustomerOrders}
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
+        onSelectionChange={mockOnSelectionChange}
       />
-    )
+    );
 
-    expect(screen.getByText('Customer Information')).toBeInTheDocument()
-    expect(screen.getByText('Choose how you want to specify the customer for this billing statement')).toBeInTheDocument()
-  })
+    expect(screen.getByText('Customer Information')).toBeInTheDocument();
+    expect(screen.getByText('Choose how you want to specify the customer for this billing statement')).toBeInTheDocument();
+  });
 
-  test('renders all three tab options', () => {
+  it('shows all three tabs', () => {
     render(
       <EnhancedCustomerSelection
         customers={mockCustomers}
         customerOrders={mockCustomerOrders}
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
+        onSelectionChange={mockOnSelectionChange}
       />
-    )
+    );
 
-    expect(screen.getByText('Customer Order')).toBeInTheDocument()
-    expect(screen.getByText('Direct Customer')).toBeInTheDocument()
-    expect(screen.getByText('Manual Entry')).toBeInTheDocument()
-  })
+    expect(screen.getByText('Customer Order')).toBeInTheDocument();
+    expect(screen.getByText('Direct Customer')).toBeInTheDocument();
+    expect(screen.getByText('Manual Entry')).toBeInTheDocument();
+  });
 
-  test('shows customer order tab content by default', () => {
+  it('defaults to customer-order tab', () => {
     render(
       <EnhancedCustomerSelection
         customers={mockCustomers}
         customerOrders={mockCustomerOrders}
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
+        onSelectionChange={mockOnSelectionChange}
       />
-    )
+    );
 
-    expect(screen.getByText('Select from Customer Orders')).toBeInTheDocument()
-    expect(screen.getByText('Choose an existing customer order to automatically populate customer details and order items.')).toBeInTheDocument()
-  })
+    expect(screen.getByText('Customer Order Billing:')).toBeInTheDocument();
+    expect(screen.getByText('Create billing from an existing customer order with pre-filled details')).toBeInTheDocument();
+  });
 
-  test('switches to direct customer tab when clicked', async () => {
+  it('allows changing tabs', async () => {
     render(
       <EnhancedCustomerSelection
         customers={mockCustomers}
         customerOrders={mockCustomerOrders}
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
+        onSelectionChange={mockOnSelectionChange}
       />
-    )
+    );
 
-    const directCustomerTab = screen.getByText('Direct Customer')
-    fireEvent.click(directCustomerTab)
+    const directCustomerTab = screen.getByText('Direct Customer');
+    fireEvent.click(directCustomerTab);
 
     await waitFor(() => {
-      expect(screen.getByText('Select from Customer Database')).toBeInTheDocument()
-      expect(screen.getByText('Choose an existing customer from your database to automatically populate their information.')).toBeInTheDocument()
-    })
-  })
+      expect(screen.getByText('Direct Customer Billing:')).toBeInTheDocument();
+      expect(screen.getByText('Create billing for an existing customer from your database')).toBeInTheDocument();
+    });
+  });
 
-  test('switches to manual entry tab when clicked', async () => {
+  it('calls onSelectionChange when tab changes', async () => {
     render(
       <EnhancedCustomerSelection
         customers={mockCustomers}
         customerOrders={mockCustomerOrders}
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
+        onSelectionChange={mockOnSelectionChange}
       />
-    )
+    );
 
-    const manualEntryTab = screen.getByText('Manual Entry')
-    fireEvent.click(manualEntryTab)
+    const manualEntryTab = screen.getByText('Manual Entry');
+    fireEvent.click(manualEntryTab);
 
     await waitFor(() => {
-      expect(screen.getByText('Manual Customer Entry')).toBeInTheDocument()
-      expect(screen.getByText('Enter customer information manually. This won\'t create a permanent customer record.')).toBeInTheDocument()
-    })
-  })
+      expect(mockOnSelectionChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          billingType: 'manual-customer',
+          customerName: '',
+        })
+      );
+    });
+  });
 
-  test('updates active tab based on selectedBillingType prop', () => {
-    const { rerender } = render(
-      <EnhancedCustomerSelection
-        customers={mockCustomers}
-        customerOrders={mockCustomerOrders}
-        selectedBillingType="direct-customer"
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
-      />
-    )
-
-    expect(screen.getByText('Select from Customer Database')).toBeInTheDocument()
-
-    rerender(
-      <EnhancedCustomerSelection
-        customers={mockCustomers}
-        customerOrders={mockCustomerOrders}
-        selectedBillingType="manual-customer"
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
-      />
-    )
-
-    expect(screen.getByText('Manual Customer Entry')).toBeInTheDocument()
-  })
-
-  test('shows selection alert when customer is selected', () => {
+  it('calls onSelectionChange when customer order is selected', async () => {
     render(
       <EnhancedCustomerSelection
         customers={mockCustomers}
         customerOrders={mockCustomerOrders}
-        selectedCustomer={mockCustomers[0]}
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
+        onSelectionChange={mockOnSelectionChange}
       />
-    )
+    );
 
-    expect(screen.getByText('Customer Selected:')).toBeInTheDocument()
-    expect(screen.getByText('John Doe')).toBeInTheDocument()
-    expect(screen.getByText('From Database')).toBeInTheDocument()
-  })
+    const selector = screen.getByRole('combobox');
+    fireEvent.click(selector);
 
-  test('shows selection alert when customer order is selected', () => {
+    await waitFor(() => {
+      const orderOption = screen.getByText('ORD-001');
+      fireEvent.click(orderOption);
+    });
+
+    expect(mockOnSelectionChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        billingType: 'customer-order',
+        customerName: 'John Doe',
+        customerOrderId: '1',
+        selectedOrder: mockCustomerOrders[0],
+      })
+    );
+  });
+
+  it('calls onSelectionChange when direct customer is selected', async () => {
     render(
       <EnhancedCustomerSelection
         customers={mockCustomers}
         customerOrders={mockCustomerOrders}
-        selectedCustomerOrder={mockCustomerOrders[0]}
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
+        onSelectionChange={mockOnSelectionChange}
       />
-    )
+    );
 
-    expect(screen.getByText('Customer Selected:')).toBeInTheDocument()
-    expect(screen.getByText('John Doe')).toBeInTheDocument()
-    expect(screen.getByText('From Order')).toBeInTheDocument()
-  })
+    const directCustomerTab = screen.getByText('Direct Customer');
+    fireEvent.click(directCustomerTab);
 
-  test('shows selection alert when manual customer is entered', () => {
+    await waitFor(() => {
+      const selector = screen.getByRole('combobox');
+      fireEvent.click(selector);
+    });
+
+    await waitFor(() => {
+      const customerOption = screen.getByText('John Doe');
+      fireEvent.click(customerOption);
+    });
+
+    expect(mockOnSelectionChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        billingType: 'direct-customer',
+        customerName: 'John Doe',
+        customerId: '1',
+        selectedCustomer: mockCustomers[0],
+      })
+    );
+  });
+
+  it('calls onSelectionChange when manual customer name is entered', async () => {
     render(
       <EnhancedCustomerSelection
         customers={mockCustomers}
         customerOrders={mockCustomerOrders}
-        manualCustomerName="Jane Smith"
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
+        onSelectionChange={mockOnSelectionChange}
       />
-    )
+    );
 
-    expect(screen.getByText('Customer Selected:')).toBeInTheDocument()
-    expect(screen.getByText('Jane Smith')).toBeInTheDocument()
-    expect(screen.getByText('Manual Entry')).toBeInTheDocument()
-  })
+    const manualEntryTab = screen.getByText('Manual Entry');
+    fireEvent.click(manualEntryTab);
 
-  test('calls onClearSelection when tab is changed', async () => {
+    // Wait for tab to be active and content to be visible
+    await waitFor(() => {
+      expect(screen.getByText('Manual Customer Entry:')).toBeInTheDocument();
+    });
+
+    const nameInput = screen.getByPlaceholderText('Enter customer name...');
+    fireEvent.change(nameInput, { target: { value: 'Custom Customer' } });
+
+    expect(mockOnSelectionChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        billingType: 'manual-customer',
+        customerName: 'Custom Customer',
+        manualCustomerDetails: expect.objectContaining({
+          name: 'Custom Customer',
+        }),
+      })
+    );
+  });
+
+  it('shows selection summary when customer is selected', () => {
+    const selectedData = {
+      billingType: 'customer-order' as const,
+      customerName: 'John Doe',
+      customerOrderId: '1',
+      selectedOrder: mockCustomerOrders[0],
+    };
+
     render(
       <EnhancedCustomerSelection
         customers={mockCustomers}
         customerOrders={mockCustomerOrders}
-        selectedCustomer={mockCustomers[0]}
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
+        selectedData={selectedData}
+        onSelectionChange={mockOnSelectionChange}
       />
-    )
+    );
 
-    const manualEntryTab = screen.getByText('Manual Entry')
-    fireEvent.click(manualEntryTab)
+    expect(screen.getByText('Selected Customer:')).toBeInTheDocument();
+    expect(screen.getAllByText('John Doe')).toHaveLength(2); // One in summary, one in order preview
+    expect(screen.getByText('via Customer Order')).toBeInTheDocument();
+  });
 
-    expect(mockOnClearSelection).toHaveBeenCalled()
-  })
+  it('shows reset button when customer is selected', () => {
+    const selectedData = {
+      billingType: 'customer-order' as const,
+      customerName: 'John Doe',
+      customerOrderId: '1',
+      selectedOrder: mockCustomerOrders[0],
+    };
 
-  test('passes props correctly to CustomerOrderSelector', async () => {
     render(
       <EnhancedCustomerSelection
         customers={mockCustomers}
         customerOrders={mockCustomerOrders}
-        selectedCustomerOrder={mockCustomerOrders[0]}
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
+        selectedData={selectedData}
+        onSelectionChange={mockOnSelectionChange}
       />
-    )
+    );
 
-    // Should show the selected order in the customer order selector
-    expect(screen.getByText('Selected Order')).toBeInTheDocument()
-    expect(screen.getByText('CO-2024-0001')).toBeInTheDocument()
-  })
+    expect(screen.getByText('Reset')).toBeInTheDocument();
+  });
 
-  test('passes props correctly to DirectCustomerSelector', async () => {
+  it('resets selection when reset button is clicked', () => {
+    const selectedData = {
+      billingType: 'customer-order' as const,
+      customerName: 'John Doe',
+      customerOrderId: '1',
+      selectedOrder: mockCustomerOrders[0],
+    };
+
     render(
       <EnhancedCustomerSelection
         customers={mockCustomers}
         customerOrders={mockCustomerOrders}
-        selectedCustomer={mockCustomers[0]}
-        selectedBillingType="direct-customer"
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
+        selectedData={selectedData}
+        onSelectionChange={mockOnSelectionChange}
       />
-    )
+    );
 
-    // Should show the selected customer in the direct customer selector
-    expect(screen.getByText('Selected Customer')).toBeInTheDocument()
-    expect(screen.getByText('CUST-001')).toBeInTheDocument()
-  })
+    const resetButton = screen.getByText('Reset');
+    fireEvent.click(resetButton);
 
-  test('passes props correctly to ManualCustomerEntry', async () => {
+    expect(mockOnSelectionChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        billingType: 'customer-order',
+        customerName: '',
+        customerId: undefined,
+        customerOrderId: undefined,
+        selectedCustomer: undefined,
+        selectedOrder: undefined,
+      })
+    );
+  });
+
+  it('uses provided defaultTab', () => {
     render(
       <EnhancedCustomerSelection
         customers={mockCustomers}
         customerOrders={mockCustomerOrders}
-        manualCustomerName="Jane Smith"
-        selectedBillingType="manual-customer"
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
+        onSelectionChange={mockOnSelectionChange}
+        defaultTab="direct-customer"
       />
-    )
+    );
 
-    // Should show the manual customer entry with the name
-    expect(screen.getByDisplayValue('Jane Smith')).toBeInTheDocument()
-  })
+    expect(screen.getByText('Direct Customer Billing:')).toBeInTheDocument();
+  });
 
-  test('disables all components when disabled prop is true', () => {
+  it('uses selectedData when provided', () => {
+    const selectedData = {
+      billingType: 'manual-customer' as const,
+      customerName: 'Existing Customer',
+      manualCustomerDetails: {
+        name: 'Existing Customer',
+        email: 'existing@example.com',
+      },
+    };
+
     render(
       <EnhancedCustomerSelection
         customers={mockCustomers}
         customerOrders={mockCustomerOrders}
+        selectedData={selectedData}
+        onSelectionChange={mockOnSelectionChange}
+      />
+    );
+
+    expect(screen.getByText('Manual Customer Entry:')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Existing Customer')).toBeInTheDocument();
+  });
+
+  it('handles disabled state correctly', () => {
+    render(
+      <EnhancedCustomerSelection
+        customers={mockCustomers}
+        customerOrders={mockCustomerOrders}
+        onSelectionChange={mockOnSelectionChange}
         disabled={true}
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
       />
-    )
+    );
 
-    const searchInput = screen.getByPlaceholderText('Search by order number, customer name, or amount...')
-    expect(searchInput).toBeDisabled()
-  })
+    const selector = screen.getByRole('combobox');
+    expect(selector).toBeDisabled();
+  });
 
-  test('applies custom className', () => {
-    const { container } = render(
-      <EnhancedCustomerSelection
-        customers={mockCustomers}
-        customerOrders={mockCustomerOrders}
-        className="custom-class"
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
-      />
-    )
-
-    expect(container.firstChild).toHaveClass('custom-class')
-  })
-
-  test('handles manual customer details change correctly', async () => {
+  it('handles loading state correctly', () => {
     render(
       <EnhancedCustomerSelection
         customers={mockCustomers}
         customerOrders={mockCustomerOrders}
-        selectedBillingType="manual-customer"
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
+        onSelectionChange={mockOnSelectionChange}
+        loading={true}
       />
-    )
+    );
 
-    const nameInput = screen.getByPlaceholderText('Enter customer name...')
-    fireEvent.change(nameInput, { target: { value: 'Test Customer' } })
+    const selector = screen.getByRole('combobox');
+    expect(selector).toBeDisabled();
+  });
 
-    expect(mockOnManualCustomerChange).toHaveBeenCalledWith('Test Customer', undefined)
-  })
-
-  test('shows no selection alert when no customer is selected', () => {
+  it('shows correct tab descriptions', () => {
     render(
       <EnhancedCustomerSelection
         customers={mockCustomers}
         customerOrders={mockCustomerOrders}
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
+        onSelectionChange={mockOnSelectionChange}
       />
-    )
+    );
 
-    expect(screen.queryByText('Customer Selected:')).not.toBeInTheDocument()
-  })
+    // Customer Order tab (default)
+    expect(screen.getByText('Create billing from an existing customer order with pre-filled details')).toBeInTheDocument();
+    expect(screen.getByText('Customer Order Billing:')).toBeInTheDocument();
+  });
 
-  test('renders tab icons correctly', () => {
+  it('clears previous selection when switching tabs', () => {
     render(
       <EnhancedCustomerSelection
         customers={mockCustomers}
         customerOrders={mockCustomerOrders}
-        onCustomerSelect={mockOnCustomerSelect}
-        onCustomerOrderSelect={mockOnCustomerOrderSelect}
-        onManualCustomerChange={mockOnManualCustomerChange}
-        onClearSelection={mockOnClearSelection}
+        onSelectionChange={mockOnSelectionChange}
       />
-    )
+    );
 
-    expect(screen.getByTestId('shopping-cart-icon')).toBeInTheDocument()
-    expect(screen.getByTestId('users-icon')).toBeInTheDocument()
-    expect(screen.getByTestId('edit-icon')).toBeInTheDocument()
-  })
-})
+    // Switch to direct customer tab
+    const directCustomerTab = screen.getByText('Direct Customer');
+    fireEvent.click(directCustomerTab);
+
+    // Should call onSelectionChange when tab changes
+    expect(mockOnSelectionChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        billingType: 'direct-customer',
+        customerName: '',
+      })
+    );
+  });
+});
