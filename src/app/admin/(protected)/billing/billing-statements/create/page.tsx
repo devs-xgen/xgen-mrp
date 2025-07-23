@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { BillingStatementForm } from "@/components/module/admin/billing/billing-statement-form";
+import { BillingTypeSelectorDemo } from "./demo";
 import { BillingStatementFormData } from "@/types/admin/billing";
 import { createBillingStatement } from "@/lib/actions/billing-statements";
 
@@ -67,11 +68,16 @@ export default function CreateBillingStatementPage() {
         </div>
       </div>
 
-      {/* Form */}
-      <BillingStatementForm 
-        onSubmit={handleSubmit}
-        isSubmitting={isSubmitting}
-      />
+      {/* Demo - Billing Type Selector */}
+      <BillingTypeSelectorDemo />
+
+      {/* Original Form (temporarily hidden) */}
+      <div style={{ display: 'none' }}>
+        <BillingStatementForm 
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+        />
+      </div>
     </div>
   );
 }
