@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@headlessui/react": "^1.7.17",
+    "@hello-pangea/dnd": "^18.0.1",
     "@heroicons/react": "^2.0.18",
     "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "^6.9.0",
@@ -99,6 +100,7 @@
     "@shadcn/ui": "^0.0.4",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/lodash": "^4.17.17",
     "@types/node": "^20.17.16",

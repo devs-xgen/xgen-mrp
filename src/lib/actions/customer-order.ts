@@ -531,46 +531,7 @@ export async function validateOrderForBilling(orderId: string): Promise<{
   }
 }
 
-/**
- * Map customer order items to invoice items for billing
- */
-export function mapOrderItemsToInvoiceItems(orderLines: OrderLineForDisplay[]): Array<{
-  productId?: string;
-  productVariantId?: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  productCode: string;
-  unit: string;
-  discountPercent: number;
-  taxable: boolean;
-}> {
-  return orderLines.map((line) => {
-    const product = line.product;
-    const variant = line.productVariant;
-    
-    // Use variant information if available, otherwise use product information
-    const description = variant 
-      ? `${product?.name || 'Unknown Product'} (${variant.displayName})`
-      : product?.name || 'Unknown Product';
-    
-    const productCode = variant?.sku || product?.sku || '';
-    const unitPrice = variant?.unitPrice || line.unitPrice || 0;
-    const unit = product?.unitOfMeasure || 'PCS';
 
-    return {
-      productId: line.productId,
-      productVariantId: line.productVariantId,
-      description,
-      quantity: line.quantity,
-      unitPrice,
-      productCode,
-      unit,
-      discountPercent: 0, // Default discount
-      taxable: true, // Default taxable
-    };
-  });
-}
 
 /**
  * Get customer order details with enhanced information for billing preview

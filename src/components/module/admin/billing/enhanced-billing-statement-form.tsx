@@ -41,11 +41,13 @@ import { BillingFormNavigation } from "./form-steps/billing-form-navigation";
 import { CustomerInformationCard } from "./form-sections/customer-information-card";
 import { CustomerSelectionData } from "./enhanced-customer-selection";
 import { billingFormSteps, getNextStep, getPreviousStep } from "./form-steps/billing-form-steps-config";
+import { InvoiceItemsManager } from "./invoice-items";
 
 // Actions
 import { getAllCustomers } from "@/lib/actions/customers";
 import { getCustomerOrdersForBilling } from "@/lib/actions/customer-order";
 import { formatCurrencyPHP } from "@/lib/constant";
+import { mapOrderItemsToInvoiceItems } from "@/lib/utils/invoice-item-utils";
 
 // Step validation schemas
 const stepSchemas = {
@@ -543,21 +545,36 @@ export function EnhancedBillingStatementForm({
             )}
 
             {uiState.currentStep === BillingFormStep.INVOICE_ITEMS && (
-              <Card className="bg-card border rounded-lg">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg">Invoice Items</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Add items to be included in the billing statement
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <Alert>
-                    <AlertDescription>
-                      Invoice items form will be implemented in the next task.
-                    </AlertDescription>
-                  </Alert>
-                </CardContent>
-              </Card>
+              <InvoiceItemsManager
+                items={invoiceItems}
+                onItemsChange={(items) => {
+                  setInvoiceItems(items);
+                  form.setValue("invoiceItems", items);
+                  
+                  // Recalculate totals based on items
+                  const newSubtotal = items.reduce((sum, item) => {
+                    const itemTotal = item.quantity * item.unitPrice;
+                    const discountAmount = item.discountPercent ? (itemTotal * item.discountPercent) / 100 : 0;
+                    return sum + (itemTotal - discountAmount);
+                  }, 0);
+                  
+                  calculateTotals(newSubtotal, form.getValues("taxRate"), form.getValues("discountAmount"));
+                }}
+                disabled={disabled || isSubmitting}
+                showTemplates={true}
+                showBulkOperations={true}
+                maxItems={50}
+                errors={stepValidation.errors}
+                onValidationChange={(isValid, errors) => {
+                  if (!isValid) {
+                    stepValidation.setServerErrors(
+                      errors.reduce((acc, error) => ({ ...acc, invoiceItems: error }), {})
+                    );
+                  } else {
+                    stepValidation.clearFieldError('invoiceItems');
+                  }
+                }}
+              />
             )}
 
             {uiState.currentStep === BillingFormStep.REVIEW_SUBMIT && (
