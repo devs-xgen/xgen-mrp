@@ -11,16 +11,29 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FormGlobalError, FormValidationSummary } from "@/components/ui/form-section-error";
 
 import {
   BillingStatementFormData,
   SalesInvoiceItemFormData,
-  billingStatementSchema,
 } from "@/types/admin/billing";
 import { EnhancedBillingStatementFormData, BillingTypeId } from "@/types/admin/billing-types";
 import { BillingFormStep, BillingFormUIState } from "@/types/admin/billing-form-steps";
 import { Customer } from "@/types/admin/billing";
 import { CustomerOrder } from "@/types/admin/customer-order";
+
+// Enhanced validation
+import { 
+  enhancedBillingStatementSchema,
+  billingTypeSelectionSchema,
+  customerInformationSchema,
+  billingDetailsSchema,
+  invoiceItemsSchema,
+  validateBillingTypeStep,
+  validateCustomerInformationStep,
+  validateInvoiceItemsStep
+} from "@/lib/validation/enhanced-billing-validation";
+import { useFormValidation, useStepValidation } from "@/hooks/use-form-validation";
 
 // Form components
 import { BillingFormProgress } from "./form-steps/billing-form-progress";
@@ -34,24 +47,14 @@ import { getAllCustomers } from "@/lib/actions/customers";
 import { getCustomerOrders } from "@/lib/actions/customer-order";
 import { formatCurrencyPHP } from "@/lib/constant";
 
-// Enhanced schema with billing type
-const enhancedBillingStatementSchema = z.object({
-  billingType: z.enum(['direct-customer', 'customer-order', 'manual-customer']),
-  customerName: z.string().min(1, 'Customer name is required'),
-  customerId: z.string().optional(),
-  customerOrderId: z.string().optional(),
-  productionOrderId: z.string().optional(),
-  subtotal: z.number().min(0),
-  taxRate: z.number().min(0).max(100),
-  discountAmount: z.number().min(0),
-  paymentTerms: z.string().optional(),
-  dueDate: z.date().optional(),
-  invoiceItems: z.array(z.any()),
-  notes: z.string().optional(),
-  poNumber: z.string().optional(),
-  terms: z.string().optional(),
-  footerNotes: z.string().optional(),
-});
+// Step validation schemas
+const stepSchemas = {
+  [BillingFormStep.BILLING_TYPE_SELECTION]: billingTypeSelectionSchema,
+  [BillingFormStep.CUSTOMER_INFORMATION]: customerInformationSchema,
+  [BillingFormStep.BILLING_DETAILS]: billingDetailsSchema,
+  [BillingFormStep.INVOICE_ITEMS]: invoiceItemsSchema,
+  [BillingFormStep.REVIEW_SUBMIT]: enhancedBillingStatementSchema,
+};
 
 interface EnhancedBillingStatementFormProps {
   onSubmit: (data: BillingStatementFormData) => Promise<void>;
@@ -78,6 +81,10 @@ export function EnhancedBillingStatementForm({
     showValidation: false,
   });
 
+  // Global error state
+  const [globalError, setGlobalError] = useState<string | null>(null);
+  const [networkError, setNetworkError] = useState<string | null>(null);
+
   // Data State
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>([]);
@@ -95,9 +102,11 @@ export function EnhancedBillingStatementForm({
     },
   ]);
 
-  // Form setup
+  // Form setup with enhanced validation
   const form = useForm<EnhancedBillingStatementFormData>({
     resolver: zodResolver(enhancedBillingStatementSchema),
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
     defaultValues: {
       billingType: 'customer-order',
       customerName: "",
@@ -118,10 +127,18 @@ export function EnhancedBillingStatementForm({
     },
   });
 
+  // Step-based validation
+  const stepValidation = useStepValidation<EnhancedBillingStatementFormData>(
+    stepSchemas,
+    uiState.currentStep
+  );
+
   // Load initial data
   useEffect(() => {
     const loadData = async () => {
       setUIState(prev => ({ ...prev, isLoading: true }));
+      setNetworkError(null);
+      
       try {
         const [customersResult, customerOrdersResult] = await Promise.all([
           getAllCustomers(),
@@ -132,6 +149,8 @@ export function EnhancedBillingStatementForm({
         setCustomerOrders(customerOrdersResult || []);
       } catch (error) {
         console.error("Error loading data:", error);
+        const errorMessage = error instanceof Error ? error.message : "Failed to load required data";
+        setNetworkError(errorMessage);
         toast.error("Failed to load required data");
       } finally {
         setUIState(prev => ({ ...prev, isLoading: false }));
@@ -141,13 +160,25 @@ export function EnhancedBillingStatementForm({
     loadData();
   }, []);
 
-  // Step navigation handlers
+  // Step navigation handlers with validation
   const handleStepChange = (step: BillingFormStep) => {
     setUIState(prev => ({ ...prev, currentStep: step }));
+    setGlobalError(null);
+    stepValidation.clearAllErrors();
     onStepChange?.(step);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    const formData = form.getValues();
+    
+    // Validate current step before proceeding
+    const canProceed = await validateCurrentStep(formData);
+    
+    if (!canProceed) {
+      setUIState(prev => ({ ...prev, showValidation: true }));
+      return;
+    }
+
     const nextStep = getNextStep(uiState.currentStep);
     if (nextStep) {
       // Mark current step as completed
@@ -155,7 +186,9 @@ export function EnhancedBillingStatementForm({
         ...prev,
         currentStep: nextStep,
         completedSteps: [...prev.completedSteps.filter(s => s !== uiState.currentStep), uiState.currentStep],
+        showValidation: false,
       }));
+      stepValidation.clearAllErrors();
       onStepChange?.(nextStep);
     }
   };
@@ -163,12 +196,17 @@ export function EnhancedBillingStatementForm({
   const handlePrevious = () => {
     const previousStep = getPreviousStep(uiState.currentStep);
     if (previousStep) {
-      setUIState(prev => ({ ...prev, currentStep: previousStep }));
+      setUIState(prev => ({ 
+        ...prev, 
+        currentStep: previousStep,
+        showValidation: false 
+      }));
+      stepValidation.clearAllErrors();
       onStepChange?.(previousStep);
     }
   };
 
-  // Billing type handlers
+  // Billing type handlers with validation
   const handleBillingTypeChange = (type: BillingTypeId) => {
     setSelectedBillingType(type);
     form.setValue("billingType", type);
@@ -178,6 +216,11 @@ export function EnhancedBillingStatementForm({
     form.setValue("customerId", "");
     form.setValue("customerOrderId", "");
     setSelectedCustomerData(undefined);
+    
+    // Clear validation errors for customer fields
+    stepValidation.clearFieldError('customerId');
+    stepValidation.clearFieldError('customerOrderId');
+    stepValidation.clearFieldError('customerName');
     
     setUIState(prev => ({ ...prev, billingType: type, isDirty: true }));
   };
@@ -189,6 +232,11 @@ export function EnhancedBillingStatementForm({
     form.setValue("customerName", data.customerName);
     form.setValue("customerId", data.customerId || "");
     form.setValue("customerOrderId", data.customerOrderId || "");
+    
+    // Clear validation errors for customer fields
+    stepValidation.clearFieldError('customerId');
+    stepValidation.clearFieldError('customerOrderId');
+    stepValidation.clearFieldError('customerName');
     
     // Auto-populate from customer order
     if (data.selectedOrder) {
@@ -226,9 +274,21 @@ export function EnhancedBillingStatementForm({
     form.setValue("discountAmount", discountAmount);
   };
 
-  // Form submission
+  // Form submission with enhanced error handling
   const handleSubmit = async (data: EnhancedBillingStatementFormData) => {
+    setGlobalError(null);
+    setNetworkError(null);
+    
     try {
+      // Final validation before submission
+      const validationResult = await stepValidation.validateForm(data);
+      
+      if (!validationResult.isValid) {
+        setUIState(prev => ({ ...prev, showValidation: true }));
+        toast.error("Please fix the validation errors before submitting");
+        return;
+      }
+
       // Convert enhanced form data to standard form data
       const standardFormData: BillingStatementFormData = {
         customerName: data.customerName,
@@ -250,23 +310,113 @@ export function EnhancedBillingStatementForm({
       await onSubmit(standardFormData);
     } catch (error) {
       console.error("Error submitting form:", error);
-      toast.error("An unexpected error occurred");
+      
+      if (error instanceof Error) {
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          setNetworkError("Network error occurred. Please check your connection and try again.");
+        } else {
+          setGlobalError(error.message);
+        }
+      } else {
+        setGlobalError("An unexpected error occurred while submitting the form");
+      }
+      
+      toast.error("Failed to submit billing statement");
     }
   };
 
-  // Validation for step progression
+  // Enhanced validation for step progression
+  const validateCurrentStep = async (formData: EnhancedBillingStatementFormData): Promise<boolean> => {
+    switch (uiState.currentStep) {
+      case BillingFormStep.BILLING_TYPE_SELECTION:
+        const billingTypeValidation = validateBillingTypeStep(formData.billingType);
+        if (!billingTypeValidation.isValid) {
+          stepValidation.setServerErrors(
+            billingTypeValidation.errors.reduce((acc, error) => ({ ...acc, billingType: error }), {})
+          );
+        }
+        return billingTypeValidation.isValid;
+
+      case BillingFormStep.CUSTOMER_INFORMATION:
+        const customerValidation = validateCustomerInformationStep(
+          formData.billingType,
+          formData.customerName,
+          formData.customerId,
+          formData.customerOrderId
+        );
+        if (!customerValidation.isValid) {
+          const errors: Record<string, string> = {};
+          customerValidation.errors.forEach(error => {
+            if (error.includes('customer from the database')) {
+              errors.customerId = error;
+            } else if (error.includes('customer order')) {
+              errors.customerOrderId = error;
+            } else {
+              errors.customerName = error;
+            }
+          });
+          stepValidation.setServerErrors(errors);
+        }
+        return customerValidation.isValid;
+
+      case BillingFormStep.BILLING_DETAILS:
+        try {
+          await billingDetailsSchema.parseAsync({
+            subtotal: formData.subtotal,
+            taxRate: formData.taxRate,
+            discountAmount: formData.discountAmount,
+            paymentTerms: formData.paymentTerms,
+            dueDate: formData.dueDate,
+            notes: formData.notes,
+            poNumber: formData.poNumber,
+            terms: formData.terms,
+            footerNotes: formData.footerNotes,
+          });
+          return true;
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            const errors: Record<string, string> = {};
+            error.errors.forEach(err => {
+              const fieldPath = err.path.join('.');
+              errors[fieldPath] = err.message;
+            });
+            stepValidation.setServerErrors(errors);
+          }
+          return false;
+        }
+
+      case BillingFormStep.INVOICE_ITEMS:
+        const itemsValidation = validateInvoiceItemsStep(formData.invoiceItems);
+        if (!itemsValidation.isValid) {
+          stepValidation.setServerErrors(
+            itemsValidation.errors.reduce((acc, error) => ({ ...acc, invoiceItems: error }), {})
+          );
+        }
+        return itemsValidation.isValid;
+
+      case BillingFormStep.REVIEW_SUBMIT:
+        const finalValidation = await stepValidation.validateForm(formData);
+        return finalValidation.isValid;
+
+      default:
+        return false;
+    }
+  };
+
   const canProceedFromCurrentStep = () => {
+    const formData = form.getValues();
+    
     switch (uiState.currentStep) {
       case BillingFormStep.BILLING_TYPE_SELECTION:
         return !!selectedBillingType;
       case BillingFormStep.CUSTOMER_INFORMATION:
         return !!selectedCustomerData?.customerName && selectedCustomerData.customerName.trim().length > 0;
       case BillingFormStep.BILLING_DETAILS:
-        return true; // Basic validation can be added here
+        return formData.subtotal >= 0 && formData.taxRate >= 0 && formData.discountAmount >= 0;
       case BillingFormStep.INVOICE_ITEMS:
-        return invoiceItems.some(item => item.description && item.quantity > 0 && item.unitPrice > 0);
+        return invoiceItems.some(item => item.description && item.quantity > 0 && item.unitPrice >= 0);
       case BillingFormStep.REVIEW_SUBMIT:
-        return true;
+        return !stepValidation.hasErrors;
       default:
         return false;
     }
@@ -305,6 +455,32 @@ export function EnhancedBillingStatementForm({
           </CardContent>
         </Card>
 
+        {/* Global Error Display */}
+        {globalError && (
+          <FormGlobalError
+            error={globalError}
+            type="server"
+            onDismiss={() => setGlobalError(null)}
+          />
+        )}
+
+        {/* Network Error Display */}
+        {networkError && (
+          <FormGlobalError
+            error={networkError}
+            type="network"
+            onDismiss={() => setNetworkError(null)}
+          />
+        )}
+
+        {/* Validation Summary */}
+        {uiState.showValidation && stepValidation.hasErrors && (
+          <FormValidationSummary
+            errors={stepValidation.errors}
+            title={`Please fix the following errors in ${billingFormSteps.find(s => s.id === uiState.currentStep)?.title}:`}
+          />
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Main Form Area - 3 columns */}
           <div className="lg:col-span-3 space-y-6">
@@ -320,7 +496,7 @@ export function EnhancedBillingStatementForm({
                 disabled={isSubmitting}
                 loading={uiState.isLoading}
                 showBillingTypeSelector={true}
-                errors={uiState.errors}
+                errors={stepValidation.errors}
               />
             )}
 
@@ -335,7 +511,7 @@ export function EnhancedBillingStatementForm({
                 disabled={isSubmitting}
                 loading={uiState.isLoading}
                 showBillingTypeSelector={false}
-                errors={uiState.errors}
+                errors={stepValidation.errors}
               />
             )}
 

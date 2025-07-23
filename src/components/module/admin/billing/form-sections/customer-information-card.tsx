@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { FormFieldError } from "@/components/ui/form-field-error";
 import { User, ShoppingCart, Edit, CheckCircle } from "lucide-react";
 import { BillingTypeSelector } from "../billing-type-selector";
 import { EnhancedCustomerSelection, CustomerSelectionData } from "../enhanced-customer-selection";
@@ -21,7 +22,7 @@ interface CustomerInformationCardProps {
   disabled?: boolean;
   loading?: boolean;
   showBillingTypeSelector?: boolean;
-  errors?: Record<string, string>;
+  errors?: Record<string, string | string[]>;
 }
 
 export function CustomerInformationCard({
@@ -117,9 +118,9 @@ export function CustomerInformationCard({
               disabled={disabled}
             />
             {errors.billingType && (
-              <Alert className="mt-4" variant="destructive">
-                <AlertDescription>{errors.billingType}</AlertDescription>
-              </Alert>
+              <div className="mt-4">
+                <FormFieldError error={errors.billingType} />
+              </div>
             )}
           </CardContent>
         </Card>
@@ -156,21 +157,17 @@ export function CustomerInformationCard({
               loading={loading}
               defaultTab={localBillingType}
             />
-            {errors.customerName && (
-              <Alert className="mt-4" variant="destructive">
-                <AlertDescription>{errors.customerName}</AlertDescription>
-              </Alert>
-            )}
-            {errors.customerId && (
-              <Alert className="mt-4" variant="destructive">
-                <AlertDescription>{errors.customerId}</AlertDescription>
-              </Alert>
-            )}
-            {errors.customerOrderId && (
-              <Alert className="mt-4" variant="destructive">
-                <AlertDescription>{errors.customerOrderId}</AlertDescription>
-              </Alert>
-            )}
+            <div className="mt-4 space-y-2">
+              {errors.customerName && (
+                <FormFieldError error={errors.customerName} field="customerName" />
+              )}
+              {errors.customerId && (
+                <FormFieldError error={errors.customerId} field="customerId" />
+              )}
+              {errors.customerOrderId && (
+                <FormFieldError error={errors.customerOrderId} field="customerOrderId" />
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
