@@ -44,7 +44,7 @@ import { billingFormSteps, getNextStep, getPreviousStep } from "./form-steps/bil
 
 // Actions
 import { getAllCustomers } from "@/lib/actions/customers";
-import { getCustomerOrders } from "@/lib/actions/customer-order";
+import { getCustomerOrdersForBilling } from "@/lib/actions/customer-order";
 import { formatCurrencyPHP } from "@/lib/constant";
 
 // Step validation schemas
@@ -142,7 +142,7 @@ export function EnhancedBillingStatementForm({
       try {
         const [customersResult, customerOrdersResult] = await Promise.all([
           getAllCustomers(),
-          getCustomerOrders(),
+          getCustomerOrdersForBilling({ limit: 200 }), // Get recent orders for billing
         ]);
 
         setCustomers(customersResult || []);
@@ -225,7 +225,7 @@ export function EnhancedBillingStatementForm({
     setUIState(prev => ({ ...prev, billingType: type, isDirty: true }));
   };
 
-  const handleCustomerSelectionChange = (data: CustomerSelectionData) => {
+  const handleCustomerSelectionChange = (data: CustomerSelectionData, invoiceItems?: SalesInvoiceItemFormData[]) => {
     setSelectedCustomerData(data);
     
     // Update form values based on selection
@@ -243,19 +243,28 @@ export function EnhancedBillingStatementForm({
       form.setValue("subtotal", data.selectedOrder.totalAmount);
       calculateTotals(data.selectedOrder.totalAmount, form.getValues("taxRate"), form.getValues("discountAmount"));
       
-      // Auto-populate invoice items from order lines if available
-      if (data.selectedOrder.orderLines && data.selectedOrder.orderLines.length > 0) {
-        const orderItems: SalesInvoiceItemFormData[] = data.selectedOrder.orderLines.map(line => ({
+      // Use provided invoice items or map from order lines
+      let orderItems: SalesInvoiceItemFormData[] = [];
+      
+      if (invoiceItems && invoiceItems.length > 0) {
+        orderItems = invoiceItems;
+      } else if (data.selectedOrder.orderLines && data.selectedOrder.orderLines.length > 0) {
+        orderItems = data.selectedOrder.orderLines.map(line => ({
           productId: line.productId,
-          description: line.product?.name || "",
+          productVariantId: line.productVariantId,
+          description: line.productVariant 
+            ? `${line.product?.name || 'Unknown Product'} (${line.productVariant.displayName})`
+            : line.product?.name || 'Unknown Product',
           quantity: line.quantity,
-          unitPrice: line.unitPrice,
-          productCode: line.product?.sku || "",
-          unit: "PCS",
+          unitPrice: line.productVariant?.unitPrice || line.unitPrice,
+          productCode: line.productVariant?.sku || line.product?.sku || "",
+          unit: line.product?.unitOfMeasure || "PCS",
           discountPercent: 0,
           taxable: true,
         }));
-        
+      }
+      
+      if (orderItems.length > 0) {
         setInvoiceItems(orderItems);
         form.setValue("invoiceItems", orderItems);
       }
@@ -492,7 +501,7 @@ export function EnhancedBillingStatementForm({
                 selectedBillingType={selectedBillingType}
                 selectedCustomerData={selectedCustomerData}
                 onBillingTypeChange={handleBillingTypeChange}
-                onCustomerSelectionChange={handleCustomerSelectionChange}
+                onCustomerSelectionChange={(data, invoiceItems) => handleCustomerSelectionChange(data, invoiceItems)}
                 disabled={isSubmitting}
                 loading={uiState.isLoading}
                 showBillingTypeSelector={true}
@@ -507,7 +516,7 @@ export function EnhancedBillingStatementForm({
                 selectedBillingType={selectedBillingType}
                 selectedCustomerData={selectedCustomerData}
                 onBillingTypeChange={handleBillingTypeChange}
-                onCustomerSelectionChange={handleCustomerSelectionChange}
+                onCustomerSelectionChange={(data, invoiceItems) => handleCustomerSelectionChange(data, invoiceItems)}
                 disabled={isSubmitting}
                 loading={uiState.isLoading}
                 showBillingTypeSelector={false}

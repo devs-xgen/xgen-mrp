@@ -57,7 +57,8 @@ export function DirectCustomerSelector({
         customer.name.toLowerCase().includes(searchLower) ||
         customer.email.toLowerCase().includes(searchLower) ||
         customer.code.toLowerCase().includes(searchLower) ||
-        customer.phone.toLowerCase().includes(searchLower)
+        customer.phone.toLowerCase().includes(searchLower) ||
+        (customer.contactPerson && customer.contactPerson.toLowerCase().includes(searchLower))
       );
     });
 
@@ -147,6 +148,12 @@ export function DirectCustomerSelector({
                             <div className="flex items-center gap-1">
                               <Phone className="h-3 w-3" />
                               <span>{customer.phone}</span>
+                            </div>
+                          )}
+                          {customer.contactPerson && (
+                            <div className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              <span className="truncate">{customer.contactPerson}</span>
                             </div>
                           )}
                         </div>
@@ -240,6 +247,38 @@ export function DirectCustomerSelector({
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Payment Information */}
+            {(selectedCustomer.creditLimit || selectedCustomer.paymentTerms) && (
+              <div className="pt-2 border-t">
+                <span className="font-medium text-muted-foreground text-sm">Payment Information:</span>
+                <div className="grid grid-cols-2 gap-4 text-sm mt-1">
+                  {selectedCustomer.creditLimit && (
+                    <div>
+                      <span className="font-medium text-muted-foreground">Credit Limit:</span>
+                      <div className="flex items-center gap-1">
+                        <CreditCard className="h-3 w-3" />
+                        <span className="font-mono">₱{selectedCustomer.creditLimit.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+                  {selectedCustomer.paymentTerms && (
+                    <div>
+                      <span className="font-medium text-muted-foreground">Payment Terms:</span>
+                      <div>{selectedCustomer.paymentTerms}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Contact Person */}
+            {selectedCustomer.contactPerson && (
+              <div className="pt-2 border-t">
+                <span className="font-medium text-muted-foreground text-sm">Contact Person:</span>
+                <div className="text-sm mt-1">{selectedCustomer.contactPerson}</div>
               </div>
             )}
           </CardContent>

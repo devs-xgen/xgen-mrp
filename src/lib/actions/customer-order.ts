@@ -24,15 +24,69 @@ import { createProductionBOMFromProduct } from "./production-bom";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function getCustomerOrders(): Promise<CustomerOrder[]> {
+/**
+ * Enhanced customer order retrieval for billing with search and filtering
+ */
+export async function getCustomerOrdersForBilling(options?: {
+  search?: string;
+  status?: Status[];
+  customerId?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  limit?: number;
+}): Promise<CustomerOrder[]> {
   try {
+    const {
+      search,
+      status,
+      customerId,
+      dateFrom,
+      dateTo,
+      limit = 100
+    } = options || {};
+
+    // Build where clause
+    const where: any = {};
+
+    // Search filter
+    if (search) {
+      where.OR = [
+        { orderNumber: { contains: search, mode: 'insensitive' } },
+        { customer: { name: { contains: search, mode: 'insensitive' } } },
+        { customer: { email: { contains: search, mode: 'insensitive' } } },
+        { notes: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Status filter
+    if (status && status.length > 0) {
+      where.status = { in: status };
+    }
+
+    // Customer filter
+    if (customerId) {
+      where.customerId = customerId;
+    }
+
+    // Date range filter
+    if (dateFrom || dateTo) {
+      where.orderDate = {};
+      if (dateFrom) where.orderDate.gte = dateFrom;
+      if (dateTo) where.orderDate.lte = dateTo;
+    }
+
     const orders = await prisma.customerOrder.findMany({
+      where,
       include: {
         customer: {
           select: {
             id: true,
             name: true,
             email: true,
+            phone: true,
+            address: true,
+            paymentTerms: true,
+            creditLimit: true,
           },
         },
         orderLines: {
@@ -43,6 +97,8 @@ export async function getCustomerOrders(): Promise<CustomerOrder[]> {
                 name: true,
                 sku: true,
                 sellingPrice: true,
+                description: true,
+                unitOfMeasure: true,
               },
             },
             productVariant: {
@@ -52,6 +108,151 @@ export async function getCustomerOrders(): Promise<CustomerOrder[]> {
                 displayName: true,
                 sizeName: true,
                 colorName: true,
+                unitPrice: true,
+              },
+            },
+          },
+        },
+        productionOrders: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            productionOrders: true,
+            orderLines: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: limit,
+    });
+
+    // Convert Prisma model to CustomerOrder type with proper type conversion
+    return orders.map((order) => ({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      customerId: order.customerId,
+      orderDate: order.orderDate,
+      requiredDate: order.requiredDate,
+      status: order.status,
+      totalAmount:
+        order.totalAmount instanceof Decimal
+          ? order.totalAmount.toNumber()
+          : Number(order.totalAmount),
+      notes: order.notes,
+      customer: {
+        id: order.customer.id,
+        name: order.customer.name,
+        email: order.customer.email,
+        phone: order.customer.phone,
+        address: order.customer.address,
+        paymentTerms: order.customer.paymentTerms,
+        creditLimit: order.customer.creditLimit instanceof Decimal
+          ? order.customer.creditLimit.toNumber()
+          : Number(order.customer.creditLimit || 0),
+      },
+      orderLines: order.orderLines.map((line) => ({
+        id: line.id,
+        productId: line.productId,
+        productVariantId: line.productVariantId || undefined,
+        quantity: line.quantity,
+        unitPrice:
+          line.unitPrice instanceof Decimal
+            ? line.unitPrice.toNumber()
+            : Number(line.unitPrice),
+        status: line.status,
+        product: line.product
+          ? {
+              id: line.product.id,
+              name: line.product.name,
+              sku: line.product.sku,
+              description: line.product.description,
+              unitOfMeasure: line.product.unitOfMeasure,
+              sellingPrice: line.product.sellingPrice instanceof Decimal
+                ? line.product.sellingPrice.toNumber()
+                : Number(line.product.sellingPrice || 0),
+            }
+          : undefined,
+        productVariant: line.productVariant
+          ? {
+              id: line.productVariant.id,
+              sku: line.productVariant.sku,
+              displayName: line.productVariant.displayName,
+              sizeName: line.productVariant.sizeName,
+              colorName: line.productVariant.colorName,
+              unitPrice: line.productVariant.unitPrice instanceof Decimal
+                ? line.productVariant.unitPrice.toNumber()
+                : Number(line.productVariant.unitPrice || 0),
+            }
+          : undefined,
+      })),
+      productionOrders: order.productionOrders?.map((po) => ({
+        id: po.id,
+        quantity: po.quantity,
+        status: po.status,
+        priority: po.priority,
+        startDate: po.startDate,
+        dueDate: po.dueDate,
+        completedQuantity: po.completedQuantity,
+        product: {
+          id: po.product.id,
+          name: po.product.name,
+          sku: po.product.sku,
+        },
+      })),
+      _count: order._count,
+    }));
+  } catch (error) {
+    console.error("Error fetching customer orders for billing:", error);
+    throw new Error("Failed to fetch customer orders for billing");
+  }
+}
+
+export async function getCustomerOrders(): Promise<CustomerOrder[]> {
+  try {
+    const orders = await prisma.customerOrder.findMany({
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            address: true,
+            paymentTerms: true,
+            creditLimit: true,
+          },
+        },
+        orderLines: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                sellingPrice: true,
+                description: true,
+                unitOfMeasure: true,
+              },
+            },
+            productVariant: {
+              select: {
+                id: true,
+                sku: true,
+                displayName: true,
+                sizeName: true,
+                colorName: true,
+                unitPrice: true,
               },
             },
           },
@@ -230,6 +431,293 @@ export async function checkInventoryLevels(
   }
 
   return productsNeedingProduction;
+}
+
+/**
+ * Validate if a customer order can be used for billing
+ */
+export async function validateOrderForBilling(orderId: string): Promise<{
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}> {
+  try {
+    const order = await prisma.customerOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        customer: true,
+        orderLines: {
+          include: {
+            product: true,
+            productVariant: true,
+          },
+        },
+        productionOrders: {
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return {
+        isValid: false,
+        errors: ["Customer order not found"],
+        warnings: [],
+      };
+    }
+
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    // Check order status
+    if (order.status === Status.CANCELLED) {
+      errors.push("Cannot create billing for cancelled orders");
+    }
+
+    if (order.status === Status.DRAFT) {
+      warnings.push("Order is still in draft status");
+    }
+
+    // Check if order has items
+    if (!order.orderLines || order.orderLines.length === 0) {
+      errors.push("Order has no items to bill");
+    }
+
+    // Check if order total is valid
+    if (order.totalAmount <= 0) {
+      errors.push("Order total amount must be greater than zero");
+    }
+
+    // Check customer information
+    if (!order.customer) {
+      errors.push("Order customer information is missing");
+    }
+
+    // Check for existing billing statements (if needed)
+    const existingBilling = await prisma.salesInvoice.findFirst({
+      where: { customerOrderId: orderId },
+    });
+
+    if (existingBilling) {
+      warnings.push("A billing statement already exists for this order");
+    }
+
+    // Check production order status
+    if (order.productionOrders && order.productionOrders.length > 0) {
+      const pendingProduction = order.productionOrders.filter(
+        po => po.status === Status.PENDING || po.status === Status.IN_PROGRESS
+      );
+      
+      if (pendingProduction.length > 0) {
+        warnings.push(`${pendingProduction.length} production orders are still pending/in progress`);
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+    };
+  } catch (error) {
+    console.error("Error validating order for billing:", error);
+    return {
+      isValid: false,
+      errors: ["Failed to validate order for billing"],
+      warnings: [],
+    };
+  }
+}
+
+/**
+ * Map customer order items to invoice items for billing
+ */
+export function mapOrderItemsToInvoiceItems(orderLines: OrderLineForDisplay[]): Array<{
+  productId?: string;
+  productVariantId?: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  productCode: string;
+  unit: string;
+  discountPercent: number;
+  taxable: boolean;
+}> {
+  return orderLines.map((line) => {
+    const product = line.product;
+    const variant = line.productVariant;
+    
+    // Use variant information if available, otherwise use product information
+    const description = variant 
+      ? `${product?.name || 'Unknown Product'} (${variant.displayName})`
+      : product?.name || 'Unknown Product';
+    
+    const productCode = variant?.sku || product?.sku || '';
+    const unitPrice = variant?.unitPrice || line.unitPrice || 0;
+    const unit = product?.unitOfMeasure || 'PCS';
+
+    return {
+      productId: line.productId,
+      productVariantId: line.productVariantId,
+      description,
+      quantity: line.quantity,
+      unitPrice,
+      productCode,
+      unit,
+      discountPercent: 0, // Default discount
+      taxable: true, // Default taxable
+    };
+  });
+}
+
+/**
+ * Get customer order details with enhanced information for billing preview
+ */
+export async function getCustomerOrderForBilling(orderId: string): Promise<CustomerOrder | null> {
+  try {
+    const order = await prisma.customerOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            address: true,
+            paymentTerms: true,
+            creditLimit: true,
+          },
+        },
+        orderLines: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                sellingPrice: true,
+                description: true,
+                unitOfMeasure: true,
+              },
+            },
+            productVariant: {
+              select: {
+                id: true,
+                sku: true,
+                displayName: true,
+                sizeName: true,
+                colorName: true,
+                unitPrice: true,
+              },
+            },
+          },
+        },
+        productionOrders: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            productionOrders: true,
+            orderLines: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return null;
+    }
+
+    // Convert to CustomerOrder type with proper type conversion
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      customerId: order.customerId,
+      orderDate: order.orderDate,
+      requiredDate: order.requiredDate,
+      status: order.status,
+      totalAmount:
+        order.totalAmount instanceof Decimal
+          ? order.totalAmount.toNumber()
+          : Number(order.totalAmount),
+      notes: order.notes,
+      customer: {
+        id: order.customer.id,
+        name: order.customer.name,
+        email: order.customer.email,
+        phone: order.customer.phone,
+        address: order.customer.address,
+        paymentTerms: order.customer.paymentTerms,
+        creditLimit: order.customer.creditLimit instanceof Decimal
+          ? order.customer.creditLimit.toNumber()
+          : Number(order.customer.creditLimit || 0),
+      },
+      orderLines: order.orderLines.map((line) => ({
+        id: line.id,
+        productId: line.productId,
+        productVariantId: line.productVariantId || undefined,
+        quantity: line.quantity,
+        unitPrice:
+          line.unitPrice instanceof Decimal
+            ? line.unitPrice.toNumber()
+            : Number(line.unitPrice),
+        status: line.status,
+        product: line.product
+          ? {
+              id: line.product.id,
+              name: line.product.name,
+              sku: line.product.sku,
+              description: line.product.description,
+              unitOfMeasure: line.product.unitOfMeasure,
+              sellingPrice: line.product.sellingPrice instanceof Decimal
+                ? line.product.sellingPrice.toNumber()
+                : Number(line.product.sellingPrice || 0),
+            }
+          : undefined,
+        productVariant: line.productVariant
+          ? {
+              id: line.productVariant.id,
+              sku: line.productVariant.sku,
+              displayName: line.productVariant.displayName,
+              sizeName: line.productVariant.sizeName,
+              colorName: line.productVariant.colorName,
+              unitPrice: line.productVariant.unitPrice instanceof Decimal
+                ? line.productVariant.unitPrice.toNumber()
+                : Number(line.productVariant.unitPrice || 0),
+            }
+          : undefined,
+      })),
+      productionOrders: order.productionOrders?.map((po) => ({
+        id: po.id,
+        quantity: po.quantity,
+        status: po.status,
+        priority: po.priority,
+        startDate: po.startDate,
+        dueDate: po.dueDate,
+        completedQuantity: po.completedQuantity,
+        product: {
+          id: po.product.id,
+          name: po.product.name,
+          sku: po.product.sku,
+        },
+      })),
+      _count: order._count,
+    };
+  } catch (error) {
+    console.error("Error fetching customer order for billing:", error);
+    throw new Error("Failed to fetch customer order for billing");
+  }
 }
 
 export async function createCustomerOrder(data: CreateCustomerOrderInput) {

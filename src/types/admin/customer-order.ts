@@ -4,7 +4,11 @@ import { Status, Priority } from "@prisma/client";
 export interface Customer {
   id: string;
   name: string;
-  email?: string;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  paymentTerms?: string | null;
+  creditLimit?: number;
 }
 
 export interface OrderLine {
@@ -18,6 +22,9 @@ export interface OrderLine {
     id: string;
     name: string;
     sku: string;
+    description?: string | null;
+    unitOfMeasure?: string | null;
+    sellingPrice?: number;
   };
   productVariant?: {
     id: string;
@@ -25,6 +32,7 @@ export interface OrderLine {
     displayName: string;
     sizeName?: string | null;
     colorName?: string | null;
+    unitPrice?: number;
   };
 }
 
@@ -41,6 +49,10 @@ export interface CustomerOrder {
     id: string;
     name: string;
     email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    paymentTerms?: string | null;
+    creditLimit?: number;
   };
   orderLines: OrderLineForDisplay[];
   productionOrders?: ProductionOrderSummary[];
@@ -76,6 +88,9 @@ export interface OrderLineForDisplay {
     id: string;
     name: string;
     sku: string;
+    description?: string | null;
+    unitOfMeasure?: string | null;
+    sellingPrice?: number;
   };
   productVariant?: {
     id: string;
@@ -83,6 +98,7 @@ export interface OrderLineForDisplay {
     displayName: string;
     sizeName?: string | null;
     colorName?: string | null;
+    unitPrice?: number;
   };
 }
 

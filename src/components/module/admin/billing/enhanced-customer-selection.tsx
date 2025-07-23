@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CustomerOrderSelector } from "./customer-selection/customer-order-selector";
+import { EnhancedCustomerOrderSelector } from "./customer-selection/enhanced-customer-order-selector";
 import { DirectCustomerSelector } from "./customer-selection/direct-customer-selector";
 import { ManualCustomerEntry } from "./customer-selection/manual-customer-entry";
 import { Customer } from "@/types/admin/billing";
@@ -37,7 +37,7 @@ interface EnhancedCustomerSelectionProps {
   customers: Customer[];
   customerOrders: CustomerOrder[];
   selectedData?: CustomerSelectionData;
-  onSelectionChange: (data: CustomerSelectionData) => void;
+  onSelectionChange: (data: CustomerSelectionData, invoiceItems?: any[]) => void;
   disabled?: boolean;
   loading?: boolean;
   defaultTab?: BillingType;
@@ -77,7 +77,7 @@ export function EnhancedCustomerSelection({
     }
   }, [activeTab, selectionData.billingType, onSelectionChange]);
 
-  const handleCustomerOrderSelect = (order: CustomerOrder) => {
+  const handleCustomerOrderSelect = (order: CustomerOrder, invoiceItems?: any[]) => {
     const newData: CustomerSelectionData = {
       billingType: 'customer-order',
       customerName: order.customer.name,
@@ -88,7 +88,7 @@ export function EnhancedCustomerSelection({
       manualCustomerDetails: undefined,
     };
     setSelectionData(newData);
-    onSelectionChange(newData);
+    onSelectionChange(newData, invoiceItems);
   };
 
   const handleDirectCustomerSelect = (customer: Customer) => {
@@ -243,13 +243,19 @@ export function EnhancedCustomerSelection({
           </div>
 
           <TabsContent value="customer-order" className="space-y-4">
-            <CustomerOrderSelector
+            <EnhancedCustomerOrderSelector
               customerOrders={customerOrders}
               selectedOrder={selectionData.selectedOrder}
-              onOrderSelect={handleCustomerOrderSelect}
+              onOrderSelect={(order, invoiceItems) => {
+                handleCustomerOrderSelect(order, invoiceItems);
+              }}
               onClear={handleClearSelection}
               disabled={disabled}
               loading={loading}
+              onValidationResult={(result) => {
+                // Handle validation result if needed
+                console.log('Order validation result:', result);
+              }}
             />
           </TabsContent>
 

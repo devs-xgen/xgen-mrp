@@ -49,7 +49,7 @@
   - Create unit tests for calculation accuracy and summary display
   - _Requirements: 4.3, 4.4, 3.3, 5.2_
 
-- [ ] 6. Implement customer order integration
+- [x] 6. Implement customer order integration
   - Update getCustomerOrders action to include necessary relationship data
   - Implement order search and filtering functionality
   - Add order details preview with customer and financial information
@@ -59,7 +59,7 @@
   - Create integration tests for customer order billing flow
   - _Requirements: 2.3, 2.4, 3.3, 4.2_
 
-- [ ] 7. Enhance direct customer billing functionality
+- [x] 7. Enhance direct customer billing functionality
   - Update getAllCustomers action to include search and filtering
   - Implement customer search with name, email, and code matching
   - Add customer details preview with contact and payment information

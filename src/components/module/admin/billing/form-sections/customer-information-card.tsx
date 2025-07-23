@@ -18,7 +18,7 @@ interface CustomerInformationCardProps {
   selectedBillingType?: BillingTypeId;
   selectedCustomerData?: CustomerSelectionData;
   onBillingTypeChange: (type: BillingTypeId) => void;
-  onCustomerSelectionChange: (data: CustomerSelectionData) => void;
+  onCustomerSelectionChange: (data: CustomerSelectionData, invoiceItems?: any[]) => void;
   disabled?: boolean;
   loading?: boolean;
   showBillingTypeSelector?: boolean;
@@ -67,9 +67,9 @@ export function CustomerInformationCard({
     onCustomerSelectionChange(resetData);
   };
 
-  const handleCustomerSelectionChange = (data: CustomerSelectionData) => {
+  const handleCustomerSelectionChange = (data: CustomerSelectionData, invoiceItems?: any[]) => {
     setLocalCustomerData(data);
-    onCustomerSelectionChange(data);
+    onCustomerSelectionChange(data, invoiceItems);
   };
 
   const getSelectionIcon = (billingType: BillingTypeId) => {

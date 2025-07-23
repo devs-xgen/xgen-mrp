@@ -713,6 +713,7 @@ export interface Customer {
   id: string;
   name: string;
   code: string;
+  contactPerson: string;
   email: string;
   phone: string;
   address?: string;
@@ -721,7 +722,15 @@ export interface Customer {
   country?: string;
   postalCode?: string;
   tinNumber?: string;
+  creditLimit?: number;
+  paymentTerms?: string;
   status: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  // Optional related data for enhanced display
+  orders?: CustomerOrder[];
+  billingStatements?: BillingStatement[];
 }
 
 export interface CustomerOrder {
