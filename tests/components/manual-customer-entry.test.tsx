@@ -1,14 +1,43 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ManualCustomerEntry } from '@/components/module/admin/billing/customer-selection/manual-customer-entry';
+
+// Mock lucide-react icons
+vi.mock('lucide-react', () => ({
+  Edit: () => <div data-testid="edit-icon" />,
+  User: () => <div data-testid="user-icon" />,
+  Mail: () => <div data-testid="mail-icon" />,
+  Phone: () => <div data-testid="phone-icon" />,
+  MapPin: () => <div data-testid="mappin-icon" />,
+  X: () => <div data-testid="x-icon" />,
+  AlertTriangle: () => <div data-testid="alert-triangle-icon" />,
+  CheckCircle: () => <div data-testid="check-circle-icon" />,
+  Save: () => <div data-testid="save-icon" />,
+  AlertCircle: () => <div data-testid="alert-circle-icon" />,
+}));
 
 describe('ManualCustomerEntry', () => {
   const mockOnCustomerNameChange = vi.fn();
   const mockOnCustomerDetailsChange = vi.fn();
   const mockOnClear = vi.fn();
+  const mockOnValidationChange = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock localStorage
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+      },
+      writable: true,
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('renders correctly with default state', () => {
@@ -352,6 +381,305 @@ describe('ManualCustomerEntry', () => {
     await waitFor(() => {
       const phoneInput = screen.getByLabelText('Phone');
       expect(phoneInput).toHaveAttribute('type', 'tel');
+    });
+  });
+
+  // New tests for enhanced functionality
+  describe('Validation', () => {
+    it('validates customer name length', () => {
+      render(
+        <ManualCustomerEntry
+          customerName="A"
+          onCustomerNameChange={mockOnCustomerNameChange}
+          onValidationChange={mockOnValidationChange}
+          onClear={mockOnClear}
+        />
+      );
+
+      expect(mockOnValidationChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isValid: false,
+          errors: expect.arrayContaining(['Customer name must be at least 2 characters long']),
+        })
+      );
+    });
+
+    it('validates required customer name', () => {
+      render(
+        <ManualCustomerEntry
+          customerName=""
+          onCustomerNameChange={mockOnCustomerNameChange}
+          onValidationChange={mockOnValidationChange}
+          onClear={mockOnClear}
+          required={true}
+        />
+      );
+
+      expect(mockOnValidationChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isValid: false,
+          errors: expect.arrayContaining(['Customer name is required']),
+        })
+      );
+    });
+
+    it('validates email format', async () => {
+      render(
+        <ManualCustomerEntry
+          customerName="John Doe"
+          onCustomerNameChange={mockOnCustomerNameChange}
+          onCustomerDetailsChange={mockOnCustomerDetailsChange}
+          onValidationChange={mockOnValidationChange}
+          onClear={mockOnClear}
+          showAdditionalFields={true}
+        />
+      );
+
+      const toggleButton = screen.getByText('Add Additional Customer Details');
+      fireEvent.click(toggleButton);
+
+      await waitFor(() => {
+        const emailInput = screen.getByLabelText('Email');
+        fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
+      });
+
+      // Wait for validation to be called with the invalid email
+      await waitFor(() => {
+        const lastCall = mockOnValidationChange.mock.calls[mockOnValidationChange.mock.calls.length - 1];
+        expect(lastCall[0]).toEqual(
+          expect.objectContaining({
+            isValid: false,
+            errors: expect.arrayContaining(['Please enter a valid email address']),
+          })
+        );
+      });
+    });
+
+    it('formats customer name properly', () => {
+      render(
+        <ManualCustomerEntry
+          customerName=""
+          onCustomerNameChange={mockOnCustomerNameChange}
+          onClear={mockOnClear}
+        />
+      );
+
+      const nameInput = screen.getByPlaceholderText('Enter customer name...');
+      fireEvent.change(nameInput, { target: { value: 'john  doe' } });
+
+      expect(mockOnCustomerNameChange).toHaveBeenCalledWith('John Doe');
+    });
+
+    it('shows validation errors in UI', () => {
+      render(
+        <ManualCustomerEntry
+          customerName="A"
+          onCustomerNameChange={mockOnCustomerNameChange}
+          onClear={mockOnClear}
+        />
+      );
+
+      expect(screen.getAllByText('Customer name must be at least 2 characters long')).toHaveLength(2);
+    });
+
+    it('shows validation success indicators', () => {
+      render(
+        <ManualCustomerEntry
+          customerName="John Doe"
+          onCustomerNameChange={mockOnCustomerNameChange}
+          onClear={mockOnClear}
+        />
+      );
+
+      expect(screen.getByText('Valid')).toBeInTheDocument();
+    });
+  });
+
+  describe('Persistence', () => {
+    it('shows save button when persistence is enabled and there are unsaved changes', () => {
+      render(
+        <ManualCustomerEntry
+          customerName="John Doe"
+          onCustomerNameChange={mockOnCustomerNameChange}
+          onClear={mockOnClear}
+          enablePersistence={true}
+        />
+      );
+
+      // Trigger a change to create unsaved changes
+      const nameInput = screen.getByPlaceholderText('Enter customer name...');
+      fireEvent.change(nameInput, { target: { value: 'John Doe Updated' } });
+
+      expect(screen.getByTitle('Save customer entry for future use')).toBeInTheDocument();
+    });
+
+    it('saves customer data to localStorage when save button is clicked', () => {
+      const mockSetItem = vi.fn();
+      Object.defineProperty(window, 'localStorage', {
+        value: { ...window.localStorage, setItem: mockSetItem },
+        writable: true,
+      });
+
+      render(
+        <ManualCustomerEntry
+          customerName="John Doe"
+          onCustomerNameChange={mockOnCustomerNameChange}
+          onClear={mockOnClear}
+          enablePersistence={true}
+        />
+      );
+
+      // Trigger a change to create unsaved changes
+      const nameInput = screen.getByPlaceholderText('Enter customer name...');
+      fireEvent.change(nameInput, { target: { value: 'John Doe Updated' } });
+
+      const saveButton = screen.getByTitle('Save customer entry for future use');
+      fireEvent.click(saveButton);
+
+      expect(mockSetItem).toHaveBeenCalledWith(
+        'manual-customer-entries',
+        expect.stringContaining('John Doe Updated')
+      );
+    });
+
+    it('shows persistence status messages', () => {
+      render(
+        <ManualCustomerEntry
+          customerName="John Doe"
+          onCustomerNameChange={mockOnCustomerNameChange}
+          onClear={mockOnClear}
+          enablePersistence={true}
+        />
+      );
+
+      expect(screen.getByText(/Customer details are automatically saved locally/)).toBeInTheDocument();
+    });
+
+    it('does not show persistence features when disabled', () => {
+      render(
+        <ManualCustomerEntry
+          customerName="John Doe"
+          onCustomerNameChange={mockOnCustomerNameChange}
+          onClear={mockOnClear}
+          enablePersistence={false}
+        />
+      );
+
+      expect(screen.queryByTitle('Save customer entry for future use')).not.toBeInTheDocument();
+      expect(screen.getByText(/Consider adding this customer to your database/)).toBeInTheDocument();
+    });
+  });
+
+  describe('Business Rules', () => {
+    it('shows warning for short customer names', () => {
+      render(
+        <ManualCustomerEntry
+          customerName="John"
+          onCustomerNameChange={mockOnCustomerNameChange}
+          onValidationChange={mockOnValidationChange}
+          onClear={mockOnClear}
+        />
+      );
+
+      expect(mockOnValidationChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          warnings: expect.arrayContaining(['Customer name seems short - consider adding more details']),
+        })
+      );
+    });
+
+    it('shows warning when no contact information is provided', () => {
+      render(
+        <ManualCustomerEntry
+          customerName="John Doe"
+          onCustomerNameChange={mockOnCustomerNameChange}
+          onValidationChange={mockOnValidationChange}
+          onClear={mockOnClear}
+        />
+      );
+
+      expect(mockOnValidationChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          warnings: expect.arrayContaining(['Consider adding contact information for better record keeping']),
+        })
+      );
+    });
+
+    it('shows warning for incomplete address', async () => {
+      render(
+        <ManualCustomerEntry
+          customerName="John Doe"
+          onCustomerNameChange={mockOnCustomerNameChange}
+          onCustomerDetailsChange={mockOnCustomerDetailsChange}
+          onValidationChange={mockOnValidationChange}
+          onClear={mockOnClear}
+          showAdditionalFields={true}
+        />
+      );
+
+      const toggleButton = screen.getByText('Add Additional Customer Details');
+      fireEvent.click(toggleButton);
+
+      await waitFor(() => {
+        const addressInput = screen.getByLabelText('Address');
+        fireEvent.change(addressInput, { target: { value: '123 Main St' } });
+      });
+
+      expect(mockOnValidationChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          warnings: expect.arrayContaining(['Address is incomplete - consider adding city and state']),
+        })
+      );
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('displays external validation errors', () => {
+      render(
+        <ManualCustomerEntry
+          customerName="John Doe"
+          onCustomerNameChange={mockOnCustomerNameChange}
+          onClear={mockOnClear}
+          errors={{ customerName: 'External validation error' }}
+        />
+      );
+
+      expect(screen.getByText('External validation error')).toBeInTheDocument();
+    });
+
+    it('handles localStorage errors gracefully', () => {
+      const mockSetItem = vi.fn().mockImplementation(() => {
+        throw new Error('Storage quota exceeded');
+      });
+      Object.defineProperty(window, 'localStorage', {
+        value: { ...window.localStorage, setItem: mockSetItem },
+        writable: true,
+      });
+
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      render(
+        <ManualCustomerEntry
+          customerName="John Doe"
+          onCustomerNameChange={mockOnCustomerNameChange}
+          onClear={mockOnClear}
+          enablePersistence={true}
+        />
+      );
+
+      // Trigger a change and save
+      const nameInput = screen.getByPlaceholderText('Enter customer name...');
+      fireEvent.change(nameInput, { target: { value: 'John Doe Updated' } });
+
+      const saveButton = screen.getByTitle('Save customer entry for future use');
+      fireEvent.click(saveButton);
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Failed to save customer entry to local storage:',
+        expect.any(Error)
+      );
+
+      consoleSpy.mockRestore();
     });
   });
 });
