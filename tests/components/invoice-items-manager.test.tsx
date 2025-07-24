@@ -4,6 +4,21 @@ import userEvent from '@testing-library/user-event'
 import { InvoiceItemsManager } from '@/components/module/admin/billing/invoice-items/invoice-items-manager'
 import { SalesInvoiceItemFormData } from '@/types/admin/billing'
 
+// Mock lucide-react icons
+vi.mock('lucide-react', async (importOriginal) => {
+  const actual = await importOriginal() as any
+  return {
+    ...actual,
+    Plus: () => <div data-testid="plus-icon" />,
+    Trash2: () => <div data-testid="trash-icon" />,
+    GripVertical: () => <div data-testid="grip-icon" />,
+    Copy: () => <div data-testid="copy-icon" />,
+    Download: () => <div data-testid="download-icon" />,
+    Upload: () => <div data-testid="upload-icon" />,
+    Zap: () => <div data-testid="zap-icon" />,
+  }
+})
+
 // Mock drag and drop
 vi.mock('@hello-pangea/dnd', () => ({
   DragDropContext: ({ children, onDragEnd }: any) => (

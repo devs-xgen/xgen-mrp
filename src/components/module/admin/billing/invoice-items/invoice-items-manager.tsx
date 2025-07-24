@@ -311,20 +311,20 @@ export function InvoiceItemsManager({
   }, [maxItems, onItemsChange, validateItems]);
 
   return (
-    <Card className="bg-card border rounded-lg">
+    <Card className="bg-card border rounded-lg" role="region" aria-labelledby="invoice-items-title">
       <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <CardTitle className="text-lg">Invoice Items</CardTitle>
+            <CardTitle id="invoice-items-title" className="text-lg">Invoice Items</CardTitle>
             <p className="text-sm text-muted-foreground">
               Add and manage items for this invoice
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" role="status" aria-label={`${items.length} of ${maxItems} items`}>
               {items.length} / {maxItems} items
             </Badge>
-            <Badge variant="outline">
+            <Badge variant="outline" role="status" aria-label={`Total amount: ${formatCurrencyPHP(totalAmount)}`}>
               Total: {formatCurrencyPHP(totalAmount)}
             </Badge>
           </div>
@@ -338,16 +338,21 @@ export function InvoiceItemsManager({
         )}
 
         {/* Action Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-muted/50 rounded-lg">
-          <div className="flex items-center gap-2">
+        <div 
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-3 bg-muted/50 rounded-lg"
+          role="toolbar"
+          aria-label="Invoice items actions"
+        >
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => addItem()}
               disabled={disabled || items.length >= maxItems}
+              aria-label={`Add new item (${items.length}/${maxItems} items)`}
             >
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus className="h-4 w-4 mr-1" aria-hidden="true" />
               Add Item
             </Button>
 
@@ -358,8 +363,9 @@ export function InvoiceItemsManager({
                 size="sm"
                 onClick={() => setShowTemplateDialog(true)}
                 disabled={disabled}
+                aria-label="Use item templates"
               >
-                <Zap className="h-4 w-4 mr-1" />
+                <Zap className="h-4 w-4 mr-1" aria-hidden="true" />
                 Templates
               </Button>
             )}
@@ -371,22 +377,24 @@ export function InvoiceItemsManager({
                 size="sm"
                 onClick={() => setShowBulkDialog(true)}
                 disabled={disabled}
+                aria-label="Bulk operations"
               >
-                <Copy className="h-4 w-4 mr-1" />
+                <Copy className="h-4 w-4 mr-1" aria-hidden="true" />
                 Bulk Actions
               </Button>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={handleExportItems}
               disabled={disabled || items.length === 0}
+              aria-label="Export items to file"
             >
-              <Download className="h-4 w-4 mr-1" />
+              <Download className="h-4 w-4 mr-1" aria-hidden="true" />
               Export
             </Button>
 
@@ -396,8 +404,9 @@ export function InvoiceItemsManager({
               size="sm"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
+              aria-label="Import items from file"
             >
-              <Upload className="h-4 w-4 mr-1" />
+              <Upload className="h-4 w-4 mr-1" aria-hidden="true" />
               Import
             </Button>
 
@@ -406,33 +415,40 @@ export function InvoiceItemsManager({
               type="file"
               accept=".json"
               onChange={handleImportItems}
-              className="hidden"
+              className="sr-only"
+              aria-label="Select file to import"
             />
           </div>
         </div>
 
         {/* Bulk Selection Bar */}
         {selectedItems.length > 0 && (
-          <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div 
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800"
+            role="region"
+            aria-label="Bulk selection actions"
+          >
             <div className="flex items-center gap-2">
               <Checkbox
                 checked={selectedItems.length === items.length}
                 onCheckedChange={handleSelectAll}
                 disabled={disabled}
+                aria-label={selectedItems.length === items.length ? "Deselect all items" : "Select all items"}
               />
-              <span className="text-sm font-medium">
+              <span className="text-sm font-medium" role="status">
                 {selectedItems.length} of {items.length} items selected
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={handleBulkDuplicate}
                 disabled={disabled || items.length + selectedItems.length > maxItems}
+                aria-label={`Duplicate ${selectedItems.length} selected items`}
               >
-                <Copy className="h-4 w-4 mr-1" />
+                <Copy className="h-4 w-4 mr-1" aria-hidden="true" />
                 Duplicate
               </Button>
               <Button
@@ -441,8 +457,9 @@ export function InvoiceItemsManager({
                 size="sm"
                 onClick={handleBulkDelete}
                 disabled={disabled || items.length - selectedItems.length < 1}
+                aria-label={`Delete ${selectedItems.length} selected items`}
               >
-                <Trash2 className="h-4 w-4 mr-1" />
+                <Trash2 className="h-4 w-4 mr-1" aria-hidden="true" />
                 Delete
               </Button>
             </div>
@@ -457,7 +474,13 @@ export function InvoiceItemsManager({
                 {...provided.droppableProps}
                 ref={provided.innerRef}
                 className={`space-y-2 ${snapshot.isDraggingOver ? 'bg-muted/30 rounded-lg p-2' : ''}`}
+                role="list"
+                aria-label="Invoice items list"
+                aria-describedby="items-list-description"
               >
+                <div id="items-list-description" className="sr-only">
+                  Use arrow keys to navigate, space to select, and drag handles to reorder items
+                </div>
                 {items.map((item, index) => (
                   <Draggable
                     key={`item-${index}`}
@@ -470,6 +493,8 @@ export function InvoiceItemsManager({
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         className={`${snapshot.isDragging ? 'shadow-lg' : ''}`}
+                        role="listitem"
+                        aria-label={`Invoice item ${index + 1}: ${item.description || 'New item'}`}
                       >
                         <InvoiceItemRow
                           item={item}
@@ -497,25 +522,32 @@ export function InvoiceItemsManager({
 
         {/* Summary */}
         <Separator />
-        <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-          <div className="text-sm text-muted-foreground">
+        <div 
+          className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-3 bg-muted/30 rounded-lg"
+          role="region"
+          aria-labelledby="invoice-summary-title"
+        >
+          <div id="invoice-summary-title" className="sr-only">Invoice totals summary</div>
+          <div className="text-sm text-muted-foreground" role="status">
             Total Quantity: <span className="font-medium">{totalQuantity}</span>
           </div>
-          <div className="text-lg font-semibold">
+          <div className="text-lg font-semibold" role="status" aria-label={`Total amount: ${formatCurrencyPHP(totalAmount)}`}>
             Total Amount: {formatCurrencyPHP(totalAmount)}
           </div>
         </div>
 
         {/* Empty State */}
         {items.length === 0 && (
-          <div className="text-center py-8">
+          <div className="text-center py-8" role="region" aria-labelledby="empty-state-title">
+            <h3 id="empty-state-title" className="sr-only">No invoice items</h3>
             <p className="text-muted-foreground mb-4">No items added yet</p>
             <Button
               type="button"
               onClick={() => addItem()}
               disabled={disabled}
+              aria-label="Add your first invoice item"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
               Add Your First Item
             </Button>
           </div>

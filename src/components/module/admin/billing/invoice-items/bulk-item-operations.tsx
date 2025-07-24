@@ -42,34 +42,48 @@ export function BulkItemOperations({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+      <DialogContent 
+        className="max-w-3xl max-h-[80vh] overflow-y-auto"
+        aria-labelledby="bulk-operations-title"
+        aria-describedby="bulk-operations-description"
+      >
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Copy className="h-5 w-5" />
+          <DialogTitle id="bulk-operations-title" className="flex items-center gap-2">
+            <Copy className="h-5 w-5" aria-hidden="true" />
             Bulk Item Operations
           </DialogTitle>
+          <p id="bulk-operations-description" className="sr-only">
+            Add multiple items at once using various methods
+          </p>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Status Info */}
-          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+          <div 
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-muted/50 rounded-lg"
+            role="status"
+            aria-label="Current item status"
+          >
             <div className="text-sm">
               <span className="text-muted-foreground">Current items: </span>
               <span className="font-medium">{currentItemCount}</span>
             </div>
             <div className="text-sm">
               <span className="text-muted-foreground">Available slots: </span>
-              <Badge variant={remainingSlots > 10 ? "secondary" : "destructive"}>
+              <Badge 
+                variant={remainingSlots > 10 ? "secondary" : "destructive"}
+                aria-label={`${remainingSlots} slots remaining`}
+              >
                 {remainingSlots}
               </Badge>
             </div>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="multiple">Add Multiple</TabsTrigger>
-              <TabsTrigger value="csv">Import CSV</TabsTrigger>
-              <TabsTrigger value="template">Quick Template</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto" role="tablist">
+              <TabsTrigger value="multiple" className="text-sm">Add Multiple</TabsTrigger>
+              <TabsTrigger value="csv" className="text-sm">Import CSV</TabsTrigger>
+              <TabsTrigger value="template" className="text-sm">Quick Template</TabsTrigger>
             </TabsList>
 
             <TabsContent value="multiple" className="space-y-4">
@@ -102,7 +116,7 @@ export function BulkItemOperations({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} aria-label="Close bulk operations dialog">
             Close
           </Button>
         </DialogFooter>
@@ -151,16 +165,16 @@ function AddMultipleItems({ onAddItems, onClose, disabled, maxItems }: AddMultip
   };
 
   return (
-    <div className="space-y-4">
-      <Alert>
-        <AlertDescription>
+    <div className="space-y-4" role="tabpanel" aria-labelledby="multiple-tab">
+      <Alert role="region" aria-labelledby="multiple-info">
+        <AlertDescription id="multiple-info">
           Create multiple similar items at once. Each item will be numbered automatically.
         </AlertDescription>
       </Alert>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="item-count">Number of Items</Label>
+          <Label htmlFor="item-count" className="text-sm font-medium">Number of Items</Label>
           <Input
             id="item-count"
             type="number"
@@ -169,20 +183,21 @@ function AddMultipleItems({ onAddItems, onClose, disabled, maxItems }: AddMultip
             min="1"
             max={maxItems}
             disabled={disabled}
+            aria-describedby="item-count-help"
           />
-          <p className="text-xs text-muted-foreground mt-1">
+          <p id="item-count-help" className="text-xs text-muted-foreground mt-1">
             Maximum: {maxItems} items
           </p>
         </div>
 
         <div>
-          <Label htmlFor="base-unit">Unit</Label>
+          <Label htmlFor="base-unit" className="text-sm font-medium">Unit</Label>
           <Select
             value={baseItem.unit || 'PCS'}
             onValueChange={(value) => setBaseItem(prev => ({ ...prev, unit: value }))}
             disabled={disabled}
           >
-            <SelectTrigger>
+            <SelectTrigger id="base-unit" aria-label="Select unit of measurement">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -197,22 +212,23 @@ function AddMultipleItems({ onAddItems, onClose, disabled, maxItems }: AddMultip
       </div>
 
       <div>
-        <Label htmlFor="base-description">Base Description</Label>
+        <Label htmlFor="base-description" className="text-sm font-medium">Base Description</Label>
         <Input
           id="base-description"
           value={baseItem.description}
           onChange={(e) => setBaseItem(prev => ({ ...prev, description: e.target.value }))}
           placeholder="e.g., Product Item"
           disabled={disabled}
+          aria-describedby="base-description-help"
         />
-        <p className="text-xs text-muted-foreground mt-1">
+        <p id="base-description-help" className="text-xs text-muted-foreground mt-1">
           Items will be named: "{baseItem.description} 1", "{baseItem.description} 2", etc.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
-          <Label htmlFor="base-quantity">Quantity</Label>
+          <Label htmlFor="base-quantity" className="text-sm font-medium">Quantity</Label>
           <Input
             id="base-quantity"
             type="number"
@@ -225,7 +241,7 @@ function AddMultipleItems({ onAddItems, onClose, disabled, maxItems }: AddMultip
         </div>
 
         <div>
-          <Label htmlFor="base-price">Unit Price</Label>
+          <Label htmlFor="base-price" className="text-sm font-medium">Unit Price</Label>
           <Input
             id="base-price"
             type="number"
@@ -238,7 +254,7 @@ function AddMultipleItems({ onAddItems, onClose, disabled, maxItems }: AddMultip
         </div>
 
         <div>
-          <Label htmlFor="base-discount">Discount %</Label>
+          <Label htmlFor="base-discount" className="text-sm font-medium">Discount %</Label>
           <Input
             id="base-discount"
             type="number"
@@ -253,7 +269,7 @@ function AddMultipleItems({ onAddItems, onClose, disabled, maxItems }: AddMultip
       </div>
 
       <div>
-        <Label htmlFor="base-code">Product Code (Optional)</Label>
+        <Label htmlFor="base-code" className="text-sm font-medium">Product Code (Optional)</Label>
         <Input
           id="base-code"
           value={baseItem.productCode || ''}
@@ -264,20 +280,20 @@ function AddMultipleItems({ onAddItems, onClose, disabled, maxItems }: AddMultip
       </div>
 
       {/* Preview */}
-      <Card>
+      <Card role="region" aria-labelledby="preview-title">
         <CardHeader>
-          <CardTitle className="text-sm">Preview</CardTitle>
+          <CardTitle id="preview-title" className="text-sm">Preview</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
+          <div className="space-y-2" role="list" aria-label="Preview of items to be created">
             {Array.from({ length: Math.min(count, 3) }, (_, index) => (
-              <div key={index} className="flex justify-between text-sm">
-                <span>{baseItem.description} {index + 1}</span>
-                <span>{baseItem.quantity} × {formatCurrencyPHP(baseItem.unitPrice)}</span>
+              <div key={index} className="flex justify-between text-sm" role="listitem">
+                <span className="break-words flex-1 mr-2">{baseItem.description} {index + 1}</span>
+                <span className="flex-shrink-0">{baseItem.quantity} × {formatCurrencyPHP(baseItem.unitPrice)}</span>
               </div>
             ))}
             {count > 3 && (
-              <div className="text-xs text-muted-foreground">
+              <div className="text-xs text-muted-foreground" role="status">
                 +{count - 3} more items
               </div>
             )}
@@ -294,8 +310,9 @@ function AddMultipleItems({ onAddItems, onClose, disabled, maxItems }: AddMultip
         onClick={handleAddMultiple}
         disabled={disabled || !baseItem.description.trim() || count > maxItems}
         className="w-full"
+        aria-label={`Add ${count} items to invoice`}
       >
-        <Plus className="h-4 w-4 mr-2" />
+        <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
         Add {count} Items
       </Button>
     </div>

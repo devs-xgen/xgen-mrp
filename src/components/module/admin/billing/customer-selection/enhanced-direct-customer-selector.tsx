@@ -167,17 +167,26 @@ export function EnhancedDirectCustomerSelector({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" role="region" aria-labelledby="direct-customer-selector-heading">
       <div className="space-y-2">
-        <Label htmlFor="enhanced-direct-customer-selector">Direct Customer</Label>
-        <div className="flex gap-2">
+        <Label 
+          htmlFor="enhanced-direct-customer-selector" 
+          id="direct-customer-selector-heading"
+          className="text-sm font-medium"
+        >
+          Direct Customer
+        </Label>
+        <div className="flex flex-col sm:flex-row gap-2">
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
               <Button
+                id="enhanced-direct-customer-selector"
                 variant="outline"
                 role="combobox"
                 aria-expanded={open}
-                className="flex-1 justify-between"
+                aria-haspopup="listbox"
+                aria-label={selectedCustomer ? `Selected customer: ${selectedCustomer.name}` : "Select a customer"}
+                className="flex-1 justify-between min-w-0"
                 disabled={disabled || loading || isLoadingCustomers}
               >
                 {selectedCustomer ? (
@@ -187,18 +196,24 @@ export function EnhancedDirectCustomerSelector({
                 ) : (
                   <span className="text-muted-foreground">Select customer...</span>
                 )}
-                <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" aria-hidden="true" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[500px] p-0" align="start">
+            <PopoverContent 
+              className="w-[min(500px,calc(100vw-2rem))] p-0" 
+              align="start"
+              side="bottom"
+              sideOffset={4}
+            >
               <Command>
                 <CommandInput
                   placeholder="Search customers by name, email, code, or contact person..."
                   value={searchValue}
                   onValueChange={setSearchValue}
+                  aria-label="Search customers"
                 />
-                <CommandList>
-                  <CommandEmpty>
+                <CommandList role="listbox" aria-label="Customer options">
+                  <CommandEmpty role="status">
                     {isLoadingCustomers ? "Loading customers..." : "No customers found."}
                   </CommandEmpty>
                   <CommandGroup>
@@ -207,41 +222,43 @@ export function EnhancedDirectCustomerSelector({
                         key={customer.id}
                         value={customer.id}
                         onSelect={() => handleCustomerSelect(customer)}
-                        className="flex flex-col items-start p-3 space-y-2"
+                        className="flex flex-col items-start p-3 space-y-2 cursor-pointer"
+                        role="option"
+                        aria-selected={selectedCustomer?.id === customer.id}
                       >
-                        <div className="flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{customer.name}</span>
-                            <Badge className={getStatusColor(customer.status)}>
+                        <div className="flex items-center justify-between w-full min-w-0">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <User className="h-4 w-4 text-muted-foreground flex-shrink-0" aria-hidden="true" />
+                            <span className="font-medium truncate">{customer.name}</span>
+                            <Badge className={`${getStatusColor(customer.status)} flex-shrink-0`}>
                               {customer.status}
                             </Badge>
                           </div>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
                             {customer.code}
                           </span>
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground w-full">
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground w-full">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <Mail className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
                             <span className="truncate">{customer.email}</span>
                           </div>
                           {customer.phone && (
-                            <div className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <Phone className="h-3 w-3" aria-hidden="true" />
                               <span>{customer.phone}</span>
                             </div>
                           )}
                           {customer.contactPerson && (
-                            <div className="flex items-center gap-1">
-                              <Building className="h-3 w-3" />
+                            <div className="flex items-center gap-1 min-w-0">
+                              <Building className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
                               <span className="truncate">{customer.contactPerson}</span>
                             </div>
                           )}
                         </div>
                         {customer.address && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground w-full">
+                            <MapPin className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
                             <span className="truncate">
                               {customer.address}
                               {customer.city && `, ${customer.city}`}
@@ -251,7 +268,7 @@ export function EnhancedDirectCustomerSelector({
                         )}
                         {customer.creditLimit && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <CreditCard className="h-3 w-3" />
+                            <CreditCard className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
                             <span>Credit Limit: ₱{customer.creditLimit.toLocaleString()}</span>
                           </div>
                         )}
@@ -269,7 +286,8 @@ export function EnhancedDirectCustomerSelector({
               size="icon"
               onClick={handleClear}
               disabled={disabled}
-              title="Clear selection"
+              aria-label="Clear customer selection"
+              className="flex-shrink-0"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -284,30 +302,41 @@ export function EnhancedDirectCustomerSelector({
 
       {/* Selected Customer Preview */}
       {selectedCustomer && (
-        <Card className="bg-green-50 border-green-200">
+        <Card 
+          className="bg-green-50 border-green-200"
+          role="region"
+          aria-labelledby="selected-customer-title"
+          aria-describedby="selected-customer-description"
+        >
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <User className="h-4 w-4" />
+            <CardTitle 
+              id="selected-customer-title"
+              className="text-base flex items-center gap-2"
+            >
+              <User className="h-4 w-4" aria-hidden="true" />
               Selected Customer Details
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div 
+              id="selected-customer-description"
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm"
+            >
               <div>
                 <span className="font-medium text-muted-foreground">Customer Name:</span>
-                <div className="font-semibold">{selectedCustomer.name}</div>
+                <div className="font-semibold break-words">{selectedCustomer.name}</div>
               </div>
               <div>
                 <span className="font-medium text-muted-foreground">Customer Code:</span>
-                <div className="font-mono">{selectedCustomer.code}</div>
+                <div className="font-mono break-all">{selectedCustomer.code}</div>
               </div>
               <div>
                 <span className="font-medium text-muted-foreground">Email:</span>
-                <div>{selectedCustomer.email}</div>
+                <div className="break-all">{selectedCustomer.email}</div>
               </div>
               <div>
                 <span className="font-medium text-muted-foreground">Phone:</span>
-                <div>{selectedCustomer.phone}</div>
+                <div className="break-all">{selectedCustomer.phone}</div>
               </div>
               <div>
                 <span className="font-medium text-muted-foreground">Status:</span>
@@ -320,7 +349,7 @@ export function EnhancedDirectCustomerSelector({
               {selectedCustomer.tinNumber && (
                 <div>
                   <span className="font-medium text-muted-foreground">TIN Number:</span>
-                  <div className="font-mono">{selectedCustomer.tinNumber}</div>
+                  <div className="font-mono break-all">{selectedCustomer.tinNumber}</div>
                 </div>
               )}
             </div>
@@ -329,7 +358,7 @@ export function EnhancedDirectCustomerSelector({
             {selectedCustomer.contactPerson && (
               <div className="pt-2 border-t">
                 <span className="font-medium text-muted-foreground text-sm">Contact Person:</span>
-                <div className="text-sm mt-1">{selectedCustomer.contactPerson}</div>
+                <div className="text-sm mt-1 break-words">{selectedCustomer.contactPerson}</div>
               </div>
             )}
 
@@ -338,9 +367,9 @@ export function EnhancedDirectCustomerSelector({
               <div className="pt-2 border-t">
                 <span className="font-medium text-muted-foreground text-sm">Address:</span>
                 <div className="text-sm mt-1">
-                  <div>{selectedCustomer.address}</div>
+                  <div className="break-words">{selectedCustomer.address}</div>
                   {(selectedCustomer.city || selectedCustomer.state || selectedCustomer.postalCode) && (
-                    <div className="text-muted-foreground">
+                    <div className="text-muted-foreground break-words">
                       {[selectedCustomer.city, selectedCustomer.state, selectedCustomer.postalCode]
                         .filter(Boolean)
                         .join(', ')}
@@ -373,11 +402,11 @@ export function EnhancedDirectCustomerSelector({
             {(selectedCustomer.orders?.length || selectedCustomer.billingStatements?.length) && (
               <div className="pt-2 border-t">
                 <span className="font-medium text-muted-foreground text-sm">Recent Activity:</span>
-                <div className="grid grid-cols-2 gap-4 text-xs mt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs mt-1">
                   {selectedCustomer.orders && selectedCustomer.orders.length > 0 && (
                     <div>
                       <span className="font-medium">Last Order:</span>
-                      <div className="text-muted-foreground">
+                      <div className="text-muted-foreground break-words">
                         {selectedCustomer.orders[0].orderNumber} - ₱{selectedCustomer.orders[0].totalAmount.toLocaleString()}
                       </div>
                     </div>
@@ -385,7 +414,7 @@ export function EnhancedDirectCustomerSelector({
                   {selectedCustomer.billingStatements && selectedCustomer.billingStatements.length > 0 && (
                     <div>
                       <span className="font-medium">Last Billing:</span>
-                      <div className="text-muted-foreground">
+                      <div className="text-muted-foreground break-words">
                         {selectedCustomer.billingStatements[0].statementNumber} - ₱{selectedCustomer.billingStatements[0].totalAmount.toLocaleString()}
                       </div>
                     </div>
@@ -399,7 +428,7 @@ export function EnhancedDirectCustomerSelector({
 
       {/* Auto-population Notice */}
       {selectedCustomer && validation.isValid && (
-        <Alert>
+        <Alert role="status" aria-live="polite">
           <AlertDescription className="text-sm">
             <strong>Auto-populated:</strong> Customer name and details will be automatically filled in the billing form. 
             You can manually add invoice items for this customer.

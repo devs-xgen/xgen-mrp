@@ -1,0 +1,436 @@
+/* Billing Components Responsive Design Enhancements */
+
+/* Base responsive utilities */
+.billing-responsive-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .billing-responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .billing-responsive-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Customer selection responsive improvements */
+.customer-selector-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .customer-selector-container {
+    flex-direction: row;
+  }
+}
+
+.customer-preview-card {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+.customer-preview-card .customer-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.customer-preview-card .customer-details {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .customer-preview-card .customer-details {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Invoice items responsive improvements */
+.invoice-items-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .invoice-items-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.invoice-items-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .invoice-items-toolbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.invoice-items-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.invoice-items-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .invoice-items-summary {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+/* Invoice item row responsive improvements */
+.invoice-item-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (min-width: 1024px) {
+  .invoice-item-row {
+    flex-direction: row;
+    align-items: start;
+  }
+}
+
+.invoice-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+@media (min-width: 1024px) {
+  .invoice-item-controls {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+.invoice-item-fields-mobile {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+.invoice-item-fields-desktop {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .invoice-item-fields-mobile {
+    display: none;
+  }
+  
+  .invoice-item-fields-desktop {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 0.75rem;
+    flex: 1;
+  }
+}
+
+.invoice-item-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+@media (min-width: 1024px) {
+  .invoice-item-actions {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+}
+
+.invoice-item-calculation {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .invoice-item-calculation {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+/* Bulk operations responsive improvements */
+.bulk-operations-tabs {
+  display: grid;
+  grid-template-columns: 1fr;
+  height: auto;
+}
+
+@media (min-width: 640px) {
+  .bulk-operations-tabs {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.bulk-operations-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .bulk-operations-status {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.bulk-operations-form {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+  .bulk-operations-form {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.bulk-operations-fields {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .bulk-operations-fields {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .bulk-operations-fields {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Accessibility improvements */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Focus improvements */
+.focus-visible:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .invoice-item-row {
+    border: 2px solid;
+  }
+  
+  .customer-preview-card {
+    border: 2px solid;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .invoice-item-row {
+    transition: none;
+  }
+  
+  .customer-preview-card {
+    transition: none;
+  }
+  
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  .invoice-items-toolbar,
+  .invoice-item-actions,
+  .bulk-operations-tabs {
+    display: none;
+  }
+  
+  .invoice-item-row {
+    break-inside: avoid;
+  }
+  
+  .customer-preview-card {
+    break-inside: avoid;
+  }
+}
+
+/* Touch device improvements */
+@media (hover: none) and (pointer: coarse) {
+  .invoice-item-actions button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .customer-selector-container button {
+    min-height: 44px;
+  }
+  
+  .invoice-items-actions button {
+    min-height: 44px;
+  }
+}
+
+/* Dark mode improvements */
+@media (prefers-color-scheme: dark) {
+  .invoice-item-row[data-selected="true"] {
+    background-color: hsl(var(--primary) / 0.1);
+  }
+  
+  .customer-preview-card {
+    border-color: hsl(var(--border));
+  }
+}
+
+/* Container queries for advanced responsive design */
+@container (max-width: 600px) {
+  .invoice-item-fields-desktop {
+    display: none;
+  }
+  
+  .invoice-item-fields-mobile {
+    display: grid;
+  }
+}
+
+@container (min-width: 601px) {
+  .invoice-item-fields-mobile {
+    display: none;
+  }
+  
+  .invoice-item-fields-desktop {
+    display: grid;
+  }
+}
+
+/* Utility classes for responsive text */
+.text-responsive {
+  font-size: clamp(0.875rem, 2.5vw, 1rem);
+}
+
+.text-responsive-lg {
+  font-size: clamp(1rem, 3vw, 1.125rem);
+}
+
+.text-responsive-xl {
+  font-size: clamp(1.125rem, 3.5vw, 1.25rem);
+}
+
+/* Responsive spacing */
+.spacing-responsive {
+  padding: clamp(0.5rem, 2vw, 1rem);
+}
+
+.gap-responsive {
+  gap: clamp(0.5rem, 2vw, 1rem);
+}
+
+/* Responsive grid utilities */
+.grid-responsive-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.grid-responsive-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .grid-responsive-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.grid-responsive-3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .grid-responsive-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid-responsive-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Responsive flex utilities */
+.flex-responsive {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .flex-responsive {
+    flex-direction: row;
+  }
+}
+
+.flex-responsive-reverse {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .flex-responsive-reverse {
+    flex-direction: row;
+  }
+}

@@ -39,7 +39,7 @@
   - Create unit tests for validation logic and error handling
   - _Requirements: 3.4, 3.5, 5.3_
 
-- [x] 5. Create improved summary and calculation components
+- [x] 5. Create 2 summary and calculation components
   - Enhance BillingSummaryCard with real-time calculation updates
   - Create CustomerSummaryCard to show selected customer information
   - Implement calculation logic with proper decimal handling
@@ -79,7 +79,7 @@
   - Create unit tests for manual customer entry functionality
   - _Requirements: 2.2, 3.3, 3.4, 5.2_
 
-- [ ] 9. Update invoice items management
+- [x] 9. Update invoice items management
   - Enhance invoice item components with better UX
   - Implement drag-and-drop reordering for invoice items
   - Add bulk item operations (add multiple, import from template)
@@ -89,7 +89,7 @@
   - Create unit tests for invoice item management
   - _Requirements: 4.3, 4.4, 5.1_
 
-- [ ] 10. Implement responsive design and accessibility
+- [x] 10. Implement responsive design and accessibility
   - Ensure all components work properly on mobile devices
   - Add proper ARIA labels and accessibility attributes
   - Implement keyboard navigation for all form elements
