@@ -338,7 +338,7 @@ export async function updateInspector(id: string, updates: {
 }
 
 
-export async function getProductionOrdersForInspector() {
+export async function getProductionOrdersForInspector(p0: { status: any; }) {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {

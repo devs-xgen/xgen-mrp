@@ -3,14 +3,14 @@ import { ArrowLeft } from "lucide-react";
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-
 import { ProductionQRGenerator } from "@/components/module/admin/production/production-qr-generator";
 import { Button } from "@/components/ui/button";
 import { getDeliveryUsers, getDeliveryAssignment } from "@/lib/actions/delivery/delivery-assignment";
 import { getActiveInspectors } from "@/lib/actions/inspector";
 import { getProductionOrder} from "@/lib/actions/production-order";
-import ProductionOrderDetails from "@/components/module/admin/production/production-order-details";
 import { getAvailableWorkCenters } from "@/lib/actions/inspector/production-order";
+import { ProductionOrderDetails } from "@/components/module/admin/production/production-order-details";
+
 
 interface ProductionOrderPageProps {
   params: Promise<{
