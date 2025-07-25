@@ -119,7 +119,7 @@
   - Create end-to-end tests for billing statement creation
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 4.1, 4.5, 5.4_
 
-- [ ] 13. Enhance billing dashboard integration
+- [x] 13. Enhance billing dashboard integration
   - Update billing dashboard to highlight new creation flow
   - Add quick action buttons for different billing types
   - Implement dashboard analytics for billing type usage
@@ -129,7 +129,7 @@
   - Create integration tests for dashboard and billing form interaction
   - _Requirements: 5.1, 5.4_
 
-- [ ] 14. Test and validate the enhanced billing UI
+- [-] 14. Test and validate the enhanced billing UI
   - Perform comprehensive testing of all billing type flows
   - Test form validation and error handling scenarios
   - Validate calculation accuracy and real-time updates

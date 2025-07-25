@@ -24,6 +24,190 @@ import {
 } from "@/types/admin/billing";
 
 // ==============================================
+// BILLING TYPE ANALYTICS
+// ==============================================
+
+export interface BillingTypeAnalytics {
+  billingType: 'direct-customer' | 'customer-order' | 'manual-customer';
+  count: number;
+  totalAmount: number;
+  percentage: number;
+  averageAmount: number;
+  lastUsed?: Date;
+}
+
+export interface BillingTypeRecommendation {
+  recommendedType: 'direct-customer' | 'customer-order' | 'manual-customer';
+  reason: string;
+  confidence: number;
+  basedOn: 'usage-pattern' | 'recent-activity' | 'customer-data';
+}
+
+export async function getBillingTypeAnalytics(
+  startDate?: Date,
+  endDate?: Date,
+  userId?: string
+): Promise<BillingTypeAnalytics[]> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new Error("Unauthorized");
+    }
+
+    const dateFilter =
+      startDate && endDate
+        ? {
+            billingDate: {
+              gte: startDate,
+              lte: endDate,
+            },
+          }
+        : {};
+
+    const userFilter = userId ? { createdBy: userId } : {};
+
+    // Determine billing type based on data patterns
+    const billingStatements = await prisma.billingStatement.findMany({
+      where: {
+        ...dateFilter,
+        ...userFilter,
+      },
+      select: {
+        id: true,
+        customerId: true,
+        customerOrderId: true,
+        customerName: true,
+        totalAmount: true,
+        createdAt: true,
+        customer: {
+          select: { id: true, name: true }
+        },
+        customerOrder: {
+          select: { id: true, orderNumber: true }
+        }
+      },
+    });
+
+    // Categorize billing statements by type
+    const typeStats: Record<string, { count: number; totalAmount: number; lastUsed?: Date }> = {
+      'direct-customer': { count: 0, totalAmount: 0 },
+      'customer-order': { count: 0, totalAmount: 0 },
+      'manual-customer': { count: 0, totalAmount: 0 },
+    };
+
+    billingStatements.forEach((statement) => {
+      let billingType: string;
+      
+      if (statement.customerOrderId && statement.customerOrder) {
+        billingType = 'customer-order';
+      } else if (statement.customerId && statement.customer) {
+        billingType = 'direct-customer';
+      } else {
+        billingType = 'manual-customer';
+      }
+
+      typeStats[billingType].count++;
+      typeStats[billingType].totalAmount += statement.totalAmount.toNumber();
+      
+      if (!typeStats[billingType].lastUsed || statement.createdAt > typeStats[billingType].lastUsed) {
+        typeStats[billingType].lastUsed = statement.createdAt;
+      }
+    });
+
+    const totalCount = billingStatements.length;
+    
+    return Object.entries(typeStats).map(([type, stats]) => ({
+      billingType: type as 'direct-customer' | 'customer-order' | 'manual-customer',
+      count: stats.count,
+      totalAmount: stats.totalAmount,
+      percentage: totalCount > 0 ? (stats.count / totalCount) * 100 : 0,
+      averageAmount: stats.count > 0 ? stats.totalAmount / stats.count : 0,
+      lastUsed: stats.lastUsed,
+    }));
+  } catch (error) {
+    console.error("Error fetching billing type analytics:", error);
+    throw new Error("Failed to fetch billing type analytics");
+  }
+}
+
+export async function getBillingTypeRecommendations(
+  userId?: string
+): Promise<BillingTypeRecommendation[]> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new Error("Unauthorized");
+    }
+
+    const currentUserId = userId || session.user.id;
+    
+    // Get recent billing patterns (last 30 days)
+    const recentDate = new Date();
+    recentDate.setDate(recentDate.getDate() - 30);
+    
+    const recentAnalytics = await getBillingTypeAnalytics(recentDate, new Date(), currentUserId);
+    const allTimeAnalytics = await getBillingTypeAnalytics(undefined, undefined, currentUserId);
+    
+    const recommendations: BillingTypeRecommendation[] = [];
+    
+    // Recommendation 1: Most used type
+    const mostUsedType = allTimeAnalytics.reduce((prev, current) => 
+      prev.count > current.count ? prev : current
+    );
+    
+    if (mostUsedType.count > 0) {
+      recommendations.push({
+        recommendedType: mostUsedType.billingType,
+        reason: `Your most frequently used billing type (${mostUsedType.count} times, ${mostUsedType.percentage.toFixed(1)}% of all billing)`,
+        confidence: Math.min(mostUsedType.percentage / 100, 0.9),
+        basedOn: 'usage-pattern'
+      });
+    }
+    
+    // Recommendation 2: Recently active type
+    const recentlyUsedType = recentAnalytics
+      .filter(type => type.count > 0)
+      .sort((a, b) => (b.lastUsed?.getTime() || 0) - (a.lastUsed?.getTime() || 0))[0];
+    
+    if (recentlyUsedType && recentlyUsedType.billingType !== mostUsedType.billingType) {
+      recommendations.push({
+        recommendedType: recentlyUsedType.billingType,
+        reason: `Recently active - used ${recentlyUsedType.count} times in the last 30 days`,
+        confidence: Math.min(recentlyUsedType.count / 10, 0.8),
+        basedOn: 'recent-activity'
+      });
+    }
+    
+    // Recommendation 3: Based on available data
+    const [customerCount, customerOrderCount] = await Promise.all([
+      prisma.customer.count(),
+      prisma.customerOrder.count({ where: { status: { not: 'CANCELLED' } } })
+    ]);
+    
+    if (customerOrderCount > customerCount * 0.5) {
+      recommendations.push({
+        recommendedType: 'customer-order',
+        reason: `You have many active customer orders (${customerOrderCount}) - consider order-based billing`,
+        confidence: 0.7,
+        basedOn: 'customer-data'
+      });
+    } else if (customerCount > 10) {
+      recommendations.push({
+        recommendedType: 'direct-customer',
+        reason: `You have a good customer database (${customerCount} customers) - direct billing might be efficient`,
+        confidence: 0.6,
+        basedOn: 'customer-data'
+      });
+    }
+    
+    return recommendations.slice(0, 3); // Return top 3 recommendations
+  } catch (error) {
+    console.error("Error generating billing type recommendations:", error);
+    return [];
+  }
+}
+
+// ==============================================
 // COMPREHENSIVE BILLING ANALYTICS
 // ==============================================
 
@@ -92,6 +276,10 @@ export async function getComprehensiveBillingAnalytics(
     // Get recent billing activity
     const recentActivity = await getRecentBillingActivity();
 
+    // Get billing type analytics
+    const billingTypeBreakdown = await getBillingTypeAnalytics(startDate, endDate);
+    const billingTypeRecommendations = await getBillingTypeRecommendations();
+
     return {
       totalBillingStatements: totalCount,
       totalRevenue: totalRevenue._sum.totalAmount?.toNumber() || 0,
@@ -102,6 +290,8 @@ export async function getComprehensiveBillingAnalytics(
       statusBreakdown,
       topCustomers,
       recentActivity,
+      billingTypeBreakdown,
+      billingTypeRecommendations,
     };
   } catch (error) {
     console.error("Error fetching comprehensive billing analytics:", error);

@@ -37,6 +37,12 @@ import { getAllDeliveryReceipts } from "@/lib/actions/delivery-receipts";
 import { FloatingChatbox } from "@/components/global/floating-chatbox";
 import { formatCurrencyPHP, CURRENCY_SYMBOLS } from "@/lib/constant";
 
+// Import enhanced dashboard components
+import { BillingTypeQuickActions } from "@/components/module/admin/billing/dashboard/billing-type-quick-actions";
+import { BillingTypeAnalyticsCard } from "@/components/module/admin/billing/dashboard/billing-type-analytics-card";
+import { BillingRecommendationsCard } from "@/components/module/admin/billing/dashboard/billing-recommendations-card";
+import { EnhancedRecentStatements } from "@/components/module/admin/billing/dashboard/enhanced-recent-statements";
+
 export const metadata: Metadata = {
   title: "Billing Dashboard",
   description: "Comprehensive billing management and analytics",
@@ -132,23 +138,23 @@ async function BillingDashboardContent() {
           </Card>
         </div>
 
-        {/* Quick Actions */}
+        {/* Enhanced Quick Actions with Billing Type Support */}
+        <BillingTypeQuickActions 
+          billingTypeAnalytics={analytics.billingTypeBreakdown}
+          recommendations={analytics.billingTypeRecommendations}
+        />
+
+        {/* Additional Quick Actions */}
         <Card>
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle>Other Actions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <Button asChild className="h-auto p-4 flex flex-col items-center space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
                 <Link href="/admin/billing/simple-billing-statements">
                   <FileText className="h-6 w-6" />
                   <span>Simple Billing</span>
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                <Link href="/admin/billing/billing-statements/create">
-                  <FileText className="h-6 w-6" />
-                  <span>Create Billing Statement</span>
                 </Link>
               </Button>
               <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
@@ -173,45 +179,25 @@ async function BillingDashboardContent() {
           </CardContent>
         </Card>
 
-        {/* Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Recent Billing Statements</span>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/admin/billing/billing-statements">View All</Link>
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentStatements.data.slice(0, 5).map((statement) => (
-                  <div key={statement.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">{statement.statementNumber}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {statement.customer?.name || 'Unknown Customer'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatCurrencyPHP(statement.netAmount)}</p>
-                      <Badge 
-                        variant={statement.status === 'PAID' ? 'secondary' : 
-                                statement.status === 'OVERDUE' ? 'destructive' : 'outline'}
-                      >
-                        {statement.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        {/* Enhanced Analytics and Recent Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Enhanced Recent Statements with Billing Type Indicators */}
+          <div className="lg:col-span-2">
+            <EnhancedRecentStatements statements={recentStatements.data.slice(0, 5)} />
+          </div>
 
+          {/* Billing Type Analytics */}
+          <div>
+            <BillingTypeAnalyticsCard analytics={analytics.billingTypeBreakdown || []} />
+          </div>
+        </div>
+
+        {/* Recommendations and Sales Invoices */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Smart Recommendations */}
+          <BillingRecommendationsCard recommendations={analytics.billingTypeRecommendations || []} />
+
+          {/* Recent Sales Invoices */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -229,9 +215,9 @@ async function BillingDashboardContent() {
                       <Receipt className="h-4 w-4 text-muted-foreground" />
                       <div>
                         <p className="font-medium">{invoice.invoiceNumber}</p>
-                                                 <p className="text-sm text-muted-foreground">
-                           {invoice.billingStatements?.[0]?.customer?.name || 'Unknown Customer'}
-                         </p>
+                        <p className="text-sm text-muted-foreground">
+                          {invoice.billingStatements?.[0]?.customer?.name || 'Unknown Customer'}
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -290,10 +276,16 @@ export default function BillingDashboard() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button asChild>
+          <Button asChild size="lg" className="shadow-lg hover:shadow-xl transition-all duration-200">
             <Link href="/admin/billing/billing-statements/create">
-              <Plus className="h-4 w-4 mr-2" />
-              New Billing Statement
+              <Plus className="h-5 w-5 mr-2" />
+              Create New Statement
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="lg">
+            <Link href="/admin/billing/billing-statements">
+              <FileText className="h-4 w-4 mr-2" />
+              View All
             </Link>
           </Button>
         </div>

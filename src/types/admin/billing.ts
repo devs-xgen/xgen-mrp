@@ -286,6 +286,26 @@ export interface BillingAnalytics {
 
   // Recent activity
   recentActivity: BillingActivity[];
+
+  // Billing type analytics
+  billingTypeBreakdown?: BillingTypeAnalytics[];
+  billingTypeRecommendations?: BillingTypeRecommendation[];
+}
+
+export interface BillingTypeAnalytics {
+  billingType: 'direct-customer' | 'customer-order' | 'manual-customer';
+  count: number;
+  totalAmount: number;
+  percentage: number;
+  averageAmount: number;
+  lastUsed?: Date;
+}
+
+export interface BillingTypeRecommendation {
+  recommendedType: 'direct-customer' | 'customer-order' | 'manual-customer';
+  reason: string;
+  confidence: number;
+  basedOn: 'usage-pattern' | 'recent-activity' | 'customer-data';
 }
 
 export interface MonthlyRevenue {

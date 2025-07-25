@@ -101,11 +101,12 @@ describe('Billing Statement Creation Page - E2E Integration', () => {
     it('should navigate back when back button is clicked', async () => {
       render(<MockCreateBillingStatementClient />);
 
-      const backButton = screen.getByText('Back to Statements');
-      fireEvent.click(backButton);
+      const backButtons = screen.getAllByText('Back to Statements');
+      const headerBackButton = backButtons[0]; // First one is in the header
+      fireEvent.click(headerBackButton);
 
       // In a real implementation, this would trigger navigation
-      expect(backButton).toBeInTheDocument();
+      expect(headerBackButton).toBeInTheDocument();
     });
 
     it('should navigate to dashboard when dashboard breadcrumb is clicked', async () => {
@@ -193,7 +194,7 @@ describe('Billing Statement Creation Page - E2E Integration', () => {
 
       expect(screen.getByText('Something went wrong')).toBeInTheDocument();
       expect(screen.getByText('Try Again')).toBeInTheDocument();
-      expect(screen.getByText('Back to Statements')).toBeInTheDocument();
+      expect(screen.getAllByText('Back to Statements')).toHaveLength(2); // One in header, one in error state
     });
 
     it('should handle retry functionality', async () => {
