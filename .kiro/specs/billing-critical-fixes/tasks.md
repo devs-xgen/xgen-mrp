@@ -21,14 +21,14 @@
   - Add error handling for params resolution
   - _Requirements: 2.1, 2.2, 2.3_
 
-- [ ] 4. Create PDF generation service for billing documents
+- [x] 4. Create PDF generation service for billing documents
   - Create `src/lib/services/pdf-generator.ts` with PDF generation functions
   - Implement `generateBillingStatementPDF()` function
   - Create PDF templates for billing statements with proper formatting
   - Add company branding and styling to PDF templates
   - _Requirements: 3.3, 4.3, 5.2_
 
-- [ ] 5. Implement delivery receipts page and export functionality
+- [x] 5. Implement delivery receipts page and export functionality
   - Create `src/app/admin/(protected)/billing/delivery-receipts/page.tsx`
   - Implement delivery receipts table component
   - Add download receipt functionality with PDF generation
@@ -36,7 +36,7 @@
   - Add proper loading states and error handling
   - _Requirements: 3.1, 3.2, 3.3_
 
-- [ ] 6. Create delivery receipt PDF generation
+- [x] 6. Create delivery receipt PDF generation
   - Implement `generateDeliveryReceiptPDF()` in PDF generator service
   - Create delivery receipt PDF template with proper formatting
   - Add delivery details, customer information, and item listings

@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Import server actions, types, and new components
 import { getAllDeliveryReceipts, getDeliveryAnalytics } from "@/lib/actions/delivery-receipts";
 import { DeliveryReceiptList } from "@/components/module/admin/billing/delivery-receipt-list";
+import { DeliveryReceiptsExportButton } from "@/components/module/admin/billing/delivery-receipts-export-button";
 
 export const metadata: Metadata = {
   title: "Delivery Receipts",
@@ -163,10 +164,7 @@ export default function DeliveryReceiptsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
+          <DeliveryReceiptsExportButton />
           <Button size="sm" asChild>
             <Link href="/admin/billing/delivery-receipts/create">
               <Plus className="mr-2 h-4 w-4" />
