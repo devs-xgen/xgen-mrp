@@ -19,6 +19,7 @@ import {
 } from "@/types/admin/billing";
 import { BillingStatus as PrismaBillingStatus } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
+import { serializeDecimals, SerializableData } from "@/lib/utils/decimal-serializer";
 
 // ==============================================
 // BILLING STATEMENT CRUD OPERATIONS
@@ -226,7 +227,7 @@ export async function getAllBillingStatements(
     });
 
     return {
-      data: statements as BillingStatementWithRelations[],
+      data: serializeDecimals(statements) as SerializableData<BillingStatementWithRelations[]>,
       pagination: {
         page,
         pageSize,
@@ -368,7 +369,7 @@ export async function getBillingStatementById(
       },
     });
 
-    return statement as BillingStatementWithRelations | null;
+    return statement ? serializeDecimals(statement) as SerializableData<BillingStatementWithRelations> : null;
   } catch (error) {
     console.error("Error fetching billing statement:", error);
     throw new Error("Failed to fetch billing statement");
@@ -482,7 +483,7 @@ export async function createBillingStatement(
 
     return {
       success: true,
-      data: result as BillingStatement,
+      data: serializeDecimals(result) as SerializableData<BillingStatement>,
       message: "Billing statement created successfully",
     };
   } catch (error) {
@@ -539,7 +540,7 @@ export async function updateBillingStatement(
 
     return {
       success: true,
-      data: updatedStatement as BillingStatement,
+      data: serializeDecimals(updatedStatement) as SerializableData<BillingStatement>,
       message: "Billing statement updated successfully",
     };
   } catch (error) {
@@ -582,7 +583,7 @@ export async function updateBillingStatementStatus(
 
     return {
       success: true,
-      data: updatedStatement as BillingStatement,
+      data: serializeDecimals(updatedStatement) as SerializableData<BillingStatement>,
       message: `Billing statement marked as ${status.toLowerCase()}`,
     };
   } catch (error) {

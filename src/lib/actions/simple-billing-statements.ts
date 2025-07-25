@@ -1,6 +1,6 @@
 "use server";
 
-import { createEnhancedBillingStatement, getBillingStatements, updateBillingStatementStatus, deleteBillingStatement } from "./enhanced-billing-statements";
+import { createEnhancedBillingStatement, getBillingStatements, getBillingStatement, updateBillingStatementStatus, deleteBillingStatement } from "./enhanced-billing-statements";
 import { BillingStatus } from "@prisma/client";
 
 interface SimpleBillingStatementData {
@@ -34,4 +34,4 @@ export async function createBillingStatement(data: SimpleBillingStatementData) {
 }
 
 // Re-export enhanced functions for backward compatibility
-export { getBillingStatements, updateBillingStatementStatus, deleteBillingStatement };
+export { getBillingStatements, getBillingStatement, updateBillingStatementStatus, deleteBillingStatement };

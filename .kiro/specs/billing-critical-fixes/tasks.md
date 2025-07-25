@@ -7,14 +7,14 @@
   - Create unit tests for decimal conversion accuracy
   - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 2. Update server actions to handle decimal serialization
+- [x] 2. Update server actions to handle decimal serialization
   - Modify `src/lib/actions/simple-billing-statements.ts` to serialize Decimal objects
   - Update `getBillingStatements()` to return serializable data
   - Update `getBillingStatement()` to serialize individual statement data
   - Create wrapper functions for all billing-related server actions
   - _Requirements: 1.1, 1.2_
 
-- [ ] 3. Fix Next.js params handling in billing statement pages
+- [x] 3. Fix Next.js params handling in billing statement pages
   - Update `src/app/admin/(protected)/billing/billing-statements/[id]/page.tsx` to use React.use()
   - Create params handling utility in `src/lib/utils/params-handler.ts`
   - Update `BillingStatementPage` component to properly await params

@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Decimal } from "@prisma/client/runtime/library";
 import { BillingStatus } from "@prisma/client";
+import { serializeDecimals, SerializableData } from "@/lib/utils/decimal-serializer";
 
 // Interface for customer order-based billing
 interface CustomerOrderBillingData {
@@ -142,7 +143,7 @@ async function createCustomerOrderBilling(
 
   revalidatePath("/admin/billing/billing-statements");
   revalidatePath("/admin/customer-orders");
-  return billingStatement;
+  return serializeDecimals(billingStatement);
 }
 
 async function createManualBilling(
@@ -211,7 +212,7 @@ async function createManualBilling(
   });
 
   revalidatePath("/admin/billing/billing-statements");
-  return billingStatement;
+  return serializeDecimals(billingStatement);
 }
 
 async function generateStatementNumber(): Promise<string> {
@@ -259,7 +260,7 @@ export async function getCustomersForBilling() {
       },
     });
 
-    return customers;
+    return serializeDecimals(customers);
   } catch (error) {
     console.error("Error fetching customers:", error);
     throw new Error("Failed to fetch customers");
@@ -322,11 +323,11 @@ export async function getItemsForBilling() {
       }),
     ]);
 
-    return {
+    return serializeDecimals({
       products,
       materials,
       inventoryItems,
-    };
+    });
   } catch (error) {
     console.error("Error fetching items:", error);
     throw new Error("Failed to fetch items");
@@ -378,10 +379,88 @@ export async function getBillingStatements() {
       },
     });
 
-    return statements;
+    // Serialize decimal fields for client consumption
+    return serializeDecimals(statements);
   } catch (error) {
     console.error("Error fetching billing statements:", error);
     throw new Error("Failed to fetch billing statements");
+  }
+}
+
+export async function getBillingStatement(id: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new Error("Unauthorized");
+    }
+
+    const statement = await prisma.billingStatement.findUnique({
+      where: { id },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            code: true,
+            phone: true,
+            address: true,
+            city: true,
+            state: true,
+            country: true,
+            postalCode: true,
+          },
+        },
+        customerOrder: {
+          select: {
+            id: true,
+            orderNumber: true,
+            orderDate: true,
+            status: true,
+            totalAmount: true,
+          },
+        },
+        salesInvoice: {
+          include: {
+            invoiceItems: {
+              include: {
+                product: {
+                  select: {
+                    id: true,
+                    name: true,
+                    sku: true,
+                  },
+                },
+                material: {
+                  select: {
+                    id: true,
+                    name: true,
+                    sku: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        createdByUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!statement) {
+      return null;
+    }
+
+    // Serialize decimal fields for client consumption
+    return serializeDecimals(statement);
+  } catch (error) {
+    console.error("Error fetching billing statement:", error);
+    throw new Error("Failed to fetch billing statement");
   }
 }
 
@@ -403,7 +482,7 @@ export async function updateBillingStatementStatus(id: string, status: BillingSt
     });
 
     revalidatePath("/admin/billing/billing-statements");
-    return billingStatement;
+    return serializeDecimals(billingStatement);
   } catch (error) {
     console.error("Error updating billing statement status:", error);
     throw new Error("Failed to update billing statement status");
