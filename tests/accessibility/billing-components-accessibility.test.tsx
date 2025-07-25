@@ -1,3 +1,4 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ManualCustomerEntry } from '@/components/module/admin/billing/customer-selection/manual-customer-entry';
@@ -5,77 +6,6 @@ import { EnhancedDirectCustomerSelector } from '@/components/module/admin/billin
 import { InvoiceItemsManager } from '@/components/module/admin/billing/invoice-items/invoice-items-manager';
 import { InvoiceItemRow } from '@/components/module/admin/billing/invoice-items/invoice-item-row';
 import { BulkItemOperations } from '@/components/module/admin/billing/invoice-items/bulk-item-operations';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { describe } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { beforeEach } from 'vitest';
-import { describe } from 'vitest';
-import { expect } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { describe } from 'vitest';
-import { expect } from 'vitest';
-import { expect } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { expect } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { describe } from 'vitest';
-import { expect } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { describe } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { describe } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { expect } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { expect } from 'vitest';
-import { it } from 'vitest';
-import { describe } from 'vitest';
-import { describe } from 'vitest';
 
 // Mock axe for now - would need to install vitest-axe or similar
 const mockAxe = async (container: any) => ({ violations: [] });
@@ -85,9 +15,9 @@ const toHaveNoViolations = (received: any) => ({
 });
 
 // Mock dependencies
-jest.mock('@/lib/actions/customers', () => ({
-  getAllCustomers: jest.fn().mockResolvedValue([]),
-  validateCustomerForBilling: jest.fn().mockResolvedValue({
+vi.mock('@/lib/actions/customers', () => ({
+  getAllCustomers: vi.fn().mockResolvedValue([]),
+  validateCustomerForBilling: vi.fn().mockResolvedValue({
     isValid: true,
     customer: null,
     warnings: [],
@@ -95,10 +25,10 @@ jest.mock('@/lib/actions/customers', () => ({
   }),
 }));
 
-jest.mock('sonner', () => ({
+vi.mock('sonner', () => ({
   toast: {
-    success: jest.fn(),
-    error: jest.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
@@ -106,8 +36,8 @@ describe('Billing Components Accessibility', () => {
   describe('ManualCustomerEntry', () => {
     const defaultProps = {
       customerName: '',
-      onCustomerNameChange: jest.fn(),
-      onClear: jest.fn(),
+      onCustomerNameChange: vi.fn(),
+      onClear: vi.fn(),
     };
 
     it('should have no accessibility violations', async () => {
@@ -144,7 +74,7 @@ describe('Billing Components Accessibility', () => {
 
     it('should support keyboard navigation', async () => {
       const user = userEvent.setup();
-      const onClear = jest.fn();
+      const onClear = vi.fn();
       
       render(
         <ManualCustomerEntry 
@@ -173,8 +103,8 @@ describe('Billing Components Accessibility', () => {
 
   describe('EnhancedDirectCustomerSelector', () => {
     const defaultProps = {
-      onCustomerSelect: jest.fn(),
-      onClear: jest.fn(),
+      onCustomerSelect: vi.fn(),
+      onClear: vi.fn(),
     };
 
     it('should have no accessibility violations', async () => {
@@ -193,7 +123,7 @@ describe('Billing Components Accessibility', () => {
 
     it('should announce selection changes', async () => {
       const user = userEvent.setup();
-      const onCustomerSelect = jest.fn();
+      const onCustomerSelect = vi.fn();
       
       render(
         <EnhancedDirectCustomerSelector 
@@ -212,7 +142,7 @@ describe('Billing Components Accessibility', () => {
   describe('InvoiceItemsManager', () => {
     const defaultProps = {
       items: [],
-      onItemsChange: jest.fn(),
+      onItemsChange: vi.fn(),
     };
 
     it('should have no accessibility violations', async () => {
@@ -248,7 +178,7 @@ describe('Billing Components Accessibility', () => {
 
     it('should support keyboard navigation for actions', async () => {
       const user = userEvent.setup();
-      const onItemsChange = jest.fn();
+      const onItemsChange = vi.fn();
       
       render(
         <InvoiceItemsManager 
@@ -279,10 +209,10 @@ describe('Billing Components Accessibility', () => {
         taxable: true,
       },
       index: 0,
-      onUpdate: jest.fn(),
-      onRemove: jest.fn(),
-      onDuplicate: jest.fn(),
-      onSelect: jest.fn(),
+      onUpdate: vi.fn(),
+      onRemove: vi.fn(),
+      onDuplicate: vi.fn(),
+      onSelect: vi.fn(),
       selected: false,
       canRemove: true,
       errors: {},
@@ -336,8 +266,8 @@ describe('Billing Components Accessibility', () => {
   describe('BulkItemOperations', () => {
     const defaultProps = {
       open: true,
-      onClose: jest.fn(),
-      onAddMultiple: jest.fn(),
+      onClose: vi.fn(),
+      onAddMultiple: vi.fn(),
       maxItems: 50,
       currentItemCount: 0,
     };
@@ -375,33 +305,33 @@ describe('Billing Components Accessibility', () => {
       // Mock window.matchMedia for responsive tests
       Object.defineProperty(window, 'matchMedia', {
         writable: true,
-        value: jest.fn().mockImplementation(query => ({
+        value: vi.fn().mockImplementation(query => ({
           matches: false,
           media: query,
           onchange: null,
-          addListener: jest.fn(),
-          removeListener: jest.fn(),
-          addEventListener: jest.fn(),
-          removeEventListener: jest.fn(),
-          dispatchEvent: jest.fn(),
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
         })),
       });
     });
 
     it('should adapt layout for mobile screens', () => {
       // Mock mobile viewport
-      window.matchMedia = jest.fn().mockImplementation(query => ({
+      window.matchMedia = vi.fn().mockImplementation(query => ({
         matches: query === '(max-width: 768px)',
         media: query,
         onchange: null,
-        addListener: jest.fn(),
-        removeListener: jest.fn(),
-        addEventListener: jest.fn(),
-        removeEventListener: jest.fn(),
-        dispatchEvent: jest.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
       }));
 
-      render(<ManualCustomerEntry customerName="" onCustomerNameChange={jest.fn()} onClear={jest.fn()} />);
+      render(<ManualCustomerEntry customerName="" onCustomerNameChange={vi.fn()} onClear={vi.fn()} />);
       
       // Check that mobile-specific classes are applied
       const container = screen.getByRole('region');
@@ -414,8 +344,8 @@ describe('Billing Components Accessibility', () => {
       render(
         <ManualCustomerEntry 
           customerName={longCustomerName}
-          onCustomerNameChange={jest.fn()}
-          onClear={jest.fn()}
+          onCustomerNameChange={vi.fn()}
+          onClear={vi.fn()}
         />
       );
       
@@ -427,13 +357,13 @@ describe('Billing Components Accessibility', () => {
   describe('Screen Reader Support', () => {
     it('should provide meaningful live region updates', async () => {
       const user = userEvent.setup();
-      const onCustomerNameChange = jest.fn();
+      const onCustomerNameChange = vi.fn();
       
       render(
         <ManualCustomerEntry 
           customerName=""
           onCustomerNameChange={onCustomerNameChange}
-          onClear={jest.fn()}
+          onClear={vi.fn()}
         />
       );
       
@@ -449,7 +379,7 @@ describe('Billing Components Accessibility', () => {
       const { rerender } = render(
         <InvoiceItemsManager 
           items={[]}
-          onItemsChange={jest.fn()}
+          onItemsChange={vi.fn()}
         />
       );
       
@@ -466,7 +396,7 @@ describe('Billing Components Accessibility', () => {
       rerender(
         <InvoiceItemsManager 
           items={newItems}
-          onItemsChange={jest.fn()}
+          onItemsChange={vi.fn()}
         />
       );
       
