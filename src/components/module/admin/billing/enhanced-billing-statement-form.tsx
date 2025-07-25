@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Calculator } from "lucide-react";
+import { Loader2, Calculator, Save, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FormGlobalError, FormValidationSummary } from "@/components/ui/form-section-error";
+import { 
+  FormRecoveryDialog, 
+  AutoSaveStatus, 
+  UnsavedChangesWarning,
+  FormPersistenceInfo 
+} from "@/components/ui/form-recovery-dialog";
 
 import {
   BillingStatementFormData,
@@ -34,6 +40,11 @@ import {
   validateInvoiceItemsStep
 } from "@/lib/validation/enhanced-billing-validation";
 import { useFormValidation, useStepValidation } from "@/hooks/use-form-validation";
+import { 
+  useFormPersistence, 
+  useUnsavedChangesWarning, 
+  useAutoSaveStatus 
+} from "@/hooks/use-form-persistence";
 
 // Form components
 import { BillingFormProgress } from "./form-steps/billing-form-progress";
@@ -63,6 +74,8 @@ interface EnhancedBillingStatementFormProps {
   isSubmitting?: boolean;
   initialData?: Partial<EnhancedBillingStatementFormData>;
   onStepChange?: (step: BillingFormStep) => void;
+  enablePersistence?: boolean;
+  enableAutoSave?: boolean;
 }
 
 export function EnhancedBillingStatementForm({
@@ -70,6 +83,8 @@ export function EnhancedBillingStatementForm({
   isSubmitting = false,
   initialData,
   onStepChange,
+  enablePersistence = true,
+  enableAutoSave = true,
 }: EnhancedBillingStatementFormProps) {
   // UI State
   const [uiState, setUIState] = useState<BillingFormUIState>({
@@ -135,7 +150,45 @@ export function EnhancedBillingStatementForm({
     uiState.currentStep
   );
 
-  // Load initial data
+  // Form persistence
+  const [persistenceState, persistenceActions] = useFormPersistence(
+    form,
+    uiState,
+    setUIState,
+    {
+      enableAutoSave: enablePersistence && enableAutoSave,
+      enableDirtyTracking: enablePersistence,
+      persistenceConfig: {
+        storageKey: 'billing-form-state',
+        autoSaveInterval: 30000, // 30 seconds
+      },
+      onRecoveryAvailable: (data) => {
+        console.log('Recovery data available:', data);
+      },
+      onAutoSave: (success) => {
+        if (!success) {
+          console.warn('Auto-save failed');
+        }
+      },
+    }
+  );
+
+  // Auto-save status
+  const autoSaveStatus = useAutoSaveStatus(
+    persistenceState.lastAutoSave,
+    persistenceState.autoSaveEnabled
+  );
+
+  // Unsaved changes warning
+  useUnsavedChangesWarning(
+    persistenceState.dirtyState.hasUnsavedChanges,
+    'You have unsaved changes in your billing form. Are you sure you want to leave?'
+  );
+
+  // Recovery dialog state
+  const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
+
+  // Load initial data and check for recovery
   useEffect(() => {
     const loadData = async () => {
       setUIState(prev => ({ ...prev, isLoading: true }));
@@ -149,6 +202,11 @@ export function EnhancedBillingStatementForm({
 
         setCustomers(customersResult || []);
         setCustomerOrders(customerOrdersResult || []);
+
+        // Check for recovery data after loading
+        if (enablePersistence && persistenceState.isRecoveryAvailable) {
+          setShowRecoveryDialog(true);
+        }
       } catch (error) {
         console.error("Error loading data:", error);
         const errorMessage = error instanceof Error ? error.message : "Failed to load required data";
@@ -160,7 +218,7 @@ export function EnhancedBillingStatementForm({
     };
 
     loadData();
-  }, []);
+  }, [enablePersistence, persistenceState.isRecoveryAvailable]);
 
   // Step navigation handlers with validation
   const handleStepChange = (step: BillingFormStep) => {
@@ -319,6 +377,13 @@ export function EnhancedBillingStatementForm({
       };
       
       await onSubmit(standardFormData);
+      
+      // Clear persistence data on successful submission
+      if (enablePersistence) {
+        persistenceActions.clearFormData();
+        persistenceActions.markAsSaved();
+        toast.success("Billing statement submitted successfully");
+      }
     } catch (error) {
       console.error("Error submitting form:", error);
       
@@ -334,6 +399,31 @@ export function EnhancedBillingStatementForm({
       
       toast.error("Failed to submit billing statement");
     }
+  };
+
+  // Manual save handler
+  const handleManualSave = () => {
+    if (enablePersistence) {
+      const success = persistenceActions.saveFormData();
+      if (success) {
+        toast.success("Form data saved locally");
+      } else {
+        toast.error("Failed to save form data");
+      }
+    }
+  };
+
+  // Recovery handlers
+  const handleRecoverData = () => {
+    if (persistenceActions.recoverFormData()) {
+      setShowRecoveryDialog(false);
+    }
+  };
+
+  const handleDiscardRecovery = () => {
+    persistenceActions.clearFormData();
+    setShowRecoveryDialog(false);
+    toast.info("Previous session data discarded");
   };
 
   // Enhanced validation for step progression
@@ -453,18 +543,73 @@ export function EnhancedBillingStatementForm({
   const isLastStep = uiState.currentStep === BillingFormStep.REVIEW_SUBMIT;
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        {/* Progress Indicator */}
-        <Card className="bg-card border rounded-lg">
-          <CardContent className="pt-6">
-            <BillingFormProgress
-              currentStep={uiState.currentStep}
-              completedSteps={uiState.completedSteps}
-              totalSteps={billingFormSteps.length}
-            />
-          </CardContent>
-        </Card>
+    <>
+      {/* Form Recovery Dialog */}
+      {enablePersistence && (
+        <FormRecoveryDialog
+          open={showRecoveryDialog}
+          onOpenChange={setShowRecoveryDialog}
+          recoveryData={persistenceState.recoveryData}
+          onRecover={handleRecoverData}
+          onDiscard={handleDiscardRecovery}
+          validationResult={
+            persistenceState.recoveryData
+              ? persistenceActions.loadFormData()
+                ? {
+                    isValid: true,
+                    errors: [],
+                    warnings: [],
+                  }
+                : undefined
+              : undefined
+          }
+        />
+      )}
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          {/* Progress Indicator with Auto-save Status */}
+          <Card className="bg-card border rounded-lg">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <BillingFormProgress
+                  currentStep={uiState.currentStep}
+                  completedSteps={uiState.completedSteps}
+                  totalSteps={billingFormSteps.length}
+                />
+                
+                {enablePersistence && (
+                  <div className="flex items-center gap-4">
+                    <AutoSaveStatus
+                      status={autoSaveStatus.status}
+                      lastSaveText={autoSaveStatus.lastSaveText}
+                    />
+                    
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleManualSave}
+                      disabled={isSubmitting}
+                      className="text-xs"
+                    >
+                      <Save className="h-3 w-3 mr-1" />
+                      Save
+                    </Button>
+                  </div>
+                )}
+              </div>
+              
+              {/* Unsaved Changes Warning */}
+              {enablePersistence && (
+                <UnsavedChangesWarning
+                  show={persistenceState.dirtyState.hasUnsavedChanges}
+                  onSave={handleManualSave}
+                  className="mt-4"
+                />
+              )}
+            </CardContent>
+          </Card>
 
         {/* Global Error Display */}
         {globalError && (
@@ -674,11 +819,22 @@ export function EnhancedBillingStatementForm({
                     {billingFormSteps.find(s => s.id === uiState.currentStep)?.title}
                   </div>
                 </div>
+
+                {/* Form Persistence Info */}
+                {enablePersistence && (
+                  <div className="pt-4 border-t">
+                    <FormPersistenceInfo
+                      storageInfo={persistenceState.storageInfo}
+                      autoSaveEnabled={persistenceState.autoSaveEnabled}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
         </div>
       </form>
     </Form>
+    </>
   );
 }
