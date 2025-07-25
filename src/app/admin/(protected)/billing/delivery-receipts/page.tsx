@@ -1,27 +1,50 @@
 import { Suspense } from "react";
 import { Metadata } from "next";
 import Link from "next/link";
-import { Plus, Truck, Download, FileText } from "lucide-react";
+import { Plus } from "lucide-react";
+import { revalidatePath } from "next/cache";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Import server actions, types, and new components
-import { getAllDeliveryReceipts, getDeliveryAnalytics } from "@/lib/actions/delivery-receipts";
-import { DeliveryReceiptList } from "@/components/module/admin/billing/delivery-receipt-list";
-import { DeliveryReceiptsExportButton } from "@/components/module/admin/billing/delivery-receipts-export-button";
+// Import the new delivery receipts components
+import { getAllDeliveryReceipts } from "@/lib/actions/delivery-receipts";
+import { DeliveryReceiptsDashboard } from "@/components/module/admin/billing/delivery-receipts/delivery-receipts-dashboard";
+import { DataTable } from "@/components/module/admin/billing/delivery-receipts/data-table";
+import { DeliveryReceiptWithBilling, DeliveryAnalytics, DeliveryStatus } from "@/types/admin/billing";
 
 export const metadata: Metadata = {
   title: "Delivery Receipts",
   description: "Track delivery confirmations and manage delivery receipts",
 };
 
+// Server actions for data revalidation
+async function revalidateDeliveryReceipts() {
+  "use server";
+  revalidatePath("/admin/billing/delivery-receipts");
+}
+
+async function refreshDeliveryReceipts() {
+  "use server";
+  revalidatePath("/admin/billing/delivery-receipts", "page");
+}
+
+interface DeliveryReceiptsPageProps {
+  searchParams?: {
+    page?: string;
+    per_page?: string;
+    sort?: string;
+    status?: string;
+    search?: string;
+    courier?: string;
+  };
+}
+
 function DeliveryReceiptsTableSkeleton() {
   return (
     <div className="space-y-4">
-      <Card className="bg-card border rounded-lg">
-        <CardContent className="p-6">
+      <div className="rounded-md border">
+        <div className="p-4">
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="flex items-center space-x-4">
@@ -36,123 +59,63 @@ function DeliveryReceiptsTableSkeleton() {
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
 
-async function DeliveryReceiptsContent() {
-  try {
-    // Fetch delivery receipts and analytics in parallel - display billing statement relationship (Requirement 4.4)
-    const [receiptsResult, analytics] = await Promise.all([
-      getAllDeliveryReceipts({}, 1, 50), // Get first 50 receipts
-      getDeliveryAnalytics()
-    ]);
+export default async function DeliveryReceiptsPage({
+  searchParams,
+}: DeliveryReceiptsPageProps) {
+  // Parse search parameters
+  const page = Number(searchParams?.page) || 1;
+  const perPage = Number(searchParams?.per_page) || 10;
+  const sort = searchParams?.sort;
+  const status = searchParams?.status;
+  const search = searchParams?.search;
+  const courier = searchParams?.courier;
 
-    const receipts = receiptsResult.data;
+  // Build filters object
+  const filters = {
+    ...(status && { status: status.split(",") as DeliveryStatus[] }),
+    ...(courier && { courierService: courier.split(",") }),
+    ...(search && { search }),
+    ...(sort && {
+      sortBy: sort.split(".")[0] as any,
+      sortOrder: sort.split(".")[1] as "asc" | "desc",
+    }),
+  };
 
-    // Calculate additional metrics from actual data
-    const inTransitReceipts = receipts.filter(receipt => receipt.deliveryStatus === 'IN_TRANSIT').length;
-    const withSignature = receipts.filter(receipt => receipt.signatureImage).length;
-    const withPhoto = receipts.filter(receipt => receipt.photoEvidence).length;
+  // Fetch delivery receipts data
+  const deliveryReceiptsData = await getAllDeliveryReceipts(
+    filters,
+    page,
+    perPage
+  );
 
-    return (
-      <>
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card className="bg-card border rounded-lg p-6">
-            <div className="flex items-center space-x-4">
-              <Truck className="h-8 w-8 text-blue-600" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground truncate">
-                  Total Receipts
-                </p>
-                <p className="text-2xl font-bold text-foreground mt-1">
-                  {analytics.totalDeliveries}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {inTransitReceipts} In Transit
-                </p>
-              </div>
-            </div>
-          </Card>
-          
-          <Card className="bg-green-50/90 border border-green-200/70 dark:bg-green-950/30 dark:border-green-800/50 p-6">
-            <div className="flex items-center space-x-4">
-              <Truck className="h-8 w-8 text-green-600" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground truncate">
-                  Delivered
-                </p>
-                <p className="text-2xl font-bold text-foreground mt-1">
-                  {analytics.successfulDeliveries}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {analytics.successRate.toFixed(1)}% Success Rate
-                </p>
-              </div>
-            </div>
-          </Card>
-          
-          <Card className="bg-red-50/90 border border-red-200/70 dark:bg-red-950/30 dark:border-red-800/50 p-6">
-            <div className="flex items-center space-x-4">
-              <Truck className="h-8 w-8 text-red-600" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground truncate">
-                  Failed Deliveries
-                </p>
-                <p className="text-2xl font-bold text-foreground mt-1">
-                  {analytics.failedDeliveries}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Need Attention
-                </p>
-              </div>
-            </div>
-          </Card>
-          
-          <Card className="bg-purple-50/90 border border-purple-200/70 dark:bg-purple-950/30 dark:border-purple-800/50 p-6">
-            <div className="flex items-center space-x-4">
-              <FileText className="h-8 w-8 text-purple-600" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground truncate">
-                  With Proof
-                </p>
-                <p className="text-2xl font-bold text-foreground mt-1">
-                  {withSignature}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {withPhoto} With Photos
-                </p>
-              </div>
-            </div>
-          </Card>
-        </div>
+  const deliveryReceipts = deliveryReceiptsData?.data || [];
 
-        {/* Delivery Receipts List with billing statement relationship display */}
-        <DeliveryReceiptList receipts={receipts} />
-      </>
-    );
-  } catch (error) {
-    console.error('Error loading delivery receipts:', error);
-    return (
-      <Card className="bg-card border rounded-lg p-8">
-        <CardContent className="text-center">
-          <h3 className="text-lg font-semibold mb-2">Error Loading Data</h3>
-          <p className="text-muted-foreground mb-4">
-            Unable to load delivery receipts. Please try refreshing the page.
-          </p>
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            Refresh Page
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-}
+  // Create analytics for dashboard
+  const analytics: DeliveryAnalytics = {
+    totalDeliveries: deliveryReceipts.length,
+    successfulDeliveries: deliveryReceipts.filter(r => r.deliveryStatus === 'DELIVERED').length,
+    failedDeliveries: deliveryReceipts.filter(r => r.deliveryStatus === 'FAILED').length,
+    successRate: deliveryReceipts.length > 0 
+      ? (deliveryReceipts.filter(r => r.deliveryStatus === 'DELIVERED').length / deliveryReceipts.length) * 100 
+      : 0,
+    deliveryMethodBreakdown: [],
+    courierPerformance: [],
+    recentDeliveries: deliveryReceipts.slice(0, 5).map(receipt => ({
+      id: receipt.id,
+      receiptNumber: receipt.receiptNumber,
+      deliveryDate: receipt.deliveryDate,
+      status: receipt.deliveryStatus,
+      customerName: receipt.billingStatement?.customerName || 'Unknown',
+      deliveryMethod: receipt.courierService || 'Standard',
+    })),
+  };
 
-export default function DeliveryReceiptsPage() {
   return (
     <div className="flex flex-col gap-6 p-8 bg-background min-h-screen">
       {/* Page Header */}
@@ -164,7 +127,6 @@ export default function DeliveryReceiptsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <DeliveryReceiptsExportButton />
           <Button size="sm" asChild>
             <Link href="/admin/billing/delivery-receipts/create">
               <Plus className="mr-2 h-4 w-4" />
@@ -174,9 +136,17 @@ export default function DeliveryReceiptsPage() {
         </div>
       </div>
 
-      {/* Content with Suspense */}
+      {/* Dashboard Analytics */}
+      <Suspense fallback={<div>Loading dashboard...</div>}>
+        <DeliveryReceiptsDashboard 
+          receipts={deliveryReceipts} 
+          analytics={analytics}
+        />
+      </Suspense>
+
+      {/* Data Table */}
       <Suspense fallback={<DeliveryReceiptsTableSkeleton />}>
-        <DeliveryReceiptsContent />
+        <DataTable data={deliveryReceipts} />
       </Suspense>
     </div>
   );

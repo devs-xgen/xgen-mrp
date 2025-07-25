@@ -59,6 +59,47 @@ export default function ViewDeliveryReceiptPage() {
     }
   }, [receiptId, router]);
 
+  // Handle export
+  const handleExport = async () => {
+    if (!receipt) return;
+
+    try {
+      setIsLoading(true);
+      
+      // Call the API route to download the PDF
+      const response = await fetch(`/api/admin/billing/delivery-receipts/${receipt.id}/export`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to export PDF");
+      }
+      
+      // Get the filename from the response headers
+      const contentDisposition = response.headers.get('content-disposition');
+      const filename = contentDisposition
+        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
+        : `delivery-receipt-${receipt.receiptNumber}.pdf`;
+      
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("PDF exported successfully!");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to export PDF");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Handle delete
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -129,9 +170,9 @@ export default function ViewDeliveryReceiptPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
-            Export
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading}>
+             <Download className="mr-2 h-4 w-4" />
+             {isLoading ? "Exporting..." : "Export"}
           </Button>
           {receipt.deliveryStatus === 'PENDING' && (
             <>

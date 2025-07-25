@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { exportDeliveryReceiptsData } from "@/lib/actions/delivery-receipts";
 
 export function DeliveryReceiptsExportButton() {
   const [isExporting, setIsExporting] = useState(false);
@@ -20,18 +21,15 @@ export function DeliveryReceiptsExportButton() {
   const handleExportCSV = async () => {
     setIsExporting(true);
     try {
-      const response = await fetch('/api/billing/delivery-receipts/export?format=csv');
+      const { csvContent, filename } = await exportDeliveryReceiptsData();
       
-      if (!response.ok) {
-        throw new Error('Export failed');
-      }
-
-      const blob = await response.blob();
+      // Create and download the CSV file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = `delivery-receipts-${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -56,18 +54,17 @@ export function DeliveryReceiptsExportButton() {
   const handleExportExcel = async () => {
     setIsExporting(true);
     try {
-      const response = await fetch('/api/billing/delivery-receipts/export?format=xlsx');
+      // For now, we'll export as CSV since Excel export requires additional libraries
+      // This can be enhanced later with libraries like xlsx
+      const { csvContent, filename } = await exportDeliveryReceiptsData();
       
-      if (!response.ok) {
-        throw new Error('Export failed');
-      }
-
-      const blob = await response.blob();
+      // Create and download the CSV file (can be opened in Excel)
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = `delivery-receipts-${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.download = filename.replace('.csv', '.csv'); // Keep as CSV for now
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -75,7 +72,7 @@ export function DeliveryReceiptsExportButton() {
 
       toast({
         title: "Export Successful",
-        description: "Delivery receipts exported to Excel successfully.",
+        description: "Delivery receipts exported successfully. The CSV file can be opened in Excel.",
       });
     } catch (error) {
       console.error('Export error:', error);
@@ -110,7 +107,7 @@ export function DeliveryReceiptsExportButton() {
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleExportExcel} disabled={isExporting}>
           <FileSpreadsheet className="mr-2 h-4 w-4" />
-          Export as Excel
+          Export as CSV (Excel Compatible)
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

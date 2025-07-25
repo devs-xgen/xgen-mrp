@@ -1,8 +1,14 @@
 {
   "designSystem": {
     "name": "XGen MRP Design System",
-    "version": "1.3.0",
-    "description": "A consistent design system for the XGen MRP application with enhanced color system through Tailwind CSS custom properties",
+    "version": "2.0.0",
+    "description": "A comprehensive design system for the XGen MRP application with strict component rules, table specifications, and consistency guidelines to prevent unnecessary component creation",
+    "philosophy": {
+      "consistency": "Use existing components and patterns. Never create new components when existing ones can be adapted.",
+      "simplicity": "Keep interfaces clean, direct, and focused on data presentation.",
+      "reusability": "All components must be reusable across different modules and contexts.",
+      "standardization": "Follow established patterns for all UI elements to maintain visual and functional consistency."
+    },
     "colorTheme": {
       "philosophy": "Enhanced color system using Tailwind CSS custom properties to automatically apply subtle backgrounds throughout the application. Standard classes like bg-white now use #F2F3F4 instead of pure white.",
       "implementation": "Colors are defined in CSS custom properties and automatically applied through standard Tailwind classes. No need for manual bg-[#F2F3F4] usage - just use bg-white, bg-card, bg-muted, etc.",
@@ -140,6 +146,433 @@
       "md": "0.375rem",
       "lg": "0.5rem",
       "full": "9999px"
+    }
+  },
+  "componentRules": {
+    "mandatoryComponents": {
+      "description": "These are the ONLY components that should be used. Do not create new ones.",
+      "ui": {
+        "Button": "Use for all clickable actions. Variants: default, destructive, outline, secondary, ghost, link",
+        "Input": "Use for all text inputs. Never create custom input components.",
+        "Select": "Use for all dropdown selections. Never create custom select components.",
+        "Card": "Use for all content containers. Variants: standard, elevated, nested",
+        "Badge": "Use for all status indicators. Never create custom status components.",
+        "Table": "Use for all tabular data. Never create custom table components.",
+        "Dialog": "Use for all modal interactions. Never create custom modal components.",
+        "DropdownMenu": "Use for all action menus. Never create custom menu components.",
+        "Popover": "Use for all floating content. Never create custom popover components.",
+        "ScrollArea": "Use for all scrollable content. Never create custom scroll components.",
+        "Separator": "Use for all visual divisions. Never create custom divider components.",
+        "Skeleton": "Use for all loading states. Never create custom loading components.",
+        "Tooltip": "Use for all hover information. Never create custom tooltip components."
+      },
+      "icons": {
+        "source": "lucide-react ONLY. Never use other icon libraries.",
+        "standardIcons": {
+          "actions": ["Eye", "Edit", "Trash2", "MoreHorizontal", "Plus", "Download", "Upload"],
+          "navigation": ["ChevronLeft", "ChevronRight", "ChevronUp", "ChevronDown", "ArrowLeft", "ArrowRight"],
+          "status": ["Check", "X", "AlertTriangle", "Info", "Clock", "Loader2"],
+          "data": ["Search", "Filter", "SortAsc", "SortDesc", "Calendar", "FileText"],
+          "interface": ["Settings", "Menu", "Home", "User", "Bell", "Mail"]
+        }
+      }
+    },
+    "prohibitedActions": {
+      "noCustomComponents": "Never create components that duplicate existing UI component functionality",
+      "noCustomHooks": "Only create hooks for business logic, never for UI state that can be handled by existing patterns",
+      "noCustomStyles": "Use only Tailwind classes defined in this schema. No custom CSS files.",
+      "noNewPatterns": "Use only the patterns defined in this schema. Do not invent new layout patterns.",
+      "noLibraryMixing": "Stick to the defined tech stack. Do not introduce new UI libraries."
+    },
+    "adaptationRules": {
+      "beforeCreating": [
+        "Check if existing component can be adapted with props",
+        "Check if existing pattern can be modified with different styling",
+        "Check if combination of existing components achieves the goal",
+        "Only create if absolutely no existing solution works"
+      ],
+      "namingConvention": {
+        "components": "PascalCase with descriptive names (e.g., DataTable, not CustomTable)",
+        "files": "kebab-case matching component name (e.g., data-table.tsx)",
+        "props": "camelCase with clear purpose (e.g., showActions, not showStuff)"
+      }
+    }
+  },
+  "tableSpecifications": {
+    "mandatoryStructure": {
+      "description": "ALL tables must follow this exact structure. No exceptions.",
+      "pageLayout": {
+        "container": "flex flex-col gap-6 p-8 bg-background min-h-screen",
+        "pageHeader": {
+          "structure": "flex items-center justify-between",
+          "title": "text-3xl font-bold tracking-tight",
+          "description": "text-muted-foreground mt-1",
+          "actions": "flex items-center gap-2"
+        },
+        "dashboardSection": {
+          "when": "When showing analytics/metrics",
+          "structure": "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4",
+          "card": "bg-card border rounded-lg p-6"
+        },
+        "tableSection": {
+          "container": "space-y-4",
+          "wrapper": "rounded-md border",
+          "table": "w-full"
+        }
+      }
+    },
+    "mandatoryComponents": {
+      "description": "These components MUST be used for all tables. Do not create alternatives.",
+      "DataTable": {
+        "purpose": "Main table component with sorting, filtering, pagination",
+        "requiredFeatures": ["sorting", "filtering", "pagination", "column visibility", "row selection"],
+        "stateManagement": ["sorting", "columnFilters", "columnVisibility", "rowSelection"],
+        "techStack": "@tanstack/react-table"
+      },
+      "DataTableToolbar": {
+        "purpose": "Search and filter controls",
+        "requiredFeatures": ["text search", "faceted filters", "filter reset", "column visibility"],
+        "layout": "flex items-center justify-between",
+        "components": ["Input for search", "DataTableFacetedFilter", "DataTableViewOptions", "Button for reset"]
+      },
+      "DataTableColumnHeader": {
+        "purpose": "Sortable column headers",
+        "requiredFeatures": ["sort indicators", "click to sort", "accessible labels"],
+        "icons": ["ArrowUpIcon", "ArrowDownIcon", "CaretSortIcon"]
+      },
+      "DataTableFacetedFilter": {
+        "purpose": "Multi-select filter with search",
+        "requiredFeatures": ["search within options", "selected count badges", "clear filters"],
+        "ui": "Popover with Command component"
+      },
+      "DataTablePagination": {
+        "purpose": "Pagination controls",
+        "requiredFeatures": ["page navigation", "page size selection", "total count display"],
+        "pageSizes": [10, 20, 50, 100]
+      }
+    },
+    "mandatoryColumnTypes": {
+      "description": "Use these standardized column types. Do not create custom column types.",
+      "selection": {
+        "id": "select",
+        "component": "Checkbox",
+        "header": "Checkbox for select all",
+        "cell": "Checkbox for individual selection",
+        "enableSorting": false,
+        "enableHiding": false
+      },
+      "identifier": {
+        "purpose": "Primary identifier (ID, receipt number, etc.)",
+        "styling": "font-mono text-sm",
+        "features": ["copyable", "linkable"],
+        "pattern": "Copy to clipboard on click"
+      },
+      "status": {
+        "purpose": "Status indicators",
+        "component": "Badge with conditional styling",
+        "colorMapping": {
+          "active": "bg-green-100 text-green-800",
+          "pending": "bg-yellow-100 text-yellow-800",
+          "completed": "bg-green-100 text-green-800",
+          "cancelled": "bg-gray-100 text-gray-800",
+          "failed": "bg-red-100 text-red-800"
+        },
+        "nullSafety": "Always provide fallback value"
+      },
+      "date": {
+        "purpose": "Date display",
+        "formatting": "new Date(date).toLocaleDateString()",
+        "styling": "text-sm text-gray-600",
+        "sorting": "Automatic date sorting"
+      },
+      "currency": {
+        "purpose": "Money values",
+        "formatting": "new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })",
+        "styling": "text-right font-mono",
+        "nullSafety": "Display '-' for null values"
+      },
+      "actions": {
+        "id": "actions",
+        "purpose": "Row action dropdown",
+        "component": "DropdownMenu",
+        "trigger": "Button variant='ghost' h-8 w-8 p-0 with MoreHorizontal icon",
+        "enableSorting": false,
+        "enableHiding": false
+      }
+    },
+    "mandatoryActionStructure": {
+      "description": "ALL action dropdowns must follow this exact structure",
+      "menuStructure": [
+        "DropdownMenuLabel: 'Actions'",
+        "Utility actions (Copy ID) - if applicable",
+        "DropdownMenuSeparator",
+        "Primary actions (View, Edit)",
+        "DropdownMenuSeparator",
+        "Conditional actions (View Signature, View Photo, etc.) - if applicable",
+        "Download actions (Export PDF, Download) - if applicable",
+        "DropdownMenuSeparator",
+        "Destructive actions (Delete)"
+      ],
+      "actionTypes": {
+        "view": {
+          "icon": "Eye",
+          "pattern": "Link to detail page",
+          "href": "/admin/[module]/[entity]/${id}"
+        },
+        "edit": {
+          "icon": "Edit",
+          "pattern": "Link to edit page",
+          "href": "/admin/[module]/[entity]/${id}/edit"
+        },
+        "conditional": {
+          "description": "Show only when condition is met",
+          "examples": ["View Signature (if signatureImage)", "View Photo (if photoEvidence)"]
+        },
+        "download": {
+          "icon": "Download",
+          "pattern": "onClick handler for downloads",
+          "examples": ["Export PDF", "Download Document"]
+        },
+        "destructive": {
+          "icon": "Trash2",
+          "styling": "text-destructive",
+          "pattern": "Delete with confirmation",
+          "placement": "Always at bottom, separated"
+        },
+        "utility": {
+          "description": "Helper actions",
+          "pattern": "navigator.clipboard.writeText()",
+          "examples": ["Copy ID", "Copy Link"]
+        }
+      }
+    },
+    "mandatoryStates": {
+      "loading": {
+        "component": "Skeleton or Loader2 with animate-spin",
+        "pattern": "Show skeleton rows matching table structure",
+        "duration": "Minimum 200ms to prevent flashing"
+      },
+      "empty": {
+        "structure": "text-center py-12",
+        "icon": "Relevant icon (h-12 w-12 mx-auto text-muted-foreground mb-4)",
+        "title": "text-lg font-medium mb-2",
+        "description": "text-muted-foreground",
+        "action": "Button to add first item (if applicable)"
+      },
+      "error": {
+        "structure": "text-center py-12",
+        "icon": "AlertTriangle (h-12 w-12 mx-auto text-muted-foreground mb-4)",
+        "title": "text-lg font-medium mb-2",
+        "description": "text-muted-foreground",
+        "action": "Button to retry"
+      }
+    },
+    "mandatoryFiltering": {
+      "textSearch": {
+        "component": "Input with Search icon",
+        "placeholder": "Search [entity name]...",
+        "debounce": "300ms",
+        "searchFields": "Define which fields are searchable"
+      },
+      "facetedFilters": {
+        "statusFilter": {
+          "title": "Status",
+          "options": "Array of {label, value, icon?}",
+          "component": "DataTableFacetedFilter"
+        },
+        "dateFilter": {
+          "component": "DateRangePicker or Select with predefined ranges",
+          "options": ["Today", "Yesterday", "Last 7 days", "Last 30 days", "Custom range"]
+        }
+      },
+      "urlState": {
+        "parameters": ["page", "per_page", "search", "status", "sort"],
+        "persistence": "State persists across page refreshes",
+        "sharing": "URLs can be shared with filters applied"
+      }
+    }
+  },
+  "dataDisplayRules": {
+    "description": "Rules for displaying data consistently across all tables and components",
+    "nullHandling": {
+      "text": "Display '-' for null text values",
+      "numbers": "Display '-' for null numeric values",
+      "dates": "Display '-' for null dates",
+      "status": "Display 'Unknown' for null status values",
+      "images": "Display placeholder icon for missing images"
+    },
+    "formatting": {
+      "dates": "Use toLocaleDateString() for consistency",
+      "currency": "Use Intl.NumberFormat with USD currency",
+      "numbers": "Use Intl.NumberFormat for large numbers",
+      "percentages": "Show with % symbol and 1 decimal place",
+      "identifiers": "Use monospace font for IDs and codes"
+    },
+    "truncation": {
+      "longText": "Truncate with ellipsis after 50 characters",
+      "tooltips": "Show full text on hover for truncated content",
+      "expandable": "Use 'Show more' pattern for very long content"
+    },
+    "statusColors": {
+      "success": "green-100 background, green-800 text",
+      "warning": "yellow-100 background, yellow-800 text",
+      "error": "red-100 background, red-800 text",
+      "info": "blue-100 background, blue-800 text",
+      "neutral": "gray-100 background, gray-800 text"
+    }
+   },
+   "implementationGuidelines": {
+     "description": "Step-by-step guidelines for implementing any new page or feature",
+     "mandatorySteps": {
+       "1_analysis": {
+         "description": "Before writing any code, analyze existing patterns",
+         "checklist": [
+           "Check if similar page already exists",
+           "Identify which table pattern to use",
+           "List required data fields and their types",
+           "Determine necessary filters and actions",
+           "Check if any custom logic is needed"
+         ]
+      },
+      "2_dataLayer": {
+        "description": "Set up data fetching and types",
+        "files": [
+          "types/[module]/index.ts - Define TypeScript interfaces",
+          "lib/actions/[module].ts - Server actions for data fetching",
+          "lib/validation/[module].ts - Zod schemas for validation"
+        ],
+        "patterns": [
+          "Use existing type patterns",
+          "Follow naming conventions",
+          "Include proper error handling"
+        ]
+      },
+      "3_tableImplementation": {
+        "description": "Implement table using mandatory components",
+        "files": [
+          "app/admin/[module]/[entity]/columns.tsx - Column definitions",
+          "app/admin/[module]/[entity]/page.tsx - Main page component"
+        ],
+        "requirements": [
+          "Use DataTable component",
+          "Follow mandatoryColumnTypes",
+          "Implement mandatoryActionStructure",
+          "Include all mandatoryStates"
+        ]
+      },
+      "4_testing": {
+        "description": "Test implementation thoroughly",
+        "checklist": [
+          "Test all table states (loading, empty, error)",
+          "Test all filters and search",
+          "Test all actions in dropdown",
+          "Test responsive behavior",
+          "Test URL state persistence"
+        ]
+      }
+    },
+    "fileStructureTemplates": {
+      "tablePage": {
+        "description": "Standard file structure for any table page",
+        "files": {
+          "page.tsx": {
+            "purpose": "Main page component with data fetching",
+            "structure": [
+              "Import statements",
+              "Server component with data fetching",
+              "Page header with title and actions",
+              "Dashboard cards (if needed)",
+              "DataTable component"
+            ]
+          },
+          "columns.tsx": {
+            "purpose": "Column definitions for the table",
+            "structure": [
+              "Import statements (icons, components, types)",
+              "Column definitions array",
+              "Action dropdown implementation",
+              "Export columns array"
+            ]
+          },
+          "data-table.tsx": {
+            "purpose": "Reusable DataTable component (if not exists)",
+            "note": "Use existing DataTable component, do not create new one"
+          }
+        }
+      },
+      "formPage": {
+        "description": "Standard file structure for form pages",
+        "files": {
+          "page.tsx": "Main form page component",
+          "form.tsx": "Form component with validation",
+          "schema.ts": "Zod validation schema"
+        }
+      }
+    },
+    "codeTemplates": {
+      "columnDefinition": {
+        "identifier": "{\n  accessorKey: 'id',\n  header: 'ID',\n  cell: ({ row }) => (\n    <div className=\"font-mono text-sm\">\n      {row.getValue('id')}\n    </div>\n  )\n}",
+        "status": "{\n  accessorKey: 'status',\n  header: ({ column }) => (\n    <DataTableColumnHeader column={column} title=\"Status\" />\n  ),\n  cell: ({ row }) => {\n    const status = row.getValue('status') as string\n    return (\n      <Badge variant=\"outline\" className={getStatusColor(status)}>\n        {status || 'Unknown'}\n      </Badge>\n    )\n  },\n  filterFn: (row, id, value) => {\n    return value.includes(row.getValue(id))\n  }\n}",
+        "actions": "{\n  id: 'actions',\n  enableHiding: false,\n  cell: ({ row }) => {\n    const item = row.original\n    return (\n      <DropdownMenu>\n        <DropdownMenuTrigger asChild>\n          <Button variant=\"ghost\" className=\"h-8 w-8 p-0\">\n            <span className=\"sr-only\">Open menu</span>\n            <MoreHorizontal className=\"h-4 w-4\" />\n          </Button>\n        </DropdownMenuTrigger>\n        <DropdownMenuContent align=\"end\">\n          <DropdownMenuLabel>Actions</DropdownMenuLabel>\n          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(item.id)}>\n            Copy ID\n          </DropdownMenuItem>\n          <DropdownMenuSeparator />\n          <DropdownMenuItem asChild>\n            <Link href={`/admin/module/entity/${item.id}`}>\n              <Eye className=\"mr-2 h-4 w-4\" />\n              View\n            </Link>\n          </DropdownMenuItem>\n          <DropdownMenuItem asChild>\n            <Link href={`/admin/module/entity/${item.id}/edit`}>\n              <Edit className=\"mr-2 h-4 w-4\" />\n              Edit\n            </Link>\n          </DropdownMenuItem>\n          <DropdownMenuSeparator />\n          <DropdownMenuItem className=\"text-destructive\">\n            <Trash2 className=\"mr-2 h-4 w-4\" />\n            Delete\n          </DropdownMenuItem>\n        </DropdownMenuContent>\n      </DropdownMenu>\n    )\n  }\n}"
+      },
+      "pageStructure": "export default async function EntityPage({\n  searchParams\n}: {\n  searchParams: { [key: string]: string | string[] | undefined }\n}) {\n  const data = await fetchEntityData(searchParams)\n  \n  return (\n    <div className=\"flex flex-col gap-6 p-8 bg-background min-h-screen\">\n      <div className=\"flex items-center justify-between\">\n        <div>\n          <h1 className=\"text-3xl font-bold tracking-tight\">Entity Name</h1>\n          <p className=\"text-muted-foreground mt-1\">Manage your entities</p>\n        </div>\n        <div className=\"flex items-center gap-2\">\n          <Button asChild>\n            <Link href=\"/admin/module/entity/new\">\n              <Plus className=\"mr-2 h-4 w-4\" />\n              Add Entity\n            </Link>\n          </Button>\n        </div>\n      </div>\n      \n      <div className=\"space-y-4\">\n        <DataTable\n          columns={columns}\n          data={data}\n          searchKey=\"name\"\n          searchPlaceholder=\"Search entities...\"\n        />\n      </div>\n    </div>\n  )\n}"
+    }
+  },
+  "qualityAssurance": {
+    "description": "Mandatory quality checks before considering any implementation complete",
+    "codeQuality": {
+      "typeScript": [
+        "All props must have proper TypeScript interfaces",
+        "No 'any' types allowed",
+        "All data must be properly typed",
+        "Use proper generic types for reusable components"
+      ],
+      "errorHandling": [
+        "All async operations must have error handling",
+        "All data access must have null checks",
+        "All external API calls must have timeout handling",
+        "User-friendly error messages for all error states"
+      ],
+      "performance": [
+        "Use proper memoization for expensive calculations",
+        "Implement proper loading states",
+        "Use server-side data fetching when possible",
+        "Optimize re-renders with proper dependency arrays"
+      ]
+    },
+    "userExperience": {
+      "accessibility": [
+        "All interactive elements must be keyboard accessible",
+        "All images must have alt text",
+        "All forms must have proper labels",
+        "Color cannot be the only way to convey information"
+      ],
+      "responsiveness": [
+        "Test on mobile, tablet, and desktop",
+        "Ensure touch targets are at least 44px",
+        "Text must be readable at all screen sizes",
+        "Tables must be horizontally scrollable on mobile"
+      ],
+      "feedback": [
+        "All actions must provide immediate feedback",
+        "Loading states for all async operations",
+        "Success/error messages for all form submissions",
+        "Confirmation dialogs for destructive actions"
+      ]
+    },
+    "consistency": {
+      "visual": [
+        "Use only colors defined in the design system",
+        "Use only spacing values defined in the design system",
+        "Use only typography scales defined in the design system",
+        "Follow the exact component patterns defined"
+      ],
+      "functional": [
+        "All similar actions must behave the same way",
+        "All tables must have the same features",
+        "All forms must have the same validation patterns",
+        "All error states must look and behave the same"
+      ]
     }
   },
   "components": {
@@ -357,27 +790,103 @@
     },
     "tables": {
       "dataTable": {
-        "description": "Standard data table pattern with consistent styling",
+        "description": "Advanced data table pattern with comprehensive features based on delivery receipts implementation",
+        "architecture": {
+          "philosophy": "Server-side data fetching with URL state management, component composition for reusability, type safety throughout data flow",
+          "techStack": "@tanstack/react-table, Next.js App Router, TypeScript, Tailwind CSS, Lucide React"
+        },
         "structure": {
-          "container": "bg-card border rounded-lg overflow-hidden",
-          "header": "p-6 pb-4 border-b bg-card",
-          "toolbar": "flex items-center justify-between gap-4 flex-wrap mb-4",
-          "tableWrapper": "overflow-auto",
-          "table": "w-full",
-          "footer": "p-4 border-t bg-card"
+          "pageContainer": "flex flex-col gap-6 p-8 bg-background min-h-screen",
+          "pageHeader": "flex items-center justify-between",
+          "dashboardSection": "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4",
+          "tableContainer": "space-y-4",
+          "tableWrapper": "rounded-md border",
+          "table": "w-full"
         },
         "components": {
-          "dataTable": "Base table component with consistent row styling",
-          "dataTableToolbar": "Search and filter controls with responsive layout",
-          "dataTableColumnHeader": "Sortable column headers with clear visual feedback",
-          "dataTablePagination": "Pagination controls with page size options",
-          "dataTableRowActions": "Action dropdown for each row with consistent styling"
+          "dataTable": {
+            "description": "Main table component with state management",
+            "features": ["sorting", "filtering", "pagination", "column visibility", "row selection"],
+            "state": ["sorting", "columnFilters", "columnVisibility", "rowSelection"]
+          },
+          "dataTableToolbar": {
+            "description": "Search and filter controls with responsive layout",
+            "features": ["text search", "faceted filters", "filter reset", "column visibility toggle"],
+            "layout": "flex items-center justify-between"
+          },
+          "dataTableColumnHeader": {
+            "description": "Sortable column headers with clear visual feedback",
+            "features": ["sort indicators", "click to sort", "accessible labels"],
+            "icons": ["ArrowUpIcon", "ArrowDownIcon", "CaretSortIcon"]
+          },
+          "dataTableFacetedFilter": {
+            "description": "Multi-select filter with search and badges",
+            "features": ["search within options", "selected count badges", "clear filters", "facet counts"],
+            "ui": "Popover with Command component"
+          },
+          "dataTablePagination": {
+            "description": "Pagination controls with page size options",
+            "features": ["page navigation", "page size selection", "total count display", "keyboard navigation"]
+          },
+          "dataTableViewOptions": {
+            "description": "Column visibility toggle",
+            "features": ["show/hide columns", "persistent state", "accessible controls"]
+          }
         },
         "styling": {
-          "headerRow": "bg-muted/50 border-b",
-          "dataRow": "border-b hover:bg-muted/30 transition-colors",
-          "cell": "p-4 align-middle",
-          "headerCell": "p-4 text-left font-medium"
+          "headerRow": "bg-muted/50",
+          "dataRow": "hover:bg-muted/30 transition-colors",
+          "cell": "p-4",
+          "headerCell": "bg-muted/50",
+          "selectedRow": "data-state selected",
+          "emptyState": "h-24 text-center"
+        },
+        "actionSystem": {
+          "description": "Comprehensive action dropdown for each row",
+          "structure": "DropdownMenu with categorized actions",
+          "actionTypes": {
+            "view": {
+              "icon": "Eye",
+              "pattern": "Link to detail page",
+              "example": "/admin/[module]/[entity]/${id}"
+            },
+            "edit": {
+              "icon": "Edit",
+              "pattern": "Link to edit page",
+              "example": "/admin/[module]/[entity]/${id}/edit"
+            },
+            "conditional": {
+              "description": "Actions shown only when conditions are met",
+              "examples": ["View Signature (if signatureImage exists)", "View Photo (if photoEvidence exists)"]
+            },
+            "download": {
+              "icon": "Download",
+              "pattern": "onClick handler for file downloads",
+              "example": "Export PDF, Download Document"
+            },
+            "destructive": {
+              "icon": "Trash2",
+              "styling": "text-destructive",
+              "pattern": "Delete action with confirmation",
+              "placement": "Separated at bottom of menu"
+            },
+            "utility": {
+              "description": "Helper actions like copy ID",
+              "pattern": "navigator.clipboard.writeText()",
+              "placement": "Top of menu after label"
+            }
+          },
+          "menuStructure": [
+            "DropdownMenuLabel: 'Actions'",
+            "Utility actions (Copy ID)",
+            "DropdownMenuSeparator",
+            "Primary actions (View, Edit)",
+            "DropdownMenuSeparator", 
+            "Conditional actions (View Signature, View Photo, View Address)",
+            "Download actions (Export PDF)",
+            "DropdownMenuSeparator",
+            "Destructive actions (Delete)"
+          ]
         }
       },
       "tableStates": {
@@ -393,7 +902,8 @@
           "icon": "w-16 h-16 mx-auto mb-4 text-muted-foreground/50",
           "title": "text-lg font-medium mb-2",
           "description": "text-muted-foreground",
-          "action": "mt-4"
+          "action": "mt-4",
+          "example": "<TableRow><TableCell colSpan={columns.length} className=\"h-24 text-center\">No results.</TableCell></TableRow>"
         },
         "error": {
           "description": "Error state when data loading fails",
@@ -405,20 +915,114 @@
         }
       },
       "tableToolbar": {
-        "description": "Standard toolbar above data tables",
-        "structure": "flex items-center justify-between gap-4 flex-wrap p-6 pb-4 border-b bg-card",
+        "description": "Advanced toolbar with search and filtering capabilities",
+        "structure": "flex items-center justify-between",
         "leftSection": {
           "description": "Search and filter controls",
-          "structure": "flex items-center gap-4 flex-1",
-          "searchBox": "relative max-w-sm",
-          "filters": "flex items-center gap-2"
+          "structure": "flex flex-1 items-center space-x-2",
+          "searchBox": {
+            "component": "Input",
+            "placeholder": "Filter by [primary field]...",
+            "styling": "h-8 w-[150px] lg:w-[250px]",
+            "binding": "table.getColumn('[field]')?.getFilterValue()"
+          },
+          "facetedFilters": {
+            "description": "Multi-select filters for categorical data",
+            "example": "Status filter with PENDING, IN_TRANSIT, DELIVERED options",
+            "conditional": "Only show if column exists: table.getColumn('[field]')"
+          },
+          "resetButton": {
+            "description": "Clear all filters button",
+            "condition": "Show when isFiltered = table.getState().columnFilters.length > 0",
+            "styling": "variant='ghost' h-8 px-2 lg:px-3",
+            "icon": "Cross2Icon"
+          }
         },
         "rightSection": {
-          "description": "Action buttons and view controls",
-          "structure": "flex items-center gap-2",
-          "actions": "flex items-center gap-2",
-          "viewToggle": "flex items-center gap-1"
+          "description": "View controls and actions",
+          "structure": "DataTableViewOptions component",
+          "features": ["Column visibility toggle", "Export options", "Bulk actions"]
         }
+      },
+      "columnDefinitions": {
+        "description": "Comprehensive column definition patterns",
+        "columnTypes": {
+          "selection": {
+            "id": "select",
+            "purpose": "Row selection checkbox",
+            "features": ["Select all", "Individual selection", "Bulk actions"],
+            "enableSorting": false,
+            "enableHiding": false
+          },
+          "identifier": {
+            "purpose": "Primary identifier with link to detail page",
+            "pattern": "Link component with hover effects",
+            "styling": "font-medium text-blue-600 hover:text-blue-800 hover:underline"
+          },
+          "status": {
+            "purpose": "Status badges with color coding",
+            "component": "Badge with conditional styling",
+            "colorMapping": {
+              "PENDING": "bg-yellow-100 text-yellow-800",
+              "IN_TRANSIT": "bg-blue-100 text-blue-800", 
+              "DELIVERED": "bg-green-100 text-green-800",
+              "FAILED": "bg-red-100 text-red-800",
+              "CANCELLED": "bg-gray-100 text-gray-800"
+            },
+            "filterFn": "value.includes(row.getValue(id))",
+            "nullSafety": "status ? status.replace('_', ' ') : 'Unknown'"
+          },
+          "date": {
+            "purpose": "Formatted date display",
+            "formatting": "new Date(date).toLocaleDateString()",
+            "styling": "text-sm text-gray-600",
+            "sorting": "Automatic date sorting"
+          },
+          "actions": {
+            "id": "actions",
+            "purpose": "Row action dropdown menu",
+            "component": "DropdownMenu with comprehensive actions",
+            "trigger": "Button variant='ghost' h-8 w-8 p-0 with MoreHorizontal icon"
+          }
+        },
+        "headerPattern": {
+          "sortable": "DataTableColumnHeader component with column and title props",
+          "nonSortable": "Plain div with title",
+          "conditional": "Check column.getCanSort() before rendering sort controls"
+        }
+      },
+      "urlStateManagement": {
+        "description": "Synchronize table state with URL parameters",
+        "parameters": {
+          "page": "Current page number",
+          "per_page": "Items per page",
+          "search": "Search query",
+          "status": "Comma-separated status filters",
+          "sort": "Sort field and direction"
+        },
+        "implementation": {
+          "hook": "useDataTableState with useRouter and useSearchParams",
+          "parsing": "Parse URL params to state object",
+          "updating": "Update URL when state changes",
+          "persistence": "State persists across page refreshes"
+        }
+      },
+      "dashboardIntegration": {
+        "description": "Analytics dashboard above data table",
+        "layout": "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4",
+        "cardTypes": {
+          "metric": {
+            "structure": "Card with header (title + icon) and content (value + subtitle)",
+            "variants": ["default", "success", "warning", "error"],
+            "features": ["Trend indicators", "Comparison values", "Click actions"]
+          },
+          "chart": {
+            "purpose": "Visual data representation",
+            "integration": "Recharts or similar charting library",
+            "responsive": "Adjust chart size based on screen size"
+          }
+        },
+        "dataFlow": "Same data source as table, aggregated for analytics"
       }
     }
   },
@@ -455,6 +1059,28 @@
     }
   },
   "bestPractices": {
+    "enforcementRules": {
+      "description": "These rules MUST be followed. No exceptions.",
+      "componentCreation": [
+        "NEVER create a new component if an existing one can be adapted",
+        "NEVER create custom UI components that duplicate shadcn/ui functionality",
+        "NEVER create custom table components - use DataTable pattern only",
+        "NEVER create custom form components - use existing form patterns only",
+        "NEVER create custom modal components - use Dialog component only"
+      ],
+      "styling": [
+        "NEVER write custom CSS - use only Tailwind classes defined in this schema",
+        "NEVER use inline styles",
+        "NEVER use CSS modules or styled-components",
+        "NEVER create custom color values - use only design system colors"
+      ],
+      "patterns": [
+        "NEVER deviate from the mandatoryStructure for tables",
+        "NEVER create custom layout patterns - use only defined layouts",
+        "NEVER create custom loading states - use Skeleton or Loader2 only",
+        "NEVER create custom error states - use defined error patterns only"
+      ]
+    },
     "colorTheme": [
       "Use bg-[#F2F3F4] as the primary background for cards and main content areas",
       "Apply bg-[#F8F9FA] for nested content or secondary panels within cards",
@@ -484,27 +1110,71 @@
       "Consider using grid layouts for dense forms"
     ],
     "tableDesign": [
-      "Always wrap tables in bg-card containers with rounded corners for visual definition",
-      "Use bg-muted/50 for table headers to distinguish from data rows",
-      "Apply hover:bg-muted/30 to data rows for interactive feedback",
-      "Include comprehensive search and filter capabilities in the toolbar",
-      "Use consistent row actions with dropdown menus for multiple actions",
-      "Implement pagination for datasets with >50 items",
-      "Allow column sorting where appropriate with clear visual indicators",
-      "Use skeleton loaders or loading states during data fetching",
-      "Provide empty states with helpful icons and action buttons",
-      "Include error states with retry mechanisms",
-      "Use consistent cell padding (p-4) for readability",
-      "Implement responsive design - hide less important columns on mobile",
-      "Add summary cards above tables when showing key metrics",
-      "Use sidebar layouts for complex filtering requirements",
-      "Maintain consistent spacing between page header, summary cards, and table (gap-6)"
+      "ARCHITECTURE: Use server-side data fetching with URL state management for scalability",
+      "LAYOUT: Always wrap tables in rounded-md border containers for visual definition",
+      "STYLING: Use bg-muted/50 for table headers to distinguish from data rows",
+      "INTERACTION: Apply hover:bg-muted/30 to data rows for interactive feedback",
+      "SEARCH: Include comprehensive text search in toolbar with proper debouncing",
+      "FILTERING: Implement faceted filters for categorical data with multi-select capability",
+      "ACTIONS: Use consistent row actions with dropdown menus containing categorized actions",
+      "PAGINATION: Implement pagination for datasets with >50 items with page size options",
+      "SORTING: Allow column sorting where appropriate with clear visual indicators (arrows)",
+      "LOADING: Use skeleton loaders or loading states during data fetching",
+      "EMPTY STATES: Provide helpful empty states with icons and clear action buttons",
+      "ERROR HANDLING: Include error states with retry mechanisms and clear error messages",
+      "SPACING: Use consistent cell padding (p-4) for readability and visual balance",
+      "RESPONSIVE: Implement mobile-first design - hide less important columns on mobile",
+      "ANALYTICS: Add dashboard cards above tables when showing key metrics (4-column grid)",
+      "COMPLEX FILTERING: Use sidebar layouts for advanced filtering requirements",
+      "PAGE STRUCTURE: Maintain consistent spacing between page header, dashboard, and table (gap-6)",
+      "STATE MANAGEMENT: Synchronize all table state (filters, sorting, pagination) with URL parameters",
+      "ACCESSIBILITY: Ensure full keyboard navigation and screen reader support",
+      "PERFORMANCE: Use proper memoization and avoid loading all data client-side",
+      "COLUMN TYPES: Implement standardized column patterns (selection, identifier, status, date, actions)",
+      "STATUS BADGES: Use color-coded badges with consistent color mapping across the application",
+      "ACTION MENUS: Structure action menus with logical grouping and separators",
+      "CONDITIONAL ACTIONS: Show actions only when relevant (e.g., View Signature if signature exists)",
+      "DESTRUCTIVE ACTIONS: Always separate destructive actions and use appropriate styling",
+      "NULL SAFETY: Implement proper null checks and fallback values for all data fields",
+      "TYPE SAFETY: Use TypeScript throughout for better developer experience and fewer runtime errors"
     ],
     "iconUsage": [
       "Use icons consistently across similar components",
       "Pair icons with text for better clarity",
       "Keep icon sizes consistent within contexts",
       "Use color to enhance meaning, not as the sole indicator"
+    ]
+  },
+  "validationChecklist": {
+    "description": "Final checklist before any code is considered complete",
+    "preImplementation": [
+      "✓ Analyzed existing patterns and confirmed no similar implementation exists",
+      "✓ Identified exact components and patterns to use from this schema",
+      "✓ Confirmed no new components need to be created",
+      "✓ Planned data structure and types",
+      "✓ Identified required filters and actions"
+    ],
+    "duringImplementation": [
+      "✓ Using only mandatoryComponents defined in this schema",
+      "✓ Following mandatoryStructure for page layout",
+      "✓ Implementing mandatoryColumnTypes for table columns",
+      "✓ Following mandatoryActionStructure for action menus",
+      "✓ Including all mandatoryStates (loading, empty, error)",
+      "✓ Using only approved icons from lucide-react",
+      "✓ Following dataDisplayRules for consistent formatting",
+      "✓ Implementing proper TypeScript types"
+    ],
+    "postImplementation": [
+      "✓ All table states work correctly (loading, empty, error)",
+      "✓ All filters and search functionality work",
+      "✓ All actions in dropdown menus work",
+      "✓ Page is responsive on mobile, tablet, and desktop",
+      "✓ URL state persistence works correctly",
+      "✓ No console errors or warnings",
+      "✓ Accessibility requirements met",
+      "✓ Performance is acceptable",
+      "✓ Code follows TypeScript best practices",
+      "✓ Visual consistency with other pages confirmed"
     ]
   },
   "exampleImplementations": {

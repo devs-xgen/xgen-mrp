@@ -18,6 +18,7 @@ import {
 } from "@/types/admin/billing";
 import { DeliveryStatus as PrismaDeliveryStatus } from "@prisma/client";
 import { z } from "zod";
+import { serializeDeliveryReceipt } from "@/lib/serialization-helpers";
 
 // ==============================================
 // DELIVERY RECEIPT CRUD OPERATIONS
@@ -111,7 +112,13 @@ export async function getAllDeliveryReceipts(
       where: whereClause,
       include: {
         billingStatement: {
-          include: {
+          select: {
+            id: true,
+            statementNumber: true,
+            customerName: true,
+            status: true,
+            billingDate: true,
+            dueDate: true,
             customer: {
               select: {
                 id: true,
@@ -259,7 +266,8 @@ export async function getDeliveryReceiptById(
       },
     });
 
-    return receipt as DeliveryReceiptWithBilling | null;
+    // Serialize the receipt to handle Decimal fields
+    return receipt ? serializeDeliveryReceipt(receipt) as DeliveryReceiptWithBilling : null;
   } catch (error) {
     console.error("Error fetching delivery receipt:", error);
     throw new Error("Failed to fetch delivery receipt");
@@ -900,6 +908,237 @@ async function getRecentDeliveries() {
     customerName: receipt.billingStatement?.customer?.name || receipt.billingStatement?.customerName || "Unknown",
     deliveryMethod: "Standard", // Simplified - no longer tracking delivery method
   }));
+}
+
+// ==============================================
+// EXPORT FUNCTIONS
+// ==============================================
+
+export async function exportDeliveryReceiptsData(): Promise<{
+  csvContent: string;
+  filename: string;
+}> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new Error("Unauthorized");
+    }
+
+    // Get all delivery receipts with related data
+    const receipts = await prisma.deliveryReceipt.findMany({
+      orderBy: { deliveryDate: "desc" },
+      include: {
+        billingStatement: {
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+              },
+            },
+            customerOrder: {
+              select: {
+                id: true,
+                orderNumber: true,
+                orderDate: true,
+              },
+            },
+            productionOrder: {
+              select: {
+                id: true,
+                quantity: true,
+                product: {
+                  select: {
+                    id: true,
+                    name: true,
+                    sku: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        createdByUser: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Build CSV headers
+    const headers = [
+      "Receipt Number",
+      "Delivery Date",
+      "Status",
+      "Customer Name",
+      "Customer Email",
+      "Customer Phone",
+      "Product Name",
+      "Product SKU",
+      "Quantity",
+      "Received By",
+      "Received By Title",
+      "Delivery Address",
+      "Tracking Number",
+      "Courier Service",
+      "Delivery Notes",
+      "Has Signature",
+      "Has Photo Evidence",
+      "Order Number",
+      "Order Date",
+      "Created By",
+      "Created Date",
+    ];
+
+    // Build CSV rows
+    const rows = receipts.map((receipt) => {
+      const customer = receipt.billingStatement?.customer;
+      const product = receipt.billingStatement?.productionOrder?.product;
+      const order = receipt.billingStatement?.customerOrder;
+      const createdBy = receipt.createdByUser;
+      
+      const createdByName = createdBy?.profile
+        ? `${createdBy.profile.firstName} ${createdBy.profile.lastName}`
+        : createdBy?.email || "Unknown";
+
+      return [
+        receipt.receiptNumber,
+        receipt.deliveryDate.toISOString().split('T')[0], // YYYY-MM-DD
+        receipt.deliveryStatus,
+        customer?.name || receipt.billingStatement?.customerName || "Unknown",
+        customer?.email || "",
+        customer?.phone || "",
+        product?.name || "",
+        product?.sku || "",
+        receipt.billingStatement?.productionOrder?.quantity?.toString() || "",
+        receipt.receivedBy || "",
+        receipt.receivedByTitle || "",
+        receipt.deliveryAddress || "",
+        receipt.trackingNumber || "",
+        receipt.courierService || "",
+        receipt.deliveryNotes || "",
+        receipt.signatureImage ? "Yes" : "No",
+        receipt.photoEvidence ? "Yes" : "No",
+        order?.orderNumber || "",
+        order?.orderDate ? order.orderDate.toISOString().split('T')[0] : "",
+        createdByName,
+        receipt.createdAt.toISOString().split('T')[0],
+      ];
+    });
+
+    // Convert to CSV content
+    const csvRows = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => 
+        // Escape commas and quotes in cell content
+        `"${String(cell).replace(/"/g, '""')}"`
+      ).join(','))
+    ];
+    
+    const csvContent = csvRows.join('\n');
+    
+    // Generate filename with date
+    const date = new Date().toISOString().split('T')[0];
+    const filename = `delivery-receipts-export-${date}.csv`;
+
+    return {
+      csvContent,
+      filename
+    };
+  } catch (error) {
+    console.error("Error exporting delivery receipts data:", error);
+    throw new Error("Failed to export delivery receipts data");
+  }
+}
+
+export async function exportDeliveryReceiptPDF(
+  id: string
+): Promise<{ success: boolean; pdfBuffer?: Buffer; filename?: string; error?: string }> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    // Get delivery receipt with all related data
+    const receipt = await prisma.deliveryReceipt.findUnique({
+      where: { id },
+      include: {
+        billingStatement: {
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                address: true,
+              },
+            },
+            customerOrder: {
+              select: {
+                id: true,
+                orderNumber: true,
+                totalAmount: true,
+              },
+            },
+            productionOrder: {
+              include: {
+                product: {
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        createdByUser: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!receipt) {
+      return { success: false, error: "Delivery receipt not found" };
+    }
+
+    // Generate PDF using the PDF service
+    const { generateDeliveryReceiptPDF } = await import("@/lib/services/pdf-generator");
+    const pdfBuffer = await generateDeliveryReceiptPDF(receipt);
+
+    const filename = `delivery-receipt-${receipt.receiptNumber}-${new Date().toISOString().split('T')[0]}.pdf`;
+
+    return {
+      success: true,
+      pdfBuffer,
+      filename,
+    };
+  } catch (error) {
+    console.error("Error exporting delivery receipt PDF:", error);
+    return { success: false, error: "Failed to export delivery receipt PDF" };
+  }
 }
 
 // ==============================================

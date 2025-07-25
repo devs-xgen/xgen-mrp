@@ -15,7 +15,7 @@ import {
   Camera, 
   FileText, 
   MapPin,
-  Package
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -92,7 +92,7 @@ export function DeliveryReceiptList({
     setSearchTerm(value);
     if (onFilterChange) {
       onFilterChange({
-        search: value,
+        search: value || undefined,
         status: statusFilter !== "ALL" ? [statusFilter] : undefined,
       });
     }
@@ -103,11 +103,23 @@ export function DeliveryReceiptList({
     setStatusFilter(status);
     if (onFilterChange) {
       onFilterChange({
-        search: searchTerm,
+        search: searchTerm || undefined,
         status: status !== "ALL" ? [status] : undefined,
       });
     }
   };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("ALL");
+    if (onFilterChange) {
+      onFilterChange({});
+    }
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = searchTerm || statusFilter !== "ALL";
 
   // Empty state
   if (receipts.length === 0 && !isLoading) {
@@ -139,7 +151,14 @@ export function DeliveryReceiptList({
       <Card className="bg-card border rounded-lg">
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <CardTitle className="text-lg">Delivery Receipts</CardTitle>
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-lg">Delivery Receipts</CardTitle>
+              {hasActiveFilters && (
+                <Badge variant="secondary" className="text-xs">
+                  {searchTerm && statusFilter !== "ALL" ? "2 filters" : "1 filter"} active
+                </Badge>
+              )}
+            </div>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -149,6 +168,16 @@ export function DeliveryReceiptList({
                   onChange={(e) => handleSearch(e.target.value)}
                   className="pl-10 w-full sm:w-64"
                 />
+                {searchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-gray-100"
+                    onClick={() => handleSearch("")}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
               <Select value={statusFilter} onValueChange={handleStatusFilter}>
                 <SelectTrigger className="w-full sm:w-40">
@@ -164,6 +193,17 @@ export function DeliveryReceiptList({
                   <SelectItem value="CANCELLED">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
+              {hasActiveFilters && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="flex items-center gap-2"
+                >
+                  <X className="h-3 w-3" />
+                  Clear
+                </Button>
+              )}
               <Button asChild size="sm">
                 <Link href="/admin/billing/delivery-receipts/create">
                   <Plus className="mr-2 h-4 w-4" />
@@ -178,29 +218,43 @@ export function DeliveryReceiptList({
       {/* Table */}
       <Card className="bg-card border rounded-lg">
         <div className="overflow-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[140px]">Receipt #</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Billing Statement</TableHead>
-                <TableHead>Delivery Date</TableHead>
-                <TableHead>Received By</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Tracking</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          {isLoading && (
+            <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex items-center justify-center">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                Updating results...
+              </div>
+            </div>
+          )}
+          <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-50' : 'opacity-100'}`}>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[140px]">Receipt #</TableHead>
+                  <TableHead className="hidden sm:table-cell">Customer</TableHead>
+                  <TableHead>Billing Statement</TableHead>
+                  <TableHead className="hidden md:table-cell">Delivery Date</TableHead>
+                  <TableHead className="hidden lg:table-cell">Received By</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden xl:table-cell">Tracking</TableHead>
+                  <TableHead className="w-[80px] text-center">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
               {receipts.map((receipt) => (
                 <TableRow key={receipt.id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                      {receipt.receiptNumber}
+                      <div>
+                        <div className="font-medium">{receipt.receiptNumber}</div>
+                        {/* Show customer on mobile */}
+                        <div className="text-xs text-muted-foreground sm:hidden">
+                          {receipt.billingStatement?.customerName || "Unknown Customer"}
+                        </div>
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <div className="space-y-1">
                       <p className="font-medium">
                         {receipt.billingStatement?.customerName || "Unknown Customer"}
@@ -213,20 +267,27 @@ export function DeliveryReceiptList({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">
-                        {receipt.billingStatement?.statementNumber || "N/A"}
-                      </Badge>
-                      {receipt.billingStatement && (
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/admin/billing/statements/${receipt.billingStatement.id}`}>
-                            <Eye className="h-3 w-3" />
-                          </Link>
-                        </Button>
-                      )}
-                    </div>
+                    {receipt.billingStatement ? (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-auto p-2 flex items-center gap-2 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                        asChild
+                      >
+                        <Link href={`/admin/billing/statements/${receipt.billingStatement.id}`}>
+                          <div className="flex items-center gap-2">
+                            <Eye className="h-3 w-3 text-blue-600" />
+                            <span className="font-medium text-blue-600">
+                              {receipt.billingStatement.statementNumber}
+                            </span>
+                          </div>
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Badge variant="secondary">N/A</Badge>
+                    )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <div className="space-y-1">
                       <p className="text-sm">
                         {format(new Date(receipt.deliveryDate), "MMM dd, yyyy")}
@@ -236,7 +297,7 @@ export function DeliveryReceiptList({
                       </p>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     <div className="space-y-1">
                       <p className="text-sm font-medium">{receipt.receivedBy}</p>
                       {receipt.receivedByTitle && (
@@ -247,9 +308,15 @@ export function DeliveryReceiptList({
                     </div>
                   </TableCell>
                   <TableCell>
-                    {getStatusBadge(receipt.deliveryStatus)}
+                    <div className="flex flex-col gap-1">
+                      {getStatusBadge(receipt.deliveryStatus)}
+                      {/* Show delivery date on mobile/tablet */}
+                      <div className="text-xs text-muted-foreground md:hidden">
+                        {format(new Date(receipt.deliveryDate), "MMM dd")}
+                      </div>
+                    </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden xl:table-cell">
                     <div className="space-y-1">
                       {receipt.trackingNumber && (
                         <p className="text-sm font-mono">{receipt.trackingNumber}</p>
@@ -265,53 +332,67 @@ export function DeliveryReceiptList({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/billing/delivery-receipts/${receipt.id}`}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Receipt
-                          </Link>
-                        </DropdownMenuItem>
-                        {receipt.deliveryStatus === 'PENDING' && (
+                    <div className="flex items-center justify-center">
+                      {/* Actions Dropdown */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          
+                          {/* View Receipt */}
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/billing/delivery-receipts/${receipt.id}`}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Receipt
+                            </Link>
+                          </DropdownMenuItem>
+                          
+                          {/* Edit Receipt */}
                           <DropdownMenuItem asChild>
                             <Link href={`/admin/billing/delivery-receipts/${receipt.id}/edit`}>
                               <Edit className="mr-2 h-4 w-4" />
                               Edit Receipt
                             </Link>
                           </DropdownMenuItem>
-                        )}
-                        <DropdownMenuSeparator />
-                        {receipt.signatureImage && (
+                          
+                          <DropdownMenuSeparator />
+                          
+                          {/* Additional Actions */}
+                          {receipt.signatureImage && (
+                            <DropdownMenuItem>
+                              <Camera className="mr-2 h-4 w-4" />
+                              View Signature
+                            </DropdownMenuItem>
+                          )}
+                          {receipt.photoEvidence && (
+                            <DropdownMenuItem>
+                              <FileText className="mr-2 h-4 w-4" />
+                              View Photo
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem>
-                            <Camera className="mr-2 h-4 w-4" />
-                            View Signature
+                            <MapPin className="mr-2 h-4 w-4" />
+                            View Address
                           </DropdownMenuItem>
-                        )}
-                        {receipt.photoEvidence && (
                           <DropdownMenuItem>
-                            <FileText className="mr-2 h-4 w-4" />
-                            View Photo
+                            <Download className="mr-2 h-4 w-4" />
+                            Export PDF
                           </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem>
-                          <MapPin className="mr-2 h-4 w-4" />
-                          View Address
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         </div>
       </Card>
     </div>

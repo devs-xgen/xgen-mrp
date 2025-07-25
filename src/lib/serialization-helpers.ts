@@ -5,6 +5,41 @@ export function serializeDecimal(value: any): number | null {
   return Number(value)
 }
 
+export function serializeBillingStatement(billingStatement: any) {
+  if (!billingStatement) return null
+  
+  return {
+    ...billingStatement,
+    // Convert Decimal fields to numbers
+    totalAmount: serializeDecimal(billingStatement.totalAmount),
+    taxAmount: serializeDecimal(billingStatement.taxAmount),
+    discountAmount: serializeDecimal(billingStatement.discountAmount),
+    netAmount: serializeDecimal(billingStatement.netAmount),
+    
+    // Ensure dates are properly serialized
+    billingDate: billingStatement.billingDate instanceof Date ? billingStatement.billingDate : new Date(billingStatement.billingDate),
+    dueDate: billingStatement.dueDate ? (billingStatement.dueDate instanceof Date ? billingStatement.dueDate : new Date(billingStatement.dueDate)) : null,
+    paidDate: billingStatement.paidDate ? (billingStatement.paidDate instanceof Date ? billingStatement.paidDate : new Date(billingStatement.paidDate)) : null,
+    createdAt: billingStatement.createdAt instanceof Date ? billingStatement.createdAt : new Date(billingStatement.createdAt),
+    updatedAt: billingStatement.updatedAt instanceof Date ? billingStatement.updatedAt : new Date(billingStatement.updatedAt),
+  }
+}
+
+export function serializeDeliveryReceipt(receipt: any) {
+  if (!receipt) return null
+  
+  return {
+    ...receipt,
+    // Serialize billing statement if present
+    billingStatement: serializeBillingStatement(receipt.billingStatement),
+    
+    // Ensure dates are properly serialized
+    deliveryDate: receipt.deliveryDate instanceof Date ? receipt.deliveryDate : new Date(receipt.deliveryDate),
+    createdAt: receipt.createdAt instanceof Date ? receipt.createdAt : new Date(receipt.createdAt),
+    updatedAt: receipt.updatedAt instanceof Date ? receipt.updatedAt : new Date(receipt.updatedAt),
+  }
+}
+
 export function serializeProductionOrder(order: any) {
   return {
     ...order,

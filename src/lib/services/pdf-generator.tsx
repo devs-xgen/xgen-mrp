@@ -1,5 +1,5 @@
 import React from 'react';
-import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { pdf, Document, Page, Text, View, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
 import { BillingStatement, SalesInvoice, DeliveryReceipt, SalesInvoiceItem } from '@/types/admin/billing';
 
 // Company branding configuration
@@ -279,32 +279,32 @@ const SalesInvoicePDFDocument: React.FC<{
           <Text style={styles.infoTitle}>Invoice Details</Text>
           <Text style={styles.infoText}>Invoice #: {salesInvoice.invoiceNumber}</Text>
           <Text style={styles.infoText}>Date: {formatDate(salesInvoice.invoiceDate)}</Text>
-          {salesInvoice.dueDate && (
+          {salesInvoice.dueDate ? (
             <Text style={styles.infoText}>Due Date: {formatDate(salesInvoice.dueDate)}</Text>
-          )}
-          {salesInvoice.poNumber && (
+          ) : null}
+          {salesInvoice.poNumber ? (
             <Text style={styles.infoText}>PO #: {salesInvoice.poNumber}</Text>
-          )}
+          ) : null}
         </View>
         <View style={styles.infoSection}>
           <Text style={styles.infoTitle}>Bill To</Text>
           <Text style={styles.infoText}>
             {salesInvoice.billingStatement?.customerName || 'Customer'}
           </Text>
-          {salesInvoice.billingStatement?.customer?.email && (
+          {salesInvoice.billingStatement?.customer?.email ? (
             <Text style={styles.infoText}>{salesInvoice.billingStatement.customer.email}</Text>
-          )}
-          {salesInvoice.billingStatement?.customer?.phone && (
+          ) : null}
+          {salesInvoice.billingStatement?.customer?.phone ? (
             <Text style={styles.infoText}>{salesInvoice.billingStatement.customer.phone}</Text>
-          )}
-          {salesInvoice.billingStatement?.customer?.address && (
+          ) : null}
+          {salesInvoice.billingStatement?.customer?.address ? (
             <Text style={styles.infoText}>{salesInvoice.billingStatement.customer.address}</Text>
-          )}
+          ) : null}
         </View>
       </View>
 
       {/* Invoice Items Table */}
-      {salesInvoice.invoiceItems && salesInvoice.invoiceItems.length > 0 && (
+      {salesInvoice.invoiceItems && salesInvoice.invoiceItems.length > 0 ? (
         <View style={styles.table}>
           {/* Table Header */}
           <View style={[styles.tableRow, styles.tableHeader]}>
@@ -327,11 +327,11 @@ const SalesInvoicePDFDocument: React.FC<{
             <View key={index} style={styles.tableRow}>
               <View style={styles.tableColDescription}>
                 <Text style={styles.tableCell}>{item.description}</Text>
-                {item.productCode && (
+                {item.productCode ? (
                   <Text style={[styles.tableCell, { fontSize: 8, color: '#9ca3af' }]}>
                     Code: {item.productCode}
                   </Text>
-                )}
+                ) : null}
               </View>
               <View style={styles.tableColQty}>
                 <Text style={styles.tableCellCenter}>{item.quantity}</Text>
@@ -345,7 +345,7 @@ const SalesInvoicePDFDocument: React.FC<{
             </View>
           ))}
         </View>
-      )}
+      ) : null}
 
       {/* Totals Section */}
       <View style={styles.totalsSection}>
@@ -353,12 +353,12 @@ const SalesInvoicePDFDocument: React.FC<{
           <Text style={styles.totalLabel}>Subtotal:</Text>
           <Text style={styles.totalValue}>{formatCurrency(salesInvoice.subtotal)}</Text>
         </View>
-        {salesInvoice.discountAmount > 0 && (
+        {salesInvoice.discountAmount > 0 ? (
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Discount:</Text>
             <Text style={styles.totalValue}>-{formatCurrency(salesInvoice.discountAmount)}</Text>
           </View>
-        )}
+        ) : null}
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Tax ({salesInvoice.taxRate}%):</Text>
           <Text style={styles.totalValue}>{formatCurrency(salesInvoice.taxAmount)}</Text>
@@ -370,32 +370,191 @@ const SalesInvoicePDFDocument: React.FC<{
       </View>
 
       {/* Payment Terms */}
-      {salesInvoice.paymentTerms && (
+      {salesInvoice.paymentTerms ? (
         <View style={styles.notes}>
           <Text style={styles.notesTitle}>Payment Terms</Text>
           <Text style={styles.notesText}>{salesInvoice.paymentTerms}</Text>
         </View>
-      )}
+      ) : null}
 
       {/* Terms & Conditions */}
-      {salesInvoice.terms && (
+      {salesInvoice.terms ? (
         <View style={styles.notes}>
           <Text style={styles.notesTitle}>Terms & Conditions</Text>
           <Text style={styles.notesText}>{salesInvoice.terms}</Text>
         </View>
-      )}
+      ) : null}
 
       {/* Footer Notes */}
-      {salesInvoice.footerNotes && (
+      {salesInvoice.footerNotes ? (
         <View style={styles.notes}>
           <Text style={styles.notesTitle}>Notes</Text>
           <Text style={styles.notesText}>{salesInvoice.footerNotes}</Text>
         </View>
-      )}
+      ) : null}
 
       {/* Footer */}
       <Text style={styles.footer}>
         {`Thank you for your business! • ${COMPANY_INFO.website} • Generated on ${formatDate(new Date())}`}
+      </Text>
+    </Page>
+  </Document>
+);
+
+// Delivery Receipt PDF Document Component
+const DeliveryReceiptPDFDocument: React.FC<{
+  deliveryReceipt: DeliveryReceipt & {
+    billingStatement?: BillingStatement & {
+      customer?: { name: string; email?: string; phone?: string; address?: string };
+      customerOrder?: { orderNumber: string; totalAmount: number };
+    };
+    user?: { name: string; email?: string; phone?: string };
+  };
+}> = ({ deliveryReceipt }) => (
+  <Document>
+    <Page size="A4" style={styles.page}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.companyName}>{COMPANY_INFO.name}</Text>
+          <Text style={styles.companyDetails}>
+            {`${COMPANY_INFO.address}\n${COMPANY_INFO.city}\nPhone: ${COMPANY_INFO.phone}\nEmail: ${COMPANY_INFO.email}`}
+          </Text>
+        </View>
+        <View>
+          <View style={[styles.statusBadge, {
+            backgroundColor: deliveryReceipt.deliveryStatus === 'DELIVERED' ? '#dcfce7' : 
+                           deliveryReceipt.deliveryStatus === 'FAILED' ? '#fef2f2' : '#fef3c7',
+            color: deliveryReceipt.deliveryStatus === 'DELIVERED' ? '#166534' : 
+                   deliveryReceipt.deliveryStatus === 'FAILED' ? '#dc2626' : '#d97706'
+          }]}>
+            <Text>{deliveryReceipt.deliveryStatus}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Document Title */}
+      <Text style={styles.documentTitle}>DELIVERY RECEIPT</Text>
+
+      {/* Document Information */}
+      <View style={styles.documentInfo}>
+        <View style={styles.infoSection}>
+          <Text style={styles.infoTitle}>Receipt Details</Text>
+          <Text style={styles.infoText}>Receipt #: {deliveryReceipt.receiptNumber}</Text>
+          <Text style={styles.infoText}>Delivery Date: {formatDate(deliveryReceipt.deliveryDate)}</Text>
+          <Text style={styles.infoText}>Status: {deliveryReceipt.deliveryStatus}</Text>
+          {deliveryReceipt.billingStatement?.customerOrder?.orderNumber ? (
+            <Text style={styles.infoText}>Order #: {deliveryReceipt.billingStatement.customerOrder.orderNumber}</Text>
+          ) : null}
+        </View>
+        <View style={styles.infoSection}>
+          <Text style={styles.infoTitle}>Customer Information</Text>
+          <Text style={styles.infoText}>
+            {deliveryReceipt.billingStatement?.customer?.name || 'Customer'}
+          </Text>
+          {deliveryReceipt.billingStatement?.customer?.email ? (
+            <Text style={styles.infoText}>{deliveryReceipt.billingStatement.customer.email}</Text>
+          ) : null}
+          {deliveryReceipt.billingStatement?.customer?.phone ? (
+            <Text style={styles.infoText}>{deliveryReceipt.billingStatement.customer.phone}</Text>
+          ) : null}
+        </View>
+      </View>
+
+      {/* Delivery Information */}
+      <View style={styles.table}>
+        <View style={[styles.tableRow, styles.tableHeader]}>
+          <View style={[styles.tableCol, { width: '30%' }]}>
+            <Text style={styles.tableCellHeader}>Field</Text>
+          </View>
+          <View style={[styles.tableCol, { width: '70%' }]}>
+            <Text style={styles.tableCellHeader}>Details</Text>
+          </View>
+        </View>
+        
+        <View style={styles.tableRow}>
+          <View style={[styles.tableCol, { width: '30%' }]}>
+            <Text style={styles.tableCell}>Delivery Address</Text>
+          </View>
+          <View style={[styles.tableCol, { width: '70%' }]}>
+            <Text style={styles.tableCell}>
+              {deliveryReceipt.deliveryAddress || deliveryReceipt.billingStatement?.customer?.address || 'Not specified'}
+            </Text>
+          </View>
+        </View>
+
+        {deliveryReceipt.courierService ? (
+          <View style={styles.tableRow}>
+            <View style={[styles.tableCol, { width: '30%' }]}>
+              <Text style={styles.tableCell}>Courier Service</Text>
+            </View>
+            <View style={[styles.tableCol, { width: '70%' }]}>
+              <Text style={styles.tableCell}>{deliveryReceipt.courierService}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {deliveryReceipt.trackingNumber ? (
+          <View style={styles.tableRow}>
+            <View style={[styles.tableCol, { width: '30%' }]}>
+              <Text style={styles.tableCell}>Tracking Number</Text>
+            </View>
+            <View style={[styles.tableCol, { width: '70%' }]}>
+              <Text style={styles.tableCell}>{deliveryReceipt.trackingNumber}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        <View style={styles.tableRow}>
+          <View style={[styles.tableCol, { width: '30%' }]}>
+            <Text style={styles.tableCell}>Proof of Delivery</Text>
+          </View>
+          <View style={[styles.tableCol, { width: '70%' }]}>
+            <Text style={styles.tableCell}>
+              {deliveryReceipt.signatureImage ? 'Signature Captured' : 'No Signature'} | {' '}
+              {deliveryReceipt.photoEvidence ? 'Photo Evidence Available' : 'No Photo Evidence'}
+            </Text>
+          </View>
+        </View>
+
+        {deliveryReceipt.billingStatement?.customerOrder?.totalAmount ? (
+          <View style={styles.tableRow}>
+            <View style={[styles.tableCol, { width: '30%' }]}>
+              <Text style={styles.tableCell}>Order Value</Text>
+            </View>
+            <View style={[styles.tableCol, { width: '70%' }]}>
+              <Text style={styles.tableCell}>
+                {formatCurrency(deliveryReceipt.billingStatement.customerOrder.totalAmount)}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Delivery Notes */}
+      {deliveryReceipt.deliveryNotes ? (
+        <View style={styles.notes}>
+          <Text style={styles.notesTitle}>Delivery Notes</Text>
+          <Text style={styles.notesText}>{deliveryReceipt.deliveryNotes}</Text>
+        </View>
+      ) : null}
+
+      {/* Recipient Information */}
+      {(deliveryReceipt.receivedBy || deliveryReceipt.receivedByTitle) ? (
+        <View style={styles.notes}>
+          <Text style={styles.notesTitle}>Recipient Information</Text>
+          {deliveryReceipt.receivedBy ? (
+            <Text style={styles.notesText}>Received By: {deliveryReceipt.receivedBy}</Text>
+          ) : null}
+          {deliveryReceipt.receivedByTitle ? (
+            <Text style={styles.notesText}>Title: {deliveryReceipt.receivedByTitle}</Text>
+          ) : null}
+        </View>
+      ) : null}
+
+      {/* Footer */}
+      <Text style={styles.footer}>
+        {`Delivery Receipt • ${COMPANY_INFO.website} • Generated on ${formatDate(new Date())}`}
       </Text>
     </Page>
   </Document>
@@ -411,11 +570,29 @@ export async function generateSalesInvoicePDF(
   }
 ): Promise<Buffer> {
   try {
-    const pdfBuffer = await pdf(<SalesInvoicePDFDocument salesInvoice={salesInvoice} />).toBuffer();
+    const pdfBuffer = await renderToBuffer(<SalesInvoicePDFDocument salesInvoice={salesInvoice} />);
     return pdfBuffer;
   } catch (error) {
     console.error('Error generating sales invoice PDF:', error);
     throw new Error('Failed to generate sales invoice PDF');
+  }
+}
+
+export async function generateDeliveryReceiptPDF(
+  deliveryReceipt: DeliveryReceipt & {
+    billingStatement?: BillingStatement & {
+      customer?: { name: string; email?: string; phone?: string; address?: string };
+      customerOrder?: { orderNumber: string; totalAmount: number };
+    };
+    user?: { name: string; email?: string; phone?: string };
+  }
+): Promise<Buffer> {
+  try {
+    const pdfBuffer = await renderToBuffer(<DeliveryReceiptPDFDocument deliveryReceipt={deliveryReceipt} />);
+    return pdfBuffer;
+  } catch (error) {
+    console.error('Error generating delivery receipt PDF:', error);
+    throw new Error('Failed to generate delivery receipt PDF');
   }
 }
 
