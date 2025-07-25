@@ -180,7 +180,11 @@ export default function SalesInvoiceViewPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => window.open(`/api/admin/billing/sales-invoices/${invoice.id}/download`, '_blank')}
+          >
             <Download className="mr-2 h-4 w-4" />
             Download PDF
           </Button>
@@ -518,7 +522,11 @@ export default function SalesInvoiceViewPage() {
                   Mark as Paid
                 </Button>
               )}
-              <Button variant="outline" className="w-full">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => window.open(`/api/admin/billing/sales-invoices/${invoice.id}/download`, '_blank')}
+              >
                 <Download className="mr-2 h-4 w-4" />
                 Download PDF
               </Button>

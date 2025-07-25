@@ -191,7 +191,9 @@ function SalesInvoicesList({ invoices }: SalesInvoicesListProps) {
                         </Link>
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => window.open(`/api/admin/billing/sales-invoices/${invoice.id}/download`, '_blank')}
+                    >
                       <Download className="mr-2 h-4 w-4" />
                       Download PDF
                     </DropdownMenuItem>

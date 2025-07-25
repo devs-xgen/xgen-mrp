@@ -43,7 +43,7 @@
   - Include proper branding and legal information
   - _Requirements: 3.1, 3.3_
 
-- [ ] 7. Fix sales invoice PDF download functionality
+- [x] 7. Fix sales invoice PDF download functionality
   - Update sales invoice page to use PDF generation service
   - Implement `generateSalesInvoicePDF()` function
   - Create sales invoice PDF template with invoice items
