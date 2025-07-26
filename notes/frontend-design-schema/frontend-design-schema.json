@@ -227,13 +227,20 @@
         "purpose": "Main table component with sorting, filtering, pagination",
         "requiredFeatures": ["sorting", "filtering", "pagination", "column visibility", "row selection"],
         "stateManagement": ["sorting", "columnFilters", "columnVisibility", "rowSelection"],
-        "techStack": "@tanstack/react-table"
+        "techStack": "@tanstack/react-table",
+        "newProps": {
+          "onFiltersChange": "Optional callback for filter changes - enables URL synchronization",
+          "onPageChange": "Optional callback for page changes - enables URL synchronization"
+        }
       },
       "DataTableToolbar": {
         "purpose": "Search and filter controls",
         "requiredFeatures": ["text search", "faceted filters", "filter reset", "column visibility"],
         "layout": "flex items-center justify-between",
-        "components": ["Input for search", "DataTableFacetedFilter", "DataTableViewOptions", "Button for reset"]
+        "components": ["Input for search", "DataTableFacetedFilter", "DataTableViewOptions", "Button for reset"],
+        "newProps": {
+          "onFiltersChange": "Optional callback passed from DataTable for filter synchronization"
+        }
       },
       "DataTableColumnHeader": {
         "purpose": "Sortable column headers",
@@ -243,12 +250,28 @@
       "DataTableFacetedFilter": {
         "purpose": "Multi-select filter with search",
         "requiredFeatures": ["search within options", "selected count badges", "clear filters"],
-        "ui": "Popover with Command component"
+        "ui": "Popover with Command component",
+        "newProps": {
+          "onValueChange": "Required callback for handling filter value changes"
+        }
       },
       "DataTablePagination": {
         "purpose": "Pagination controls",
         "requiredFeatures": ["page navigation", "page size selection", "total count display"],
-        "pageSizes": [10, 20, 50, 100]
+        "pageSizes": [10, 20, 50, 100],
+        "newProps": {
+          "onPageChange": "Optional callback passed from DataTable for page synchronization"
+        }
+      },
+      "ClientWrapper": {
+        "purpose": "NEW: Client-side wrapper for URL state management",
+        "naming": "[Entity]Client (e.g., SalesInvoicesClient, DeliveryReceiptsClient)",
+        "requiredFeatures": ["URL state synchronization", "filter state management", "page state management"],
+        "implementation": "Use 'use client' directive, useState, useSearchParams, useRouter",
+        "props": {
+          "initialData": "Server-fetched data passed from page component",
+          "additionalProps": "Any entity-specific props needed"
+        }
       }
     },
     "mandatoryColumnTypes": {
@@ -372,13 +395,16 @@
         "component": "Input with Search icon",
         "placeholder": "Search [entity name]...",
         "debounce": "300ms",
-        "searchFields": "Define which fields are searchable"
+        "searchFields": "Define which fields are searchable",
+        "implementation": "table.getColumn('fieldName')?.setFilterValue(value)"
       },
       "facetedFilters": {
         "statusFilter": {
           "title": "Status",
           "options": "Array of {label, value, icon?}",
-          "component": "DataTableFacetedFilter"
+          "component": "DataTableFacetedFilter",
+          "implementation": "table.getColumn('status')?.setFilterValue(values)",
+          "onValueChange": "Required prop for handling filter changes"
         },
         "dateFilter": {
           "component": "DateRangePicker or Select with predefined ranges",
@@ -386,9 +412,37 @@
         }
       },
       "urlState": {
-        "parameters": ["page", "per_page", "search", "status", "sort"],
+        "parameters": ["page", "per_page", "search", "status", "sort", "dateFrom", "dateTo"],
         "persistence": "State persists across page refreshes",
-        "sharing": "URLs can be shared with filters applied"
+        "sharing": "URLs can be shared with filters applied",
+        "implementation": "Use URLSearchParams with router.push for navigation"
+      },
+      "clientSidePattern": {
+        "description": "New pattern for client-side filtering with URL synchronization",
+        "wrapperComponent": {
+          "purpose": "Client component that manages filter state and URL synchronization",
+          "naming": "[Entity]Client (e.g., SalesInvoicesClient)",
+          "props": ["initialData", "optional filter callbacks"],
+          "stateManagement": "useState for data, useSearchParams for URL state",
+          "navigation": "useRouter for URL updates"
+        },
+        "filterHandlers": {
+          "onFiltersChange": {
+            "purpose": "Handle filter changes and update URL",
+            "parameters": "{ search?: string; status?: Status[]; dateRange?: { start: Date; end: Date } }",
+            "implementation": "Update URLSearchParams and call router.push"
+          },
+          "onPageChange": {
+            "purpose": "Handle pagination changes",
+            "parameters": "page: number",
+            "implementation": "Update page parameter in URL"
+          }
+        },
+        "urlSynchronization": {
+          "pattern": "URLSearchParams manipulation with router.push",
+          "parameterHandling": "Set if value exists, delete if empty/null",
+          "arrayHandling": "Join arrays with comma for URL storage"
+        }
       }
     }
   },
@@ -1212,6 +1266,140 @@
         "elevatedCard": "<div className=\"relative rounded-lg bg-white/90 border border-slate-200/80 dark:bg-slate-800/90 dark:border-slate-700/80 p-6 transition-all duration-200 shadow-sm hover:shadow-md\">",
         "content": "<div className=\"flex items-center space-x-4\"><Icon className=\"h-8 w-8 text-color\" /><div>...</div></div>"
       }
+    }
+  },
+  "enhancedTablePatterns": {
+    "description": "Enhanced patterns for table implementation with client-side filtering and URL synchronization",
+    "version": "2.1.0",
+    "clientSideFiltering": {
+      "description": "Pattern for implementing client-side filtering with URL state management",
+      "architecture": {
+        "serverComponent": {
+          "file": "page.tsx",
+          "purpose": "Fetch initial data and handle search parameters",
+          "responsibilities": [
+            "Parse search parameters from URL",
+            "Fetch data with server actions",
+            "Pass initial data to client wrapper"
+          ]
+        },
+        "clientWrapper": {
+          "file": "[entity]-client.tsx",
+          "purpose": "Manage filter state and URL synchronization",
+          "responsibilities": [
+            "Manage local state for data",
+            "Handle filter changes and update URL",
+            "Handle pagination changes",
+            "Pass callbacks to DataTable"
+          ]
+        },
+        "dataTable": {
+          "file": "data-table.tsx",
+          "purpose": "Render table with enhanced props",
+          "responsibilities": [
+            "Accept onFiltersChange and onPageChange props",
+            "Pass callbacks to toolbar and pagination",
+            "Manage table state with @tanstack/react-table"
+          ]
+        }
+      },
+      "implementation": {
+        "clientWrapperPattern": {
+          "imports": [
+            "\"use client\"",
+            "useState, useEffect from react",
+            "useRouter, useSearchParams from next/navigation",
+            "DataTable component",
+            "Entity types"
+          ],
+          "stateManagement": "const [data, setData] = useState(initialData)",
+          "urlHandling": "const router = useRouter(); const searchParams = useSearchParams()",
+          "filterHandler": {
+            "purpose": "Handle filter changes and update URL parameters",
+            "implementation": "Use URLSearchParams to build query string, then router.push",
+            "parameterHandling": "Set if value exists, delete if empty/null"
+          },
+          "pageHandler": {
+            "purpose": "Handle pagination changes",
+            "implementation": "Update page parameter in URL"
+          }
+        },
+        "dataTableEnhancements": {
+          "newProps": {
+            "onFiltersChange": "Optional callback for filter changes",
+            "onPageChange": "Optional callback for page changes"
+          },
+          "propPassing": "Pass callbacks to DataTableToolbar and DataTablePagination"
+        },
+        "toolbarEnhancements": {
+          "newProps": {
+            "onFiltersChange": "Callback from DataTable for filter synchronization"
+          },
+          "filterHandlers": [
+            "handleSearchChange - Update search filter and call callback",
+            "handleStatusChange - Update status filter and call callback",
+            "handleResetFilters - Clear all filters and call callback"
+          ]
+        },
+        "facetedFilterEnhancements": {
+          "newProps": {
+            "onValueChange": "Required callback for handling filter value changes"
+          },
+          "implementation": "Call onValueChange when filter values change"
+        },
+        "paginationEnhancements": {
+          "newProps": {
+            "onPageChange": "Optional callback for page changes"
+          },
+          "handlers": [
+            "handlePageSizeChange",
+            "handleFirstPage",
+            "handlePreviousPage", 
+            "handleNextPage",
+            "handleLastPage"
+          ]
+        }
+      },
+      "urlParameters": {
+        "standard": ["page", "per_page", "search", "sort"],
+        "filtering": ["status", "dateFrom", "dateTo"],
+        "custom": "Add entity-specific parameters as needed"
+      },
+      "benefits": [
+        "URL state persistence across page refreshes",
+        "Shareable URLs with applied filters",
+        "Better user experience with instant feedback",
+        "Consistent filtering behavior across all tables",
+        "Separation of concerns between server and client logic"
+      ]
+    },
+    "codeTemplates": {
+      "clientWrapper": {
+        "description": "Template for creating client wrapper components",
+        "template": "\"use client\";\n\nimport { useState } from \"react\";\nimport { useRouter, useSearchParams } from \"next/navigation\";\nimport { DataTable } from \"./data-table\";\nimport { EntityType, StatusType } from \"@/types/admin/module\";\n\ninterface EntityClientProps {\n  initialData: EntityType[];\n}\n\nexport function EntityClient({ initialData }: EntityClientProps) {\n  const router = useRouter();\n  const searchParams = useSearchParams();\n  const [data, setData] = useState(initialData);\n\n  const handleFiltersChange = (filters: {\n    search?: string;\n    status?: StatusType[];\n    dateRange?: { start: Date; end: Date };\n  }) => {\n    const params = new URLSearchParams(searchParams);\n    \n    if (filters.search) {\n      params.set(\"search\", filters.search);\n    } else {\n      params.delete(\"search\");\n    }\n    \n    if (filters.status && filters.status.length > 0) {\n      params.set(\"status\", filters.status.join(\",\"));\n    } else {\n      params.delete(\"status\");\n    }\n    \n    router.push(`?${params.toString()}`);\n  };\n\n  const handlePageChange = (page: number) => {\n    const params = new URLSearchParams(searchParams);\n    params.set(\"page\", page.toString());\n    router.push(`?${params.toString()}`);\n  };\n\n  return (\n    <DataTable \n      data={data}\n      onFiltersChange={handleFiltersChange}\n      onPageChange={handlePageChange}\n    />\n  );\n}"
+      },
+      "enhancedDataTable": {
+        "description": "Template for enhanced DataTable with callback props",
+        "propsInterface": "interface DataTableProps<TData, TValue> {\n  columns: ColumnDef<TData, TValue>[];\n  data: TData[];\n  onFiltersChange?: (filters: FilterType) => void;\n  onPageChange?: (page: number) => void;\n}",
+        "propPassing": "// Pass callbacks to child components\n<DataTableToolbar \n  table={table} \n  onFiltersChange={onFiltersChange}\n/>\n<DataTablePagination \n  table={table} \n  onPageChange={onPageChange}\n/>"
+      },
+      "enhancedToolbar": {
+        "description": "Template for enhanced toolbar with filter callbacks",
+        "filterHandlers": "const handleSearchChange = (value: string) => {\n  table.getColumn(\"searchField\")?.setFilterValue(value);\n  onFiltersChange?.({ search: value });\n};\n\nconst handleStatusChange = (values: string[]) => {\n  table.getColumn(\"status\")?.setFilterValue(values);\n  onFiltersChange?.({ status: values as StatusType[] });\n};\n\nconst handleResetFilters = () => {\n  table.resetColumnFilters();\n  onFiltersChange?.({});\n};"
+      }
+    },
+    "migrationGuide": {
+      "description": "How to migrate existing tables to the new pattern",
+      "steps": [
+        "1. Create [Entity]Client wrapper component using the template",
+        "2. Update DataTable component to accept onFiltersChange and onPageChange props",
+        "3. Update DataTableToolbar to accept and use onFiltersChange prop",
+        "4. Update DataTableFacetedFilter to accept and use onValueChange prop", 
+        "5. Update DataTablePagination to accept and use onPageChange prop",
+        "6. Update page.tsx to use the new client wrapper",
+        "7. Test URL state persistence and filter functionality"
+      ],
+      "compatibility": "This pattern is backward compatible - existing tables will continue to work without the new props"
     }
   }
 }

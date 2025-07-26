@@ -1,9 +1,24 @@
 # Data Table Implementation Quick Guide
 
-**Based on:** Delivery Receipts Page Implementation  
-**Purpose:** Step-by-step guide for implementing data tables following XGen MRP standards
+**Based on:** Sales Invoices Enhanced Pattern (v2.1)  
+**Previous:** Delivery Receipts Legacy Pattern (v1.0)  
+**Purpose:** Step-by-step guide for implementing data tables with client-side filtering
 
-## Quick Implementation Checklist
+## Pattern Selection
+
+### Enhanced Pattern (v2.1) - **RECOMMENDED**
+- ✅ Client-side filtering with URL synchronization
+- ✅ Real-time user feedback
+- ✅ Shareable filtered URLs
+- ✅ Better user experience
+- **Use for:** All new implementations
+
+### Legacy Pattern (v1.0) - **REFERENCE ONLY**
+- ⚠️ Server-side only filtering
+- ⚠️ Limited user feedback
+- **Use for:** Understanding existing Delivery Receipts code only
+
+## Enhanced Implementation Checklist
 
 ### 1. Setup Phase
 - [ ] Define TypeScript interfaces in `types/admin/[module].ts`
@@ -13,21 +28,24 @@
 ### 2. Core Components (Create in Order)
 - [ ] `columns.tsx` - Column definitions with proper typing
 - [ ] `data-table-column-header.tsx` - Sortable headers
-- [ ] `data-table-faceted-filter.tsx` - Multi-select filters  
+- [ ] `data-table-faceted-filter.tsx` - Multi-select filters **with onValueChange**
 - [ ] `data-table-view-options.tsx` - Column visibility
-- [ ] `data-table-pagination.tsx` - Pagination controls
-- [ ] `data-table-toolbar.tsx` - Search and filters
-- [ ] `data-table.tsx` - Main table component
+- [ ] `data-table-pagination.tsx` - Pagination controls **with onPageChange**
+- [ ] `data-table-toolbar.tsx` - Search and filters **with onFiltersChange**
+- [ ] `data-table.tsx` - Main table component **with callback props**
+- [ ] `[entity]-client.tsx` - **NEW: Client wrapper component**
 - [ ] `[entity]-dashboard.tsx` - Analytics dashboard (optional)
-- [ ] `page.tsx` - Page component
+- [ ] `page.tsx` - Page component **using client wrapper**
 
-### 3. Essential Features
-- [ ] Text search with debouncing
-- [ ] Faceted filters for categorical data
+### 3. Enhanced Features
+- [ ] Text search with real-time URL updates
+- [ ] Faceted filters with URL synchronization
 - [ ] Column sorting with visual indicators
-- [ ] Pagination with page size options
+- [ ] Pagination with URL state persistence
 - [ ] Row actions with dropdown menu
-- [ ] URL state synchronization
+- [ ] **Client-side state management**
+- [ ] **URL parameter synchronization**
+- [ ] **Filter callbacks and handlers**
 - [ ] Loading, empty, and error states
 - [ ] Responsive design
 
@@ -47,8 +65,23 @@
 - [ ] Status badges with color coding
 - [ ] Consistent icon usage
 
-## File Structure Template
+## Enhanced File Structure Template
 
+```
+src/components/admin/[module]/[entity]/
+├── index.ts                          # Export barrel
+├── [entity]-client.tsx               # NEW: Client wrapper with state management
+├── [entity]-dashboard.tsx            # Analytics dashboard
+├── data-table.tsx                    # Main table component (enhanced)
+├── data-table-toolbar.tsx            # Search and filters (with callbacks)
+├── data-table-column-header.tsx      # Sortable headers
+├── data-table-faceted-filter.tsx     # Multi-select filters (with onValueChange)
+├── data-table-view-options.tsx       # Column visibility
+├── data-table-pagination.tsx         # Pagination controls (with onPageChange)
+└── columns.tsx                       # Column definitions
+```
+
+### Legacy File Structure (Reference Only)
 ```
 src/components/admin/[module]/[entity]/
 ├── index.ts                          # Export barrel
@@ -62,7 +95,161 @@ src/components/admin/[module]/[entity]/
 └── columns.tsx                       # Column definitions
 ```
 
-## Key Patterns
+## Enhanced Key Patterns (v2.1)
+
+### Client Wrapper Pattern
+```tsx
+"use client";
+
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { DataTable } from "./data-table";
+
+interface EntityClientProps {
+  initialData: EntityType[];
+}
+
+export function EntityClient({ initialData }: EntityClientProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [data, setData] = useState(initialData);
+
+  const handleFiltersChange = (filters: {
+    search?: string;
+    status?: StatusType[];
+    dateRange?: { start: Date; end: Date };
+  }) => {
+    const params = new URLSearchParams(searchParams);
+    
+    // Update URL parameters
+    if (filters.search) {
+      params.set("search", filters.search);
+    } else {
+      params.delete("search");
+    }
+    
+    if (filters.status && filters.status.length > 0) {
+      params.set("status", filters.status.join(","));
+    } else {
+      params.delete("status");
+    }
+    
+    router.push(`?${params.toString()}`);
+  };
+
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("page", page.toString());
+    router.push(`?${params.toString()}`);
+  };
+
+  return (
+    <DataTable 
+      data={data}
+      onFiltersChange={handleFiltersChange}
+      onPageChange={handlePageChange}
+    />
+  );
+}
+```
+
+### Enhanced DataTable Props
+```tsx
+interface DataTableProps<TData, TValue> {
+  columns: ColumnDef<TData, TValue>[];
+  data: TData[];
+  onFiltersChange?: (filters: FilterType) => void;  // NEW
+  onPageChange?: (page: number) => void;            // NEW
+}
+
+export function DataTable<TData, TValue>({
+  columns,
+  data,
+  onFiltersChange,  // NEW
+  onPageChange,     // NEW
+}: DataTableProps<TData, TValue>) {
+  // ... existing table logic
+
+  return (
+    <div className="space-y-4">
+      <DataTableToolbar 
+        table={table} 
+        onFiltersChange={onFiltersChange}  // Pass callback
+      />
+      {/* ... table content */}
+      <DataTablePagination 
+        table={table} 
+        onPageChange={onPageChange}        // Pass callback
+      />
+    </div>
+  );
+}
+```
+
+### Enhanced Toolbar with Callbacks
+```tsx
+interface DataTableToolbarProps<TData> {
+  table: Table<TData>;
+  onFiltersChange?: (filters: FilterType) => void;  // NEW
+}
+
+export function DataTableToolbar<TData>({
+  table,
+  onFiltersChange,  // NEW
+}: DataTableToolbarProps<TData>) {
+  const handleSearchChange = (value: string) => {
+    table.getColumn("searchField")?.setFilterValue(value);
+    onFiltersChange?.({ search: value });  // Trigger callback
+  };
+
+  const handleStatusChange = (values: string[]) => {
+    table.getColumn("status")?.setFilterValue(values);
+    onFiltersChange?.({ status: values as StatusType[] });  // Trigger callback
+  };
+
+  const handleResetFilters = () => {
+    table.resetColumnFilters();
+    onFiltersChange?.({});  // Trigger callback
+  };
+
+  // ... rest of component
+}
+```
+
+### Enhanced Faceted Filter
+```tsx
+interface DataTableFacetedFilterProps<TData, TValue> {
+  column?: Column<TData, TValue>;
+  title?: string;
+  options: { label: string; value: string; icon?: ComponentType<{ className?: string }> }[];
+  onValueChange?: (values: string[]) => void;  // NEW
+}
+
+export function DataTableFacetedFilter<TData, TValue>({
+  column,
+  title,
+  options,
+  onValueChange,  // NEW
+}: DataTableFacetedFilterProps<TData, TValue>) {
+  const handleSelect = (value: string) => {
+    const filterValues = facets?.has(value) 
+      ? Array.from(selectedValues).filter((v) => v !== value)
+      : [...Array.from(selectedValues), value];
+    
+    column?.setFilterValue(filterValues.length ? filterValues : undefined);
+    onValueChange?.(filterValues);  // Trigger callback
+  };
+
+  const handleClearFilters = () => {
+    column?.setFilterValue(undefined);
+    onValueChange?.([]);  // Trigger callback
+  };
+
+  // ... rest of component
+}
+```
+
+## Legacy Key Patterns (Reference Only)
 
 ### Column Definition Pattern
 ```tsx
@@ -118,8 +305,17 @@ const statusColors = {
 </DropdownMenu>
 ```
 
-## Performance Tips
+## Enhanced Performance Tips
 
+1. **Server-side data fetching** - Initial data from server actions
+2. **Client-side state management** - Real-time filtering without server calls
+3. **URL state synchronization** - Persist filters, sorting, pagination in URL
+4. **Proper memoization** - Use `useMemo` for expensive calculations
+5. **Debounced search** - Prevent excessive URL updates (optional)
+6. **Skeleton loading** - Show loading states during data fetching
+7. **Callback optimization** - Use `useCallback` for filter handlers
+
+### Legacy Performance Tips (Reference Only)
 1. **Server-side everything** - Never load all data client-side
 2. **URL state management** - Persist filters, sorting, pagination in URL
 3. **Proper memoization** - Use `useMemo` for expensive calculations
@@ -133,8 +329,20 @@ const statusColors = {
 3. **Focus management** - Clear focus indicators
 4. **Color contrast** - Sufficient contrast for all text
 
-## Common Pitfalls to Avoid
+## Enhanced Common Pitfalls to Avoid
 
+1. ❌ Not implementing client wrapper component
+2. ❌ Missing callback props in enhanced components
+3. ❌ Not synchronizing filter state with URL
+4. ❌ Forgetting to handle empty/null filter values
+5. ❌ Not implementing proper loading states
+6. ❌ Missing null safety checks
+7. ❌ Inconsistent action menu structure
+8. ❌ Poor mobile responsiveness
+9. ❌ Missing accessibility features
+10. ❌ Not testing URL state persistence
+
+### Legacy Pitfalls (Reference Only)
 1. ❌ Loading all data client-side
 2. ❌ Not implementing proper loading states
 3. ❌ Missing null safety checks
@@ -143,8 +351,31 @@ const statusColors = {
 6. ❌ Poor mobile responsiveness
 7. ❌ Missing accessibility features
 
-## Testing Checklist
+## Enhanced Testing Checklist
 
+### Core Functionality
+- [ ] Table loads data correctly
+- [ ] Search functionality works with URL updates
+- [ ] Filters apply correctly and persist in URL
+- [ ] Sorting works for all sortable columns
+- [ ] Pagination navigates properly with URL sync
+- [ ] Actions perform expected operations
+
+### Enhanced Features
+- [ ] **Client wrapper manages state correctly**
+- [ ] **Filter callbacks trigger URL updates**
+- [ ] **Page refresh preserves filter state**
+- [ ] **Shareable URLs work with applied filters**
+- [ ] **Real-time feedback on filter changes**
+
+### Cross-browser & Accessibility
+- [ ] Mobile layout is usable
+- [ ] Keyboard navigation works
+- [ ] Loading states display properly
+- [ ] Error states handle gracefully
+- [ ] URL parameters work across browsers
+
+### Legacy Testing Checklist (Reference Only)
 - [ ] Table loads data correctly
 - [ ] Search functionality works
 - [ ] Filters apply correctly
@@ -156,4 +387,4 @@ const statusColors = {
 - [ ] Loading states display properly
 - [ ] Error states handle gracefully
 
-This guide ensures consistent, performant, and accessible data table implementations across the XGen MRP application.
+This enhanced guide ensures consistent, performant, and user-friendly data table implementations with client-side filtering across the XGen MRP application. The new pattern provides better user experience through real-time feedback and URL state persistence while maintaining backward compatibility with existing implementations.
