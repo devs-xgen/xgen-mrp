@@ -49,7 +49,7 @@
   - Update any documentation or comments referencing the old API
   - _Requirements: 3.1, 3.4_
 
-- [ ] 8. Add integration tests
+- [x] 8. Add integration tests
   - Test complete PDF download flow from UI to file generation
   - Test CSV export with various filter combinations
   - Test error scenarios and user feedback
