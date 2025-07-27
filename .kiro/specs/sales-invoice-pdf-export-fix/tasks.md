@@ -42,7 +42,7 @@
   - Handle CSV download trigger in browser
   - _Requirements: 4.2, 4.3, 4.4_
 
-- [-] 7. Remove deprecated API route
+- [x] 7. Remove deprecated API route
   - Delete `/src/app/api/admin/billing/sales-invoices/[id]/download/route.ts`
   - Verify no remaining references to the API route
   - Clean up any unused imports or dependencies

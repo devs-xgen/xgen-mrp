@@ -596,16 +596,3 @@ export async function generateDeliveryReceiptPDF(
   }
 }
 
-// Utility function to create download response
-export function createPDFDownloadResponse(
-  pdfBuffer: Buffer,
-  filename: string
-): Response {
-  return new Response(pdfBuffer, {
-    headers: {
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${filename}"`,
-      'Content-Length': pdfBuffer.length.toString(),
-    },
-  });
-}
