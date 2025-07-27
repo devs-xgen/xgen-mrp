@@ -34,9 +34,9 @@ import { Status } from "@prisma/client";
 import { formatCurrencyPHP } from "@/lib/constant";
 import { 
   getCustomerOrdersForBilling, 
-  validateOrderForBilling,
-  mapOrderItemsToInvoiceItems 
+  validateOrderForBilling
 } from "@/lib/actions/customer-order";
+import { mapOrderItemsToInvoiceItems } from "@/lib/utils/invoice-item-utils";
 
 interface EnhancedCustomerOrderSelectorProps {
   customerOrders: CustomerOrder[];
@@ -137,7 +137,7 @@ export function EnhancedCustomerOrderSelector({
     switch (status.toLowerCase()) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'confirmed':
+      case 'active':
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'in_progress':
         return 'bg-purple-100 text-purple-800 border-purple-200';
@@ -145,8 +145,12 @@ export function EnhancedCustomerOrderSelector({
         return 'bg-green-100 text-green-800 border-green-200';
       case 'cancelled':
         return 'bg-red-100 text-red-800 border-red-200';
-      case 'draft':
+      case 'inactive':
         return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'suspended':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'on_hold':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -193,11 +197,10 @@ export function EnhancedCustomerOrderSelector({
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value={Status.PENDING}>Pending</SelectItem>
-              <SelectItem value={Status.CONFIRMED}>Confirmed</SelectItem>
               <SelectItem value={Status.IN_PROGRESS}>In Progress</SelectItem>
               <SelectItem value={Status.COMPLETED}>Completed</SelectItem>
               <SelectItem value={Status.CANCELLED}>Cancelled</SelectItem>
-              <SelectItem value={Status.DRAFT}>Draft</SelectItem>
+              <SelectItem value={Status.ACTIVE}>Active</SelectItem>
             </SelectContent>
           </Select>
         </div>

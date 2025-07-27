@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download } from "lucide-react";
+import { Download, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { exportSalesInvoicePDF } from "@/lib/actions/sales-invoices";
@@ -22,16 +22,11 @@ export function PDFDownloadStandaloneButton({
   className 
 }: PDFDownloadStandaloneButtonProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
 
-  const handleDownloadPDF = async () => {
-    if (isDownloading) return;
-
-    setIsDownloading(true);
+  const downloadPDF = async (attempt: number = 1): Promise<void> => {
     try {
-      toast.success("Download started", {
-        description: "Your invoice PDF is being generated...",
-      });
-
       // Use server action instead of API route
       const result = await exportSalesInvoicePDF(invoiceId);
       
@@ -56,17 +51,99 @@ export function PDFDownloadStandaloneButton({
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
+      // Reset retry count on success
+      setRetryCount(0);
+
       toast.success("Download complete", {
         description: "Invoice PDF has been downloaded successfully.",
       });
     } catch (error) {
-      console.error('Error downloading PDF:', error);
-      toast.error("Download failed", {
-        description: "Failed to download the invoice PDF. Please try again.",
+      console.error(`PDF download attempt ${attempt} failed:`, error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      // Check if we should retry based on error type
+      const shouldRetry = attempt < maxRetries && (
+        errorMessage.includes('timeout') ||
+        errorMessage.includes('connection') ||
+        errorMessage.includes('network') ||
+        errorMessage.includes('Database connection error')
+      );
+
+      if (shouldRetry) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
+        
+        toast.error(`Download failed (Attempt ${attempt}/${maxRetries})`, {
+          description: `Retrying in ${delay / 1000} seconds...`,
+        });
+
+        setTimeout(() => {
+          setRetryCount(attempt);
+          downloadPDF(attempt + 1);
+        }, delay);
+      } else {
+        // Final failure or non-retryable error
+        setRetryCount(0);
+        
+        let userFriendlyMessage = "Failed to download the invoice PDF.";
+        let actionMessage = "Please try again.";
+
+        if (errorMessage.includes('Authentication required')) {
+          userFriendlyMessage = "Your session has expired.";
+          actionMessage = "Please refresh the page and log in again.";
+        } else if (errorMessage.includes('Admin access required')) {
+          userFriendlyMessage = "You don't have permission to download invoices.";
+          actionMessage = "Please contact your administrator.";
+        } else if (errorMessage.includes('Invoice not found')) {
+          userFriendlyMessage = "This invoice no longer exists.";
+          actionMessage = "Please refresh the page.";
+        } else if (errorMessage.includes('PDF generation failed')) {
+          userFriendlyMessage = "There was an issue generating the PDF.";
+          actionMessage = "Please try again or contact support.";
+        } else if (attempt >= maxRetries) {
+          userFriendlyMessage = `Failed to download after ${maxRetries} attempts.`;
+          actionMessage = "Please try again later or contact support.";
+        }
+
+        toast.error("Download failed", {
+          description: `${userFriendlyMessage} ${actionMessage}`,
+        });
+      }
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (isDownloading) return;
+
+    setIsDownloading(true);
+    setRetryCount(0);
+    
+    try {
+      toast.success("Download started", {
+        description: "Your invoice PDF is being generated...",
       });
+
+      await downloadPDF(1);
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  const getButtonText = () => {
+    if (isDownloading) {
+      if (retryCount > 0) {
+        return `Retrying... (${retryCount}/${maxRetries})`;
+      }
+      return "Downloading...";
+    }
+    return "Download PDF";
+  };
+
+  const getIcon = () => {
+    if (isDownloading && retryCount > 0) {
+      return <RefreshCw className="mr-2 h-4 w-4 animate-spin" />;
+    }
+    return <Download className="mr-2 h-4 w-4" />;
   };
 
   return (
@@ -77,8 +154,8 @@ export function PDFDownloadStandaloneButton({
       disabled={isDownloading}
       className={className}
     >
-      <Download className="mr-2 h-4 w-4" />
-      {isDownloading ? "Downloading..." : "Download PDF"}
+      {getIcon()}
+      {getButtonText()}
     </Button>
   );
 }

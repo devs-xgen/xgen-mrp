@@ -720,6 +720,7 @@ export interface PDFExportResponse {
   pdfBuffer?: Buffer;
   filename?: string;
   error?: string;
+  errorCode?: string;
 }
 
 export interface CSVExportResponse {

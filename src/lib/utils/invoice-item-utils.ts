@@ -3,21 +3,21 @@ import { SalesInvoiceItemFormData } from "@/types/admin/billing";
 // Type for order line display (from customer-order types)
 interface OrderLineForDisplay {
   id: string;
-  productId: string | null;
-  productVariantId: string | null;
+  productId: string;
+  productVariantId?: string;
   quantity: number;
   unitPrice: number;
   product?: {
     id: string;
     name: string;
     sku: string;
-    unitOfMeasure: string;
+    unitOfMeasure?: string | null;
   } | null;
   productVariant?: {
     id: string;
     displayName: string;
     sku: string;
-    unitPrice: number;
+    unitPrice?: number;
   } | null;
 }
 

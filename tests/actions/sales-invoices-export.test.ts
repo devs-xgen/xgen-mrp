@@ -156,7 +156,8 @@ describe('Sales Invoice Export Actions', () => {
       const result = await exportSalesInvoicePDF('invoice-1');
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Unauthorized');
+      expect(result.error).toBe('Authentication required. Please log in to continue.');
+      expect(result.errorCode).toBe('UNAUTHORIZED');
       expect(result.pdfBuffer).toBeUndefined();
       expect(prismaMock.salesInvoice.findUnique).not.toHaveBeenCalled();
     });
@@ -169,7 +170,8 @@ describe('Sales Invoice Export Actions', () => {
       const result = await exportSalesInvoicePDF('invoice-1');
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Insufficient permissions');
+      expect(result.error).toBe('Admin access required to export invoices.');
+      expect(result.errorCode).toBe('INSUFFICIENT_PERMISSIONS');
       expect(result.pdfBuffer).toBeUndefined();
       expect(prismaMock.salesInvoice.findUnique).not.toHaveBeenCalled();
     });
@@ -184,11 +186,12 @@ describe('Sales Invoice Export Actions', () => {
       const result = await exportSalesInvoicePDF('non-existent-id');
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Sales invoice not found');
+      expect(result.error).toBe('Invoice not found. It may have been deleted or you don\'t have access to it.');
+      expect(result.errorCode).toBe('NOT_FOUND');
       expect(result.pdfBuffer).toBeUndefined();
     });
 
-    it('should handle PDF generation errors', async () => {
+    it('should handle PDF generation errors with specific error codes', async () => {
       vi.mocked(getServerSession).mockResolvedValue({
         user: { id: 'user-1', role: 'ADMIN' },
       } as any);
@@ -199,7 +202,8 @@ describe('Sales Invoice Export Actions', () => {
       const result = await exportSalesInvoicePDF('invoice-1');
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Failed to generate PDF. Please try again.');
+      expect(result.error).toBe('Failed to generate PDF. Please try again or contact support if the problem persists.');
+      expect(result.errorCode).toBe('UNKNOWN_ERROR');
       expect(result.pdfBuffer).toBeUndefined();
     });
 
@@ -208,12 +212,75 @@ describe('Sales Invoice Export Actions', () => {
         user: { id: 'user-1', role: 'ADMIN' },
       } as any);
 
-      prismaMock.salesInvoice.findUnique.mockRejectedValue(new Error('Database error'));
+      prismaMock.salesInvoice.findUnique.mockRejectedValue(new Error('Database connection error'));
 
       const result = await exportSalesInvoicePDF('invoice-1');
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Failed to generate PDF. Please try again.');
+      expect(result.error).toBe('Database connection error. Please try again in a moment.');
+      expect(result.errorCode).toBe('DATABASE_ERROR');
+      expect(result.pdfBuffer).toBeUndefined();
+    });
+
+    it('should handle timeout errors', async () => {
+      vi.mocked(getServerSession).mockResolvedValue({
+        user: { id: 'user-1', role: 'ADMIN' },
+      } as any);
+
+      prismaMock.salesInvoice.findUnique.mockResolvedValue(mockSalesInvoice);
+      vi.mocked(generateSalesInvoicePDF).mockRejectedValue(new Error('Request timeout'));
+
+      const result = await exportSalesInvoicePDF('invoice-1');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('PDF generation timed out. Please try again with a smaller invoice.');
+      expect(result.errorCode).toBe('TIMEOUT');
+      expect(result.pdfBuffer).toBeUndefined();
+    });
+
+    it('should handle memory errors', async () => {
+      vi.mocked(getServerSession).mockResolvedValue({
+        user: { id: 'user-1', role: 'ADMIN' },
+      } as any);
+
+      prismaMock.salesInvoice.findUnique.mockResolvedValue(mockSalesInvoice);
+      vi.mocked(generateSalesInvoicePDF).mockRejectedValue(new Error('Out of memory'));
+
+      const result = await exportSalesInvoicePDF('invoice-1');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Insufficient memory to generate PDF. Please try again later.');
+      expect(result.errorCode).toBe('MEMORY_ERROR');
+      expect(result.pdfBuffer).toBeUndefined();
+    });
+
+    it('should handle invalid input', async () => {
+      vi.mocked(getServerSession).mockResolvedValue({
+        user: { id: 'user-1', role: 'ADMIN' },
+      } as any);
+
+      const result = await exportSalesInvoicePDF('');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Invalid invoice ID provided.');
+      expect(result.errorCode).toBe('INVALID_INPUT');
+      expect(result.pdfBuffer).toBeUndefined();
+      expect(prismaMock.salesInvoice.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('should handle empty PDF buffer', async () => {
+      vi.mocked(getServerSession).mockResolvedValue({
+        user: { id: 'user-1', role: 'ADMIN' },
+      } as any);
+
+      prismaMock.salesInvoice.findUnique.mockResolvedValue(mockSalesInvoice);
+      vi.mocked(generateSalesInvoicePDF).mockResolvedValue(Buffer.alloc(0)); // Empty buffer
+
+      const result = await exportSalesInvoicePDF('invoice-1');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('PDF generation failed. The generated file is empty.');
+      expect(result.errorCode).toBe('PDF_GENERATION_FAILED');
       expect(result.pdfBuffer).toBeUndefined();
     });
 
@@ -614,7 +681,7 @@ describe('Sales Invoice Export Actions', () => {
     it('should throw error for unauthenticated user', async () => {
       vi.mocked(getServerSession).mockResolvedValue(null);
 
-      await expect(exportSalesInvoicesData()).rejects.toThrow('Failed to export sales invoices data');
+      await expect(exportSalesInvoicesData()).rejects.toThrow('Authentication required. Please log in to continue.');
       expect(prismaMock.salesInvoice.findMany).not.toHaveBeenCalled();
     });
 
@@ -623,7 +690,7 @@ describe('Sales Invoice Export Actions', () => {
         user: { id: 'user-1', role: 'WORKER' },
       } as any);
 
-      await expect(exportSalesInvoicesData()).rejects.toThrow('Failed to export sales invoices data');
+      await expect(exportSalesInvoicesData()).rejects.toThrow('Admin access required to export invoices.');
       expect(prismaMock.salesInvoice.findMany).not.toHaveBeenCalled();
     });
 
@@ -632,9 +699,39 @@ describe('Sales Invoice Export Actions', () => {
         user: { id: 'user-1', role: 'ADMIN' },
       } as any);
 
-      prismaMock.salesInvoice.findMany.mockRejectedValue(new Error('Database error'));
+      prismaMock.salesInvoice.findMany.mockRejectedValue(new Error('Database connection error'));
 
-      await expect(exportSalesInvoicesData()).rejects.toThrow('Failed to export sales invoices data');
+      await expect(exportSalesInvoicesData()).rejects.toThrow('Database connection error. Please try again in a moment.');
+    });
+
+    it('should handle timeout errors', async () => {
+      vi.mocked(getServerSession).mockResolvedValue({
+        user: { id: 'user-1', role: 'ADMIN' },
+      } as any);
+
+      prismaMock.salesInvoice.findMany.mockRejectedValue(new Error('Query timeout'));
+
+      await expect(exportSalesInvoicesData()).rejects.toThrow('Export timed out. Please try with fewer filters or contact support.');
+    });
+
+    it('should handle memory errors', async () => {
+      vi.mocked(getServerSession).mockResolvedValue({
+        user: { id: 'user-1', role: 'ADMIN' },
+      } as any);
+
+      prismaMock.salesInvoice.findMany.mockRejectedValue(new Error('Out of memory'));
+
+      await expect(exportSalesInvoicesData()).rejects.toThrow('Export too large. Please apply filters to reduce the data size.');
+    });
+
+    it('should handle validation errors', async () => {
+      vi.mocked(getServerSession).mockResolvedValue({
+        user: { id: 'user-1', role: 'ADMIN' },
+      } as any);
+
+      prismaMock.salesInvoice.findMany.mockRejectedValue(new Error('Validation failed'));
+
+      await expect(exportSalesInvoicesData()).rejects.toThrow('Failed to export sales invoices. Please try again or contact support if the problem persists.');
     });
 
     it('should handle invalid filter validation', async () => {
@@ -785,7 +882,7 @@ describe('Sales Invoice Export Actions', () => {
       const result = await exportSalesInvoicePDF('invoice-1');
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Insufficient permissions');
+      expect(result.error).toBe('Admin access required to export invoices.');
     });
 
     it('should handle concurrent export requests', async () => {

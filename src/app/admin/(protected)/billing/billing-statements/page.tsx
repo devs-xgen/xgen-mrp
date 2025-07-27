@@ -1,5 +1,8 @@
 import { Suspense } from "react";
 import { Metadata } from "next";
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Import server actions and types
@@ -74,7 +77,7 @@ export default async function BillingStatementsPage({ searchParams }: BillingSta
   const analytics = await getBillingAnalytics();
 
   return (
-    <div className="flex-1 space-y-6 p-6">
+    <div className="container mx-auto py-10">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Billing Statements</h1>
@@ -82,6 +85,12 @@ export default async function BillingStatementsPage({ searchParams }: BillingSta
             Manage customer billing statements and track payments
           </p>
         </div>
+        <Button asChild>
+          <Link href="/admin/billing/billing-statements/create">
+            <Plus className="mr-2 h-4 w-4" />
+            Create Statement
+          </Link>
+        </Button>
       </div>
 
       <Suspense fallback={<BillingStatementsTableSkeleton />}>

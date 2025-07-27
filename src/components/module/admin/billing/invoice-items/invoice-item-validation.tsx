@@ -4,6 +4,7 @@ import { AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 interface InvoiceItemValidationProps {
   errors: string[];
@@ -131,7 +132,7 @@ export function InvoiceItemValidationSummary({
             <div className="text-xs text-muted-foreground">Invalid Items</div>
           </div>
           <div className="text-center">
-            <div className="text-lg font-bold">₱{totalAmount.toLocaleString()}</div>
+            <div className="text-lg font-bold">{formatCurrencyPHP(totalAmount)}</div>
             <div className="text-xs text-muted-foreground">Total Amount</div>
           </div>
         </div>

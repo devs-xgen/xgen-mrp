@@ -23,7 +23,6 @@ export interface OrderLine {
     name: string;
     sku: string;
     description?: string | null;
-    unitOfMeasure?: string | null;
     sellingPrice?: number;
   };
   productVariant?: {

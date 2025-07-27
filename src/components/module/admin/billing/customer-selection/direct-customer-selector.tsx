@@ -22,6 +22,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Customer } from "@/types/admin/billing";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 interface DirectCustomerSelectorProps {
   customers: Customer[];
@@ -260,7 +261,7 @@ export function DirectCustomerSelector({
                       <span className="font-medium text-muted-foreground">Credit Limit:</span>
                       <div className="flex items-center gap-1">
                         <CreditCard className="h-3 w-3" />
-                        <span className="font-mono">₱{selectedCustomer.creditLimit.toLocaleString()}</span>
+                        <span className="font-mono">{formatCurrencyPHP(selectedCustomer.creditLimit)}</span>
                       </div>
                     </div>
                   )}

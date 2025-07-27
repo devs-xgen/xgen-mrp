@@ -3,6 +3,7 @@
 import { AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 interface CustomerValidationResult {
   isValid: boolean;
@@ -111,7 +112,7 @@ export function CustomerCreditStatus({
         </Badge>
       </div>
       <div className="text-xs text-muted-foreground">
-        Outstanding: ₱{outstandingAmount.toLocaleString()} / ₱{customer.creditLimit.toLocaleString()} 
+        Outstanding: {formatCurrencyPHP(outstandingAmount)} / {formatCurrencyPHP(customer.creditLimit)} 
         ({creditUtilization.toFixed(1)}%)
       </div>
       <div className="w-full bg-gray-200 rounded-full h-2">

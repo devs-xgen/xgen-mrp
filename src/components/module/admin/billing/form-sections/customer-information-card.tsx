@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { FormFieldError } from "@/components/ui/form-field-error";
 import { User, ShoppingCart, Edit, CheckCircle } from "lucide-react";
+import { formatCurrencyPHP } from "@/lib/constant";
 import { BillingTypeSelector } from "../billing-type-selector";
 import { EnhancedCustomerSelection, CustomerSelectionData } from "../enhanced-customer-selection";
 import { Customer } from "@/types/admin/billing";
@@ -198,7 +199,7 @@ export function CustomerInformationCard({
                 <div>Order: {localCustomerData.selectedOrder.orderNumber}</div>
                 <div>Order Date: {new Date(localCustomerData.selectedOrder.orderDate).toLocaleDateString()}</div>
                 {localCustomerData.selectedOrder.totalAmount && (
-                  <div>Order Total: ₱{localCustomerData.selectedOrder.totalAmount.toLocaleString()}</div>
+                  <div>Order Total: {formatCurrencyPHP(localCustomerData.selectedOrder.totalAmount)}</div>
                 )}
               </div>
             )}

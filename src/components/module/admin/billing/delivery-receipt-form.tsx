@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 // Import types and server actions
 import { 
@@ -561,7 +562,7 @@ export function DeliveryReceiptForm({
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Amount:</span>
                     <span className="text-sm font-medium">
-                      ₱{selectedBillingStatement.totalAmount.toLocaleString()}
+                      {formatCurrencyPHP(selectedBillingStatement.totalAmount)}
                     </span>
                   </div>
                 </CardContent>

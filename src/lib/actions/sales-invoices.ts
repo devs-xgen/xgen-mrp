@@ -877,17 +877,34 @@ export async function exportSalesInvoicePDF(
     // Authentication check
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return { success: false, error: "Unauthorized" };
+      return { 
+        success: false, 
+        error: "Authentication required. Please log in to continue.",
+        errorCode: "UNAUTHORIZED"
+      };
     }
 
     // Authorization check - ensure user has admin role
     if (session.user.role !== "ADMIN") {
-      return { success: false, error: "Insufficient permissions" };
+      return { 
+        success: false, 
+        error: "Admin access required to export invoices.",
+        errorCode: "INSUFFICIENT_PERMISSIONS"
+      };
+    }
+
+    // Validate input
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return {
+        success: false,
+        error: "Invalid invoice ID provided.",
+        errorCode: "INVALID_INPUT"
+      };
     }
 
     // Get sales invoice with all required relationships for PDF generation
     const salesInvoice = await prisma.salesInvoice.findUnique({
-      where: { id },
+      where: { id: id.trim() },
       include: {
         invoiceItems: {
           include: {
@@ -947,7 +964,11 @@ export async function exportSalesInvoicePDF(
     });
 
     if (!salesInvoice) {
-      return { success: false, error: "Sales invoice not found" };
+      return { 
+        success: false, 
+        error: "Invoice not found. It may have been deleted or you don't have access to it.",
+        errorCode: "NOT_FOUND"
+      };
     }
 
     // Convert Decimal fields to numbers for PDF generation
@@ -972,6 +993,14 @@ export async function exportSalesInvoicePDF(
     // Generate PDF using existing service
     const pdfBuffer = await generateSalesInvoicePDF(convertedInvoice);
 
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      return {
+        success: false,
+        error: "PDF generation failed. The generated file is empty.",
+        errorCode: "PDF_GENERATION_FAILED"
+      };
+    }
+
     // Generate filename with invoice number and timestamp
     const timestamp = new Date().toISOString().split('T')[0];
     const filename = `sales-invoice-${salesInvoice.invoiceNumber}-${timestamp}.pdf`;
@@ -983,9 +1012,36 @@ export async function exportSalesInvoicePDF(
     };
   } catch (error) {
     console.error("Error exporting sales invoice PDF:", error);
+    
+    // Provide specific error messages based on error type
+    if (error instanceof Error) {
+      if (error.message.includes('timeout')) {
+        return {
+          success: false,
+          error: "PDF generation timed out. Please try again with a smaller invoice.",
+          errorCode: "TIMEOUT"
+        };
+      }
+      if (error.message.includes('memory')) {
+        return {
+          success: false,
+          error: "Insufficient memory to generate PDF. Please try again later.",
+          errorCode: "MEMORY_ERROR"
+        };
+      }
+      if (error.message.includes('database') || error.message.includes('connection')) {
+        return {
+          success: false,
+          error: "Database connection error. Please try again in a moment.",
+          errorCode: "DATABASE_ERROR"
+        };
+      }
+    }
+    
     return {
       success: false,
-      error: "Failed to generate PDF. Please try again.",
+      error: "Failed to generate PDF. Please try again or contact support if the problem persists.",
+      errorCode: "UNKNOWN_ERROR"
     };
   }
 }
@@ -997,12 +1053,12 @@ export async function exportSalesInvoicesData(
     // Authentication check
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      throw new Error("Unauthorized");
+      throw new Error("Authentication required. Please log in to continue.");
     }
 
     // Authorization check - ensure user has admin role
     if (session.user.role !== "ADMIN") {
-      throw new Error("Insufficient permissions");
+      throw new Error("Admin access required to export invoices.");
     }
 
     // Parse and validate filters
@@ -1208,7 +1264,30 @@ export async function exportSalesInvoicesData(
     };
   } catch (error) {
     console.error("Error exporting sales invoices data:", error);
-    throw new Error("Failed to export sales invoices data");
+    
+    // Provide specific error messages based on error type
+    if (error instanceof Error) {
+      if (error.message.includes('Authentication required')) {
+        throw new Error("Authentication required. Please log in to continue.");
+      }
+      if (error.message.includes('Admin access required')) {
+        throw new Error("Admin access required to export invoices.");
+      }
+      if (error.message.includes('timeout')) {
+        throw new Error("Export timed out. Please try with fewer filters or contact support.");
+      }
+      if (error.message.includes('memory')) {
+        throw new Error("Export too large. Please apply filters to reduce the data size.");
+      }
+      if (error.message.includes('database') || error.message.includes('connection')) {
+        throw new Error("Database connection error. Please try again in a moment.");
+      }
+      if (error.message.includes('validation')) {
+        throw new Error("Invalid filter parameters. Please check your selections and try again.");
+      }
+    }
+    
+    throw new Error("Failed to export sales invoices. Please try again or contact support if the problem persists.");
   }
 }
 

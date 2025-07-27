@@ -24,6 +24,7 @@ import {
 import { Customer } from "@/types/admin/billing";
 import { CustomerValidationAlert, CustomerCreditStatus } from "./customer-validation-alert";
 import { getAllCustomers, validateCustomerForBilling } from "@/lib/actions/customers";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 interface CustomerValidationResult {
   isValid: boolean;
@@ -269,7 +270,7 @@ export function EnhancedDirectCustomerSelector({
                         {customer.creditLimit && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <CreditCard className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
-                            <span>Credit Limit: ₱{customer.creditLimit.toLocaleString()}</span>
+                            <span>Credit Limit: {formatCurrencyPHP(customer.creditLimit)}</span>
                           </div>
                         )}
                       </CommandItem>
@@ -407,7 +408,7 @@ export function EnhancedDirectCustomerSelector({
                     <div>
                       <span className="font-medium">Last Order:</span>
                       <div className="text-muted-foreground break-words">
-                        {selectedCustomer.orders[0].orderNumber} - ₱{selectedCustomer.orders[0].totalAmount.toLocaleString()}
+                        {selectedCustomer.orders[0].orderNumber} - {formatCurrencyPHP(selectedCustomer.orders[0].totalAmount)}
                       </div>
                     </div>
                   )}
@@ -415,7 +416,7 @@ export function EnhancedDirectCustomerSelector({
                     <div>
                       <span className="font-medium">Last Billing:</span>
                       <div className="text-muted-foreground break-words">
-                        {selectedCustomer.billingStatements[0].statementNumber} - ₱{selectedCustomer.billingStatements[0].totalAmount.toLocaleString()}
+                        {selectedCustomer.billingStatements[0].statementNumber} - {formatCurrencyPHP(selectedCustomer.billingStatements[0].totalAmount)}
                       </div>
                     </div>
                   )}

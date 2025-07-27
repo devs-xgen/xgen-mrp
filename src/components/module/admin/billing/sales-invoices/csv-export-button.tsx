@@ -45,18 +45,10 @@ export function CSVExportButton({ className }: CSVExportButtonProps) {
   const [dateFrom, setDateFrom] = useState<Date>();
   const [dateTo, setDateTo] = useState<Date>();
 
-  const handleQuickExport = async () => {
-    if (isExporting) return;
-
-    setIsExporting(true);
+  const exportCSV = async (filters?: SalesInvoiceFilters, attempt: number = 1): Promise<void> => {
     try {
-      toast({
-        title: "Export started",
-        description: "Your sales invoices CSV is being generated...",
-      });
-
-      // Export all invoices without filters
-      const result = await exportSalesInvoicesData();
+      // Export with or without filters
+      const result = await exportSalesInvoicesData(filters);
       
       // Create blob from CSV content
       const blob = new Blob([result.csvContent], { type: 'text/csv' });
@@ -80,12 +72,73 @@ export function CSVExportButton({ className }: CSVExportButtonProps) {
         description: "Sales invoices CSV has been downloaded successfully.",
       });
     } catch (error) {
-      console.error('Error exporting CSV:', error);
+      console.error(`CSV export attempt ${attempt} failed:`, error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      const maxRetries = 3;
+      
+      // Check if we should retry based on error type
+      const shouldRetry = attempt < maxRetries && (
+        errorMessage.includes('timeout') ||
+        errorMessage.includes('connection') ||
+        errorMessage.includes('network') ||
+        errorMessage.includes('Database connection error')
+      );
+
+      if (shouldRetry) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
+        
+        toast({
+          title: `Export failed (Attempt ${attempt}/${maxRetries})`,
+          description: `Retrying in ${delay / 1000} seconds...`,
+          variant: "destructive",
+        });
+
+        setTimeout(() => {
+          exportCSV(filters, attempt + 1);
+        }, delay);
+      } else {
+        // Final failure or non-retryable error
+        let userFriendlyMessage = "Failed to export sales invoices CSV.";
+        let actionMessage = "Please try again.";
+
+        if (errorMessage.includes('Authentication required')) {
+          userFriendlyMessage = "Your session has expired.";
+          actionMessage = "Please refresh the page and log in again.";
+        } else if (errorMessage.includes('Admin access required')) {
+          userFriendlyMessage = "You don't have permission to export invoices.";
+          actionMessage = "Please contact your administrator.";
+        } else if (errorMessage.includes('Export too large')) {
+          userFriendlyMessage = "The export is too large.";
+          actionMessage = "Please apply filters to reduce the data size.";
+        } else if (errorMessage.includes('Invalid filter parameters')) {
+          userFriendlyMessage = "Invalid filter settings.";
+          actionMessage = "Please check your selections and try again.";
+        } else if (attempt >= maxRetries) {
+          userFriendlyMessage = `Failed to export after ${maxRetries} attempts.`;
+          actionMessage = "Please try again later or contact support.";
+        }
+
+        toast({
+          title: "Export failed",
+          description: `${userFriendlyMessage} ${actionMessage}`,
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleQuickExport = async () => {
+    if (isExporting) return;
+
+    setIsExporting(true);
+    try {
       toast({
-        title: "Export failed",
-        description: "Failed to export sales invoices CSV. Please try again.",
-        variant: "destructive",
+        title: "Export started",
+        description: "Your sales invoices CSV is being generated...",
       });
+
+      await exportCSV();
     } finally {
       setIsExporting(false);
     }
@@ -112,40 +165,10 @@ export function CSVExportButton({ className }: CSVExportButtonProps) {
         filters.dateRange = { start: dateFrom, end: dateTo };
       }
 
-      // Export with filters
-      const result = await exportSalesInvoicesData(filters);
+      await exportCSV(filters);
       
-      // Create blob from CSV content
-      const blob = new Blob([result.csvContent], { type: 'text/csv' });
-      
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = result.filename;
-      
-      // Trigger download
-      document.body.appendChild(link);
-      link.click();
-      
-      // Cleanup
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast({
-        title: "Export complete",
-        description: "Filtered sales invoices CSV has been downloaded successfully.",
-      });
-      
-      // Close dialog
+      // Close dialog on success
       setIsDialogOpen(false);
-    } catch (error) {
-      console.error('Error exporting filtered CSV:', error);
-      toast({
-        title: "Export failed",
-        description: "Failed to export filtered sales invoices CSV. Please try again.",
-        variant: "destructive",
-      });
     } finally {
       setIsExporting(false);
     }

@@ -98,7 +98,6 @@ export async function getCustomerOrdersForBilling(options?: {
                 sku: true,
                 sellingPrice: true,
                 description: true,
-                unitOfMeasure: true,
               },
             },
             productVariant: {
@@ -108,7 +107,7 @@ export async function getCustomerOrdersForBilling(options?: {
                 displayName: true,
                 sizeName: true,
                 colorName: true,
-                unitPrice: true,
+                sellingPrice: true,
               },
             },
           },
@@ -177,7 +176,6 @@ export async function getCustomerOrdersForBilling(options?: {
               name: line.product.name,
               sku: line.product.sku,
               description: line.product.description,
-              unitOfMeasure: line.product.unitOfMeasure,
               sellingPrice: line.product.sellingPrice instanceof Decimal
                 ? line.product.sellingPrice.toNumber()
                 : Number(line.product.sellingPrice || 0),
@@ -190,9 +188,9 @@ export async function getCustomerOrdersForBilling(options?: {
               displayName: line.productVariant.displayName,
               sizeName: line.productVariant.sizeName,
               colorName: line.productVariant.colorName,
-              unitPrice: line.productVariant.unitPrice instanceof Decimal
-                ? line.productVariant.unitPrice.toNumber()
-                : Number(line.productVariant.unitPrice || 0),
+              unitPrice: line.productVariant.sellingPrice instanceof Decimal
+                ? line.productVariant.sellingPrice.toNumber()
+                : Number(line.productVariant.sellingPrice || 0),
             }
           : undefined,
       })),
@@ -242,7 +240,6 @@ export async function getCustomerOrders(): Promise<CustomerOrder[]> {
                 sku: true,
                 sellingPrice: true,
                 description: true,
-                unitOfMeasure: true,
               },
             },
             productVariant: {
@@ -252,7 +249,7 @@ export async function getCustomerOrders(): Promise<CustomerOrder[]> {
                 displayName: true,
                 sizeName: true,
                 colorName: true,
-                unitPrice: true,
+                sellingPrice: true,
               },
             },
           },
@@ -477,8 +474,8 @@ export async function validateOrderForBilling(orderId: string): Promise<{
       errors.push("Cannot create billing for cancelled orders");
     }
 
-    if (order.status === Status.DRAFT) {
-      warnings.push("Order is still in draft status");
+    if (order.status === Status.PENDING) {
+      warnings.push("Order is still in pending status");
     }
 
     // Check if order has items
@@ -561,7 +558,6 @@ export async function getCustomerOrderForBilling(orderId: string): Promise<Custo
                 sku: true,
                 sellingPrice: true,
                 description: true,
-                unitOfMeasure: true,
               },
             },
             productVariant: {
@@ -571,7 +567,7 @@ export async function getCustomerOrderForBilling(orderId: string): Promise<Custo
                 displayName: true,
                 sizeName: true,
                 colorName: true,
-                unitPrice: true,
+                sellingPrice: true,
               },
             },
           },
@@ -640,7 +636,6 @@ export async function getCustomerOrderForBilling(orderId: string): Promise<Custo
               name: line.product.name,
               sku: line.product.sku,
               description: line.product.description,
-              unitOfMeasure: line.product.unitOfMeasure,
               sellingPrice: line.product.sellingPrice instanceof Decimal
                 ? line.product.sellingPrice.toNumber()
                 : Number(line.product.sellingPrice || 0),
@@ -653,9 +648,9 @@ export async function getCustomerOrderForBilling(orderId: string): Promise<Custo
               displayName: line.productVariant.displayName,
               sizeName: line.productVariant.sizeName,
               colorName: line.productVariant.colorName,
-              unitPrice: line.productVariant.unitPrice instanceof Decimal
-                ? line.productVariant.unitPrice.toNumber()
-                : Number(line.productVariant.unitPrice || 0),
+              unitPrice: line.productVariant.sellingPrice instanceof Decimal
+                ? line.productVariant.sellingPrice.toNumber()
+                : Number(line.productVariant.sellingPrice || 0),
             }
           : undefined,
       })),
