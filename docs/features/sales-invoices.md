@@ -3,6 +3,11 @@
 ## Overview
 The Sales Invoices module provides comprehensive invoice management functionality within the XGen MRP billing system. It handles the complete invoice lifecycle from creation to payment tracking.
 
+## Recent Updates
+- **TypeScript Fixes**: Resolved all TypeScript errors related to interface mismatches, enum usage, and property access patterns
+- **Type Safety**: Enhanced type safety throughout the module with proper enum usage and null checks
+- **Component Props**: Fixed component interface mismatches and prop passing issues
+
 ## Purpose
 - Manage sales invoice creation, editing, and tracking
 - Monitor invoice status and payment processing
@@ -22,6 +27,17 @@ The Sales Invoices module provides comprehensive invoice management functionalit
 - **Data Table**: `/src/components/module/admin/billing/sales-invoices/data-table.tsx`
 - **Column Definitions**: `/src/components/module/admin/billing/sales-invoices/columns.tsx`
 - **Supporting Components**: Various data table utilities
+
+### Page Components
+- **Invoice Details**: `/src/app/admin/(protected)/billing/sales-invoices/[id]/page.tsx`
+- **Invoice Edit**: `/src/app/admin/(protected)/billing/sales-invoices/[id]/edit/page.tsx`
+- **Invoice Create**: `/src/app/admin/(protected)/billing/sales-invoices/create/page.tsx`
+- **Main Listing**: `/src/app/admin/(protected)/billing/sales-invoices/page.tsx`
+
+### Additional Components
+- **Invoice Form**: `/src/components/module/admin/billing/sales-invoice-form.tsx`
+- **Invoice List**: `/src/components/module/admin/billing/sales-invoice-list.tsx`
+- **Invoice Preview**: `/src/components/module/admin/billing/sales-invoice-preview.tsx`
 
 ## File-Specific Documentation
 

@@ -39,19 +39,19 @@ export function SalesInvoiceList({
 }: SalesInvoiceListProps) {
   const getStatusBadge = (status: InvoiceStatus) => {
     switch (status) {
-      case "DRAFT":
+      case InvoiceStatus.DRAFT:
         return <Badge variant="secondary">Draft</Badge>;
-      case "SENT":
+      case InvoiceStatus.SENT:
         return <Badge variant="outline" className="bg-blue-500 text-white">Sent</Badge>;
-      case "PAID":
+      case InvoiceStatus.PAID:
         return <Badge variant="default" className="bg-green-500 text-white">Paid</Badge>;
-      case "OVERDUE":
+      case InvoiceStatus.OVERDUE:
         return <Badge variant="destructive">Overdue</Badge>;
-      case "CANCELLED":
+      case InvoiceStatus.CANCELLED:
         return <Badge variant="destructive">Cancelled</Badge>;
-      case "DISPUTED":
+      case InvoiceStatus.DISPUTED:
         return <Badge variant="secondary" className="bg-orange-500 text-white">Disputed</Badge>;
-      case "PARTIAL":
+      case InvoiceStatus.PARTIAL:
         return <Badge variant="outline" className="bg-yellow-500 text-white">Partial</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
@@ -157,7 +157,7 @@ export function SalesInvoiceList({
                     )}
                     {invoice.billingStatement.productionOrder && (
                       <div className="text-xs text-muted-foreground">
-                        Production: {invoice.billingStatement.productionOrder.orderNumber}
+                        Production: {invoice.billingStatement.productionOrder.product?.name || 'N/A'}
                       </div>
                     )}
                   </div>
@@ -180,7 +180,7 @@ export function SalesInvoiceList({
                         View Invoice
                       </Link>
                     </DropdownMenuItem>
-                    {invoice.status === 'DRAFT' && (
+                    {invoice.status === InvoiceStatus.DRAFT && (
                       <DropdownMenuItem asChild>
                         <Link href={`/admin/billing/sales-invoices/${invoice.id}/edit`}>
                           <Edit className="mr-2 h-4 w-4" />
@@ -193,14 +193,14 @@ export function SalesInvoiceList({
                       Download PDF
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    {invoice.status === "DRAFT" && onStatusUpdate && (
-                      <DropdownMenuItem onClick={() => onStatusUpdate(invoice.id, "SENT")}>
+                    {invoice.status === InvoiceStatus.DRAFT && onStatusUpdate && (
+                      <DropdownMenuItem onClick={() => onStatusUpdate(invoice.id, InvoiceStatus.SENT)}>
                         <Send className="mr-2 h-4 w-4" />
                         Send Invoice
                       </DropdownMenuItem>
                     )}
-                    {invoice.status === "SENT" && onStatusUpdate && (
-                      <DropdownMenuItem onClick={() => onStatusUpdate(invoice.id, "PAID")}>
+                    {invoice.status === InvoiceStatus.SENT && onStatusUpdate && (
+                      <DropdownMenuItem onClick={() => onStatusUpdate(invoice.id, InvoiceStatus.PAID)}>
                         <Receipt className="mr-2 h-4 w-4" />
                         Mark as Paid
                       </DropdownMenuItem>
@@ -211,7 +211,7 @@ export function SalesInvoiceList({
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
-                    {invoice.status === 'DRAFT' && onDelete && (
+                    {invoice.status === InvoiceStatus.DRAFT && onDelete && (
                       <DropdownMenuItem 
                         className="text-destructive"
                         onClick={() => onDelete(invoice.id)}

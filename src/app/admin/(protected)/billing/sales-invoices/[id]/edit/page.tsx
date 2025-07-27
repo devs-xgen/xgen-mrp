@@ -89,8 +89,8 @@ export default function EditSalesInvoicePage() {
           // Convert invoice items to form data
           const formItems: SalesInvoiceItemFormData[] = invoiceData.invoiceItems?.map(item => ({
             productId: item.productId || undefined,
-            materialId: item.materialId || undefined,
-            inventoryItemId: item.inventoryItemId || undefined,
+            materialId: item.material?.id || undefined,
+            inventoryItemId: item.inventoryItem?.id || undefined,
             description: item.description,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
@@ -322,7 +322,7 @@ export default function EditSalesInvoicePage() {
                             <div><strong>Customer Order:</strong> {invoice.billingStatement.customerOrder.orderNumber}</div>
                           )}
                           {invoice.billingStatement.productionOrder && (
-                            <div><strong>Production Order:</strong> {invoice.billingStatement.productionOrder.orderNumber}</div>
+                            <div><strong>Production Order:</strong> {invoice.billingStatement.productionOrder.product?.name || 'N/A'}</div>
                           )}
                         </div>
                       </AlertDescription>

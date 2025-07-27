@@ -81,7 +81,6 @@ export default async function SalesInvoicesPage({
       {/* Dashboard Analytics */}
       <Suspense fallback={<div>Loading dashboard...</div>}>
         <SalesInvoicesDashboard 
-          invoices={salesInvoices} 
           reportData={reportData}
         />
       </Suspense>

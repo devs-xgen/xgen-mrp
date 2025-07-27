@@ -235,7 +235,7 @@ export function SalesInvoiceForm({
                           <div><strong>Customer Order:</strong> {selectedBillingStatement.customerOrder.orderNumber}</div>
                         )}
                         {selectedBillingStatement.productionOrder && (
-                          <div><strong>Production Order:</strong> {selectedBillingStatement.productionOrder.orderNumber}</div>
+                          <div><strong>Production Order:</strong> {selectedBillingStatement.productionOrder.product?.name || 'N/A'}</div>
                         )}
                       </div>
                     </AlertDescription>

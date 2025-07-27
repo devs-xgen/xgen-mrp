@@ -36,6 +36,47 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SalesInvoiceWithItems, InvoiceStatus } from "@/types/admin/billing";
 import { getSalesInvoiceById, deleteSalesInvoice, updateSalesInvoiceStatus } from "@/lib/actions/sales-invoices";
 
+// Function to handle PDF download
+const handleDownloadPDF = async (invoiceId: string, invoiceNumber: string) => {
+  try {
+    toast.success("Download started", {
+      description: "Your invoice PDF is being generated...",
+    });
+
+    const response = await fetch(`/api/admin/billing/sales-invoices/${invoiceId}/download`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to download PDF');
+    }
+
+    // Create blob from response
+    const blob = await response.blob();
+    
+    // Create download link
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `sales-invoice-${invoiceNumber}.pdf`;
+    
+    // Trigger download
+    document.body.appendChild(link);
+    link.click();
+    
+    // Cleanup
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    toast.success("Download complete", {
+      description: "Invoice PDF has been downloaded successfully.",
+    });
+  } catch (error) {
+    console.error('Error downloading PDF:', error);
+    toast.error("Download failed", {
+      description: "Failed to download the invoice PDF. Please try again.",
+    });
+  }
+};
+
 export default function SalesInvoiceViewPage() {
   const router = useRouter();
   const params = useParams();
@@ -110,19 +151,19 @@ export default function SalesInvoiceViewPage() {
   // Get status badge
   const getStatusBadge = (status: InvoiceStatus) => {
     switch (status) {
-      case "DRAFT":
+      case InvoiceStatus.DRAFT:
         return <Badge variant="secondary">Draft</Badge>;
-      case "SENT":
+      case InvoiceStatus.SENT:
         return <Badge variant="outline" className="bg-blue-500 text-white">Sent</Badge>;
-      case "PAID":
+      case InvoiceStatus.PAID:
         return <Badge variant="default" className="bg-green-500 text-white">Paid</Badge>;
-      case "OVERDUE":
+      case InvoiceStatus.OVERDUE:
         return <Badge variant="destructive">Overdue</Badge>;
-      case "CANCELLED":
+      case InvoiceStatus.CANCELLED:
         return <Badge variant="destructive">Cancelled</Badge>;
-      case "DISPUTED":
+      case InvoiceStatus.DISPUTED:
         return <Badge variant="secondary" className="bg-orange-500 text-white">Disputed</Badge>;
-      case "PARTIAL":
+      case InvoiceStatus.PARTIAL:
         return <Badge variant="outline" className="bg-yellow-500 text-white">Partial</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
@@ -183,17 +224,17 @@ export default function SalesInvoiceViewPage() {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => window.open(`/api/admin/billing/sales-invoices/${invoice.id}/download`, '_blank')}
+            onClick={() => handleDownloadPDF(invoice.id, invoice.invoiceNumber)}
           >
             <Download className="mr-2 h-4 w-4" />
             Download PDF
           </Button>
-          {invoice.status === "DRAFT" && (
+          {invoice.status === InvoiceStatus.DRAFT && (
             <>
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => handleStatusUpdate("SENT")}
+                onClick={() => handleStatusUpdate(InvoiceStatus.SENT)}
                 disabled={isUpdatingStatus}
               >
                 <Send className="mr-2 h-4 w-4" />
@@ -207,11 +248,11 @@ export default function SalesInvoiceViewPage() {
               </Button>
             </>
           )}
-          {invoice.status === "SENT" && (
+          {invoice.status === InvoiceStatus.SENT && (
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => handleStatusUpdate("PAID")}
+              onClick={() => handleStatusUpdate(InvoiceStatus.PAID)}
               disabled={isUpdatingStatus}
             >
               <DollarSign className="mr-2 h-4 w-4" />
@@ -329,7 +370,7 @@ export default function SalesInvoiceViewPage() {
                           <div>
                             <p className="font-medium">Production Order</p>
                             <p className="text-sm text-muted-foreground">
-                              {invoice.billingStatement.productionOrder.orderNumber}
+                              {invoice.billingStatement.productionOrder.product?.name || 'Production Order'}
                             </p>
                           </div>
                         </div>
@@ -494,11 +535,11 @@ export default function SalesInvoiceViewPage() {
               <CardTitle className="text-lg">Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {invoice.status === "DRAFT" && (
+              {invoice.status === InvoiceStatus.DRAFT && (
                 <>
                   <Button 
                     className="w-full" 
-                    onClick={() => handleStatusUpdate("SENT")}
+                    onClick={() => handleStatusUpdate(InvoiceStatus.SENT)}
                     disabled={isUpdatingStatus}
                   >
                     <Send className="mr-2 h-4 w-4" />
@@ -512,10 +553,10 @@ export default function SalesInvoiceViewPage() {
                   </Button>
                 </>
               )}
-              {invoice.status === "SENT" && (
+              {invoice.status === InvoiceStatus.SENT && (
                 <Button 
                   className="w-full" 
-                  onClick={() => handleStatusUpdate("PAID")}
+                  onClick={() => handleStatusUpdate(InvoiceStatus.PAID)}
                   disabled={isUpdatingStatus}
                 >
                   <DollarSign className="mr-2 h-4 w-4" />
@@ -525,12 +566,12 @@ export default function SalesInvoiceViewPage() {
               <Button 
                 variant="outline" 
                 className="w-full"
-                onClick={() => window.open(`/api/admin/billing/sales-invoices/${invoice.id}/download`, '_blank')}
+                onClick={() => handleDownloadPDF(invoice.id, invoice.invoiceNumber)}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Download PDF
               </Button>
-              {invoice.status === "DRAFT" && (
+              {invoice.status === InvoiceStatus.DRAFT && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive" className="w-full">

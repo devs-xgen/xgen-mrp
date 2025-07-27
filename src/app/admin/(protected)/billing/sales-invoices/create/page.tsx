@@ -105,7 +105,7 @@ export default function CreateSalesInvoicePage() {
         // Load billing statements that don't have invoices yet
         const billingStatementsResult = await getAllBillingStatements({}, 1, 100);
         
-        if (billingStatementsResult.success && billingStatementsResult.data) {
+        if (billingStatementsResult.data) {
           // Filter out billing statements that already have sales invoices
           const availableStatements = billingStatementsResult.data.filter(
             statement => !statement.salesInvoice
@@ -341,7 +341,7 @@ export default function CreateSalesInvoicePage() {
                             <div><strong>Customer Order:</strong> {selectedBillingStatement.customerOrder.orderNumber}</div>
                           )}
                           {selectedBillingStatement.productionOrder && (
-                            <div><strong>Production Order:</strong> {selectedBillingStatement.productionOrder.orderNumber}</div>
+                            <div><strong>Production Order:</strong> {selectedBillingStatement.productionOrder.product?.name || 'N/A'}</div>
                           )}
                         </div>
                       </AlertDescription>
@@ -688,38 +688,6 @@ export default function CreateSalesInvoicePage() {
                 </CardContent>
               </Card>
 
-              {/* Invoice Status */}
-              <Card className="bg-card border rounded-lg">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg">Invoice Status</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="DRAFT">Draft</SelectItem>
-                            <SelectItem value="SENT">Sent</SelectItem>
-                            <SelectItem value="PAID">Paid</SelectItem>
-                            <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
               {/* Quick Actions */}
               <Card className="bg-card border rounded-lg">
                 <CardHeader className="pb-4">
@@ -742,4 +710,4 @@ export default function CreateSalesInvoicePage() {
       </Form>
     </div>
   );
-} 
+}

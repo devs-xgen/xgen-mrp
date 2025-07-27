@@ -161,7 +161,7 @@ export function SalesInvoicePreview({
                       <div>
                         <p className="font-medium">Production Order</p>
                         <p className="text-sm text-muted-foreground">
-                          {invoice.billingStatement.productionOrder.orderNumber}
+                          {invoice.billingStatement.productionOrder.product?.name || 'N/A'}
                         </p>
                       </div>
                     </div>
