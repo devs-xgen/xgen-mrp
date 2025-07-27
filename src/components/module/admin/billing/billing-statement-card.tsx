@@ -1,20 +1,36 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeft, Edit, Save, X, FileText, Download, Trash2, CheckCircle, Clock, AlertCircle, Loader2, Eye, Mail } from "lucide-react";
 import Link from "next/link";
-import { MoreHorizontal, FileText, Download, Edit, Trash2, Eye, Receipt, Package, Calendar, DollarSign, User } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,70 +40,130 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Separator } from "@/components/ui/separator";
 
-import { BillingStatementWithRelations, BillingStatus } from "@/types/admin/billing";
+// Import types and server actions
+import { 
+  BillingStatus,
+  BillingStatementWithRelations,
+  BillingStatementFormData, 
+  billingStatementSchema,
+} from "@/types/admin/billing";
 import { formatCurrencyPHP } from "@/lib/constant";
-import { updateBillingStatementStatus, deleteBillingStatement } from "@/lib/actions/billing-statements";
-import { toast } from "sonner";
+import { 
+  getBillingStatementById,
+  updateBillingStatement,
+  deleteBillingStatement,
+  updateBillingStatementStatus,
+} from "@/lib/actions/billing-statements";
 
-interface BillingStatementCardProps {
-  statement: BillingStatementWithRelations;
-  onRefresh?: () => void;
+interface BillingStatementClientProps {
+  billingStatement: BillingStatementWithRelations;
+  billingStatementId: string;
 }
 
-export function BillingStatementCard({ statement, onRefresh }: BillingStatementCardProps) {
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
+export function BillingStatementClient({ 
+  billingStatement: initialBillingStatement, 
+  billingStatementId 
+}: BillingStatementClientProps) {
+  const router = useRouter();
+  
+  // States
+  const [billingStatement, setBillingStatement] = useState<BillingStatementWithRelations>(initialBillingStatement);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const getStatusBadge = (status: BillingStatus) => {
-    switch (status) {
-      case "DRAFT":
-        return <Badge variant="secondary">Draft</Badge>;
-      case "SENT":
-        return <Badge variant="outline" className="bg-blue-500 text-white">Sent</Badge>;
-      case "PAID":
-        return <Badge variant="default" className="bg-green-500 text-white">Paid</Badge>;
-      case "OVERDUE":
-        return <Badge variant="destructive">Overdue</Badge>;
-      case "CANCELLED":
-        return <Badge variant="destructive">Cancelled</Badge>;
-      case "DISPUTED":
-        return <Badge variant="secondary" className="bg-orange-500 text-white">Disputed</Badge>;
-      case "PARTIAL":
-        return <Badge variant="outline" className="bg-yellow-500 text-white">Partial</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
+  // Form setup
+  const form = useForm<BillingStatementFormData>({
+    resolver: zodResolver(billingStatementSchema),
+    defaultValues: {
+      customerId: billingStatement.customerId,
+      customerOrderId: billingStatement.customerOrderId || "",
+      productionOrderId: billingStatement.productionOrderId || "",
+      deliveryReceiptId: billingStatement.deliveryReceiptId || "",
+      subtotal: billingStatement.salesInvoice.subtotal,
+      taxRate: billingStatement.salesInvoice.taxRate,
+      discountAmount: billingStatement.discountAmount,
+      paymentTerms: billingStatement.salesInvoice.paymentTerms || "",
+      dueDate: billingStatement.dueDate ? new Date(billingStatement.dueDate) : undefined,
+      invoiceItems: billingStatement.salesInvoice.invoiceItems.map(item => ({
+        productId: item.productId || "",
+        materialId: item.materialId || "",
+        inventoryItemId: item.inventoryItemId || "",
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        productCode: item.productCode || "",
+        unit: item.unit || "PCS",
+        discountPercent: item.discountPercent || 0,
+        taxable: item.taxable,
+      })),
+      notes: billingStatement.notes || "",
+      poNumber: billingStatement.salesInvoice.poNumber || "",
+      terms: billingStatement.salesInvoice.terms || "",
+      footerNotes: billingStatement.salesInvoice.footerNotes || "",
+    },
+  });
 
-  const handleStatusUpdate = async (status: BillingStatus) => {
-    setIsUpdating(true);
-    try {
-      const result = await updateBillingStatementStatus(statement.id, status);
-      if (result.success) {
-        toast.success(result.message || "Status updated successfully");
-        onRefresh?.();
-      } else {
-        toast.error(result.error || "Failed to update status");
-      }
-    } catch (error) {
-      console.error("Error updating status:", error);
-      toast.error("An unexpected error occurred");
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteId) return;
+  // Handle form submission
+  const onSubmit = async (data: BillingStatementFormData) => {
+    setIsSubmitting(true);
     
     try {
-      const result = await deleteBillingStatement(deleteId);
+      const result = await updateBillingStatement(billingStatementId, data);
+      
       if (result.success) {
-        toast.success(result.message || "Billing statement deleted successfully");
-        onRefresh?.();
+        toast.success("Billing statement updated successfully");
+        setIsEditing(false);
+        // Refresh data
+        const refreshResult = await getBillingStatementById(billingStatementId);
+        if (refreshResult) {
+          setBillingStatement(refreshResult);
+        }
+      } else {
+        toast.error(result.error || "Failed to update billing statement");
+      }
+    } catch (error) {
+      console.error("Error updating billing statement:", error);
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle mark as paid
+  const handleMarkAsPaid = async () => {
+    try {
+      const result = await updateBillingStatementStatus(billingStatementId, "PAID");
+      
+      if (result.success) {
+        toast.success("Billing statement marked as paid");
+        // Refresh data
+        const refreshResult = await getBillingStatementById(billingStatementId);
+        if (refreshResult) {
+          setBillingStatement(refreshResult);
+        }
+      } else {
+        toast.error(result.error || "Failed to mark as paid");
+      }
+    } catch (error) {
+      console.error("Error marking as paid:", error);
+      toast.error("An unexpected error occurred");
+    }
+  };
+
+  // Handle delete
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    
+    try {
+      const result = await deleteBillingStatement(billingStatementId);
+      
+      if (result.success) {
+        toast.success("Billing statement deleted successfully");
+        router.push("/admin/billing/billing-statements");
       } else {
         toast.error(result.error || "Failed to delete billing statement");
       }
@@ -95,292 +171,477 @@ export function BillingStatementCard({ statement, onRefresh }: BillingStatementC
       console.error("Error deleting billing statement:", error);
       toast.error("An unexpected error occurred");
     } finally {
-      setDeleteId(null);
+      setIsDeleting(false);
     }
   };
 
-  const renderSourceInfo = () => {
-    const sources = [];
-    
-    if (statement.customerOrder) {
-      sources.push(
-        <div key="order" className="flex items-center text-sm text-blue-600">
-          <Receipt className="mr-2 h-4 w-4" />
-          <div>
-            <div className="font-medium">Customer Order</div>
-            <div className="text-xs text-muted-foreground">
-              {statement.customerOrder.orderNumber} • {formatCurrencyPHP(statement.customerOrder.totalAmount)}
-            </div>
-          </div>
-        </div>
-      );
+  // Get status badge variant
+  const getStatusBadgeVariant = (status: BillingStatus) => {
+    switch (status) {
+      case "PAID":
+        return "default";
+      case "SENT":
+        return "secondary";
+      case "OVERDUE":
+        return "destructive";
+      case "DRAFT":
+        return "outline";
+      case "CANCELLED":
+        return "outline";
+      case "DISPUTED":
+        return "destructive";
+      case "PARTIAL":
+        return "secondary";
+      default:
+        return "outline";
     }
-    
-    if (statement.productionOrder) {
-      sources.push(
-        <div key="production" className="flex items-center text-sm text-purple-600">
-          <Package className="mr-2 h-4 w-4" />
-          <div>
-            <div className="font-medium">Production Order</div>
-            <div className="text-xs text-muted-foreground">
-              {statement.productionOrder.quantity}x {statement.productionOrder.product?.name}
-            </div>
-          </div>
-        </div>
-      );
-    }
-    
-    if (statement.deliveryReceipts && statement.deliveryReceipts.length > 0) {
-      sources.push(
-        <div key="delivery" className="flex items-center text-sm text-green-600">
-          <FileText className="mr-2 h-4 w-4" />
-          <div>
-            <div className="font-medium">Delivery Receipts</div>
-            <div className="text-xs text-muted-foreground">
-              {statement.deliveryReceipts.length} receipt{statement.deliveryReceipts.length !== 1 ? 's' : ''}
-            </div>
-          </div>
-        </div>
-      );
-    }
-    
-    if (statement.salesInvoice) {
-      sources.push(
-        <div key="invoice" className="flex items-center text-sm text-orange-600">
-          <FileText className="mr-2 h-4 w-4" />
-          <div>
-            <div className="font-medium">Sales Invoice</div>
-            <div className="text-xs text-muted-foreground">
-              {statement.salesInvoice.invoiceNumber}
-            </div>
-          </div>
-        </div>
-      );
-    }
+  };
 
-    if (sources.length === 0) {
-      return (
-        <div className="flex items-center text-sm text-muted-foreground">
-          <User className="mr-2 h-4 w-4" />
-          <div>
-            <div className="font-medium">Direct Billing</div>
-            <div className="text-xs text-muted-foreground">
-              No linked orders
-            </div>
-          </div>
-        </div>
-      );
+  // Get status icon
+  const getStatusIcon = (status: BillingStatus) => {
+    switch (status) {
+      case "PAID":
+        return <CheckCircle className="h-4 w-4" />;
+      case "OVERDUE":
+        return <AlertCircle className="h-4 w-4" />;
+      case "SENT":
+        return <Mail className="h-4 w-4" />;
+      default:
+        return <Clock className="h-4 w-4" />;
     }
-
-    return (
-      <div className="space-y-3">
-        {sources}
-      </div>
-    );
   };
 
   return (
-    <>
-      <Card className="bg-card border rounded-lg hover:shadow-md transition-shadow">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold">
-              {statement.statementNumber}
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              {getStatusBadge(statement.status)}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-8 w-8 p-0">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                  <DropdownMenuItem asChild>
-                    <Link href={`/admin/billing/billing-statements/${statement.id}`}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      View Details
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download PDF
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  
-                  {/* Status Actions */}
-                  {statement.status === 'DRAFT' && (
-                    <>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/billing/billing-statements/${statement.id}/edit`}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit Statement
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleStatusUpdate(BillingStatus.SENT)}
-                        disabled={isUpdating}
-                      >
-                        Send Statement
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                  
-                  {statement.status === 'SENT' && (
-                    <DropdownMenuItem
-                      onClick={() => handleStatusUpdate(BillingStatus.PAID)}
-                      disabled={isUpdating}
-                    >
-                      Mark as Paid
-                    </DropdownMenuItem>
-                  )}
-                  
-                  {(statement.status === 'SENT' || statement.status === 'OVERDUE') && (
-                    <DropdownMenuItem
-                      onClick={() => handleStatusUpdate(BillingStatus.DISPUTED)}
-                      disabled={isUpdating}
-                    >
-                      Mark as Disputed
-                    </DropdownMenuItem>
-                  )}
-                  
-                  {statement.status !== 'PAID' && statement.status !== 'CANCELLED' && (
-                    <DropdownMenuItem
-                      onClick={() => handleStatusUpdate(BillingStatus.CANCELLED)}
-                      disabled={isUpdating}
-                    >
-                      Cancel Statement
-                    </DropdownMenuItem>
-                  )}
-                  
-                  <DropdownMenuSeparator />
-                  
-                  {/* Delete Action - Only for DRAFT statements */}
-                  {statement.status === 'DRAFT' && (
-                    <DropdownMenuItem
-                      className="text-destructive"
-                      onClick={() => setDeleteId(statement.id)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Statement
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="space-y-4">
-          {/* Customer Information */}
-          <div className="flex items-center space-x-3">
-            <User className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <div className="font-medium">{statement.customerName}</div>
-              {statement.customer && (
-                <div className="text-sm text-muted-foreground">{statement.customer.email}</div>
-              )}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Source Information */}
+    <div className="flex flex-col gap-6 p-8 bg-background min-h-screen">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/admin/billing/billing-statements">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Statements
+            </Button>
+          </Link>
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-3">Source Information</h4>
-            {renderSourceInfo()}
-          </div>
-
-          <Separator />
-
-          {/* Financial Information */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <div className="text-sm text-muted-foreground">Net Amount</div>
-                <div className="font-semibold text-green-600">
-                  {formatCurrencyPHP(statement.netAmount)}
-                </div>
-              </div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold tracking-tight">
+                {billingStatement.statementNumber}
+              </h1>
+              <Badge variant={getStatusBadgeVariant(billingStatement.status)} className="flex items-center gap-1">
+                {getStatusIcon(billingStatement.status)}
+                {billingStatement.status}
+              </Badge>
             </div>
-            
-            <div className="flex items-center space-x-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <div className="text-sm text-muted-foreground">Due Date</div>
-                <div className="font-medium">
-                  {statement.dueDate ? new Date(statement.dueDate).toLocaleDateString() : 'Not set'}
-                </div>
-              </div>
-            </div>
+            <p className="text-muted-foreground mt-1">
+              Billing statement for {billingStatement.customer.name}
+            </p>
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {!isEditing ? (
+            <>
+              <Button variant="outline" size="sm" disabled>
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+              {billingStatement.status !== "PAID" && billingStatement.status !== "CANCELLED" && (
+                <Button size="sm" onClick={handleMarkAsPaid}>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Mark as Paid
+                </Button>
+              )}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Billing Statement</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete this billing statement? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      disabled={isDeleting}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="mr-2 h-4 w-4" />
+                      )}
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          ) : (
+            <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  setIsEditing(false);
+                  form.reset();
+                }}
+                disabled={isSubmitting}
+              >
+                <X className="mr-2 h-4 w-4" />
+                Cancel
+              </Button>
+              <Button 
+                size="sm" 
+                onClick={form.handleSubmit(onSubmit)}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
+                Save Changes
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
 
-          {/* Additional Financial Details */}
-          {(statement.totalAmount !== statement.netAmount || statement.taxAmount > 0) && (
-            <div className="text-xs text-muted-foreground space-y-1">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Billing Statement Details */}
+          <Card className="bg-card border rounded-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Billing Statement Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isEditing ? (
+                <Form {...form}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Statement Number</Label>
+                      <Input value={billingStatement.statementNumber} disabled />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Customer</Label>
+                      <Input value={billingStatement.customer.name} disabled />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Billing Date</Label>
+                      <Input 
+                        value={new Date(billingStatement.billingDate).toLocaleDateString()} 
+                        disabled 
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="dueDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Due Date</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                              onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notes</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Additional notes..."
+                            className="min-h-[100px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </Form>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Statement Number</Label>
+                      <p className="text-sm">{billingStatement.statementNumber}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Customer</Label>
+                      <p className="text-sm">{billingStatement.customer.name}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Billing Date</Label>
+                      <p className="text-sm">{new Date(billingStatement.billingDate).toLocaleDateString()}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
+                      <p className="text-sm">
+                        {billingStatement.dueDate 
+                          ? new Date(billingStatement.dueDate).toLocaleDateString()
+                          : "Not set"
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  {billingStatement.notes && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Notes</Label>
+                      <p className="text-sm">{billingStatement.notes}</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Sales Invoice Items */}
+          <Card className="bg-card border rounded-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Invoice Items</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Quantity</TableHead>
+                      <TableHead className="text-right">Unit Price</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {billingStatement.salesInvoice.invoiceItems.map((item, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{item.description}</p>
+                            {item.productCode && (
+                              <p className="text-sm text-muted-foreground">SKU: {item.productCode}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {item.quantity} {item.unit || 'PCS'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrencyPHP(item.unitPrice)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrencyPHP(item.totalPrice)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Related Information */}
+          {(billingStatement.customerOrder || billingStatement.productionOrder || billingStatement.deliveryReceipt) && (
+            <Card className="bg-card border rounded-lg">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Related Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {billingStatement.customerOrder && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Customer Order</Label>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{billingStatement.customerOrder.orderNumber}</Badge>
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={`/admin/customer-orders/${billingStatement.customerOrder.id}`}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Order
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                {billingStatement.productionOrder && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Production Order</Label>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">Production #{billingStatement.productionOrder.id}</Badge>
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={`/admin/production/${billingStatement.productionOrder.id}`}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Production
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                {billingStatement.deliveryReceipt && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Delivery Receipt</Label>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{billingStatement.deliveryReceipt.receiptNumber}</Badge>
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={`/admin/billing/delivery-receipts/${billingStatement.deliveryReceipt.id}`}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Receipt
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Financial Summary */}
+          <Card className="bg-card border rounded-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Financial Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal:</span>
+                <span className="font-medium">${billingStatement.salesInvoice.subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Tax ({billingStatement.salesInvoice.taxRate}%):</span>
+                <span className="font-medium">${billingStatement.taxAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Discount:</span>
+                <span className="font-medium">-${billingStatement.discountAmount.toFixed(2)}</span>
+              </div>
+              <Separator />
               <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span>{formatCurrencyPHP(statement.totalAmount - statement.taxAmount + statement.discountAmount)}</span>
+                <span className="font-medium">Total Amount:</span>
+                <span className="font-bold text-lg">${billingStatement.totalAmount.toFixed(2)}</span>
               </div>
-              {statement.taxAmount > 0 && (
-                <div className="flex justify-between">
-                  <span>Tax:</span>
-                  <span>{formatCurrencyPHP(statement.taxAmount)}</span>
+              <div className="flex justify-between">
+                <span className="font-medium">Net Amount:</span>
+                <span className="font-bold text-lg text-green-600">${billingStatement.netAmount.toFixed(2)}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Payment Information */}
+          <Card className="bg-card border rounded-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Payment Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Status:</span>
+                <Badge variant={getStatusBadgeVariant(billingStatement.status)} className="flex items-center gap-1">
+                  {getStatusIcon(billingStatement.status)}
+                  {billingStatement.status}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Payment Terms:</span>
+                <span className="text-sm">{billingStatement.salesInvoice.paymentTerms || "Not specified"}</span>
+              </div>
+              {billingStatement.paidDate && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Paid Date:</span>
+                  <span className="text-sm">{new Date(billingStatement.paidDate).toLocaleDateString()}</span>
                 </div>
               )}
-              {statement.discountAmount > 0 && (
-                <div className="flex justify-between">
-                  <span>Discount:</span>
-                  <span>-{formatCurrencyPHP(statement.discountAmount)}</span>
+            </CardContent>
+          </Card>
+
+          {/* Customer Information */}
+          <Card className="bg-card border rounded-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Customer Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1">
+                <p className="font-medium">{billingStatement.customer.name}</p>
+                <p className="text-sm text-muted-foreground">Code: {billingStatement.customer.code}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm">{billingStatement.customer.email}</p>
+                <p className="text-sm">{billingStatement.customer.phone}</p>
+              </div>
+              {billingStatement.customer.address && (
+                <div className="space-y-1">
+                  <p className="text-sm">{billingStatement.customer.address}</p>
+                  <p className="text-sm">
+                    {[
+                      billingStatement.customer.city,
+                      billingStatement.customer.state,
+                      billingStatement.customer.postalCode,
+                      billingStatement.customer.country
+                    ].filter(Boolean).join(", ")}
+                  </p>
                 </div>
               )}
-              <div className="flex justify-between font-medium">
-                <span>Total:</span>
-                <span>{formatCurrencyPHP(statement.totalAmount)}</span>
+              <Button variant="outline" size="sm" className="w-full" asChild>
+                <Link href={`/admin/customers/${billingStatement.customer.id}`}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  View Customer
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Timestamps */}
+          <Card className="bg-muted border rounded-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Timestamps</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Created:</span>
+                <span className="text-sm">{new Date(billingStatement.createdAt).toLocaleDateString()}</span>
               </div>
-            </div>
-          )}
-
-          {/* Dates */}
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Billing Date: {new Date(statement.billingDate).toLocaleDateString()}</span>
-            {statement.paidDate && (
-              <span>Paid: {new Date(statement.paidDate).toLocaleDateString()}</span>
-            )}
-          </div>
-
-          {/* Notes */}
-          {statement.notes && (
-            <div className="text-sm">
-              <div className="text-muted-foreground mb-1">Notes:</div>
-              <div className="text-sm bg-muted/50 p-2 rounded text-muted-foreground">
-                {statement.notes}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Updated:</span>
+                <span className="text-sm">{new Date(billingStatement.updatedAt).toLocaleDateString()}</span>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the billing statement
-              and all associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+              {billingStatement.createdByUser && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Created by:</span>
+                  <span className="text-sm">{billingStatement.createdByUser.email}</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }
