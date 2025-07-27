@@ -715,6 +715,18 @@ export interface BillingActionResponse<T = any> {
   message?: string;
 }
 
+export interface PDFExportResponse {
+  success: boolean;
+  pdfBuffer?: Buffer;
+  filename?: string;
+  error?: string;
+}
+
+export interface CSVExportResponse {
+  csvContent: string;
+  filename: string;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: {

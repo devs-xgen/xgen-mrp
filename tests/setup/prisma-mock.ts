@@ -102,6 +102,27 @@ export const prismaMock = {
     delete: vi.fn(),
   },
 
+  // Sales invoice operations
+  salesInvoice: {
+    findMany: vi.fn(),
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    count: vi.fn(),
+    aggregate: vi.fn(),
+  },
+
+  // Sales invoice item operations
+  salesInvoiceItem: {
+    findMany: vi.fn(),
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    deleteMany: vi.fn(),
+  },
+
   // Transaction operations for database
   $transaction: vi.fn(),
   $executeRaw: vi.fn(),

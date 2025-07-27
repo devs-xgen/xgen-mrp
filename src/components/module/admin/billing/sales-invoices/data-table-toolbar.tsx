@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTableViewOptions } from "./data-table-view-options";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
+import { CSVExportButton } from "./csv-export-button";
 import { SalesInvoiceWithItems, InvoiceStatus } from "@/types/admin/billing";
 
 interface DataTableToolbarProps<TData> {
@@ -89,7 +90,10 @@ export function DataTableToolbar<TData>({
           </Button>
         )}
       </div>
-      <DataTableViewOptions table={table} />
+      <div className="flex items-center space-x-2">
+        <CSVExportButton />
+        <DataTableViewOptions table={table} />
+      </div>
     </div>
   );
 }

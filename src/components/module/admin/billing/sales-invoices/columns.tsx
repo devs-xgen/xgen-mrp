@@ -16,52 +16,9 @@ import { SalesInvoiceWithItems } from "@/types/admin/billing";
 import { MoreHorizontal, Eye, Edit, Download, Send, Copy, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
-import { toast } from "@/hooks/use-toast";
+import { PDFDownloadButton } from "./pdf-download-button";
 
-// Function to handle PDF download
-const handleDownloadPDF = async (invoiceId: string, invoiceNumber: string) => {
-  try {
-    toast({
-      title: "Download started",
-      description: "Your invoice PDF is being generated...",
-    });
 
-    const response = await fetch(`/api/admin/billing/sales-invoices/${invoiceId}/download`);
-    
-    if (!response.ok) {
-      throw new Error('Failed to download PDF');
-    }
-
-    // Create blob from response
-    const blob = await response.blob();
-    
-    // Create download link
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `sales-invoice-${invoiceNumber}.pdf`;
-    
-    // Trigger download
-    document.body.appendChild(link);
-    link.click();
-    
-    // Cleanup
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-
-    toast({
-      title: "Download complete",
-      description: "Invoice PDF has been downloaded successfully.",
-    });
-  } catch (error) {
-    console.error('Error downloading PDF:', error);
-    toast({
-      title: "Download failed",
-      description: "Failed to download the invoice PDF. Please try again.",
-      variant: "destructive",
-    });
-  }
-};
 
 export const columns: ColumnDef<SalesInvoiceWithItems>[] = [
   {
@@ -231,12 +188,10 @@ export const columns: ColumnDef<SalesInvoiceWithItems>[] = [
                 Edit Invoice
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleDownloadPDF(invoice.id, invoice.invoiceNumber)}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Download PDF
-            </DropdownMenuItem>
+            <PDFDownloadButton
+              invoiceId={invoice.id}
+              invoiceNumber={invoice.invoiceNumber}
+            />
             {invoice.status === 'DRAFT' && (
               <DropdownMenuItem>
                 <Send className="mr-2 h-4 w-4" />

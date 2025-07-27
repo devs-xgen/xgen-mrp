@@ -13,11 +13,14 @@ import {
   PaginatedResponse,
   SalesReportData,
   InvoiceStatus,
+  PDFExportResponse,
+  CSVExportResponse,
   salesInvoiceSchema,
   salesInvoiceFiltersSchema,
 } from "@/types/admin/billing";
 import { InvoiceStatus as PrismaInvoiceStatus } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
+import { generateSalesInvoicePDF } from "@/lib/services/pdf-generator";
 
 // ==============================================
 // SALES INVOICE CRUD OPERATIONS
@@ -1006,6 +1009,352 @@ export async function getSalesReportData(
   } catch (error) {
     console.error("Error fetching sales report data:", error);
     throw new Error("Failed to fetch sales report data");
+  }
+}
+
+// ==============================================
+// PDF EXPORT FUNCTIONS
+// ==============================================
+
+export async function exportSalesInvoicePDF(
+  id: string
+): Promise<PDFExportResponse> {
+  try {
+    // Authentication check
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    // Authorization check - ensure user has admin role
+    if (session.user.role !== "ADMIN") {
+      return { success: false, error: "Insufficient permissions" };
+    }
+
+    // Get sales invoice with all required relationships for PDF generation
+    const salesInvoice = await prisma.salesInvoice.findUnique({
+      where: { id },
+      include: {
+        invoiceItems: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+              },
+            },
+            Material: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+              },
+            },
+            InventoryItem: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+              },
+            },
+          },
+        },
+        billingStatement: {
+          select: {
+            id: true,
+            statementNumber: true,
+            customerName: true,
+            billingDate: true,
+            status: true,
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                address: true,
+                city: true,
+                state: true,
+                country: true,
+              },
+            },
+            customerOrder: {
+              select: {
+                id: true,
+                orderNumber: true,
+                orderDate: true,
+                shippingAddress: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!salesInvoice) {
+      return { success: false, error: "Sales invoice not found" };
+    }
+
+    // Convert Decimal fields to numbers for PDF generation
+    const convertedInvoice = {
+      ...salesInvoice,
+      subtotal: Number(salesInvoice.subtotal),
+      taxRate: Number(salesInvoice.taxRate),
+      taxAmount: Number(salesInvoice.taxAmount),
+      discountAmount: Number(salesInvoice.discountAmount),
+      totalAmount: Number(salesInvoice.totalAmount),
+      invoiceItems: salesInvoice.invoiceItems.map((item) => ({
+        ...item,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice),
+        totalPrice: Number(item.totalPrice),
+        discountPercent: item.discountPercent
+          ? Number(item.discountPercent)
+          : null,
+      })),
+    };
+
+    // Generate PDF using existing service
+    const pdfBuffer = await generateSalesInvoicePDF(convertedInvoice);
+
+    // Generate filename with invoice number and timestamp
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `sales-invoice-${salesInvoice.invoiceNumber}-${timestamp}.pdf`;
+
+    return {
+      success: true,
+      pdfBuffer,
+      filename,
+    };
+  } catch (error) {
+    console.error("Error exporting sales invoice PDF:", error);
+    return {
+      success: false,
+      error: "Failed to generate PDF. Please try again.",
+    };
+  }
+}
+
+export async function exportSalesInvoicesData(
+  filters?: SalesInvoiceFilters
+): Promise<CSVExportResponse> {
+  try {
+    // Authentication check
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new Error("Unauthorized");
+    }
+
+    // Authorization check - ensure user has admin role
+    if (session.user.role !== "ADMIN") {
+      throw new Error("Insufficient permissions");
+    }
+
+    // Parse and validate filters
+    const validatedFilters = filters
+      ? salesInvoiceFiltersSchema.parse(filters)
+      : {};
+
+    // Build where clause for filtering
+    const whereClause: any = {};
+
+    if (validatedFilters.status && validatedFilters.status.length > 0) {
+      whereClause.status = {
+        in: validatedFilters.status as PrismaInvoiceStatus[],
+      };
+    }
+
+    if (validatedFilters.dateRange) {
+      whereClause.invoiceDate = {
+        gte: validatedFilters.dateRange.start,
+        lte: validatedFilters.dateRange.end,
+      };
+    }
+
+    if (validatedFilters.amountRange) {
+      whereClause.totalAmount = {
+        gte: new Decimal(validatedFilters.amountRange.min),
+        lte: new Decimal(validatedFilters.amountRange.max),
+      };
+    }
+
+    if (validatedFilters.search) {
+      whereClause.OR = [
+        {
+          invoiceNumber: {
+            contains: validatedFilters.search,
+            mode: "insensitive",
+          },
+        },
+        {
+          poNumber: { contains: validatedFilters.search, mode: "insensitive" },
+        },
+        {
+          billingStatement: {
+            customerName: {
+              contains: validatedFilters.search,
+              mode: "insensitive",
+            },
+          },
+        },
+        {
+          billingStatement: {
+            statementNumber: {
+              contains: validatedFilters.search,
+              mode: "insensitive",
+            },
+          },
+        },
+      ];
+    }
+
+    // Build order clause
+    const orderBy: any = {};
+    if (validatedFilters.sortBy) {
+      orderBy[validatedFilters.sortBy] = validatedFilters.sortOrder || "desc";
+    } else {
+      orderBy.invoiceDate = "desc";
+    }
+
+    // Get all sales invoices with related data for CSV export
+    const invoices = await prisma.salesInvoice.findMany({
+      where: whereClause,
+      orderBy,
+      include: {
+        billingStatement: {
+          select: {
+            id: true,
+            statementNumber: true,
+            customerName: true,
+            billingDate: true,
+            status: true,
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                code: true,
+              },
+            },
+            customerOrder: {
+              select: {
+                id: true,
+                orderNumber: true,
+                orderDate: true,
+              },
+            },
+          },
+        },
+        createdByUser: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+        modifiedByUser: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Build CSV headers based on design document requirements
+    const headers = [
+      "Invoice Number",
+      "Invoice Date",
+      "Due Date",
+      "Status",
+      "Customer Name",
+      "Customer Email",
+      "Customer Code",
+      "Billing Statement Number",
+      "PO Number",
+      "Subtotal",
+      "Tax Rate",
+      "Tax Amount",
+      "Discount Amount",
+      "Total Amount",
+      "Payment Terms",
+      "Created By",
+      "Created Date",
+      "Modified By",
+      "Modified Date",
+    ];
+
+    // Build CSV rows
+    const rows = invoices.map((invoice) => {
+      const customer = invoice.billingStatement?.customer;
+      const createdBy = invoice.createdByUser;
+      const modifiedBy = invoice.modifiedByUser;
+      
+      const createdByName = createdBy?.profile
+        ? `${createdBy.profile.firstName} ${createdBy.profile.lastName}`
+        : createdBy?.email || "Unknown";
+
+      const modifiedByName = modifiedBy?.profile
+        ? `${modifiedBy.profile.firstName} ${modifiedBy.profile.lastName}`
+        : modifiedBy?.email || "";
+
+      return [
+        invoice.invoiceNumber,
+        invoice.invoiceDate.toISOString().split('T')[0], // YYYY-MM-DD format
+        invoice.dueDate ? invoice.dueDate.toISOString().split('T')[0] : "",
+        invoice.status,
+        customer?.name || invoice.billingStatement?.customerName || "Unknown",
+        customer?.email || "",
+        customer?.code || "",
+        invoice.billingStatement?.statementNumber || "",
+        invoice.poNumber || "",
+        Number(invoice.subtotal).toFixed(2),
+        Number(invoice.taxRate).toFixed(2),
+        Number(invoice.taxAmount).toFixed(2),
+        Number(invoice.discountAmount).toFixed(2),
+        Number(invoice.totalAmount).toFixed(2),
+        invoice.paymentTerms || "",
+        createdByName,
+        invoice.createdAt.toISOString().split('T')[0],
+        modifiedByName,
+        invoice.updatedAt.toISOString().split('T')[0],
+      ];
+    });
+
+    // Convert to CSV content
+    const csvRows = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => 
+        // Escape commas and quotes in cell content
+        `"${String(cell).replace(/"/g, '""')}"`
+      ).join(','))
+    ];
+    
+    const csvContent = csvRows.join('\n');
+    
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `sales-invoices-export-${timestamp}.csv`;
+
+    return {
+      csvContent,
+      filename,
+    };
+  } catch (error) {
+    console.error("Error exporting sales invoices data:", error);
+    throw new Error("Failed to export sales invoices data");
   }
 }
 

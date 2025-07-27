@@ -35,47 +35,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 // Import types and server actions
 import { SalesInvoiceWithItems, InvoiceStatus } from "@/types/admin/billing";
 import { getSalesInvoiceById, deleteSalesInvoice, updateSalesInvoiceStatus } from "@/lib/actions/sales-invoices";
+import { PDFDownloadStandaloneButton } from "@/components/module/admin/billing/sales-invoices/pdf-download-standalone-button";
 
-// Function to handle PDF download
-const handleDownloadPDF = async (invoiceId: string, invoiceNumber: string) => {
-  try {
-    toast.success("Download started", {
-      description: "Your invoice PDF is being generated...",
-    });
 
-    const response = await fetch(`/api/admin/billing/sales-invoices/${invoiceId}/download`);
-    
-    if (!response.ok) {
-      throw new Error('Failed to download PDF');
-    }
-
-    // Create blob from response
-    const blob = await response.blob();
-    
-    // Create download link
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `sales-invoice-${invoiceNumber}.pdf`;
-    
-    // Trigger download
-    document.body.appendChild(link);
-    link.click();
-    
-    // Cleanup
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-
-    toast.success("Download complete", {
-      description: "Invoice PDF has been downloaded successfully.",
-    });
-  } catch (error) {
-    console.error('Error downloading PDF:', error);
-    toast.error("Download failed", {
-      description: "Failed to download the invoice PDF. Please try again.",
-    });
-  }
-};
 
 export default function SalesInvoiceViewPage() {
   const router = useRouter();
@@ -221,14 +183,12 @@ export default function SalesInvoiceViewPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
+          <PDFDownloadStandaloneButton
+            invoiceId={invoice.id}
+            invoiceNumber={invoice.invoiceNumber}
+            variant="outline"
             size="sm"
-            onClick={() => handleDownloadPDF(invoice.id, invoice.invoiceNumber)}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Download PDF
-          </Button>
+          />
           {invoice.status === InvoiceStatus.DRAFT && (
             <>
               <Button 
@@ -563,14 +523,12 @@ export default function SalesInvoiceViewPage() {
                   Mark as Paid
                 </Button>
               )}
-              <Button 
-                variant="outline" 
+              <PDFDownloadStandaloneButton
+                invoiceId={invoice.id}
+                invoiceNumber={invoice.invoiceNumber}
+                variant="outline"
                 className="w-full"
-                onClick={() => handleDownloadPDF(invoice.id, invoice.invoiceNumber)}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download PDF
-              </Button>
+              />
               {invoice.status === InvoiceStatus.DRAFT && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>

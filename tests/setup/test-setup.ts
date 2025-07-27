@@ -38,6 +38,9 @@ vi.mock('lucide-react', () => ({
   ChevronRight: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'chevron-right-icon', className, ...props }),
   Info: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'info-icon', className, ...props }),
   RotateCcw: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'rotate-ccw-icon', className, ...props }),
+  Download: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'download-icon', className, ...props }),
+  Filter: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'filter-icon', className, ...props }),
+  CalendarIcon: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'calendar-icon', className, ...props }),
 }))
 
 // Global test utilities
