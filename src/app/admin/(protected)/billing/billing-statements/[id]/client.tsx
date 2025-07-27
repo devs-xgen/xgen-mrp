@@ -50,6 +50,7 @@ import {
   BillingStatementFormData, 
   billingStatementSchema,
 } from "@/types/admin/billing";
+import { SerializableData } from "@/lib/utils/decimal-serializer";
 import { formatCurrencyPHP } from "@/lib/constant";
 import { 
   getBillingStatementById,
@@ -58,8 +59,10 @@ import {
   updateBillingStatementStatus,
 } from "@/lib/actions/billing-statements";
 
+type SerializedBillingStatement = SerializableData<BillingStatementWithRelations>;
+
 interface BillingStatementClientProps {
-  billingStatement: BillingStatementWithRelations;
+  billingStatement: SerializedBillingStatement;
   billingStatementId: string;
 }
 
@@ -70,7 +73,7 @@ export function BillingStatementClient({
   const router = useRouter();
   
   // States
-  const [billingStatement, setBillingStatement] = useState<BillingStatementWithRelations>(initialBillingStatement);
+  const [billingStatement, setBillingStatement] = useState<SerializedBillingStatement>(initialBillingStatement);
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -82,28 +85,25 @@ export function BillingStatementClient({
       customerId: billingStatement.customerId,
       customerOrderId: billingStatement.customerOrderId || "",
       productionOrderId: billingStatement.productionOrderId || "",
-      deliveryReceiptId: billingStatement.deliveryReceiptId || "",
-      subtotal: billingStatement.salesInvoice.subtotal,
-      taxRate: billingStatement.salesInvoice.taxRate,
-      discountAmount: billingStatement.discountAmount,
-      paymentTerms: billingStatement.salesInvoice.paymentTerms || "",
-      dueDate: billingStatement.dueDate ? new Date(billingStatement.dueDate) : undefined,
-      invoiceItems: billingStatement.salesInvoice.invoiceItems.map(item => ({
+      subtotal: Number(billingStatement.salesInvoice?.subtotal || 0),
+      taxRate: Number(billingStatement.salesInvoice?.taxRate || 0),
+      discountAmount: Number(billingStatement.discountAmount || 0),
+      paymentTerms: billingStatement.salesInvoice?.paymentTerms || "",
+      dueDate: billingStatement.dueDate ? new Date(billingStatement.dueDate as unknown as string) : undefined,
+      invoiceItems: billingStatement.salesInvoice?.invoiceItems?.map(item => ({
         productId: item.productId || "",
-        materialId: item.materialId || "",
-        inventoryItemId: item.inventoryItemId || "",
         description: item.description,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice),
         productCode: item.productCode || "",
         unit: item.unit || "PCS",
-        discountPercent: item.discountPercent || 0,
+        discountPercent: Number(item.discountPercent || 0),
         taxable: item.taxable,
-      })),
+      })) || [],
       notes: billingStatement.notes || "",
-      poNumber: billingStatement.salesInvoice.poNumber || "",
-      terms: billingStatement.salesInvoice.terms || "",
-      footerNotes: billingStatement.salesInvoice.footerNotes || "",
+      poNumber: billingStatement.salesInvoice?.poNumber || "",
+      terms: billingStatement.salesInvoice?.terms || "",
+      footerNotes: billingStatement.salesInvoice?.footerNotes || "",
     },
   });
 
@@ -136,7 +136,7 @@ export function BillingStatementClient({
   // Handle mark as paid
   const handleMarkAsPaid = async () => {
     try {
-      const result = await updateBillingStatementStatus(billingStatementId, "PAID");
+      const result = await updateBillingStatementStatus(billingStatementId, BillingStatus.PAID);
       
       if (result.success) {
         toast.success("Billing statement marked as paid");
@@ -343,7 +343,7 @@ export function BillingStatementClient({
                     <div className="space-y-2">
                       <Label>Billing Date</Label>
                       <Input 
-                        value={new Date(billingStatement.billingDate).toLocaleDateString()} 
+                        value={new Date(billingStatement.billingDate as unknown as string).toLocaleDateString()} 
                         disabled 
                       />
                     </div>
@@ -400,13 +400,13 @@ export function BillingStatementClient({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Billing Date</Label>
-                      <p className="text-sm">{new Date(billingStatement.billingDate).toLocaleDateString()}</p>
+                      <p className="text-sm">{new Date(billingStatement.billingDate as unknown as string).toLocaleDateString()}</p>
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
                       <p className="text-sm">
                         {billingStatement.dueDate 
-                          ? new Date(billingStatement.dueDate).toLocaleDateString()
+                          ? new Date(billingStatement.dueDate as unknown as string).toLocaleDateString()
                           : "Not set"
                         }
                       </p>
@@ -441,7 +441,7 @@ export function BillingStatementClient({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {billingStatement.salesInvoice.invoiceItems.map((item, index) => (
+                    {billingStatement.salesInvoice?.invoiceItems?.map((item, index) => (
                       <TableRow key={index}>
                         <TableCell>
                           <div>
@@ -452,13 +452,13 @@ export function BillingStatementClient({
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          {item.quantity} {item.unit || 'PCS'}
+                          {Number(item.quantity)} {item.unit || 'PCS'}
                         </TableCell>
                         <TableCell className="text-right">
-                          {formatCurrencyPHP(item.unitPrice)}
+                          {formatCurrencyPHP(Number(item.unitPrice))}
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {formatCurrencyPHP(item.totalPrice)}
+                          {formatCurrencyPHP(Number(item.totalPrice))}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -469,7 +469,7 @@ export function BillingStatementClient({
           </Card>
 
           {/* Related Information */}
-          {(billingStatement.customerOrder || billingStatement.productionOrder || billingStatement.deliveryReceipt) && (
+          {(billingStatement.customerOrder || billingStatement.productionOrder || (billingStatement.deliveryReceipts && billingStatement.deliveryReceipts.length > 0)) && (
             <Card className="bg-card border rounded-lg">
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg">Related Information</CardTitle>
@@ -505,17 +505,21 @@ export function BillingStatementClient({
                   </div>
                 )}
                 
-                {billingStatement.deliveryReceipt && (
+                {billingStatement.deliveryReceipts && billingStatement.deliveryReceipts.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Delivery Receipt</Label>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{billingStatement.deliveryReceipt.receiptNumber}</Badge>
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/admin/billing/delivery-receipts/${billingStatement.deliveryReceipt.id}`}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Receipt
-                        </Link>
-                      </Button>
+                    <Label className="text-sm font-medium text-muted-foreground">Delivery Receipts</Label>
+                    <div className="space-y-2">
+                      {billingStatement.deliveryReceipts.map((receipt) => (
+                        <div key={receipt.id} className="flex items-center gap-2">
+                          <Badge variant="outline">{receipt.receiptNumber}</Badge>
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/admin/billing/delivery-receipts/${receipt.id}`}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Receipt
+                            </Link>
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -534,24 +538,24 @@ export function BillingStatementClient({
             <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal:</span>
-                <span className="font-medium">${billingStatement.salesInvoice.subtotal.toFixed(2)}</span>
+                <span className="font-medium">{formatCurrencyPHP(Number(billingStatement.salesInvoice?.subtotal))}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Tax ({billingStatement.salesInvoice.taxRate}%):</span>
-                <span className="font-medium">${billingStatement.taxAmount.toFixed(2)}</span>
+                <span className="text-muted-foreground">Tax ({Number(billingStatement.salesInvoice?.taxRate)}%):</span>
+                <span className="font-medium">{formatCurrencyPHP(Number(billingStatement.taxAmount))}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Discount:</span>
-                <span className="font-medium">-${billingStatement.discountAmount.toFixed(2)}</span>
+                <span className="font-medium">-{formatCurrencyPHP(Number(billingStatement.discountAmount))}</span>
               </div>
               <Separator />
               <div className="flex justify-between">
                 <span className="font-medium">Total Amount:</span>
-                <span className="font-bold text-lg">${billingStatement.totalAmount.toFixed(2)}</span>
+                <span className="font-bold text-lg">{formatCurrencyPHP(Number(billingStatement.totalAmount))}</span>
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">Net Amount:</span>
-                <span className="font-bold text-lg text-green-600">${billingStatement.netAmount.toFixed(2)}</span>
+                <span className="font-bold text-lg text-green-600">{formatCurrencyPHP(Number(billingStatement.netAmount))}</span>
               </div>
             </CardContent>
           </Card>
@@ -576,7 +580,7 @@ export function BillingStatementClient({
               {billingStatement.paidDate && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Paid Date:</span>
-                  <span className="text-sm">{new Date(billingStatement.paidDate).toLocaleDateString()}</span>
+                  <span className="text-sm">{new Date(billingStatement.paidDate as unknown as string).toLocaleDateString()}</span>
                 </div>
               )}
             </CardContent>
@@ -626,11 +630,11 @@ export function BillingStatementClient({
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Created:</span>
-                <span className="text-sm">{new Date(billingStatement.createdAt).toLocaleDateString()}</span>
+                <span className="text-sm">{new Date(billingStatement.createdAt as unknown as string).toLocaleDateString()}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Updated:</span>
-                <span className="text-sm">{new Date(billingStatement.updatedAt).toLocaleDateString()}</span>
+                <span className="text-sm">{new Date(billingStatement.updatedAt as unknown as string).toLocaleDateString()}</span>
               </div>
               {billingStatement.createdByUser && (
                 <div className="flex items-center justify-between">

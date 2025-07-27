@@ -29,7 +29,7 @@ export async function getAllBillingStatements(
   filters?: BillingStatementFilters,
   page: number = 1,
   pageSize: number = 10
-): Promise<PaginatedResponse<BillingStatementWithRelations>> {
+): Promise<PaginatedResponse<SerializableData<BillingStatementWithRelations>>> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -227,7 +227,7 @@ export async function getAllBillingStatements(
     });
 
     return {
-      data: serializeDecimals(statements) as SerializableData<BillingStatementWithRelations[]>,
+      data: serializeDecimals(statements) as SerializableData<BillingStatementWithRelations>[],
       pagination: {
         page,
         pageSize,
@@ -243,7 +243,7 @@ export async function getAllBillingStatements(
 
 export async function getBillingStatementById(
   id: string
-): Promise<BillingStatementWithRelations | null> {
+): Promise<SerializableData<BillingStatementWithRelations> | null> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -378,7 +378,7 @@ export async function getBillingStatementById(
 
 export async function createBillingStatement(
   data: BillingStatementFormData
-): Promise<BillingActionResponse<BillingStatement>> {
+): Promise<BillingActionResponse<SerializableData<BillingStatement>>> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -498,7 +498,7 @@ export async function createBillingStatement(
 export async function updateBillingStatement(
   id: string,
   data: Partial<BillingStatementFormData>
-): Promise<BillingActionResponse<BillingStatement>> {
+): Promise<BillingActionResponse<SerializableData<BillingStatement>>> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -555,7 +555,7 @@ export async function updateBillingStatement(
 export async function updateBillingStatementStatus(
   id: string,
   status: BillingStatus
-): Promise<BillingActionResponse<BillingStatement>> {
+): Promise<BillingActionResponse<SerializableData<BillingStatement>>> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -781,7 +781,12 @@ async function getMonthlyRevenue() {
     monthlyData[key].invoiceCount += result._count;
   });
 
-  return Object.values(monthlyData);
+  return Object.values(monthlyData) as Array<{
+    month: string;
+    year: number;
+    revenue: number;
+    invoiceCount: number;
+  }>;
 }
 
 async function getStatusBreakdown() {
@@ -889,7 +894,7 @@ async function getRecentBillingActivity() {
 
 export async function createBillingStatementFromCustomerOrder(
   customerOrderId: string
-): Promise<BillingActionResponse<BillingStatement>> {
+): Promise<BillingActionResponse<SerializableData<BillingStatement>>> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -949,7 +954,7 @@ export async function createBillingStatementFromCustomerOrder(
 
 export async function createBillingStatementFromProductionOrder(
   productionOrderId: string
-): Promise<BillingActionResponse<BillingStatement>> {
+): Promise<BillingActionResponse<SerializableData<BillingStatement>>> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
