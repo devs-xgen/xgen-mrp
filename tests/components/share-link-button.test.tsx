@@ -13,9 +13,10 @@ Object.assign(navigator, {
 })
 
 // Mock toast
+const mockToast = vi.fn()
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({
-    toast: vi.fn()
+    toast: mockToast
   })
 }))
 
@@ -32,7 +33,7 @@ describe('ShareLinkButton', () => {
       />
     )
 
-    expect(screen.getByRole('button', { name: /generate shareable link/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /generate share link/i })).toBeInTheDocument()
   })
 
   it('should show loading state when generating link', async () => {
@@ -58,7 +59,7 @@ describe('ShareLinkButton', () => {
       />
     )
 
-    const button = screen.getByRole('button', { name: /generate shareable link/i })
+    const button = screen.getByRole('button', { name: /generate share link/i })
     fireEvent.click(button)
 
     expect(screen.getByTestId('loader2-icon')).toBeInTheDocument()
@@ -92,7 +93,7 @@ describe('ShareLinkButton', () => {
       />
     )
 
-    const button = screen.getByRole('button', { name: /generate shareable link/i })
+    const button = screen.getByRole('button', { name: /generate share link/i })
     fireEvent.click(button)
 
     await waitFor(() => {
@@ -129,7 +130,7 @@ describe('ShareLinkButton', () => {
     )
 
     // Generate link first
-    const generateButton = screen.getByRole('button', { name: /generate shareable link/i })
+    const generateButton = screen.getByRole('button', { name: /generate share link/i })
     fireEvent.click(generateButton)
 
     await waitFor(() => {
@@ -146,11 +147,6 @@ describe('ShareLinkButton', () => {
   })
 
   it('should handle API errors gracefully', async () => {
-    const mockToast = vi.fn()
-    vi.mocked(require('@/hooks/use-toast').useToast).mockReturnValue({
-      toast: mockToast
-    })
-
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
       json: () => Promise.resolve({
@@ -166,7 +162,7 @@ describe('ShareLinkButton', () => {
       />
     )
 
-    const button = screen.getByRole('button', { name: /generate shareable link/i })
+    const button = screen.getByRole('button', { name: /generate share link/i })
     fireEvent.click(button)
 
     await waitFor(() => {
@@ -179,11 +175,6 @@ describe('ShareLinkButton', () => {
   })
 
   it('should handle network errors', async () => {
-    const mockToast = vi.fn()
-    vi.mocked(require('@/hooks/use-toast').useToast).mockReturnValue({
-      toast: mockToast
-    })
-
     vi.mocked(fetch).mockRejectedValue(new Error('Network error'))
 
     render(
@@ -193,7 +184,7 @@ describe('ShareLinkButton', () => {
       />
     )
 
-    const button = screen.getByRole('button', { name: /generate shareable link/i })
+    const button = screen.getByRole('button', { name: /generate share link/i })
     fireEvent.click(button)
 
     await waitFor(() => {
@@ -230,7 +221,7 @@ describe('ShareLinkButton', () => {
       />
     )
 
-    const button = screen.getByRole('button', { name: /generate shareable link/i })
+    const button = screen.getByRole('button', { name: /generate share link/i })
     fireEvent.click(button)
 
     await waitFor(() => {
@@ -261,7 +252,7 @@ describe('ShareLinkButton', () => {
       />
     )
 
-    const button = screen.getByRole('button', { name: /generate shareable link/i })
+    const button = screen.getByRole('button', { name: /generate share link/i })
     fireEvent.click(button)
 
     await waitFor(() => {
@@ -279,11 +270,6 @@ describe('ShareLinkButton', () => {
   })
 
   it('should handle clipboard copy failures', async () => {
-    const mockToast = vi.fn()
-    vi.mocked(require('@/hooks/use-toast').useToast).mockReturnValue({
-      toast: mockToast
-    })
-
     const mockResponse = {
       success: true,
       shareableLink: {
@@ -310,7 +296,7 @@ describe('ShareLinkButton', () => {
     )
 
     // Generate link first
-    const generateButton = screen.getByRole('button', { name: /generate shareable link/i })
+    const generateButton = screen.getByRole('button', { name: /generate share link/i })
     fireEvent.click(generateButton)
 
     await waitFor(() => {

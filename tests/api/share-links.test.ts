@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
+import { getServerSession } from 'next-auth'
 
 // Mock Prisma
 const mockPrisma = {
@@ -32,8 +33,12 @@ vi.mock('@/lib/utils/token-generator', () => ({
 }))
 
 // Mock auth
-vi.mock('@/lib/auth', () => ({
+vi.mock('next-auth', () => ({
   getServerSession: vi.fn()
+}))
+
+vi.mock('@/lib/auth', () => ({
+  authOptions: {}
 }))
 
 describe('Share Links API', () => {
@@ -58,7 +63,7 @@ describe('Share Links API', () => {
         accessCount: 0
       }
 
-      vi.mocked(require('@/lib/auth').getServerSession).mockResolvedValue(mockSession)
+      vi.mocked(getServerSession).mockResolvedValue(mockSession)
       mockPrisma.billingStatement.findUnique.mockResolvedValue({ id: 'bs-1' })
       mockPrisma.shareableLink.create.mockResolvedValue(mockCreatedLink)
 
@@ -81,7 +86,7 @@ describe('Share Links API', () => {
     })
 
     it('should return 401 for unauthenticated requests', async () => {
-      vi.mocked(require('@/lib/auth').getServerSession).mockResolvedValue(null)
+      vi.mocked(getServerSession).mockResolvedValue(null)
 
       const request = new NextRequest('http://localhost/api/share-links', {
         method: 'POST',
@@ -105,7 +110,7 @@ describe('Share Links API', () => {
         user: { id: 'user-1', role: 'ADMIN' }
       }
 
-      vi.mocked(require('@/lib/auth').getServerSession).mockResolvedValue(mockSession)
+      vi.mocked(getServerSession).mockResolvedValue(mockSession)
 
       const request = new NextRequest('http://localhost/api/share-links', {
         method: 'POST',
@@ -129,7 +134,7 @@ describe('Share Links API', () => {
         user: { id: 'user-1', role: 'ADMIN' }
       }
 
-      vi.mocked(require('@/lib/auth').getServerSession).mockResolvedValue(mockSession)
+      vi.mocked(getServerSession).mockResolvedValue(mockSession)
       mockPrisma.billingStatement.findUnique.mockResolvedValue(null)
 
       const request = new NextRequest('http://localhost/api/share-links', {
@@ -154,7 +159,7 @@ describe('Share Links API', () => {
         user: { id: 'user-1', role: 'ADMIN' }
       }
 
-      vi.mocked(require('@/lib/auth').getServerSession).mockResolvedValue(mockSession)
+      vi.mocked(getServerSession).mockResolvedValue(mockSession)
       mockPrisma.billingStatement.findUnique.mockResolvedValue({ id: 'bs-1' })
       mockPrisma.shareableLink.create.mockRejectedValue(new Error('Database error'))
 
@@ -191,7 +196,11 @@ describe('Share Links API', () => {
           createdAt: new Date(),
           expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           isRevoked: false,
-          accessCount: 5
+          accessCount: 5,
+          createdByUser: {
+            name: 'John Admin',
+            email: 'john@example.com'
+          }
         },
         {
           id: 'link-2',
@@ -201,11 +210,15 @@ describe('Share Links API', () => {
           createdAt: new Date(),
           expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // Expired
           isRevoked: false,
-          accessCount: 2
+          accessCount: 2,
+          createdByUser: {
+            name: 'Jane Admin',
+            email: 'jane@example.com'
+          }
         }
       ]
 
-      vi.mocked(require('@/lib/auth').getServerSession).mockResolvedValue(mockSession)
+      vi.mocked(getServerSession).mockResolvedValue(mockSession)
       mockPrisma.shareableLink.findMany.mockResolvedValue(mockLinks)
 
       const { GET } = await import('@/app/api/share-links/[documentType]/[documentId]/route')
@@ -221,7 +234,7 @@ describe('Share Links API', () => {
     })
 
     it('should return 401 for unauthenticated requests', async () => {
-      vi.mocked(require('@/lib/auth').getServerSession).mockResolvedValue(null)
+      vi.mocked(getServerSession).mockResolvedValue(null)
 
       const { GET } = await import('@/app/api/share-links/[documentType]/[documentId]/route')
       const response = await GET(
@@ -254,7 +267,7 @@ describe('Share Links API', () => {
         revokedAt: new Date()
       }
 
-      vi.mocked(require('@/lib/auth').getServerSession).mockResolvedValue(mockSession)
+      vi.mocked(getServerSession).mockResolvedValue(mockSession)
       mockPrisma.shareableLink.findUnique.mockResolvedValue(mockLink)
       mockPrisma.shareableLink.update.mockResolvedValue(mockUpdatedLink)
 
@@ -275,7 +288,7 @@ describe('Share Links API', () => {
         user: { id: 'user-1', role: 'ADMIN' }
       }
 
-      vi.mocked(require('@/lib/auth').getServerSession).mockResolvedValue(mockSession)
+      vi.mocked(getServerSession).mockResolvedValue(mockSession)
       mockPrisma.shareableLink.findUnique.mockResolvedValue(null)
 
       const { DELETE } = await import('@/app/api/share-links/[linkId]/route')
@@ -290,7 +303,7 @@ describe('Share Links API', () => {
       expect(data.error).toBe('Share link not found')
     })
 
-    it('should return 403 for already revoked link', async () => {
+    it('should return 400 for already revoked link', async () => {
       const mockSession = {
         user: { id: 'user-1', role: 'ADMIN' }
       }
@@ -302,7 +315,7 @@ describe('Share Links API', () => {
         createdBy: 'user-1'
       }
 
-      vi.mocked(require('@/lib/auth').getServerSession).mockResolvedValue(mockSession)
+      vi.mocked(getServerSession).mockResolvedValue(mockSession)
       mockPrisma.shareableLink.findUnique.mockResolvedValue(mockRevokedLink)
 
       const { DELETE } = await import('@/app/api/share-links/[linkId]/route')
