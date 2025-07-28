@@ -100,6 +100,7 @@ import {
   Ticket,
   Cog,
   Hammer,
+  Coins
 } from "lucide-react"
 
 // Icon mapping
@@ -201,6 +202,7 @@ const iconMap = {
   Ticket,
   Cog,
   Hammer,
+  Coins
 } as const
 
 export type IconName = keyof typeof iconMap

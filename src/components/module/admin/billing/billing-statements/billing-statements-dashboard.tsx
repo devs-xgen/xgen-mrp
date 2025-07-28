@@ -1,8 +1,7 @@
 "use client"
 
-import { FileText } from "lucide-react"
-import { Card } from "@/components/ui/card"
 import { formatCurrencyPHP } from "@/lib/constant"
+import { AnalyticsCard } from "@/components/ui/analytics-card"
 
 interface BillingAnalytics {
   totalBillingStatements: number
@@ -18,65 +17,44 @@ interface BillingStatementsDashboardProps {
 export function BillingStatementsDashboard({ analytics }: BillingStatementsDashboardProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      {/* Total Statements */}
-      <Card className="bg-card border rounded-lg p-6">
-        <div className="flex items-center space-x-4">
-          <FileText className="h-8 w-8 text-blue-600" />
-          <div>
-            <p className="text-sm font-medium text-muted-foreground truncate">
-              Total Statements
-            </p>
-            <p className="text-2xl font-bold text-foreground mt-1">
-              {analytics.totalBillingStatements}
-            </p>
-          </div>
-        </div>
-      </Card>
-      
+      <AnalyticsCard
+        title="Total Statements"
+        value={analytics.totalBillingStatements}
+        icon="FileText"
+        iconColor="text-blue-600"
+        bgColor="bg-card"
+        borderColor="border-blue-200/70"
+      />
+
       {/* Paid Amount */}
-      <Card className="bg-green-50/90 border border-green-200/70 dark:bg-green-950/30 dark:border-green-800/50 p-6">
-        <div className="flex items-center space-x-4">
-          <FileText className="h-8 w-8 text-green-600" />
-          <div>
-            <p className="text-sm font-medium text-muted-foreground truncate">
-              Paid Amount
-            </p>
-            <p className="text-2xl font-bold text-foreground mt-1">
-              {formatCurrencyPHP(analytics.paidAmount)}
-            </p>
-          </div>
-        </div>
-      </Card>
-      
+      <AnalyticsCard
+        title="Paid Amount"
+        value={formatCurrencyPHP(analytics.paidAmount)}
+        icon="CheckCircle"
+        iconColor="text-green-600"
+        bgColor="bg-green-50/90 dark:bg-green-950/30"
+        borderColor="border-green-200/70 dark:border-green-800/50"
+      />
+
       {/* Overdue Amount */}
-      <Card className="bg-red-50/90 border border-red-200/70 dark:bg-red-950/30 dark:border-red-800/50 p-6">
-        <div className="flex items-center space-x-4">
-          <FileText className="h-8 w-8 text-red-600" />
-          <div>
-            <p className="text-sm font-medium text-muted-foreground truncate">
-              Overdue Amount
-            </p>
-            <p className="text-2xl font-bold text-foreground mt-1">
-              {formatCurrencyPHP(analytics.overdueAmount)}
-            </p>
-          </div>
-        </div>
-      </Card>
+      <AnalyticsCard
+        title="Overdue Amount"
+        value={formatCurrencyPHP(analytics.overdueAmount)}
+        icon="AlertTriangle"
+        iconColor="text-red-600"
+        bgColor="bg-red-50/90 dark:bg-red-950/30"
+        borderColor="border-red-200/70 dark:border-red-800/50"
+      />
       
       {/* Total Revenue */}
-      <Card className="bg-card border rounded-lg p-6">
-        <div className="flex items-center space-x-4">
-          <FileText className="h-8 w-8 text-blue-600" />
-          <div>
-            <p className="text-sm font-medium text-muted-foreground truncate">
-              Total Revenue
-            </p>
-            <p className="text-2xl font-bold text-foreground mt-1">
-              {formatCurrencyPHP(analytics.totalRevenue)}
-            </p>
-          </div>
-        </div>
-      </Card>
+      <AnalyticsCard
+        title="Total Revenue"
+        value={formatCurrencyPHP(analytics.totalRevenue)}
+        icon="Coins"
+        iconColor="text-blue-600"
+        bgColor="bg-blue-50/90 dark:bg-blue-950/30"
+        borderColor="border-blue-200/70 dark:border-blue-800/50"
+      />
     </div>
   )
 }

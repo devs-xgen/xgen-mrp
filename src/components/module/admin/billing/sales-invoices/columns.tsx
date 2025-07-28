@@ -2,6 +2,7 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrencyPHP } from "@/lib/constant"
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -125,7 +126,7 @@ export const columns: ColumnDef<SalesInvoiceWithItems>[] = [
       const amount = row.getValue("totalAmount") as number;
       return (
         <div className="font-medium">
-          ${amount.toLocaleString()}
+          {formatCurrencyPHP(amount)}
         </div>
       );
     },
