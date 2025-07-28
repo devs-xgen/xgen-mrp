@@ -41,6 +41,14 @@ vi.mock('lucide-react', () => ({
   Download: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'download-icon', className, ...props }),
   Filter: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'filter-icon', className, ...props }),
   CalendarIcon: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'calendar-icon', className, ...props }),
+  Share2: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'share2-icon', className, ...props }),
+  Copy: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'copy-icon', className, ...props }),
+  Loader2: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'loader2-icon', className, ...props }),
+  Trash2: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'trash2-icon', className, ...props }),
+  ExternalLink: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'external-link-icon', className, ...props }),
+  Eye: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'eye-icon', className, ...props }),
+  Globe: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'globe-icon', className, ...props }),
+  RefreshCw: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'refresh-cw-icon', className, ...props }),
 }))
 
 // Global test utilities

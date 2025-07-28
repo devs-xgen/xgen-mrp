@@ -15,6 +15,9 @@ import {
 import { DeliveryReceiptWithBilling } from "@/types/admin/billing";
 import { DataTableColumnHeader } from "./data-table-column-header";
 import Link from "next/link";
+import { toast } from "sonner";
+import { downloadDeliveryReceiptPDF } from "@/lib/actions/delivery-receipts";
+import { generateDeliveryReceiptPDFClient } from "@/lib/services/delivery-receipt-pdf";
 
 export const columns: ColumnDef<DeliveryReceiptWithBilling>[] = [
   {
@@ -181,7 +184,41 @@ export const columns: ColumnDef<DeliveryReceiptWithBilling>[] = [
               View Address
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={async () => {
+                try {
+                  // Use the server action to get the receipt data
+                  const result = await downloadDeliveryReceiptPDF(receipt.id);
+                  
+                  if (!result.success || !result.pdfData || !result.filename) {
+                    throw new Error(result.error || "Failed to get receipt data");
+                  }
+                  
+                  // Decode the receipt data from base64
+                  const receiptDataString = atob(result.pdfData);
+                  const receiptData = JSON.parse(receiptDataString);
+                  
+                  // Generate PDF on client side
+                  const pdfUint8Array = generateDeliveryReceiptPDFClient(receiptData);
+                  const blob = new Blob([pdfUint8Array], { type: 'application/pdf' });
+                  
+                  // Create download link
+                  const url = window.URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `delivery-receipt-${receipt.receiptNumber}.pdf`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  window.URL.revokeObjectURL(url);
+                  
+                  toast.success("PDF exported successfully!");
+                } catch (error) {
+                  console.error("Export error:", error);
+                  toast.error(error instanceof Error ? error.message : "Failed to export PDF");
+                }
+              }}
+            >
               <Download className="mr-2 h-4 w-4" />
               Export PDF
             </DropdownMenuItem>

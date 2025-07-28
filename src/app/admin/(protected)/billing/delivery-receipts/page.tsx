@@ -13,6 +13,8 @@ import { DeliveryReceiptsDashboard } from "@/components/module/admin/billing/del
 import { DataTable } from "@/components/module/admin/billing/delivery-receipts/data-table";
 import { DeliveryReceiptWithBilling, DeliveryAnalytics, DeliveryStatus } from "@/types/admin/billing";
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: "Delivery Receipts",
   description: "Track delivery confirmations and manage delivery receipts",
@@ -30,14 +32,14 @@ async function refreshDeliveryReceipts() {
 }
 
 interface DeliveryReceiptsPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     page?: string;
     per_page?: string;
     sort?: string;
     status?: string;
     search?: string;
     courier?: string;
-  };
+  }>;
 }
 
 function DeliveryReceiptsTableSkeleton() {
@@ -68,13 +70,16 @@ function DeliveryReceiptsTableSkeleton() {
 export default async function DeliveryReceiptsPage({
   searchParams,
 }: DeliveryReceiptsPageProps) {
+  // Await search parameters before accessing properties
+  const resolvedSearchParams = await searchParams;
+  
   // Parse search parameters
-  const page = Number(searchParams?.page) || 1;
-  const perPage = Number(searchParams?.per_page) || 10;
-  const sort = searchParams?.sort;
-  const status = searchParams?.status;
-  const search = searchParams?.search;
-  const courier = searchParams?.courier;
+  const page = Number(resolvedSearchParams?.page) || 1;
+  const perPage = Number(resolvedSearchParams?.per_page) || 10;
+  const sort = resolvedSearchParams?.sort;
+  const status = resolvedSearchParams?.status;
+  const search = resolvedSearchParams?.search;
+  const courier = resolvedSearchParams?.courier;
 
   // Build filters object
   const filters = {

@@ -267,7 +267,9 @@ export async function getDeliveryReceiptById(
     });
 
     // Serialize the receipt to handle Decimal fields
-    return receipt ? serializeDeliveryReceipt(receipt) as DeliveryReceiptWithBilling : null;
+    return receipt
+      ? (serializeDeliveryReceipt(receipt) as DeliveryReceiptWithBilling)
+      : null;
   } catch (error) {
     console.error("Error fetching delivery receipt:", error);
     throw new Error("Failed to fetch delivery receipt");
@@ -325,7 +327,9 @@ export async function createDeliveryReceipt(
     });
 
     revalidatePath("/admin/billing/delivery-receipts");
-    revalidatePath(`/admin/billing/statements/${validatedData.billingStatementId}`);
+    revalidatePath(
+      `/admin/billing/statements/${validatedData.billingStatementId}`
+    );
 
     return {
       success: true,
@@ -337,7 +341,7 @@ export async function createDeliveryReceipt(
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: `Validation error: ${error.errors.map(e => e.message).join(", ")}`,
+        error: `Validation error: ${error.errors.map((e) => e.message).join(", ")}`,
       };
     }
     return {
@@ -370,7 +374,10 @@ export async function updateDeliveryReceipt(
     }
 
     // If billingStatementId is being changed, verify the new billing statement exists (Requirement 4.1, 4.2)
-    if (data.billingStatementId && data.billingStatementId !== existingReceipt.billingStatementId) {
+    if (
+      data.billingStatementId &&
+      data.billingStatementId !== existingReceipt.billingStatementId
+    ) {
       const newBillingStatement = await prisma.billingStatement.findUnique({
         where: { id: data.billingStatementId },
       });
@@ -441,7 +448,9 @@ export async function updateDeliveryReceipt(
 
     revalidatePath("/admin/billing/delivery-receipts");
     revalidatePath(`/admin/billing/delivery-receipts/${id}`);
-    revalidatePath(`/admin/billing/statements/${updatedReceipt.billingStatementId}`);
+    revalidatePath(
+      `/admin/billing/statements/${updatedReceipt.billingStatementId}`
+    );
 
     return {
       success: true,
@@ -478,7 +487,9 @@ export async function updateDeliveryReceiptStatus(
 
     revalidatePath("/admin/billing/delivery-receipts");
     revalidatePath(`/admin/billing/delivery-receipts/${id}`);
-    revalidatePath(`/admin/billing/statements/${updatedReceipt.billingStatementId}`);
+    revalidatePath(
+      `/admin/billing/statements/${updatedReceipt.billingStatementId}`
+    );
 
     return {
       success: true,
@@ -523,7 +534,10 @@ export async function deleteDeliveryReceipt(
     }
 
     // Additional check: ensure billing statement allows receipt deletion
-    if (receipt.billingStatement && receipt.billingStatement.status === "PAID") {
+    if (
+      receipt.billingStatement &&
+      receipt.billingStatement.status === "PAID"
+    ) {
       return {
         success: false,
         error: "Cannot delete delivery receipt for paid billing statements",
@@ -587,7 +601,9 @@ export async function confirmDelivery(
 
     revalidatePath("/admin/billing/delivery-receipts");
     revalidatePath(`/admin/billing/delivery-receipts/${id}`);
-    revalidatePath(`/admin/billing/statements/${updatedReceipt.billingStatementId}`);
+    revalidatePath(
+      `/admin/billing/statements/${updatedReceipt.billingStatementId}`
+    );
 
     return {
       success: true,
@@ -625,7 +641,9 @@ export async function markDeliveryFailed(
 
     revalidatePath("/admin/billing/delivery-receipts");
     revalidatePath(`/admin/billing/delivery-receipts/${id}`);
-    revalidatePath(`/admin/billing/statements/${updatedReceipt.billingStatementId}`);
+    revalidatePath(
+      `/admin/billing/statements/${updatedReceipt.billingStatementId}`
+    );
 
     return {
       success: true,
@@ -674,9 +692,10 @@ export async function createDeliveryReceiptFromCustomerOrder(
     // Find the billing statement for this customer order
     const billingStatement = customerOrder.billingStatements[0];
     if (!billingStatement) {
-      return { 
-        success: false, 
-        error: "No billing statement found for this customer order. Please create a billing statement first." 
+      return {
+        success: false,
+        error:
+          "No billing statement found for this customer order. Please create a billing statement first.",
       };
     }
 
@@ -746,9 +765,10 @@ export async function createDeliveryReceiptFromProductionOrder(
     // Find the billing statement for this production order
     const billingStatement = productionOrder.billingStatements[0];
     if (!billingStatement) {
-      return { 
-        success: false, 
-        error: "No billing statement found for this production order. Please create a billing statement first." 
+      return {
+        success: false,
+        error:
+          "No billing statement found for this production order. Please create a billing statement first.",
       };
     }
 
@@ -763,7 +783,8 @@ export async function createDeliveryReceiptFromProductionOrder(
         productionOrder.customerOrder?.shippingAddress ||
         productionOrder.customerOrder?.customer.address ||
         "",
-      deliveryNotes: deliveryData.deliveryNotes || 
+      deliveryNotes:
+        deliveryData.deliveryNotes ||
         `Delivery for production order - ${productionOrder.product.name} (Qty: ${productionOrder.quantity})`,
       deliveryStatus: deliveryData.deliveryStatus || DeliveryStatus.PENDING,
       signatureImage: deliveryData.signatureImage,
@@ -864,8 +885,6 @@ async function generateReceiptNumber(): Promise<string> {
   return `DR-${year}${month}-${sequence}`;
 }
 
-
-
 async function getCourierPerformance() {
   const results = await prisma.deliveryReceipt.groupBy({
     by: ["courierService"],
@@ -905,7 +924,10 @@ async function getRecentDeliveries() {
     receiptNumber: receipt.receiptNumber,
     deliveryDate: receipt.deliveryDate,
     status: receipt.deliveryStatus as DeliveryStatus,
-    customerName: receipt.billingStatement?.customer?.name || receipt.billingStatement?.customerName || "Unknown",
+    customerName:
+      receipt.billingStatement?.customer?.name ||
+      receipt.billingStatement?.customerName ||
+      "Unknown",
     deliveryMethod: "Standard", // Simplified - no longer tracking delivery method
   }));
 }
@@ -921,8 +943,10 @@ export async function exportDeliveryReceiptsData(): Promise<{
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      throw new Error("Unauthorized");
+      throw new Error("Unauthorized: Please log in to export data");
     }
+
+    console.log("Starting delivery receipts export...");
 
     // Get all delivery receipts with related data
     const receipts = await prisma.deliveryReceipt.findMany({
@@ -975,6 +999,13 @@ export async function exportDeliveryReceiptsData(): Promise<{
       },
     });
 
+    console.log(`Found ${receipts.length} delivery receipts to export`);
+
+    // Handle case when no receipts are found
+    if (receipts.length === 0) {
+      console.log("No delivery receipts found, creating empty export");
+    }
+
     // Build CSV headers
     const headers = [
       "Receipt Number",
@@ -1006,14 +1037,14 @@ export async function exportDeliveryReceiptsData(): Promise<{
       const product = receipt.billingStatement?.productionOrder?.product;
       const order = receipt.billingStatement?.customerOrder;
       const createdBy = receipt.createdByUser;
-      
+
       const createdByName = createdBy?.profile
         ? `${createdBy.profile.firstName} ${createdBy.profile.lastName}`
         : createdBy?.email || "Unknown";
 
       return [
         receipt.receiptNumber,
-        receipt.deliveryDate.toISOString().split('T')[0], // YYYY-MM-DD
+        receipt.deliveryDate.toISOString().split("T")[0], // YYYY-MM-DD
         receipt.deliveryStatus,
         customer?.name || receipt.billingStatement?.customerName || "Unknown",
         customer?.email || "",
@@ -1030,40 +1061,167 @@ export async function exportDeliveryReceiptsData(): Promise<{
         receipt.signatureImage ? "Yes" : "No",
         receipt.photoEvidence ? "Yes" : "No",
         order?.orderNumber || "",
-        order?.orderDate ? order.orderDate.toISOString().split('T')[0] : "",
+        order?.orderDate ? order.orderDate.toISOString().split("T")[0] : "",
         createdByName,
-        receipt.createdAt.toISOString().split('T')[0],
+        receipt.createdAt.toISOString().split("T")[0],
       ];
     });
 
     // Convert to CSV content
     const csvRows = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => 
-        // Escape commas and quotes in cell content
-        `"${String(cell).replace(/"/g, '""')}"`
-      ).join(','))
+      headers.join(","),
+      ...rows.map((row) =>
+        row
+          .map(
+            (cell) =>
+              // Escape commas and quotes in cell content
+              `"${String(cell || "").replace(/"/g, '""')}"`
+          )
+          .join(",")
+      ),
     ];
-    
-    const csvContent = csvRows.join('\n');
-    
+
+    const csvContent = csvRows.join("\n");
+
     // Generate filename with date
-    const date = new Date().toISOString().split('T')[0];
+    const date = new Date().toISOString().split("T")[0];
     const filename = `delivery-receipts-export-${date}.csv`;
+
+    console.log(
+      `Export completed successfully. Generated ${csvRows.length - 1} data rows.`
+    );
 
     return {
       csvContent,
-      filename
+      filename,
     };
   } catch (error) {
     console.error("Error exporting delivery receipts data:", error);
-    throw new Error("Failed to export delivery receipts data");
+
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      throw new Error(`Export failed: ${error.message}`);
+    } else {
+      throw new Error(
+        "Failed to export delivery receipts data due to an unknown error"
+      );
+    }
   }
 }
 
-export async function exportDeliveryReceiptPDF(
-  id: string
-): Promise<{ success: boolean; pdfBuffer?: Buffer; filename?: string; error?: string }> {
+export async function downloadDeliveryReceiptPDF(id: string): Promise<{
+  success: boolean;
+  pdfData?: string;
+  filename?: string;
+  error?: string;
+}> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    // Get delivery receipt with all related data
+    const receipt = await prisma.deliveryReceipt.findUnique({
+      where: { id },
+      include: {
+        billingStatement: {
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                address: true,
+              },
+            },
+            customerOrder: {
+              select: {
+                id: true,
+                orderNumber: true,
+                totalAmount: true,
+              },
+            },
+            productionOrder: {
+              include: {
+                product: {
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        createdByUser: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!receipt) {
+      return { success: false, error: "Delivery receipt not found" };
+    }
+
+    // Convert Decimal fields to numbers for serialization
+    const convertedReceipt = {
+      ...receipt,
+      billingStatement: receipt.billingStatement
+        ? {
+            ...receipt.billingStatement,
+            totalAmount: Number(receipt.billingStatement.totalAmount),
+            taxAmount: Number(receipt.billingStatement.taxAmount),
+            discountAmount: Number(receipt.billingStatement.discountAmount),
+            netAmount: Number(receipt.billingStatement.netAmount),
+            customerOrder: receipt.billingStatement.customerOrder
+              ? {
+                  ...receipt.billingStatement.customerOrder,
+                  totalAmount: Number(
+                    receipt.billingStatement.customerOrder.totalAmount
+                  ),
+                }
+              : null,
+          }
+        : null,
+    };
+
+    // Return the receipt data for client-side PDF generation
+    const receiptData = JSON.stringify(convertedReceipt);
+    const pdfBuffer = Buffer.from(receiptData, "utf8");
+
+    // Convert buffer to base64 for client-side download
+    const pdfData = pdfBuffer.toString("base64");
+    const filename = `delivery-receipt-${receipt.receiptNumber}-${new Date().toISOString().split("T")[0]}.pdf`;
+
+    return {
+      success: true,
+      pdfData,
+      filename,
+    };
+  } catch (error) {
+    console.error("Error downloading delivery receipt PDF:", error);
+    return { success: false, error: "Failed to download delivery receipt PDF" };
+  }
+}
+
+export async function exportDeliveryReceiptPDF(id: string): Promise<{
+  success: boolean;
+  pdfBuffer?: Buffer;
+  filename?: string;
+  error?: string;
+}> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -1125,10 +1283,12 @@ export async function exportDeliveryReceiptPDF(
     }
 
     // Generate PDF using the PDF service
-    const { generateDeliveryReceiptPDF } = await import("@/lib/services/pdf-generator");
+    const { generateDeliveryReceiptPDF } = await import(
+      "@/lib/services/pdf-generator"
+    );
     const pdfBuffer = await generateDeliveryReceiptPDF(receipt);
 
-    const filename = `delivery-receipt-${receipt.receiptNumber}-${new Date().toISOString().split('T')[0]}.pdf`;
+    const filename = `delivery-receipt-${receipt.receiptNumber}-${new Date().toISOString().split("T")[0]}.pdf`;
 
     return {
       success: true,

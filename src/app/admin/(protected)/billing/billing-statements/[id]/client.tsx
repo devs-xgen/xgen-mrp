@@ -58,6 +58,8 @@ import {
   deleteBillingStatement,
   updateBillingStatementStatus,
 } from "@/lib/actions/billing-statements";
+import { ShareLinkButton } from "@/components/shared/ShareLinkButton";
+import { ShareLinkManager } from "@/components/shared/ShareLinkManager";
 
 type SerializedBillingStatement = SerializableData<BillingStatementWithRelations>;
 
@@ -240,6 +242,12 @@ export function BillingStatementClient({
         <div className="flex items-center gap-2">
           {!isEditing ? (
             <>
+              <ShareLinkButton
+                documentType="billing-statement"
+                documentId={billingStatementId}
+                variant="outline"
+                size="sm"
+              />
               <Button variant="outline" size="sm" disabled>
                 <Download className="mr-2 h-4 w-4" />
                 Download PDF
@@ -621,6 +629,12 @@ export function BillingStatementClient({
               </Button>
             </CardContent>
           </Card>
+
+          {/* Share Links Management */}
+          <ShareLinkManager
+            documentType="billing-statement"
+            documentId={billingStatementId}
+          />
 
           {/* Timestamps */}
           <Card className="bg-muted border rounded-lg">

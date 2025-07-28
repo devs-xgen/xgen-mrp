@@ -28,8 +28,10 @@ import { formatDate } from "@/lib/utils"
 import { formatCurrencyPHP } from "@/lib/constant"
 import { updateBillingStatementStatus, deleteBillingStatement } from "@/lib/actions/simple-billing-statements"
 import { useToast } from "@/hooks/use-toast"
+import { SerializableData } from "@/lib/utils/decimal-serializer"
 
-interface BillingStatement {
+// Type for serialized billing statement data
+type SerializedBillingStatement = SerializableData<{
   id: string
   statementNumber: string
   customerName: string
@@ -49,10 +51,10 @@ interface BillingStatement {
     orderDate: Date
     status: string
   }
-}
+}>
 
 interface SimpleBillingStatementsTableProps {
-  data: BillingStatement[]
+  data: SerializedBillingStatement[]
 }
 
 export function SimpleBillingStatementsTable({ data }: SimpleBillingStatementsTableProps) {
@@ -96,7 +98,7 @@ export function SimpleBillingStatementsTable({ data }: SimpleBillingStatementsTa
     }
   }
 
-  const columns: ColumnDef<BillingStatement>[] = [
+  const columns: ColumnDef<SerializedBillingStatement>[] = [
     {
       accessorKey: "statementNumber",
       header: ({ column }) => (
@@ -107,7 +109,7 @@ export function SimpleBillingStatementsTable({ data }: SimpleBillingStatementsTa
           <div>
             <div className="font-medium">{row.getValue("statementNumber")}</div>
             <div className="text-xs text-muted-foreground">
-              {formatDate(row.original.billingDate)}
+              {formatDate(new Date(row.original.billingDate as unknown as string))}
             </div>
           </div>
         )
@@ -140,7 +142,7 @@ export function SimpleBillingStatementsTable({ data }: SimpleBillingStatementsTa
           <div>
             <div className="font-medium">{order.orderNumber}</div>
             <div className="text-xs text-muted-foreground">
-              {formatDate(order.orderDate)}
+              {formatDate(new Date(order.orderDate as unknown as string))}
             </div>
           </div>
         )
@@ -206,13 +208,13 @@ export function SimpleBillingStatementsTable({ data }: SimpleBillingStatementsTa
         <DataTableColumnHeader column={column} title="Due Date" />
       ),
       cell: ({ row }) => {
-        const dueDate = new Date(row.getValue("dueDate"))
+        const dueDate = new Date(row.getValue("dueDate") as unknown as string)
         const today = new Date()
         const isOverdue = dueDate < today && row.original.status !== "PAID"
         
         return (
           <div className={isOverdue ? "text-destructive font-medium" : ""}>
-            {formatDate(row.getValue("dueDate"))}
+            {formatDate(row.getValue("dueDate") as unknown as string)}
             {isOverdue && (
               <div className="text-xs text-destructive">Overdue</div>
             )}
@@ -284,8 +286,6 @@ export function SimpleBillingStatementsTable({ data }: SimpleBillingStatementsTa
       <DataTable
         columns={columns}
         data={data}
-        searchKey="customerName"
-        searchPlaceholder="Search customers..."
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>

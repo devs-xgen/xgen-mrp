@@ -36,6 +36,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SalesInvoiceWithItems, InvoiceStatus } from "@/types/admin/billing";
 import { getSalesInvoiceById, deleteSalesInvoice, updateSalesInvoiceStatus } from "@/lib/actions/sales-invoices";
 import { PDFDownloadStandaloneButton } from "@/components/module/admin/billing/sales-invoices/pdf-download-standalone-button";
+import { ShareLinkButton } from "@/components/shared/ShareLinkButton";
+import { ShareLinkManager } from "@/components/shared/ShareLinkManager";
 
 
 
@@ -183,6 +185,12 @@ export default function SalesInvoiceViewPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <ShareLinkButton
+            documentType="sales-invoice"
+            documentId={invoice.id}
+            variant="outline"
+            size="sm"
+          />
           <PDFDownloadStandaloneButton
             invoiceId={invoice.id}
             invoiceNumber={invoice.invoiceNumber}
@@ -559,6 +567,12 @@ export default function SalesInvoiceViewPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Share Links Management */}
+          <ShareLinkManager
+            documentType="sales-invoice"
+            documentId={invoice.id}
+          />
 
           {/* Metadata */}
           <Card className="bg-card border rounded-lg">

@@ -23,7 +23,9 @@ import {
 // Import components and actions
 import { DeliveryReceiptCard } from "@/components/module/admin/billing/delivery-receipt-card";
 import { DeliveryReceiptWithBilling } from "@/types/admin/billing";
-import { getDeliveryReceiptById, deleteDeliveryReceipt } from "@/lib/actions/delivery-receipts";
+import { getDeliveryReceiptById, deleteDeliveryReceipt, downloadDeliveryReceiptPDF } from "@/lib/actions/delivery-receipts";
+import { ShareLinkButton } from "@/components/shared/ShareLinkButton";
+import { ShareLinkManager } from "@/components/shared/ShareLinkManager";
 
 export default function ViewDeliveryReceiptPage() {
   const router = useRouter();
@@ -66,26 +68,27 @@ export default function ViewDeliveryReceiptPage() {
     try {
       setIsLoading(true);
       
-      // Call the API route to download the PDF
-      const response = await fetch(`/api/admin/billing/delivery-receipts/${receipt.id}/export`);
+      // Use the server action to get the PDF data
+      const result = await downloadDeliveryReceiptPDF(receipt.id);
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to export PDF");
+      if (!result.success || !result.pdfData || !result.filename) {
+        throw new Error(result.error || "Failed to export PDF");
       }
       
-      // Get the filename from the response headers
-      const contentDisposition = response.headers.get('content-disposition');
-      const filename = contentDisposition
-        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
-        : `delivery-receipt-${receipt.receiptNumber}.pdf`;
+      // Convert base64 to blob and download
+      const byteCharacters = atob(result.pdfData);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
       
-      // Create blob and download
-      const blob = await response.blob();
+      // Create download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = filename;
+      link.download = result.filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -170,6 +173,12 @@ export default function ViewDeliveryReceiptPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <ShareLinkButton
+            documentType="delivery-receipt"
+            documentId={receiptId}
+            variant="outline"
+            size="sm"
+          />
           <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading}>
              <Download className="mr-2 h-4 w-4" />
              {isLoading ? "Exporting..." : "Export"}
@@ -220,6 +229,12 @@ export default function ViewDeliveryReceiptPage() {
         
         {/* Additional Information Sidebar */}
         <div className="space-y-6">
+          {/* Share Links Management */}
+          <ShareLinkManager
+            documentType="delivery-receipt"
+            documentId={receiptId}
+          />
+
           {/* Proof Images */}
           {(receipt.signatureImage || receipt.photoEvidence) && (
             <Card className="bg-card border rounded-lg">

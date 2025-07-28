@@ -1,5 +1,6 @@
 import React from 'react';
-import { pdf, Document, Page, Text, View, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
+import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { NextResponse } from 'next/server';
 import { BillingStatement, SalesInvoice, DeliveryReceipt, SalesInvoiceItem } from '@/types/admin/billing';
 
 // Company branding configuration
@@ -236,12 +237,21 @@ export const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
-export const formatDate = (date: Date): string => {
+export const formatDate = (date: Date | string): string => {
+  if (!date) return "N/A";
+  
+  const dateObj = date instanceof Date ? date : new Date(date);
+  
+  // Check if the date is valid
+  if (isNaN(dateObj.getTime())) {
+    return "Invalid Date";
+  }
+  
   return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  }).format(new Date(date));
+  }).format(dateObj);
 };
 
 // Sales Invoice PDF Document Component
@@ -560,7 +570,188 @@ const DeliveryReceiptPDFDocument: React.FC<{
   </Document>
 );
 
+// Billing Statement PDF Document Component
+const BillingStatementPDFDocument: React.FC<{
+  billingStatement: BillingStatement & {
+    customer?: { name: string; email?: string; phone?: string; address?: string };
+    customerOrder?: { orderNumber: string; totalAmount: number };
+    salesInvoice?: SalesInvoice;
+  };
+}> = ({ billingStatement }) => (
+  <Document>
+    <Page size="A4" style={styles.page}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.companyName}>{COMPANY_INFO.name}</Text>
+          <Text style={styles.companyDetails}>
+            {`${COMPANY_INFO.address}\n${COMPANY_INFO.city}\nPhone: ${COMPANY_INFO.phone}\nEmail: ${COMPANY_INFO.email}`}
+          </Text>
+        </View>
+        <View>
+          <View style={[styles.statusBadge, {
+            backgroundColor: billingStatement.status === 'PAID' ? '#dcfce7' : 
+                           billingStatement.status === 'OVERDUE' ? '#fef2f2' : '#fef3c7',
+            color: billingStatement.status === 'PAID' ? '#166534' : 
+                   billingStatement.status === 'OVERDUE' ? '#dc2626' : '#d97706'
+          }]}>
+            <Text>{billingStatement.status}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Document Title */}
+      <Text style={styles.documentTitle}>BILLING STATEMENT</Text>
+
+      {/* Document Information */}
+      <View style={styles.documentInfo}>
+        <View style={styles.infoSection}>
+          <Text style={styles.infoTitle}>Statement Details</Text>
+          <Text style={styles.infoText}>Statement #: {billingStatement.statementNumber}</Text>
+          <Text style={styles.infoText}>Billing Date: {formatDate(billingStatement.billingDate)}</Text>
+          <Text style={styles.infoText}>Status: {billingStatement.status}</Text>
+          {billingStatement.dueDate ? (
+            <Text style={styles.infoText}>Due Date: {formatDate(billingStatement.dueDate)}</Text>
+          ) : null}
+          {billingStatement.customerOrder?.orderNumber ? (
+            <Text style={styles.infoText}>Order #: {billingStatement.customerOrder.orderNumber}</Text>
+          ) : null}
+        </View>
+        <View style={styles.infoSection}>
+          <Text style={styles.infoTitle}>Customer Information</Text>
+          <Text style={styles.infoText}>
+            {billingStatement.customer?.name || billingStatement.customerName || 'Customer'}
+          </Text>
+          {billingStatement.customer?.email ? (
+            <Text style={styles.infoText}>{billingStatement.customer.email}</Text>
+          ) : null}
+          {billingStatement.customer?.phone ? (
+            <Text style={styles.infoText}>{billingStatement.customer.phone}</Text>
+          ) : null}
+          {billingStatement.customer?.address ? (
+            <Text style={styles.infoText}>{billingStatement.customer.address}</Text>
+          ) : null}
+        </View>
+      </View>
+
+      {/* Financial Summary */}
+      <View style={styles.table}>
+        <View style={[styles.tableRow, styles.tableHeader]}>
+          <View style={[styles.tableCol, { width: '60%' }]}>
+            <Text style={styles.tableCellHeader}>Description</Text>
+          </View>
+          <View style={[styles.tableCol, { width: '40%' }]}>
+            <Text style={styles.tableCellHeader}>Amount</Text>
+          </View>
+        </View>
+        
+        <View style={styles.tableRow}>
+          <View style={[styles.tableCol, { width: '60%' }]}>
+            <Text style={styles.tableCell}>Subtotal</Text>
+          </View>
+          <View style={[styles.tableCol, { width: '40%' }]}>
+            <Text style={styles.tableCell}>
+              {formatCurrency(billingStatement.totalAmount - billingStatement.taxAmount + billingStatement.discountAmount)}
+            </Text>
+          </View>
+        </View>
+
+        {billingStatement.discountAmount > 0 ? (
+          <View style={styles.tableRow}>
+            <View style={[styles.tableCol, { width: '60%' }]}>
+              <Text style={styles.tableCell}>Discount</Text>
+            </View>
+            <View style={[styles.tableCol, { width: '40%' }]}>
+              <Text style={styles.tableCell}>-{formatCurrency(billingStatement.discountAmount)}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {billingStatement.taxAmount > 0 ? (
+          <View style={styles.tableRow}>
+            <View style={[styles.tableCol, { width: '60%' }]}>
+              <Text style={styles.tableCell}>Tax</Text>
+            </View>
+            <View style={[styles.tableCol, { width: '40%' }]}>
+              <Text style={styles.tableCell}>{formatCurrency(billingStatement.taxAmount)}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        <View style={[styles.tableRow, { backgroundColor: '#f9fafb' }]}>
+          <View style={[styles.tableCol, { width: '60%' }]}>
+            <Text style={[styles.tableCellHeader, { fontSize: 12 }]}>Total Amount</Text>
+          </View>
+          <View style={[styles.tableCol, { width: '40%' }]}>
+            <Text style={[styles.tableCellHeader, { fontSize: 12 }]}>
+              {formatCurrency(billingStatement.totalAmount)}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.tableRow}>
+          <View style={[styles.tableCol, { width: '60%' }]}>
+            <Text style={[styles.tableCellHeader, { fontSize: 12 }]}>Net Amount</Text>
+          </View>
+          <View style={[styles.tableCol, { width: '40%' }]}>
+            <Text style={[styles.tableCellHeader, { fontSize: 12 }]}>
+              {formatCurrency(billingStatement.netAmount)}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Notes */}
+      {billingStatement.notes ? (
+        <View style={styles.notes}>
+          <Text style={styles.notesTitle}>Notes</Text>
+          <Text style={styles.notesText}>{billingStatement.notes}</Text>
+        </View>
+      ) : null}
+
+      {/* Payment Information */}
+      {billingStatement.paidDate ? (
+        <View style={styles.notes}>
+          <Text style={styles.notesTitle}>Payment Information</Text>
+          <Text style={styles.notesText}>Paid on: {formatDate(billingStatement.paidDate)}</Text>
+        </View>
+      ) : (
+        <View style={styles.notes}>
+          <Text style={styles.notesTitle}>Payment Information</Text>
+          <Text style={styles.notesText}>
+            Status: {billingStatement.status} 
+            {billingStatement.dueDate ? ` • Due: ${formatDate(billingStatement.dueDate)}` : ''}
+          </Text>
+        </View>
+      )}
+
+      {/* Footer */}
+      <Text style={styles.footer}>
+        {`Billing Statement • ${COMPANY_INFO.website} • Generated on ${formatDate(new Date())}`}
+      </Text>
+    </Page>
+  </Document>
+);
+
 // PDF Generation Functions
+export async function generateBillingStatementPDF(
+  billingStatement: BillingStatement & {
+    customer?: { name: string; email?: string; phone?: string; address?: string };
+    customerOrder?: { orderNumber: string; totalAmount: number };
+    salesInvoice?: SalesInvoice;
+  }
+): Promise<Buffer> {
+  try {
+    const pdfInstance = pdf(<BillingStatementPDFDocument billingStatement={billingStatement} />);
+    const pdfBlob = await pdfInstance.toBlob();
+    const arrayBuffer = await pdfBlob.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  } catch (error) {
+    console.error('Error generating billing statement PDF:', error);
+    throw new Error('Failed to generate billing statement PDF');
+  }
+}
+
 export async function generateSalesInvoicePDF(
   salesInvoice: SalesInvoice & {
     invoiceItems: SalesInvoiceItem[];
@@ -570,8 +761,10 @@ export async function generateSalesInvoicePDF(
   }
 ): Promise<Buffer> {
   try {
-    const pdfBuffer = await renderToBuffer(<SalesInvoicePDFDocument salesInvoice={salesInvoice} />);
-    return pdfBuffer;
+    const pdfInstance = pdf(<SalesInvoicePDFDocument salesInvoice={salesInvoice} />);
+    const pdfBlob = await pdfInstance.toBlob();
+    const arrayBuffer = await pdfBlob.arrayBuffer();
+    return Buffer.from(arrayBuffer);
   } catch (error) {
     console.error('Error generating sales invoice PDF:', error);
     throw new Error('Failed to generate sales invoice PDF');
@@ -588,11 +781,25 @@ export async function generateDeliveryReceiptPDF(
   }
 ): Promise<Buffer> {
   try {
-    const pdfBuffer = await renderToBuffer(<DeliveryReceiptPDFDocument deliveryReceipt={deliveryReceipt} />);
-    return pdfBuffer;
+    const pdfInstance = pdf(<DeliveryReceiptPDFDocument deliveryReceipt={deliveryReceipt} />);
+    const pdfBlob = await pdfInstance.toBlob();
+    const arrayBuffer = await pdfBlob.arrayBuffer();
+    return Buffer.from(arrayBuffer);
   } catch (error) {
     console.error('Error generating delivery receipt PDF:', error);
     throw new Error('Failed to generate delivery receipt PDF');
   }
+}
+
+// Utility function to create PDF download response
+export function createPDFDownloadResponse(pdfBuffer: Buffer, filename: string): NextResponse {
+  return new NextResponse(pdfBuffer, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': pdfBuffer.length.toString(),
+    },
+  });
 }
 

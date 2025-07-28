@@ -2,6 +2,8 @@ import { Metadata } from "next"
 import { getBillingStatements } from "@/lib/actions/simple-billing-statements"
 import { SimpleBillingStatementsTable } from "@/components/module/admin/billing/simple-billing-statements-table"
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: "Billing Statements",
   description: "Manage customer billing statements",

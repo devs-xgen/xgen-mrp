@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTableViewOptions } from "./data-table-view-options";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
+import { DeliveryReceiptsExportButton } from "../delivery-receipts-export-button";
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
@@ -72,7 +73,10 @@ export function DataTableToolbar<TData>({
           </Button>
         )}
       </div>
-      <DataTableViewOptions table={table} />
+      <div className="flex items-center space-x-2">
+        <DeliveryReceiptsExportButton />
+        <DataTableViewOptions table={table} />
+      </div>
     </div>
   );
 }

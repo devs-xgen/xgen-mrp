@@ -44,6 +44,7 @@ model User {
   profile                   UserProfile?
   UserWorkCenter            UserWorkCenter[]
   workCenterAssignments     WorkCenterAssignment[]
+  shareableLinks            ShareableLink[]
 }
 
 model ProductionOrderHistoryLog {
@@ -1245,4 +1246,37 @@ enum InvoiceStatus {
   CANCELLED
   DISPUTED
   PARTIAL
+}
+
+enum ShareableDocType {
+  BILLING_STATEMENT
+  SALES_INVOICE
+  DELIVERY_RECEIPT
+}
+
+model ShareableLink {
+  id              String            @id @default(cuid())
+  token           String            @unique  // Cryptographically secure random token
+  documentType    ShareableDocType  // BILLING_STATEMENT, SALES_INVOICE, DELIVERY_RECEIPT
+  documentId      String            // ID of the referenced document
+  
+  // Security and lifecycle
+  createdAt       DateTime          @default(now())
+  expiresAt       DateTime          // Configurable expiration (default 30 days)
+  isRevoked       Boolean           @default(false)
+  revokedAt       DateTime?
+  
+  // Audit trail
+  createdBy       String
+  accessCount     Int               @default(0)
+  lastAccessedAt  DateTime?
+  lastAccessedIp  String?
+  
+  // Relationships
+  createdByUser   User              @relation(fields: [createdBy], references: [id])
+  
+  @@index([token])
+  @@index([documentType, documentId])
+  @@index([expiresAt])
+  @@index([isRevoked])
 }
