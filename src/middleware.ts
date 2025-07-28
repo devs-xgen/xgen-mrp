@@ -149,7 +149,10 @@ export default async function middleware(req: NextRequest) {
   response = addSecurityHeaders(response);
 
   // Public routes (allow access without authentication)
-  if (pathname === "/" || pathname.includes("/login")) {
+  // Include shareable document routes as public
+  const isShareableRoute = pathname.match(/^\/(billing-statement|sales-invoice|delivery-receipt)\/share\/[^\/]+$/);
+  
+  if (pathname === "/" || pathname.includes("/login") || isShareableRoute) {
     try {
       // Check if user is already authenticated
       const token = await getToken({
