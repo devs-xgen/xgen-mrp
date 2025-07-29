@@ -5,9 +5,13 @@ import {
   SharedSalesInvoice,
   SharedCustomerInfo,
   SharedCompanyInfo,
-  formatDateForDisplay
+  formatDateForDisplay,
+  transformSalesInvoiceToShared,
+  extractCustomerInfo
 } from '@/lib/utils/shared-document-transformers'
+import { DEFAULT_COMPANY_INFO } from '@/lib/constant'
 import SalesInvoiceView from './sales-invoice-view'
+import { prisma } from '@/lib/db'
 
 interface SharedDocumentResponse {
   success: boolean
@@ -28,48 +32,91 @@ interface PageProps {
   }
 }
 
-async function fetchSharedDocument(token: string): Promise<SharedDocumentResponse | null> {
+async function fetchSalesInvoiceById(documentId: string): Promise<SharedDocumentResponse | null> {
   try {
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3001'
-    const response = await fetch(`${baseUrl}/api/shared-documents/${token}`, {
-      cache: 'no-store', // Always fetch fresh data for shared documents
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    const salesInvoice = await prisma.salesInvoice.findUnique({
+      where: { id: documentId },
+      include: {
+        billingStatement: {
+          include: {
+            customer: true,
+            customerOrder: {
+              include: {
+                customer: true
+              }
+            }
+          }
+        },
+        invoiceItems: {
+          include: {
+            Material: true,
+            product: true,
+            InventoryItem: true
+          }
+        },
+        createdByUser: {
+          select: {
+            id: true,
+            email: true
+          }
+        }
+      }
     })
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        return { success: false, error: 'Document not found' }
-      }
-      if (response.status === 403) {
-        return { success: false, error: 'Document access has been revoked' }
-      }
-      if (response.status === 410) {
-        return { success: false, error: 'Document link has expired' }
-      }
-      if (response.status === 429) {
-        return { success: false, error: 'Too many requests. Please try again later.' }
-      }
-      return { success: false, error: 'Failed to load document' }
+    if (!salesInvoice) {
+      return { success: false, error: 'Sales invoice not found. Please check if the ID exists in your database.' }
     }
 
-    return await response.json()
+    // Transform the sales invoice using existing transformer
+    const transformedDocument = transformSalesInvoiceToShared(salesInvoice)
+    
+    // Extract customer info from billing statement
+    let customerInfo: SharedCustomerInfo = {
+      name: "Unknown Customer",
+      email: null,
+      phone: null,
+      address: null,
+      city: null,
+      state: null,
+      country: null,
+      postalCode: null,
+      tinNumber: null
+    }
+
+    if (salesInvoice.billingStatement) {
+      customerInfo = extractCustomerInfo(
+        salesInvoice.billingStatement.customer,
+        salesInvoice.billingStatement.customerOrder,
+        salesInvoice.billingStatement.customerName
+      )
+    }
+    
+    return {
+      success: true,
+      document: {
+        type: ShareableDocType.SALES_INVOICE,
+        data: transformedDocument,
+        metadata: {
+          customerInfo,
+          companyInfo: DEFAULT_COMPANY_INFO
+        }
+      }
+    }
   } catch (error) {
-    console.error('Error fetching shared document:', error)
+    console.error('Error fetching sales invoice:', error)
     return { success: false, error: 'Failed to load document' }
   }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { token } = params
+  const { token } = await params
   
-  // Fetch document for metadata
-  const result = await fetchSharedDocument(token)
+  // Fetch document for metadata (token is actually document ID)
+  const result = await fetchSalesInvoiceById(token)
   
   if (!result?.success || !result.document) {
     return {
-      title: 'Document Not Found - XGen Manufacturing',
+      title: `Document Not Found - ${DEFAULT_COMPANY_INFO.name}`,
       description: 'The requested document could not be found or has expired.',
     }
   }
@@ -90,15 +137,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 function DocumentError({ error, companyInfo }: { error: string; companyInfo?: SharedCompanyInfo }) {
-  const defaultCompanyInfo = {
-    name: "XGen Manufacturing",
-    address: "123 Manufacturing St, Industrial City, IC 12345",
-    phone: "+1 (555) 123-4567",
-    email: "info@xgenmanufacturing.com",
-    website: "www.xgenmanufacturing.com"
-  }
-
-  const company = companyInfo || defaultCompanyInfo
+  const company = companyInfo || DEFAULT_COMPANY_INFO
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -156,18 +195,15 @@ function DocumentError({ error, companyInfo }: { error: string; companyInfo?: Sh
 }
 
 export default async function SalesInvoiceSharePage({ params }: PageProps) {
-  const { token } = params
+  const { token } = await params
   
-  const result = await fetchSharedDocument(token)
+  const result = await fetchSalesInvoiceById(token)
   
   if (!result?.success || !result.document) {
     return <DocumentError error={result?.error || 'Document not found'} />
   }
 
-  // Verify this is actually a sales invoice
-  if (result.document.type !== ShareableDocType.SALES_INVOICE) {
-    return <DocumentError error="Invalid document type" companyInfo={result.document.metadata.companyInfo} />
-  }
+  // Document type is already verified in fetchSalesInvoiceById
 
   const salesInvoice = result.document.data as SharedSalesInvoice
   const { customerInfo, companyInfo } = result.document.metadata

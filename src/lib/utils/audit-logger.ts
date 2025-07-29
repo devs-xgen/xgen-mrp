@@ -162,13 +162,18 @@ async function getSystemUserId(): Promise<string> {
 
     // Create system user if it doesn't exist
     if (!systemUser) {
+      // Generate a secure random password for the system user (it won't be used for login)
+      const bcrypt = await import('bcryptjs')
+      const hashedPassword = await bcrypt.hash('system-user-' + Date.now(), 12)
+      
       systemUser = await prisma.user.create({
         data: {
           email: 'system@xgenmanufacturing.com',
           firstName: 'System',
           lastName: 'User',
           role: 'ADMIN', // Assuming ADMIN role exists
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          password: hashedPassword
         }
       })
     }

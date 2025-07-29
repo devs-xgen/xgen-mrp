@@ -92,6 +92,27 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   },
+  
+  // Add redirects to handle plural form URLs
+  async redirects() {
+    return [
+      {
+        source: '/billing-statements/share/:token',
+        destination: '/billing-statement/share/:token',
+        permanent: true,
+      },
+      {
+        source: '/sales-invoices/share/:token',
+        destination: '/sales-invoice/share/:token',
+        permanent: true,
+      },
+      {
+        source: '/delivery-receipts/share/:token',
+        destination: '/delivery-receipt/share/:token',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 module.exports = nextConfig

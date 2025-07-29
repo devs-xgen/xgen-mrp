@@ -12,6 +12,7 @@ import {
   User
 } from "@prisma/client"
 import { serializeDecimals, SerializableData } from "./decimal-serializer"
+import { DEFAULT_COMPANY_INFO } from '@/lib/constant'
 
 // ==============================================
 // SHARED DOCUMENT INTERFACES
@@ -328,15 +329,15 @@ export function extractCustomerInfo(
 }
 
 /**
- * Creates company information from environment variables
+ * Creates company information from environment variables with fallback to default
  */
 export function getCompanyInfo(): SharedCompanyInfo {
   return {
-    name: process.env.COMPANY_NAME || "XGen Manufacturing",
-    address: process.env.COMPANY_ADDRESS || "123 Manufacturing St, Industrial City, IC 12345",
-    phone: process.env.COMPANY_PHONE || "+1 (555) 123-4567",
-    email: process.env.COMPANY_EMAIL || "info@xgenmanufacturing.com",
-    website: process.env.COMPANY_WEBSITE || "www.xgenmanufacturing.com"
+    name: process.env.COMPANY_NAME || DEFAULT_COMPANY_INFO.name,
+    address: process.env.COMPANY_ADDRESS || DEFAULT_COMPANY_INFO.address,
+    phone: process.env.COMPANY_PHONE || DEFAULT_COMPANY_INFO.phone,
+    email: process.env.COMPANY_EMAIL || DEFAULT_COMPANY_INFO.email,
+    website: process.env.COMPANY_WEBSITE || DEFAULT_COMPANY_INFO.website
   }
 }
 

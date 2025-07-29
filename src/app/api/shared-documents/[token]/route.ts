@@ -63,7 +63,7 @@ export async function GET(
   { params }: { params: { token: string } }
 ) {
   try {
-    const { token } = params
+    const { token } = await params
     
     // Get client IP for rate limiting and logging
     const forwarded = req.headers.get('x-forwarded-for')
