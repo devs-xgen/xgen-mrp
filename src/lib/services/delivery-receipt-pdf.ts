@@ -13,10 +13,12 @@ const COMPANY_INFO = {
 
 // Format currency
 const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
+  return amount.toLocaleString('en-PH', {
+    style: 'currency',
+    currency: "PHP",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 };
 
 // Format date - handles both Date objects and date strings

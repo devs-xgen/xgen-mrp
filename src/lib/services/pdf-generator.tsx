@@ -231,10 +231,12 @@ const styles = StyleSheet.create({
 
 // Utility functions
 export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
+  return amount.toLocaleString('en-PH', {
     style: 'currency',
-    currency: 'USD',
-  }).format(amount);
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 };
 
 export const formatDate = (date: Date | string): string => {

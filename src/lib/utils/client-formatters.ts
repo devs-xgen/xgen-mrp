@@ -16,14 +16,16 @@ export function formatDateForDisplay(date: Date | string): string {
 }
 
 /**
- * Formats currency for display
+ * Formats currency for display in PHP (Philippine Peso)
  */
 export function formatCurrencyForDisplay(amount: string | number): string {
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
-  return new Intl.NumberFormat('en-US', {
+  return numAmount.toLocaleString('en-PH', {
     style: 'currency',
-    currency: 'USD'
-  }).format(numAmount)
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 }
 
 /**

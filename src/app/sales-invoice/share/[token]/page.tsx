@@ -6,11 +6,12 @@ import {
   SharedCustomerInfo,
   SharedCompanyInfo,
   formatDateForDisplay,
+  formatCurrencyForDisplay,
   transformSalesInvoiceToShared,
   extractCustomerInfo
 } from '@/lib/utils/shared-document-transformers'
 import { DEFAULT_COMPANY_INFO } from '@/lib/constant'
-import SalesInvoiceView from './sales-invoice-view'
+import { SalesInvoiceView } from './sales-invoice-view'
 import { prisma } from '@/lib/db'
 
 interface SharedDocumentResponse {

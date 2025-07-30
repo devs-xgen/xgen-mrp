@@ -54,7 +54,7 @@ async function fetchBillingStatementById(documentId: string): Promise<SharedDocu
           include: {
             invoiceItems: {
               include: {
-                material: true,
+                Material: true,
                 product: true
               }
             }

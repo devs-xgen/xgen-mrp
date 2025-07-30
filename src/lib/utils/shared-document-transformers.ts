@@ -390,20 +390,14 @@ export function formatDateForDisplay(
  */
 export function formatCurrencyForDisplay(
   amount: string | number,
-  currency: string = 'USD',
-  locale: string = 'en-US'
+  currency: string = 'PHP',
+  locale: string = 'en-PH'
 ): string {
-  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount
-  
-  if (isNaN(numericAmount)) {
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency
-    }).format(0)
-  }
-  
-  return new Intl.NumberFormat(locale, {
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+  return numAmount.toLocaleString(locale, {
     style: 'currency',
-    currency
-  }).format(numericAmount)
+    currency: currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 }

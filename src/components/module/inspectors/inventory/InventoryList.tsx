@@ -90,10 +90,12 @@ export function InventoryList({ items, pagination }: InventoryListProps) {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
+    return amount.toLocaleString('en-PH', {
+      style: 'currency',
+      currency: "PHP",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
   };
 
   const calculateValue = (item: InventoryItem) => {

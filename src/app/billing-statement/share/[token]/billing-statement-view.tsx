@@ -96,36 +96,40 @@ export function BillingStatementView({
           </div>
 
           {/* Customer Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Bill To:</h3>
-              <div className="text-sm space-y-1">
-                <p className="font-medium">{customerInfo.name}</p>
-                {customerInfo.address && <p>{customerInfo.address}</p>}
-                {(customerInfo.city || customerInfo.state || customerInfo.postalCode) && (
-                  <p>
-                    {[customerInfo.city, customerInfo.state, customerInfo.postalCode]
-                      .filter(Boolean)
-                      .join(', ')}
-                  </p>
+          <div className="mb-8">
+            <div className="bg-gray-50 rounded-lg p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Bill To:</h3>
+                  <div className="text-sm space-y-1">
+                    <p className="font-medium">{customerInfo.name}</p>
+                    {customerInfo.address && <p>{customerInfo.address}</p>}
+                    {(customerInfo.city || customerInfo.state || customerInfo.postalCode) && (
+                      <p>
+                        {[customerInfo.city, customerInfo.state, customerInfo.postalCode]
+                          .filter(Boolean)
+                          .join(', ')}
+                      </p>
+                    )}
+                    {customerInfo.country && <p>{customerInfo.country}</p>}
+                    {customerInfo.phone && <p>Phone: {customerInfo.phone}</p>}
+                    {customerInfo.email && <p>Email: {customerInfo.email}</p>}
+                    {customerInfo.tinNumber && <p>TIN: {customerInfo.tinNumber}</p>}
+                  </div>
+                </div>
+
+                {/* Order Information */}
+                {billingStatement.customerOrder && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Order Information:</h3>
+                    <div className="text-sm space-y-1">
+                      <p><span className="font-medium">Order #:</span> {billingStatement.customerOrder.orderNumber}</p>
+                      <p><span className="font-medium">Order Date:</span> {formatDateForDisplay(billingStatement.customerOrder.orderDate)}</p>
+                    </div>
+                  </div>
                 )}
-                {customerInfo.country && <p>{customerInfo.country}</p>}
-                {customerInfo.phone && <p>Phone: {customerInfo.phone}</p>}
-                {customerInfo.email && <p>Email: {customerInfo.email}</p>}
-                {customerInfo.tinNumber && <p>TIN: {customerInfo.tinNumber}</p>}
               </div>
             </div>
-
-            {/* Order Information */}
-            {billingStatement.customerOrder && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Order Information:</h3>
-                <div className="text-sm space-y-1">
-                  <p><span className="font-medium">Order #:</span> {billingStatement.customerOrder.orderNumber}</p>
-                  <p><span className="font-medium">Order Date:</span> {formatDateForDisplay(billingStatement.customerOrder.orderDate)}</p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Production Order Information */}
@@ -158,41 +162,100 @@ export function BillingStatementView({
           )}
 
           {/* Financial Summary */}
-          <div className="border-t pt-6">
-            <div className="flex justify-end">
-              <div className="w-full max-w-sm">
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Total Amount:</span>
-                    <span className="font-medium">{formatCurrencyForDisplay(billingStatement.totalAmount)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Tax Amount:</span>
-                    <span className="font-medium">{formatCurrencyForDisplay(billingStatement.taxAmount)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Discount:</span>
-                    <span className="font-medium">-{formatCurrencyForDisplay(billingStatement.discountAmount)}</span>
-                  </div>
-                  <div className="border-t pt-2 flex justify-between text-lg font-bold">
-                    <span>Net Amount:</span>
-                    <span>{formatCurrencyForDisplay(billingStatement.netAmount)}</span>
+          <div className="mb-8">
+            <div className="bg-gray-50 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Financial Summary</h3>
+              <div className="flex justify-end">
+                <div className="w-full max-w-sm">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Total Amount:</span>
+                      <span className="font-medium">{formatCurrencyForDisplay(billingStatement.totalAmount)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Tax Amount:</span>
+                      <span className="font-medium">{formatCurrencyForDisplay(billingStatement.taxAmount)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Discount:</span>
+                      <span className="font-medium">-{formatCurrencyForDisplay(billingStatement.discountAmount)}</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between text-lg font-bold">
+                      <span>Net Amount:</span>
+                      <span>{formatCurrencyForDisplay(billingStatement.netAmount)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
+          {/* Payment Status */}
+          <div className="mb-8">
+            <div className="bg-gray-50 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Status</h3>
+              <div className="flex items-center space-x-3">
+                {billingStatement.status === 'PAID' ? (
+                  <>
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-green-800">Payment Completed</p>
+                      <p className="text-xs text-green-600">
+                        Amount paid: {formatCurrencyForDisplay(billingStatement.netAmount)}
+                      </p>
+                    </div>
+                  </>
+                ) : billingStatement.status === 'PENDING' ? (
+                  <>
+                    <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-yellow-800">Payment Pending</p>
+                      <p className="text-xs text-yellow-600">
+                        Amount due: {formatCurrencyForDisplay(billingStatement.netAmount)}
+                        {billingStatement.dueDate && ` • Due: ${formatDateForDisplay(billingStatement.dueDate)}`}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-red-800">Payment Overdue</p>
+                      <p className="text-xs text-red-600">
+                        Amount overdue: {formatCurrencyForDisplay(billingStatement.netAmount)}
+                        {billingStatement.dueDate && ` • Due: ${formatDateForDisplay(billingStatement.dueDate)}`}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Notes */}
           {billingStatement.notes && (
-            <div className="mt-8 pt-6 border-t">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Notes:</h3>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{billingStatement.notes}</p>
+            <div className="mb-8">
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Notes:</h3>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{billingStatement.notes}</p>
+              </div>
             </div>
           )}
 
           {/* Footer */}
-          <div className="mt-12 pt-6 border-t text-center text-xs text-gray-500">
+          <div className="pt-6 border-t text-center text-xs text-gray-500">
             <p>This is a computer-generated document. For questions, please contact us at {companyInfo.email} or {companyInfo.phone}</p>
           </div>
         </div>
