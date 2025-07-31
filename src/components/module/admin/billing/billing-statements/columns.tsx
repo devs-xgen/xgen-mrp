@@ -2,7 +2,7 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import Link from "next/link"
-import { MoreHorizontal, FileText, Download } from "lucide-react"
+import { MoreHorizontal, FileText, Download, Share2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -19,6 +19,7 @@ import { BillingStatementWithRelations, BillingStatus } from "@/types/admin/bill
 import { formatCurrencyPHP } from "@/lib/constant"
 import { formatDate } from "@/lib/services/pdf-generator"
 import { getStatusBadge } from "./utils"
+import { ShareLinkDialog } from "@/components/shared/ShareLinkDialog"
 
 export const columns: ColumnDef<BillingStatementWithRelations>[] = [
   {
@@ -168,6 +169,21 @@ export const columns: ColumnDef<BillingStatementWithRelations>[] = [
             <DropdownMenuItem>
               <Download className="mr-2 h-4 w-4" />
               Download PDF
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={(e) => e.preventDefault()}
+            >
+              <ShareLinkDialog
+                documentType="billing-statement"
+                documentId={statement.id}
+                documentTitle={`Billing Statement ${statement.statementNumber}`}
+                trigger={
+                  <div className="flex items-center w-full">
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share Link
+                  </div>
+                }
+              />
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {statement.status === 'DRAFT' && (

@@ -14,10 +14,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DataTableColumnHeader } from "./data-table-column-header";
 import { SalesInvoiceWithItems } from "@/types/admin/billing";
-import { MoreHorizontal, Eye, Edit, Download, Send, Copy, Trash2 } from "lucide-react";
+import { MoreHorizontal, Eye, Edit, Download, Send, Copy, Trash2, Share2 } from "lucide-react";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { PDFDownloadButton } from "./pdf-download-button";
+import { ShareLinkDialog } from "@/components/shared/ShareLinkDialog";
 
 
 
@@ -192,6 +193,17 @@ export const columns: ColumnDef<SalesInvoiceWithItems>[] = [
             <PDFDownloadButton
               invoiceId={invoice.id}
               invoiceNumber={invoice.invoiceNumber}
+            />
+            <ShareLinkDialog
+              documentType="sales-invoice"
+              documentId={invoice.id}
+              documentTitle={`Sales Invoice ${invoice.invoiceNumber}`}
+              trigger={
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Share Link
+                </DropdownMenuItem>
+              }
             />
             {invoice.status === 'DRAFT' && (
               <DropdownMenuItem>

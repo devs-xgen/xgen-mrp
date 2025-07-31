@@ -3,7 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, MoreHorizontal, Eye, Edit, Trash2, Camera, FileText, MapPin, Download } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Eye, Edit, Trash2, Camera, FileText, MapPin, Download, Share2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +18,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { downloadDeliveryReceiptPDF } from "@/lib/actions/delivery-receipts";
 import { generateDeliveryReceiptPDFClient } from "@/lib/services/delivery-receipt-pdf";
+import { ShareLinkDialog } from "@/components/shared/ShareLinkDialog";
 
 export const columns: ColumnDef<DeliveryReceiptWithBilling>[] = [
   {
@@ -221,6 +222,21 @@ export const columns: ColumnDef<DeliveryReceiptWithBilling>[] = [
             >
               <Download className="mr-2 h-4 w-4" />
               Export PDF
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={(e) => e.preventDefault()}
+            >
+              <ShareLinkDialog
+                documentType="delivery-receipt"
+                documentId={receipt.id}
+                documentTitle={`Delivery Receipt ${receipt.receiptNumber}`}
+                trigger={
+                  <div className="flex items-center w-full">
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share Link
+                  </div>
+                }
+              />
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive">
