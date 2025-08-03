@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Row } from "@tanstack/react-table"
-import { Eye, MoreHorizontal, Trash, Factory, Plus, FileText } from "lucide-react"
+import { Eye, MoreHorizontal, Trash, Factory, Plus, FileText, Receipt } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -28,6 +28,7 @@ import { CustomerOrderSheet } from "./customer-order-sheet"
 import { ProductionOrdersDialog } from "./production-orders-dialog"
 import { CreateProductionOrdersDialog } from "./create-production-orders-dialog"
 import { CreateBillingStatementDialog } from "./create-billing-statement-dialog"
+import { ViewBillingDocumentsDialog } from "./view-billing-documents-dialog"
 
 interface DataTableRowActionsProps {
   row: Row<CustomerOrderColumn>
@@ -39,6 +40,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const [showProductionDialog, setShowProductionDialog] = useState(false)
   const [showCreateProductionDialog, setShowCreateProductionDialog] = useState(false)
   const [showCreateBillingDialog, setShowCreateBillingDialog] = useState(false)
+  const [showViewBillingDialog, setShowViewBillingDialog] = useState(false)
   const { toast } = useToast()
   const customerOrder = row.original
 
@@ -83,6 +85,13 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             <FileText className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
             Create Billing Statement
           </DropdownMenuItem>
+          
+          {customerOrder.billingStatementCount > 0 && (
+            <DropdownMenuItem onClick={() => setShowViewBillingDialog(true)}>
+              <Receipt className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+              View Billing Documents ({customerOrder.billingStatementCount})
+            </DropdownMenuItem>
+          )}
           
           {customerOrder.productionOrderCount > 0 ? (
             <DropdownMenuItem onClick={() => setShowProductionDialog(true)}>
@@ -152,6 +161,13 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         customerOrder={customerOrder}
         open={showCreateBillingDialog}
         onOpenChange={setShowCreateBillingDialog}
+      />
+
+      <ViewBillingDocumentsDialog
+        open={showViewBillingDialog}
+        onOpenChange={setShowViewBillingDialog}
+        customerOrderNumber={customerOrder.orderNumber}
+        billingDocuments={customerOrder.billingStatements || []}
       />
     </>
   )

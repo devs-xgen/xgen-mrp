@@ -36,6 +36,8 @@ export default async function CustomerOrdersPage() {
     itemCount: order.orderLines.length,
     totalQuantity: order.orderLines.reduce((sum, line) => sum + line.quantity, 0),
     productionOrderCount: order._count?.productionOrders || 0,
+    billingStatementCount: order._count?.billingStatements || 0,
+    billingStatements: order.billingStatements,
     notes: order.notes || null,
     lastUpdated: new Date(), // Using current date for now, will fix when schema is updated
   }));

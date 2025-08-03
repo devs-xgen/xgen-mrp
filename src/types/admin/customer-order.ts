@@ -55,9 +55,11 @@ export interface CustomerOrder {
   };
   orderLines: OrderLineForDisplay[];
   productionOrders?: ProductionOrderSummary[];
+  billingStatements?: BillingStatementSummary[];
   _count?: {
     productionOrders: number;
     orderLines: number;
+    billingStatements: number;
   };
 }
 
@@ -74,6 +76,25 @@ export interface ProductionOrderSummary {
     name: string;
     sku: string;
   };
+}
+
+export interface BillingStatementSummary {
+  id: string;
+  statementNumber: string;
+  status: string;
+  totalAmount: number;
+  billingDate: Date;
+  salesInvoice?: {
+    id: string;
+    invoiceNumber: string;
+    status: string;
+  };
+  deliveryReceipts?: Array<{
+    id: string;
+    receiptNumber: string;
+    deliveryStatus: string;
+    deliveryDate: Date;
+  }>;
 }
 
 export interface OrderLineForDisplay {
@@ -252,6 +273,8 @@ export interface CustomerOrderColumn {
   itemCount: number;
   totalQuantity: number;
   productionOrderCount: number;
+  billingStatementCount: number;
+  billingStatements?: BillingStatementSummary[];
   notes: string | null;
   lastUpdated: Date;
 }

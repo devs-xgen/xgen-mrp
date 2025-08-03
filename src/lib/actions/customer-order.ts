@@ -42,7 +42,7 @@ export async function getCustomerOrdersForBilling(options?: {
       customerId,
       dateFrom,
       dateTo,
-      limit = 100
+      limit = 100,
     } = options || {};
 
     // Build where clause
@@ -51,10 +51,10 @@ export async function getCustomerOrdersForBilling(options?: {
     // Search filter
     if (search) {
       where.OR = [
-        { orderNumber: { contains: search, mode: 'insensitive' } },
-        { customer: { name: { contains: search, mode: 'insensitive' } } },
-        { customer: { email: { contains: search, mode: 'insensitive' } } },
-        { notes: { contains: search, mode: 'insensitive' } },
+        { orderNumber: { contains: search, mode: "insensitive" } },
+        { customer: { name: { contains: search, mode: "insensitive" } } },
+        { customer: { email: { contains: search, mode: "insensitive" } } },
+        { notes: { contains: search, mode: "insensitive" } },
       ];
     }
 
@@ -156,9 +156,10 @@ export async function getCustomerOrdersForBilling(options?: {
         phone: order.customer.phone,
         address: order.customer.address,
         paymentTerms: order.customer.paymentTerms,
-        creditLimit: order.customer.creditLimit instanceof Decimal
-          ? order.customer.creditLimit.toNumber()
-          : Number(order.customer.creditLimit || 0),
+        creditLimit:
+          order.customer.creditLimit instanceof Decimal
+            ? order.customer.creditLimit.toNumber()
+            : Number(order.customer.creditLimit || 0),
       },
       orderLines: order.orderLines.map((line) => ({
         id: line.id,
@@ -176,9 +177,10 @@ export async function getCustomerOrdersForBilling(options?: {
               name: line.product.name,
               sku: line.product.sku,
               description: line.product.description,
-              sellingPrice: line.product.sellingPrice instanceof Decimal
-                ? line.product.sellingPrice.toNumber()
-                : Number(line.product.sellingPrice || 0),
+              sellingPrice:
+                line.product.sellingPrice instanceof Decimal
+                  ? line.product.sellingPrice.toNumber()
+                  : Number(line.product.sellingPrice || 0),
             }
           : undefined,
         productVariant: line.productVariant
@@ -188,9 +190,10 @@ export async function getCustomerOrdersForBilling(options?: {
               displayName: line.productVariant.displayName,
               sizeName: line.productVariant.sizeName,
               colorName: line.productVariant.colorName,
-              unitPrice: line.productVariant.sellingPrice instanceof Decimal
-                ? line.productVariant.sellingPrice.toNumber()
-                : Number(line.productVariant.sellingPrice || 0),
+              unitPrice:
+                line.productVariant.sellingPrice instanceof Decimal
+                  ? line.productVariant.sellingPrice.toNumber()
+                  : Number(line.productVariant.sellingPrice || 0),
             }
           : undefined,
       })),
@@ -265,10 +268,35 @@ export async function getCustomerOrders(): Promise<CustomerOrder[]> {
             },
           },
         },
+        billingStatements: {
+          select: {
+            id: true,
+            statementNumber: true,
+            status: true,
+            totalAmount: true,
+            billingDate: true,
+            salesInvoice: {
+              select: {
+                id: true,
+                invoiceNumber: true,
+                status: true,
+              },
+            },
+            deliveryReceipts: {
+              select: {
+                id: true,
+                receiptNumber: true,
+                deliveryStatus: true,
+                deliveryDate: true,
+              },
+            },
+          },
+        },
         _count: {
           select: {
             productionOrders: true,
             orderLines: true,
+            billingStatements: true,
           },
         },
       },
@@ -335,6 +363,29 @@ export async function getCustomerOrders(): Promise<CustomerOrder[]> {
           name: po.product.name,
           sku: po.product.sku,
         },
+      })),
+      billingStatements: order.billingStatements?.map((bs) => ({
+        id: bs.id,
+        statementNumber: bs.statementNumber,
+        status: bs.status,
+        totalAmount:
+          bs.totalAmount instanceof Decimal
+            ? bs.totalAmount.toNumber()
+            : Number(bs.totalAmount),
+        billingDate: bs.billingDate,
+        salesInvoice: bs.salesInvoice
+          ? {
+              id: bs.salesInvoice.id,
+              invoiceNumber: bs.salesInvoice.invoiceNumber,
+              status: bs.salesInvoice.status,
+            }
+          : undefined,
+        deliveryReceipts: bs.deliveryReceipts?.map((dr) => ({
+          id: dr.id,
+          receiptNumber: dr.receiptNumber,
+          deliveryStatus: dr.deliveryStatus,
+          deliveryDate: dr.deliveryDate,
+        })),
       })),
       _count: order._count,
     }));
@@ -505,11 +556,13 @@ export async function validateOrderForBilling(orderId: string): Promise<{
     // Check production order status
     if (order.productionOrders && order.productionOrders.length > 0) {
       const pendingProduction = order.productionOrders.filter(
-        po => po.status === Status.PENDING || po.status === Status.IN_PROGRESS
+        (po) => po.status === Status.PENDING || po.status === Status.IN_PROGRESS
       );
-      
+
       if (pendingProduction.length > 0) {
-        warnings.push(`${pendingProduction.length} production orders are still pending/in progress`);
+        warnings.push(
+          `${pendingProduction.length} production orders are still pending/in progress`
+        );
       }
     }
 
@@ -528,12 +581,12 @@ export async function validateOrderForBilling(orderId: string): Promise<{
   }
 }
 
-
-
 /**
  * Get customer order details with enhanced information for billing preview
  */
-export async function getCustomerOrderForBilling(orderId: string): Promise<CustomerOrder | null> {
+export async function getCustomerOrderForBilling(
+  orderId: string
+): Promise<CustomerOrder | null> {
   try {
     const order = await prisma.customerOrder.findUnique({
       where: { id: orderId },
@@ -616,9 +669,10 @@ export async function getCustomerOrderForBilling(orderId: string): Promise<Custo
         phone: order.customer.phone,
         address: order.customer.address,
         paymentTerms: order.customer.paymentTerms,
-        creditLimit: order.customer.creditLimit instanceof Decimal
-          ? order.customer.creditLimit.toNumber()
-          : Number(order.customer.creditLimit || 0),
+        creditLimit:
+          order.customer.creditLimit instanceof Decimal
+            ? order.customer.creditLimit.toNumber()
+            : Number(order.customer.creditLimit || 0),
       },
       orderLines: order.orderLines.map((line) => ({
         id: line.id,
@@ -636,9 +690,10 @@ export async function getCustomerOrderForBilling(orderId: string): Promise<Custo
               name: line.product.name,
               sku: line.product.sku,
               description: line.product.description,
-              sellingPrice: line.product.sellingPrice instanceof Decimal
-                ? line.product.sellingPrice.toNumber()
-                : Number(line.product.sellingPrice || 0),
+              sellingPrice:
+                line.product.sellingPrice instanceof Decimal
+                  ? line.product.sellingPrice.toNumber()
+                  : Number(line.product.sellingPrice || 0),
             }
           : undefined,
         productVariant: line.productVariant
@@ -648,9 +703,10 @@ export async function getCustomerOrderForBilling(orderId: string): Promise<Custo
               displayName: line.productVariant.displayName,
               sizeName: line.productVariant.sizeName,
               colorName: line.productVariant.colorName,
-              unitPrice: line.productVariant.sellingPrice instanceof Decimal
-                ? line.productVariant.sellingPrice.toNumber()
-                : Number(line.productVariant.sellingPrice || 0),
+              unitPrice:
+                line.productVariant.sellingPrice instanceof Decimal
+                  ? line.productVariant.sellingPrice.toNumber()
+                  : Number(line.productVariant.sellingPrice || 0),
             }
           : undefined,
       })),
