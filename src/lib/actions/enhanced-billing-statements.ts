@@ -6,7 +6,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Decimal } from "@prisma/client/runtime/library";
 import { BillingStatus } from "@prisma/client";
-import { serializeDecimals, SerializableData } from "@/lib/utils/decimal-serializer";
+import { serializeDecimals } from "@/lib/utils/decimal-serializer";
+import { createDeliveryReceipt } from "@/lib/actions/delivery-receipts";
+import { DeliveryReceiptFormData, DeliveryStatus } from "@/types/admin/billing";
 
 // Interface for customer order-based billing
 interface CustomerOrderBillingData {
@@ -19,6 +21,13 @@ interface CustomerOrderBillingData {
   notes?: string;
   taxAmount?: number;
   discountAmount?: number;
+  // Delivery information for creating delivery receipt
+  deliveryAddress?: string;
+  deliveryDate?: Date;
+  receivedBy?: string;
+  receivedByTitle?: string;
+  deliveryNotes?: string;
+  createDeliveryReceipt?: boolean;
 }
 
 // Interface for manual billing creation
@@ -48,7 +57,9 @@ interface BillingItem {
 
 type BillingStatementData = CustomerOrderBillingData | ManualBillingData;
 
-export async function createEnhancedBillingStatement(data: BillingStatementData) {
+export async function createEnhancedBillingStatement(
+  data: BillingStatementData
+) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -60,9 +71,19 @@ export async function createEnhancedBillingStatement(data: BillingStatementData)
     const invoiceNumber = `INV-${statementNumber}`;
 
     if (data.type === "customer_order") {
-      return await createCustomerOrderBilling(data, statementNumber, invoiceNumber, session.user.id);
+      return await createCustomerOrderBilling(
+        data,
+        statementNumber,
+        invoiceNumber,
+        session.user.id
+      );
     } else {
-      return await createManualBilling(data, statementNumber, invoiceNumber, session.user.id);
+      return await createManualBilling(
+        data,
+        statementNumber,
+        invoiceNumber,
+        session.user.id
+      );
     }
   } catch (error) {
     console.error("Error creating billing statement:", error);
@@ -84,7 +105,7 @@ async function createCustomerOrderBilling(
       orderLines: {
         include: {
           product: true,
-          material: true,
+          productVariant: true,
         },
       },
     },
@@ -99,51 +120,108 @@ async function createCustomerOrderBilling(
   const totalAmount = new Decimal(data.totalAmount);
   const netAmount = totalAmount.minus(discountAmount).plus(taxAmount);
 
-  // Create sales invoice with order line items
-  const salesInvoice = await prisma.salesInvoice.create({
-    data: {
-      invoiceNumber,
-      subtotal: totalAmount,
-      taxAmount,
-      discountAmount,
-      totalAmount: netAmount,
-      createdBy: userId,
-      invoiceItems: {
-        create: customerOrder.orderLines.map((line) => ({
-          description: line.product?.name || line.material?.name || "Order Item",
-          quantity: line.quantity,
-          unitPrice: line.unitPrice,
-          totalPrice: line.totalPrice,
-          productId: line.productId,
-          materialId: line.materialId,
-        })),
+  // Use transaction to create all documents together
+  const result = await prisma.$transaction(async (tx) => {
+    // Create billing statement first
+    const billingStatement = await tx.billingStatement.create({
+      data: {
+        statementNumber,
+        customerName: customerOrder.customer?.name || "Unknown Customer",
+        totalAmount,
+        taxAmount,
+        discountAmount,
+        netAmount,
+        billingDate: data.billingDate,
+        dueDate: data.dueDate,
+        status: data.status,
+        notes: data.notes,
+        createdBy: userId,
+        customerId: customerOrder.customerId,
+        customerOrderId: data.customerOrderId,
       },
-    },
+    });
+
+    // Create sales invoice linked to billing statement
+    const salesInvoice = await tx.salesInvoice.create({
+      data: {
+        invoiceNumber,
+        billingStatementId: billingStatement.id,
+        subtotal: totalAmount,
+        taxAmount,
+        discountAmount,
+        totalAmount: netAmount,
+        createdBy: userId,
+        invoiceItems: {
+          create: customerOrder.orderLines.map((line) => {
+            const productName = line.product?.name || "Unknown Product";
+            const variantName = line.productVariant?.displayName;
+            const description = variantName
+              ? `${productName} - ${variantName}`
+              : productName;
+
+            return {
+              description,
+              quantity: new Decimal(line.quantity),
+              unitPrice: line.unitPrice,
+              totalPrice: new Decimal(line.quantity).mul(line.unitPrice),
+              productId: line.productId,
+              // Note: OrderLine doesn't have materialId, only productId and productVariantId
+            };
+          }),
+        },
+      },
+    });
+
+    return { billingStatement, salesInvoice };
   });
 
-  // Create billing statement
-  const billingStatement = await prisma.billingStatement.create({
-    data: {
-      statementNumber,
-      customerName: customerOrder.customer?.name || "Unknown Customer",
-      totalAmount,
-      taxAmount,
-      discountAmount,
-      netAmount,
-      billingDate: data.billingDate,
-      dueDate: data.dueDate,
-      status: data.status,
-      notes: data.notes,
-      createdBy: userId,
-      salesInvoiceId: salesInvoice.id,
-      customerId: customerOrder.customerId,
-      customerOrderId: data.customerOrderId,
-    },
-  });
+  // Create delivery receipt if requested
+  if (data.createDeliveryReceipt) {
+    // Ensure required fields have valid defaults
+    const defaultDeliveryAddress =
+      data.deliveryAddress ||
+      customerOrder.shippingAddress ||
+      customerOrder.customer?.address ||
+      `Customer: ${customerOrder.customer?.name || "Unknown"} - Address to be provided`;
+
+    const defaultReceivedBy =
+      data.receivedBy ||
+      customerOrder.customer?.contactPerson ||
+      customerOrder.customer?.name ||
+      "To be determined";
+
+    const deliveryData: DeliveryReceiptFormData = {
+      billingStatementId: result.billingStatement.id,
+      deliveryDate: data.deliveryDate || new Date(),
+      deliveryAddress: defaultDeliveryAddress,
+      receivedBy: defaultReceivedBy,
+      receivedByTitle: data.receivedByTitle,
+      deliveryNotes:
+        data.deliveryNotes ||
+        `Auto-generated delivery receipt for Order ${customerOrder.id}`,
+      deliveryStatus: DeliveryStatus.PENDING,
+    };
+
+    const deliveryReceiptResult = await createDeliveryReceipt(deliveryData);
+    if (!deliveryReceiptResult.success) {
+      console.error(
+        "Failed to create delivery receipt:",
+        deliveryReceiptResult.error
+      );
+      console.error("Delivery data that failed:", deliveryData);
+      // Don't throw error - billing statement and invoice were created successfully
+    } else {
+      console.log(
+        "✅ Delivery receipt created successfully:",
+        deliveryReceiptResult.data?.id
+      );
+    }
+  }
 
   revalidatePath("/admin/billing/billing-statements");
   revalidatePath("/admin/customer-orders");
-  return serializeDecimals(billingStatement);
+  revalidatePath("/admin/billing/delivery-receipts");
+  return serializeDecimals(result.billingStatement);
 }
 
 async function createManualBilling(
@@ -219,7 +297,7 @@ async function generateStatementNumber(): Promise<string> {
   const today = new Date();
   const year = today.getFullYear();
   const month = String(today.getMonth() + 1).padStart(2, "0");
-  
+
   // Get the count of billing statements created this month
   const count = await prisma.billingStatement.count({
     where: {
@@ -464,7 +542,10 @@ export async function getBillingStatement(id: string) {
   }
 }
 
-export async function updateBillingStatementStatus(id: string, status: BillingStatus) {
+export async function updateBillingStatementStatus(
+  id: string,
+  status: BillingStatus
+) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {

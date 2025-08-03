@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Copy, ExternalLink, RefreshCw, Share2 } from 'lucide-react'
+import { Copy, ExternalLink, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface ShareLinkDialogProps {
@@ -30,45 +30,33 @@ export function ShareLinkDialog({
   trigger,
   onOpenChange
 }: ShareLinkDialogProps) {
-  const [shareableLink, setShareableLink] = useState<string>('')
   const [isCopying, setIsCopying] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
+
+  // Generate the direct link immediately
+  const getShareableLink = () => {
+    const baseUrl = window.location.origin
+    
+    switch (documentType) {
+      case 'sales-invoice':
+        // Use the existing sales-invoice share route with the document ID
+        return `${baseUrl}/sales-invoice/share/${documentId}`
+      case 'billing-statement':
+        // For billing statements, use similar pattern if route exists
+        return `${baseUrl}/billing-statement/share/${documentId}`
+      case 'delivery-receipt':
+        // For delivery receipts, use similar pattern if route exists
+        return `${baseUrl}/delivery-receipt/share/${documentId}`
+      default:
+        return `${baseUrl}/sales-invoice/share/${documentId}`
+    }
+  }
+
+  const shareableLink = getShareableLink()
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
     onOpenChange?.(open)
-    
-    // Generate link when dialog opens
-    if (open) {
-      generateDirectLink()
-    }
-  }
-
-  const generateDirectLink = () => {
-    // Generate direct link based on document type
-    const baseUrl = window.location.origin
-    let directLink = ''
-    
-    switch (documentType) {
-      case 'sales-invoice':
-        directLink = `${baseUrl}/sales-invoice/share/${documentId}`
-        break
-      case 'billing-statement':
-        // For billing statements, we might still need the token-based approach
-        // or create a similar direct route
-        directLink = `${baseUrl}/billing-statement/share/${documentId}`
-        break
-      case 'delivery-receipt':
-        // For delivery receipts, we might still need the token-based approach
-        // or create a similar direct route
-        directLink = `${baseUrl}/delivery-receipt/share/${documentId}`
-        break
-      default:
-        directLink = `${baseUrl}/document/share/${documentId}`
-    }
-    
-    setShareableLink(directLink)
-    toast.success('Shareable link generated successfully!')
   }
 
   const getDocumentTypeLabel = (docType: string): string => {
@@ -159,23 +147,15 @@ export function ShareLinkDialog({
                 <Button
                   onClick={openLink}
                   variant="outline"
-                  className="flex-1 gap-2"
+                  className="w-full gap-2"
                 >
                   <ExternalLink className="h-4 w-4" />
                   Open Link
                 </Button>
-                <Button
-                  onClick={generateDirectLink}
-                  variant="ghost"
-                  className="flex-1 gap-2"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Regenerate
-                </Button>
               </div>
               
               <p className="text-xs text-muted-foreground">
-                This link can be accessed by anyone and does not expire.
+                This link provides direct access to view the document and can be shared with anyone.
               </p>
             </div>
           )}

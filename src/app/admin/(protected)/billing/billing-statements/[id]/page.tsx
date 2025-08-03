@@ -13,10 +13,10 @@ import {
 } from "@/lib/actions/billing-statements";
 import { 
   getBillingStatementId, 
-  ParamsResolutionError,
   isParamsResolutionError,
   type BillingRouteParams 
 } from "@/lib/utils/params-handler";
+import { SerializableData } from "@/lib/utils/decimal-serializer";
 
 // Client component for interactive functionality
 import { BillingStatementClient } from "./client";
@@ -60,7 +60,7 @@ export default async function BillingStatementPage({ params }: BillingStatementP
   }
 
   // Fetch billing statement data
-  let billingStatement: BillingStatementWithRelations | null = null;
+  let billingStatement: SerializableData<BillingStatementWithRelations> | null = null;
   
   try {
     const result = await getBillingStatementById(billingStatementId);

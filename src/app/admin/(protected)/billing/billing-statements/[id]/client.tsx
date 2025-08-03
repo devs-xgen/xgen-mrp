@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Edit, Save, X, FileText, Download, Trash2, CheckCircle, Clock, AlertCircle, Loader2, Eye, Mail } from "lucide-react";
+import { ArrowLeft, Edit, Save, X, FileText, Download, Trash2, CheckCircle, Clock, AlertCircle, Loader2, Eye, Mail, Share2, Copy, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -59,7 +59,7 @@ import {
   updateBillingStatementStatus,
 } from "@/lib/actions/billing-statements";
 import { ShareLinkButton } from "@/components/shared/ShareLinkButton";
-import { ShareLinkManager } from "@/components/shared/ShareLinkManager";
+import { DirectShareLink } from "@/components/shared/DirectShareLink";
 
 type SerializedBillingStatement = SerializableData<BillingStatementWithRelations>;
 
@@ -79,6 +79,7 @@ export function BillingStatementClient({
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCopyingLink, setIsCopyingLink] = useState(false);
 
   // Form setup
   const form = useForm<BillingStatementFormData>({
@@ -110,6 +111,29 @@ export function BillingStatementClient({
   });
 
   // Handle form submission
+  // Generate shareable link
+  const getShareableLink = () => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/billing-statement/share/${billingStatementId}`;
+  };
+
+  // Copy shareable link to clipboard
+  const copyShareableLink = async () => {
+    if (isCopyingLink) return;
+    
+    setIsCopyingLink(true);
+    try {
+      const shareUrl = getShareableLink();
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success("Share link copied to clipboard!");
+    } catch (error) {
+      console.error('Error copying link:', error);
+      toast.error("Failed to copy link to clipboard");
+    } finally {
+      setTimeout(() => setIsCopyingLink(false), 1000);
+    }
+  };
+
   const onSubmit = async (data: BillingStatementFormData) => {
     setIsSubmitting(true);
     
@@ -216,14 +240,17 @@ export function BillingStatementClient({
   return (
     <div className="flex flex-col gap-6 p-8 bg-background min-h-screen">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex">
           <Link href="/admin/billing/billing-statements">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Statements
-            </Button>
-          </Link>
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Statements
+              </Button>
+            </Link>
+        </div>
+      <div className="flex items-center justify-between">
+        
+        <div className="flex items-center gap-4">
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold tracking-tight">
@@ -242,12 +269,25 @@ export function BillingStatementClient({
         <div className="flex items-center gap-2">
           {!isEditing ? (
             <>
-              <ShareLinkButton
-                documentType="billing-statement"
-                documentId={billingStatementId}
-                variant="outline"
+              <Button 
+                onClick={copyShareableLink}
+                disabled={isCopyingLink}
+                variant="outline" 
                 size="sm"
-              />
+                className="gap-2"
+              >
+                {isCopyingLink ? (
+                  <>
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    Copy Link
+                  </>
+                )}
+              </Button>
               <Button variant="outline" size="sm" disabled>
                 <Download className="mr-2 h-4 w-4" />
                 Download PDF
@@ -630,8 +670,8 @@ export function BillingStatementClient({
             </CardContent>
           </Card>
 
-          {/* Share Links Management */}
-          <ShareLinkManager
+          {/* Direct Share Link */}
+          <DirectShareLink
             documentType="billing-statement"
             documentId={billingStatementId}
           />

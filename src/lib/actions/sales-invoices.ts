@@ -241,7 +241,131 @@ export async function getAllSalesInvoices(
   }
 }
 
+export async function getSalesInvoiceById(
+  id: string
+): Promise<SalesInvoiceWithItems> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new Error("Unauthorized");
+    }
 
+    const invoice = await prisma.salesInvoice.findUnique({
+      where: { id },
+      include: {
+        invoiceItems: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+              },
+            },
+            Material: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+              },
+            },
+            InventoryItem: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+              },
+            },
+          },
+        },
+        billingStatement: {
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                code: true,
+              },
+            },
+            customerOrder: {
+              select: {
+                id: true,
+                orderNumber: true,
+                orderDate: true,
+              },
+            },
+            productionOrder: {
+              select: {
+                id: true,
+                quantity: true,
+                status: true,
+                product: {
+                  select: {
+                    name: true,
+                    sku: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        createdByUser: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+        modifiedByUser: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!invoice) {
+      throw new Error("Sales invoice not found");
+    }
+
+    // Convert Decimal fields to numbers for client component compatibility
+    const convertedInvoice = {
+      ...invoice,
+      subtotal: Number(invoice.subtotal),
+      taxRate: Number(invoice.taxRate),
+      taxAmount: Number(invoice.taxAmount),
+      discountAmount: Number(invoice.discountAmount),
+      totalAmount: Number(invoice.totalAmount),
+      invoiceItems: invoice.invoiceItems.map((item) => ({
+        ...item,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice),
+        totalPrice: Number(item.totalPrice),
+        discountPercent: item.discountPercent
+          ? Number(item.discountPercent)
+          : null,
+      })),
+    };
+
+    return convertedInvoice as SalesInvoiceWithItems;
+  } catch (error) {
+    console.error("Error fetching sales invoice:", error);
+    throw new Error("Failed to fetch sales invoice");
+  }
+}
 
 export async function createSalesInvoice(
   data: SalesInvoiceFormData

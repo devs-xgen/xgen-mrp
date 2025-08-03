@@ -37,7 +37,7 @@ import { SalesInvoiceWithItems, InvoiceStatus } from "@/types/admin/billing";
 import { getSalesInvoiceById, deleteSalesInvoice, updateSalesInvoiceStatus } from "@/lib/actions/sales-invoices";
 import { PDFDownloadStandaloneButton } from "@/components/module/admin/billing/sales-invoices/pdf-download-standalone-button";
 import { ShareLinkButton } from "@/components/shared/ShareLinkButton";
-import { ShareLinkManager } from "@/components/shared/ShareLinkManager";
+import { DirectShareLink } from "@/components/shared/DirectShareLink";
 
 
 
@@ -167,14 +167,17 @@ export default function SalesInvoiceViewPage() {
   return (
     <div className="flex flex-col gap-6 p-8 bg-background min-h-screen">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4">
           <Link href="/admin/billing/sales-invoices">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Invoices
             </Button>
-          </Link>
+        </Link>
+        </div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
               Invoice {invoice.invoiceNumber}
@@ -568,8 +571,8 @@ export default function SalesInvoiceViewPage() {
             </CardContent>
           </Card>
 
-          {/* Share Links Management */}
-          <ShareLinkManager
+          {/* Share Link */}
+          <DirectShareLink
             documentType="sales-invoice"
             documentId={invoice.id}
           />
