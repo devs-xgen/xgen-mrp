@@ -667,6 +667,24 @@ export async function reportTaskIssue(
         modifiedBy: session.user.id,
       },
     });
+    // Create activity log for task issue report
+    try {
+      await prisma.activityLog.create({
+        data: {
+          type: "TASK_ISSUE_REPORTED",
+          userId: session.user.id,
+          details: {
+            taskId,
+            issueType,
+            description,
+            severity,
+            reportedAt: now,
+          },
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log activity for task issue report:", logError);
+    }
 
     revalidatePath("/inspector/tasks");
     revalidatePath("/inspector/dashboard");

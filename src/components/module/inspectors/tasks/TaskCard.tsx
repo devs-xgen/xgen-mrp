@@ -183,13 +183,13 @@ export function TaskCard({ task }: TaskCardProps) {
     }
   };
 
-  // Calculate time remaining or overdue
+
   const getDueStatusText = () => {
     if (!task.dueDate) return "No due date";
 
     const now = new Date();
     const dueDate = new Date(task.dueDate);
-
+    
     if (now > dueDate && task.status !== Status.COMPLETED) {
       return `Overdue by ${formatDistanceToNow(dueDate)}`;
     } else if (task.status === Status.COMPLETED) {

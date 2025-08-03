@@ -79,7 +79,7 @@ export function EnhancedTaskCard({ task }: { task: InspectorsTask }) {
             </div>
 
             {/* Comments/Notes */}
-            <div>
+            {/* <div>
               <label className="font-medium">Add Comment / Notes</label>
               <Textarea
                 value={comment}
@@ -87,6 +87,17 @@ export function EnhancedTaskCard({ task }: { task: InspectorsTask }) {
                 placeholder="Add your notes here..."
                 className="min-h-[80px]"
               />
+            </div> */}
+
+            <div>
+              <label className="font-medium block mb-2 text-sm text-gray-700">💬 Comments or Notes</label>
+              <Textarea
+                value={comment}
+                onChange={e => setComment(e.target.value)}
+                placeholder="Write any updates, blockers, or progress notes here..."
+                className="min-h-[120px] rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <p className="text-xs text-muted-foreground mt-2 italic">Feel free to share any insights, challenges, or accomplishments during today’s task.</p>
             </div>
           </div>
 
