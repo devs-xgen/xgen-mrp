@@ -44,22 +44,38 @@ export function InstallGuideClient() {
   useEffect(() => {
     setUserAgent(navigator.userAgent);
     
-    // Detect platform
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    const isAndroid = /Android/.test(navigator.userAgent);
-    const isDesktop = !isIOS && !isAndroid;
+    // Detect platform with tablet/desktop focus
+    const isIPad = /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isIPhone = /iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isAndroidTablet = /Android/.test(navigator.userAgent) && !navigator.userAgent.toLowerCase().includes('mobile');
+    const isAndroidPhone = /Android/.test(navigator.userAgent) && navigator.userAgent.toLowerCase().includes('mobile');
+    const isDesktop = !isIPad && !isIPhone && !isAndroidTablet && !isAndroidPhone;
     
-    if (isIOS) setPlatform("ios");
-    else if (isAndroid) setPlatform("android");
+    // Determine platform priority: tablets and desktop only
+    if (isIPad) setPlatform("ios");
+    else if (isAndroidTablet) setPlatform("android");
     else if (isDesktop) setPlatform("desktop");
+    else setPlatform("unknown"); // Phones are not supported
 
     // Debug PWA capabilities
     console.log('🔍 PWA Debug Info:');
     console.log('📱 User Agent:', navigator.userAgent);
-    console.log('🖥️ Platform:', isIOS ? 'iOS' : isAndroid ? 'Android' : 'Desktop');
+    console.log('📱 iPad detected:', isIPad);
+    console.log('📱 iPhone detected:', isIPhone);
+    console.log('📱 Android Tablet detected:', isAndroidTablet);
+    console.log('📱 Android Phone detected:', isAndroidPhone);
+    console.log('🖥️ Platform:', platform);
     console.log('🔒 Protocol:', window.location.protocol);
     console.log('🏠 Origin:', window.location.origin);
     console.log('📋 Standalone mode:', window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    
+    // Check screen size for tablet/desktop optimization
+    const screenWidth = window.screen.width;
+    const screenHeight = window.screen.height;
+    const minDimension = Math.min(screenWidth, screenHeight);
+    const maxDimension = Math.max(screenWidth, screenHeight);
+    console.log('📐 Screen size:', `${screenWidth}x${screenHeight}`);
+    console.log('📐 Suitable for app:', minDimension >= 768); // Tablet minimum
     
     // Check service worker
     if ('serviceWorker' in navigator) {
@@ -162,14 +178,28 @@ export function InstallGuideClient() {
             </Button>
           </Link>
           
-          <div className="text-center">
+                      <div className="text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
               <Download className="h-8 w-8 text-white" />
             </div>
             <h1 className="text-4xl font-bold text-gray-900 mb-2">Install XGEN MRP</h1>
             <p className="text-xl text-gray-600 mb-6">
-              Get the full app experience on your device
+              Professional manufacturing app optimized for tablets and desktop
             </p>
+            
+            {/* Device Compatibility Warning */}
+            {(platform === "unknown" || (typeof window !== 'undefined' && Math.min(window.screen.width, window.screen.height) < 768)) && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center gap-2 text-orange-800">
+                  <AlertCircle className="h-5 w-5" />
+                  <strong>Device Notice</strong>
+                </div>
+                <p className="text-sm text-orange-700 mt-1">
+                  XGEN MRP is optimized for tablets (iPad, Android tablets) and desktop computers. 
+                  For the best experience, please use a device with a larger screen.
+                </p>
+              </div>
+            )}
             
             {/* Install Button - Show if installable */}
             {isInstallable && (
@@ -205,21 +235,28 @@ export function InstallGuideClient() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4">
-              {platform === "ios" && <Smartphone className="h-8 w-8 text-blue-600" />}
-              {platform === "android" && <Smartphone className="h-8 w-8 text-green-600" />}
+              {platform === "ios" && <Tablet className="h-8 w-8 text-blue-600" />}
+              {platform === "android" && <Tablet className="h-8 w-8 text-green-600" />}
               {platform === "desktop" && <Monitor className="h-8 w-8 text-gray-600" />}
+              {platform === "unknown" && <Smartphone className="h-8 w-8 text-orange-500" />}
               
               <div>
-                <p className="font-medium capitalize">{platform} Device</p>
+                <p className="font-medium capitalize">
+                  {platform === "ios" && "iPad"}
+                  {platform === "android" && "Android Tablet"}
+                  {platform === "desktop" && "Desktop/Laptop"}
+                  {platform === "unknown" && "Unsupported Device"}
+                </p>
                 <p className="text-sm text-gray-500">
-                  {platform === "ios" && "iPhone/iPad detected"}
-                  {platform === "android" && "Android device detected"}
-                  {platform === "desktop" && "Desktop/Laptop detected"}
+                  {platform === "ios" && "iPad detected - Optimal experience"}
+                  {platform === "android" && "Android tablet detected - Optimal experience"}
+                  {platform === "desktop" && "Desktop/Laptop detected - Optimal experience"}
+                  {platform === "unknown" && "Phone detected - Please use a tablet or desktop"}
                 </p>
               </div>
               
-              <Badge variant="outline" className="ml-auto">
-                {isInstallable ? "Installable" : "Manual Installation"}
+              <Badge variant={platform === "unknown" ? "destructive" : "outline"} className="ml-auto">
+                {platform === "unknown" ? "Not Supported" : (isInstallable ? "Installable" : "Manual Installation")}
               </Badge>
             </div>
           </CardContent>
@@ -230,12 +267,12 @@ export function InstallGuideClient() {
 
         {/* Installation Instructions */}
         <div className="grid gap-6">
-          {/* iOS Instructions */}
+          {/* iPad Instructions */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Smartphone className="h-5 w-5 text-blue-600" />
-                iOS (iPhone/iPad) Installation
+                <Tablet className="h-5 w-5 text-blue-600" />
+                iPad Installation
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -250,8 +287,8 @@ export function InstallGuideClient() {
                 <div className="flex gap-3">
                   <div className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
                   <div>
-                    <p className="font-medium">Open XGEN MRP in Safari</p>
-                    <p className="text-sm text-gray-600">Make sure you're using Safari browser (not Chrome or other browsers)</p>
+                    <p className="font-medium">Open XGEN MRP in Safari on your iPad</p>
+                    <p className="text-sm text-gray-600">Use Safari browser for best iPad experience</p>
                   </div>
                 </div>
                 
@@ -286,12 +323,12 @@ export function InstallGuideClient() {
             </CardContent>
           </Card>
 
-          {/* Android Instructions */}
+          {/* Android Tablet Instructions */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Smartphone className="h-5 w-5 text-green-600" />
-                Android Installation
+                <Tablet className="h-5 w-5 text-green-600" />
+                Android Tablet Installation
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -306,8 +343,8 @@ export function InstallGuideClient() {
                 <div className="flex gap-3">
                   <div className="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
                   <div>
-                    <p className="font-medium">Open XGEN MRP in Chrome</p>
-                    <p className="text-sm text-gray-600">Visit the website in Google Chrome browser</p>
+                    <p className="font-medium">Open XGEN MRP in Chrome on your tablet</p>
+                    <p className="text-sm text-gray-600">Use Chrome browser on Android tablet for best experience</p>
                   </div>
                 </div>
                 
@@ -404,24 +441,24 @@ export function InstallGuideClient() {
                 <div className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                   <div>
-                    <p className="font-medium">Faster Performance</p>
-                    <p className="text-sm text-gray-600">Native app-like speed and responsiveness</p>
+                    <p className="font-medium">Tablet-Optimized Performance</p>
+                    <p className="text-sm text-gray-600">Landscape layout optimized for professional tablet use</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                   <div>
-                    <p className="font-medium">Offline Access</p>
-                    <p className="text-sm text-gray-600">Continue working even without internet connection</p>
+                    <p className="font-medium">Offline Manufacturing Data</p>
+                    <p className="text-sm text-gray-600">Access production data even without internet connection</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                   <div>
-                    <p className="font-medium">Home Screen Access</p>
-                    <p className="text-sm text-gray-600">Quick access from your device's home screen</p>
+                    <p className="font-medium">Professional Interface</p>
+                    <p className="text-sm text-gray-600">Full manufacturing dashboard on your tablet home screen</p>
                   </div>
                 </div>
               </div>
@@ -430,24 +467,24 @@ export function InstallGuideClient() {
                 <div className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                   <div>
-                    <p className="font-medium">Push Notifications</p>
-                    <p className="text-sm text-gray-600">Get notified about important updates</p>
+                    <p className="font-medium">Production Notifications</p>
+                    <p className="text-sm text-gray-600">Real-time alerts for manufacturing processes</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                   <div>
-                    <p className="font-medium">Full Screen Experience</p>
-                    <p className="text-sm text-gray-600">No browser UI, just your app</p>
+                    <p className="font-medium">Landscape Dashboard</p>
+                    <p className="text-sm text-gray-600">Full-screen manufacturing interface without browser bars</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                   <div>
-                    <p className="font-medium">Auto Updates</p>
-                    <p className="text-sm text-gray-600">Always get the latest features automatically</p>
+                    <p className="font-medium">Seamless Updates</p>
+                    <p className="text-sm text-gray-600">Latest manufacturing features delivered automatically</p>
                   </div>
                 </div>
               </div>
