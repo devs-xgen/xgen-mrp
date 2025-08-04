@@ -150,16 +150,26 @@ export default async function middleware(req: NextRequest) {
 
   // Public routes (allow access without authentication)
   // Include shareable document routes as public (handle both singular and plural forms)
-  const isShareableRoute = pathname.match(/^\/(billing-statements?|sales-invoices?|delivery-receipts?)\/share\/[^\/]+$/);
-  
+  const isShareableRoute = pathname.match(
+    /^\/(billing-statements?|sales-invoices?|delivery-receipts?)\/share\/[^\/]+$/
+  );
+
   // Debug logging for shareable routes
   if (pathname.includes("/share/")) {
     console.log(`🔍 Checking shareable route: ${pathname}`);
     console.log(`🔍 Is shareable route: ${!!isShareableRoute}`);
-    console.log(`🔍 Regex test result: ${/^\/(billing-statements?|sales-invoices?|delivery-receipts?)\/share\/[^\/]+$/.test(pathname)}`);
+    console.log(
+      `🔍 Regex test result: ${/^\/(billing-statements?|sales-invoices?|delivery-receipts?)\/share\/[^\/]+$/.test(pathname)}`
+    );
   }
-  
-  if (pathname === "/" || pathname.includes("/login") || isShareableRoute) {
+
+  if (
+    pathname === "/" ||
+    pathname === "/install-app" ||
+    pathname === "/offline" ||
+    pathname.includes("/login") ||
+    isShareableRoute
+  ) {
     try {
       // Check if user is already authenticated
       const token = await getToken({

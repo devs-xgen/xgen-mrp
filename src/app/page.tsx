@@ -112,14 +112,15 @@ export default function Home() {
           </div>
 
           <div className="flex justify-center space-x-6">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-600"
-              disabled
-            >
-              Download our app
-            </Button>
+            <Link href="/install-app">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-gray-600 hover:text-gray-900"
+              >
+                Download our app
+              </Button>
+            </Link>
             {/* LALAGYAN TO NG GOOGLE FORM */}
             <Button variant="ghost" size="sm" className="text-gray-600">
               Help & Support

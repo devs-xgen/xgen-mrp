@@ -33,6 +33,20 @@ export const metadata: Metadata = {
     apple: '/favicon.ico',
   },
   manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'XGEN MRP',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'default',
+    'apple-mobile-web-app-title': 'XGEN MRP',
+    'application-name': 'XGEN MRP',
+    'msapplication-TileColor': '#000000',
+    'msapplication-config': '/browserconfig.xml',
+  },
 };
 
 export const viewport: Viewport = {
@@ -41,8 +55,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: 'white' },
-    { media: '(prefers-color-scheme: dark)', color: 'black' }
+    { media: '(prefers-color-scheme: light)', color: '#000000' },
+    { media: '(prefers-color-scheme: dark)', color: '#000000' }
   ],
 };
 
@@ -155,6 +169,60 @@ export default function RootLayout({
             }}
           />
         )}
+        
+        {/* PWA Service Worker Registration */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                      console.log('✅ Service Worker registered successfully:', registration.scope);
+                      
+                      // Check for updates
+                      registration.addEventListener('updatefound', function() {
+                        const newWorker = registration.installing;
+                        if (newWorker) {
+                          newWorker.addEventListener('statechange', function() {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                              // New content is available, show update notification
+                              if (window.confirm('A new version is available. Reload to update?')) {
+                                window.location.reload();
+                              }
+                            }
+                          });
+                        }
+                      });
+                    })
+                    .catch(function(error) {
+                      console.log('❌ Service Worker registration failed:', error);
+                    });
+                });
+              }
+              
+              // PWA Install Prompt Handling
+              let deferredPrompt;
+              window.addEventListener('beforeinstallprompt', function(e) {
+                e.preventDefault();
+                deferredPrompt = e;
+                console.log('📱 PWA Install prompt available');
+              });
+              
+              // Track PWA usage
+              window.addEventListener('appinstalled', function() {
+                console.log('🎉 PWA was installed');
+                deferredPrompt = null;
+              });
+              
+              // Detect if running as PWA
+              if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+                console.log('📱 Running as PWA');
+                document.documentElement.classList.add('pwa-mode');
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
