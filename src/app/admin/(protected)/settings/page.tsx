@@ -1,46 +1,60 @@
-// settings/page.tsx
-"use client";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Construction } from "lucide-react";
-import ToggleableCard from "@/components/togglebutton";
-import { useTheme } from '@/context/ThemeContext';
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import '@/styles/globals.css'; // Make sure this path is correct
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { ProfileManagement } from "@/components/shared/profile";
+import { Settings, User, Palette } from "lucide-react";
 
 export default function SettingsPage() {
-    const { theme, setTheme } = useTheme();
-
-    const handleThemeChange = () => {
-        setTheme(theme === 'dark' ? 'light' : 'dark');
-    };
-
-    return (
-        <div className="container mx-auto py-10">
-            <Card className={cn(
-                "container mx-auto py-10", // Always applied
-            theme === 'dark' && "dark:bg-gray-900 dark:text-white", // Dark theme for outer div
-            theme === 'light' && "light:bg-gray-100 light:text-gray-800"  // Light theme
-            )}>
-                <CardHeader className="text-center">
-                    <Construction className="w-12 h-12 mx-auto" />
-                    <CardTitle className="text-2xl mt-4">Settings Page</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                    <p>We're working hard to bring you amazing new features.</p>
-                    <p className="mt-2">Stay tuned for updates!</p>
-                    <Button onClick={handleThemeChange} className={cn(
-                        "border-2 mb-8",// Base styles
-                        theme === 'dark' && "dark:bg-black-700 dark:hover:bg-gray-600 dark:text-white",
-                        theme === 'light' && "light:bg-gray-200 light:hover:bg-gray-300 light:text-gray-800"
-                    )}>
-                        {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-                    </Button>
-                </CardContent>
-            </Card>
-
-            <ToggleableCard />
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground">
+            Manage your account settings and preferences.
+          </p>
         </div>
-    );
+      </div>
+
+      <Tabs defaultValue="profile" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="profile" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Profile & Security
+          </TabsTrigger>
+          <TabsTrigger value="preferences" className="flex items-center gap-2">
+            <Palette className="h-4 w-4" />
+            Preferences
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="profile">
+          <ProfileManagement />
+        </TabsContent>
+
+        <TabsContent value="preferences">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Application Preferences
+              </CardTitle>
+              <CardDescription>
+                Customize your application experience
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium">Theme</h4>
+                <p className="text-sm text-muted-foreground">
+                  Choose your preferred color scheme
+                </p>
+                <ThemeToggle />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
 }

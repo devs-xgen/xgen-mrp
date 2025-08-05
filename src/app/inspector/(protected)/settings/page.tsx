@@ -1,35 +1,56 @@
-// src/app/worker/(protected)/settings/page.tsx
 import { Metadata } from "next";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Construction } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProfileManagement } from "@/components/shared/profile";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export const metadata: Metadata = {
-  title: "Worker Settings",
-  description: "Manage your account settings",
+  title: "Settings | Inspector Dashboard",
+  description: "Manage your account settings and preferences",
 };
 
 export default function SettingsPage() {
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto py-6 space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
-        <p className="text-muted-foreground mb-6">
-          Manage your account preferences and notifications
+        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <p className="text-muted-foreground">
+          Manage your account settings and preferences.
         </p>
       </div>
 
-      <Card className="border-2 border-dashed">
-        <CardHeader className="text-center">
-          <Construction className="w-12 h-12 mx-auto text-muted-foreground" />
-          <CardTitle className="text-2xl mt-4">
-            Settings Page Coming Soon
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-center text-muted-foreground">
-          <p>This section is under development.</p>
-          <p className="mt-2">Check back soon for account settings features!</p>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="profile" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="profile">Profile & Security</TabsTrigger>
+          <TabsTrigger value="preferences">Preferences</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="profile" className="space-y-4">
+          <ProfileManagement />
+        </TabsContent>
+
+        <TabsContent value="preferences" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Appearance</CardTitle>
+              <CardDescription>
+                Customize the appearance of the application.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <label className="text-sm font-medium">Theme</label>
+                  <p className="text-sm text-muted-foreground">
+                    Switch between light and dark themes.
+                  </p>
+                </div>
+                <ThemeToggle />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

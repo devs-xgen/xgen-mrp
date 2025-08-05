@@ -273,12 +273,6 @@ export const workerNavItems: NavItem[] = [
   // },
 
   {
-    icon: UserCircle,
-    label: "Profile",
-    href: "/worker/profile",
-    description: "Manage your profile and skills",
-  },
-  {
     icon: Settings,
     label: "Settings",
     href: "/worker/settings",
@@ -343,12 +337,7 @@ export const inspectorNavItems: NavItem[] = [
       },
     ],
   },
-  {
-    icon: UserCircle,
-    label: "Profile",
-    href: "/inspector/profile",
-    description: "Manage your profile",
-  },
+
   {
     icon: Settings,
     label: "Settings",
@@ -382,12 +371,7 @@ export const deliveryNavItems: NavItem[] = [
     href: "/delivery/deliveries",
     description: "Manage deliveries",
   },
-  {
-    icon: UserCircle,
-    label: "Profile",
-    href: "/delivery/profile",
-    description: "Manage your profile",
-  },
+
   {
     icon: Settings,
     label: "Settings",
