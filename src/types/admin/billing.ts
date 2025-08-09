@@ -8,14 +8,14 @@ import { z } from "zod";
 export interface BillingStatement {
   id: string;
   statementNumber: string;
-  
+
   // Customer Information (Required - at least one must be provided)
-  customerId: string | null;          // Direct customer reference
-  customerOrderId: string | null;     // Or reference via customer order
-  customerName: string;               // Derived/cached customer name
-  
+  customerId: string | null; // Direct customer reference
+  customerOrderId: string | null; // Or reference via customer order
+  customerName: string; // Derived/cached customer name
+
   // Optional Production Link
-  productionOrderId: string | null;   // Optional production order link
+  productionOrderId: string | null; // Optional production order link
 
   // Financial Information
   totalAmount: number;
@@ -40,7 +40,7 @@ export interface BillingStatement {
   customer?: Customer;
   customerOrder?: CustomerOrder;
   productionOrder?: ProductionOrder;
-  salesInvoice?: SalesInvoice;        // One-to-One relationship
+  salesInvoice?: SalesInvoice; // One-to-One relationship
   deliveryReceipts?: DeliveryReceipt[]; // One-to-Many relationship
   createdByUser?: User;
   modifiedByUser?: User;
@@ -49,24 +49,24 @@ export interface BillingStatement {
 export interface DeliveryReceipt {
   id: string;
   receiptNumber: string;
-  
+
   // Link to billing statement (Required)
   billingStatementId: string;
-  
+
   // Essential Delivery Information
   deliveryDate: Date;
   deliveryAddress: string;
   receivedBy: string;
   receivedByTitle: string | null;
-  
+
   // Optional Proof
   signatureImage: string | null;
   photoEvidence: string | null;
-  
+
   // Optional Tracking
   trackingNumber: string | null;
   courierService: string | null;
-  
+
   // Status and Notes
   deliveryStatus: DeliveryStatus;
   deliveryNotes: string | null;
@@ -86,10 +86,10 @@ export interface DeliveryReceipt {
 export interface SalesInvoice {
   id: string;
   invoiceNumber: string;
-  
+
   // Direct link to billing statement (Required)
   billingStatementId: string;
-  
+
   // Invoice Details
   invoiceDate: Date;
   subtotal: number;
@@ -115,7 +115,7 @@ export interface SalesInvoice {
   modifiedBy: string | null;
 
   // Relations
-  billingStatement?: BillingStatement;  // One-to-One relationship
+  billingStatement?: BillingStatement; // One-to-One relationship
   invoiceItems?: SalesInvoiceItem[];
   createdByUser?: User;
   modifiedByUser?: User;
@@ -212,7 +212,7 @@ export interface BillingStatementFormData {
 
 export interface SalesInvoiceFormData {
   billingStatementId: string; // Required - link to billing statement
-  
+
   // Invoice details
   subtotal: number;
   taxRate: number;
@@ -275,6 +275,18 @@ export interface BillingAnalytics {
   overdueAmount: number;
   pendingAmount: number;
 
+  // Computed fields for compatibility
+  totalInvoices?: number;
+  outstandingAmount?: number;
+  activeCustomers?: number;
+  newCustomers?: number;
+  overdueCount?: number;
+  revenueGrowthPercent?: number;
+  invoiceGrowthPercent?: number;
+  paymentSuccessRate?: number;
+  averageInvoiceValue?: number;
+  averagePaymentTime?: number;
+
   // Monthly trends
   monthlyRevenue: MonthlyRevenue[];
 
@@ -292,8 +304,43 @@ export interface BillingAnalytics {
   billingTypeRecommendations?: BillingTypeRecommendation[];
 }
 
+export interface MonthlyBillingReport {
+  totalRevenue: number;
+  totalInvoices: number;
+  paidInvoices: number;
+  averageInvoiceValue: number;
+  topCustomers?: Array<{
+    customerName: string;
+    invoiceCount: number;
+    totalRevenue: number;
+  }>;
+}
+
+export interface CustomerBillingReport {
+  customerId: string;
+  customerName: string;
+  totalBilled: number;
+  totalPaid: number;
+  totalOutstanding: number;
+  recentInvoices: Array<{
+    invoiceNumber: string;
+    invoiceDate: Date;
+    totalAmount: number;
+    status: string;
+  }>;
+}
+
+export interface OverduePaymentReport {
+  statementNumber: string;
+  customerName: string;
+  customerEmail: string;
+  dueDate: Date;
+  outstandingAmount: number;
+  daysOverdue: number;
+}
+
 export interface BillingTypeAnalytics {
-  billingType: 'direct-customer' | 'customer-order' | 'manual-customer';
+  billingType: "direct-customer" | "customer-order" | "manual-customer";
   count: number;
   totalAmount: number;
   percentage: number;
@@ -302,10 +349,10 @@ export interface BillingTypeAnalytics {
 }
 
 export interface BillingTypeRecommendation {
-  recommendedType: 'direct-customer' | 'customer-order' | 'manual-customer';
+  recommendedType: "direct-customer" | "customer-order" | "manual-customer";
   reason: string;
   confidence: number;
-  basedOn: 'usage-pattern' | 'recent-activity' | 'customer-data';
+  basedOn: "usage-pattern" | "recent-activity" | "customer-data";
 }
 
 export interface MonthlyRevenue {
@@ -480,52 +527,51 @@ export interface DeliveryReceiptFilters {
 // ZOD VALIDATION SCHEMAS
 // ==============================================
 
-export const billingStatementSchema = z.object({
-  customerId: z.string().optional(), // Optional - for existing customers
-  customerName: z.string().min(1, "Customer name is required"), // Required - customer name input
-  customerOrderId: z.string().optional(),
-  productionOrderId: z.string().optional(),
-  deliveryReceiptId: z.string().optional(),
+export const billingStatementSchema = z
+  .object({
+    customerId: z.string().optional(), // Optional - for existing customers
+    customerName: z.string().min(1, "Customer name is required"), // Required - customer name input
+    customerOrderId: z.string().optional(),
+    productionOrderId: z.string().optional(),
+    deliveryReceiptId: z.string().optional(),
 
-  // Billing details
-  subtotal: z.number().min(0, "Subtotal must be positive"),
-  taxRate: z.number().min(0).max(100, "Tax rate must be between 0-100%"),
-  discountAmount: z.number().min(0, "Discount must be positive"),
+    // Billing details
+    subtotal: z.number().min(0, "Subtotal must be positive"),
+    taxRate: z.number().min(0).max(100, "Tax rate must be between 0-100%"),
+    discountAmount: z.number().min(0, "Discount must be positive"),
 
-  // Payment terms
-  paymentTerms: z.string().optional(),
-  dueDate: z.date().optional(),
+    // Payment terms
+    paymentTerms: z.string().optional(),
+    dueDate: z.date().optional(),
 
-  // Invoice items
-  invoiceItems: z
-    .array(
-      z.object({
-        productId: z.string().optional(),
-        materialId: z.string().optional(),
-        inventoryItemId: z.string().optional(),
-        description: z.string().min(1, "Description is required"),
-        quantity: z.number().min(0.001, "Quantity must be positive"),
-        unitPrice: z.number().min(0, "Unit price must be positive"),
-        productCode: z.string().optional(),
-        unit: z.string().optional(),
-        discountPercent: z.number().min(0).max(100).optional(),
-        taxable: z.boolean().default(true),
-      })
-    )
-    .min(1, "At least one item is required"),
+    // Invoice items
+    invoiceItems: z
+      .array(
+        z.object({
+          productId: z.string().optional(),
+          materialId: z.string().optional(),
+          inventoryItemId: z.string().optional(),
+          description: z.string().min(1, "Description is required"),
+          quantity: z.number().min(0.001, "Quantity must be positive"),
+          unitPrice: z.number().min(0, "Unit price must be positive"),
+          productCode: z.string().optional(),
+          unit: z.string().optional(),
+          discountPercent: z.number().min(0).max(100).optional(),
+          taxable: z.boolean().default(true),
+        })
+      )
+      .min(1, "At least one item is required"),
 
-  // Additional details
-  notes: z.string().optional(),
-  poNumber: z.string().optional(),
-  terms: z.string().optional(),
-  footerNotes: z.string().optional(),
-}).refine(
-  (data) => data.customerId || data.customerOrderId,
-  {
+    // Additional details
+    notes: z.string().optional(),
+    poNumber: z.string().optional(),
+    terms: z.string().optional(),
+    footerNotes: z.string().optional(),
+  })
+  .refine((data) => data.customerId || data.customerOrderId, {
     message: "Either customer or customer order must be selected",
     path: ["customerId"],
-  }
-);
+  });
 
 export const salesInvoiceSchema = z.object({
   billingStatementId: z.string().min(1, "Billing statement is required"),
@@ -684,6 +730,20 @@ export const deliveryReceiptFiltersSchema = z.object({
     .optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
 });
+
+export const billingReportFiltersSchema = z.object({
+  startDate: z.date().optional(),
+  endDate: z.date().optional(),
+  customerId: z.string().optional(),
+  status: z.string().optional(),
+});
+
+export interface BillingReportFilters {
+  startDate?: Date;
+  endDate?: Date;
+  customerId?: string;
+  status?: string;
+}
 
 // ==============================================
 // UTILITY TYPES

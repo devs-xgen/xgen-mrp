@@ -28,7 +28,7 @@ import {
 // ==============================================
 
 export interface BillingTypeAnalytics {
-  billingType: 'direct-customer' | 'customer-order' | 'manual-customer';
+  billingType: "direct-customer" | "customer-order" | "manual-customer";
   count: number;
   totalAmount: number;
   percentage: number;
@@ -37,10 +37,10 @@ export interface BillingTypeAnalytics {
 }
 
 export interface BillingTypeRecommendation {
-  recommendedType: 'direct-customer' | 'customer-order' | 'manual-customer';
+  recommendedType: "direct-customer" | "customer-order" | "manual-customer";
   reason: string;
   confidence: number;
-  basedOn: 'usage-pattern' | 'recent-activity' | 'customer-data';
+  basedOn: "usage-pattern" | "recent-activity" | "customer-data";
 }
 
 export async function getBillingTypeAnalytics(
@@ -80,44 +80,53 @@ export async function getBillingTypeAnalytics(
         totalAmount: true,
         createdAt: true,
         customer: {
-          select: { id: true, name: true }
+          select: { id: true, name: true },
         },
         customerOrder: {
-          select: { id: true, orderNumber: true }
-        }
+          select: { id: true, orderNumber: true },
+        },
       },
     });
 
     // Categorize billing statements by type
-    const typeStats: Record<string, { count: number; totalAmount: number; lastUsed?: Date }> = {
-      'direct-customer': { count: 0, totalAmount: 0 },
-      'customer-order': { count: 0, totalAmount: 0 },
-      'manual-customer': { count: 0, totalAmount: 0 },
+    const typeStats: Record<
+      string,
+      { count: number; totalAmount: number; lastUsed?: Date }
+    > = {
+      "direct-customer": { count: 0, totalAmount: 0 },
+      "customer-order": { count: 0, totalAmount: 0 },
+      "manual-customer": { count: 0, totalAmount: 0 },
     };
 
     billingStatements.forEach((statement) => {
       let billingType: string;
-      
+
       if (statement.customerOrderId && statement.customerOrder) {
-        billingType = 'customer-order';
+        billingType = "customer-order";
       } else if (statement.customerId && statement.customer) {
-        billingType = 'direct-customer';
+        billingType = "direct-customer";
       } else {
-        billingType = 'manual-customer';
+        billingType = "manual-customer";
       }
 
       typeStats[billingType].count++;
       typeStats[billingType].totalAmount += statement.totalAmount.toNumber();
-      
-      if (!typeStats[billingType].lastUsed || statement.createdAt > typeStats[billingType].lastUsed) {
+
+      if (
+        !typeStats[billingType].lastUsed ||
+        statement.createdAt > typeStats[billingType].lastUsed
+      ) {
         typeStats[billingType].lastUsed = statement.createdAt;
       }
     });
 
     const totalCount = billingStatements.length;
-    
+
     return Object.entries(typeStats).map(([type, stats]) => ({
-      billingType: type as 'direct-customer' | 'customer-order' | 'manual-customer',
+      billingType: type as
+        | "direct-customer"
+        | "customer-order"
+        | "manual-customer",
       count: stats.count,
       totalAmount: stats.totalAmount,
       percentage: totalCount > 0 ? (stats.count / totalCount) * 100 : 0,
@@ -140,66 +149,79 @@ export async function getBillingTypeRecommendations(
     }
 
     const currentUserId = userId || session.user.id;
-    
+
     // Get recent billing patterns (last 30 days)
     const recentDate = new Date();
     recentDate.setDate(recentDate.getDate() - 30);
-    
-    const recentAnalytics = await getBillingTypeAnalytics(recentDate, new Date(), currentUserId);
-    const allTimeAnalytics = await getBillingTypeAnalytics(undefined, undefined, currentUserId);
-    
+
+    const recentAnalytics = await getBillingTypeAnalytics(
+      recentDate,
+      new Date(),
+      currentUserId
+    );
+    const allTimeAnalytics = await getBillingTypeAnalytics(
+      undefined,
+      undefined,
+      currentUserId
+    );
+
     const recommendations: BillingTypeRecommendation[] = [];
-    
+
     // Recommendation 1: Most used type
-    const mostUsedType = allTimeAnalytics.reduce((prev, current) => 
+    const mostUsedType = allTimeAnalytics.reduce((prev, current) =>
       prev.count > current.count ? prev : current
     );
-    
+
     if (mostUsedType.count > 0) {
       recommendations.push({
         recommendedType: mostUsedType.billingType,
         reason: `Your most frequently used billing type (${mostUsedType.count} times, ${mostUsedType.percentage.toFixed(1)}% of all billing)`,
         confidence: Math.min(mostUsedType.percentage / 100, 0.9),
-        basedOn: 'usage-pattern'
+        basedOn: "usage-pattern",
       });
     }
-    
+
     // Recommendation 2: Recently active type
     const recentlyUsedType = recentAnalytics
-      .filter(type => type.count > 0)
-      .sort((a, b) => (b.lastUsed?.getTime() || 0) - (a.lastUsed?.getTime() || 0))[0];
-    
-    if (recentlyUsedType && recentlyUsedType.billingType !== mostUsedType.billingType) {
+      .filter((type) => type.count > 0)
+      .sort(
+        (a, b) => (b.lastUsed?.getTime() || 0) - (a.lastUsed?.getTime() || 0)
+      )[0];
+
+    if (
+      recentlyUsedType &&
+      recentlyUsedType.billingType !== mostUsedType.billingType
+    ) {
       recommendations.push({
         recommendedType: recentlyUsedType.billingType,
         reason: `Recently active - used ${recentlyUsedType.count} times in the last 30 days`,
         confidence: Math.min(recentlyUsedType.count / 10, 0.8),
-        basedOn: 'recent-activity'
+        basedOn: "recent-activity",
       });
     }
-    
+
     // Recommendation 3: Based on available data
     const [customerCount, customerOrderCount] = await Promise.all([
       prisma.customer.count(),
-      prisma.customerOrder.count({ where: { status: { not: 'CANCELLED' } } })
+      prisma.customerOrder.count({ where: { status: { not: "CANCELLED" } } }),
     ]);
-    
+
     if (customerOrderCount > customerCount * 0.5) {
       recommendations.push({
-        recommendedType: 'customer-order',
+        recommendedType: "customer-order",
         reason: `You have many active customer orders (${customerOrderCount}) - consider order-based billing`,
         confidence: 0.7,
-        basedOn: 'customer-data'
+        basedOn: "customer-data",
       });
     } else if (customerCount > 10) {
       recommendations.push({
-        recommendedType: 'direct-customer',
+        recommendedType: "direct-customer",
         reason: `You have a good customer database (${customerCount} customers) - direct billing might be efficient`,
         confidence: 0.6,
-        basedOn: 'customer-data'
+        basedOn: "customer-data",
       });
     }
-    
+
     return recommendations.slice(0, 3); // Return top 3 recommendations
   } catch (error) {
     console.error("Error generating billing type recommendations:", error);
@@ -277,15 +299,47 @@ export async function getComprehensiveBillingAnalytics(
     const recentActivity = await getRecentBillingActivity();
 
     // Get billing type analytics
-    const billingTypeBreakdown = await getBillingTypeAnalytics(startDate, endDate);
+    const billingTypeBreakdown = await getBillingTypeAnalytics(
+      startDate,
+      endDate
+    );
     const billingTypeRecommendations = await getBillingTypeRecommendations();
+
+    // Calculate computed fields for better analytics
+    const totalRevenueValue = totalRevenue._sum.totalAmount?.toNumber() || 0;
+    const paidAmountValue = paidStatements._sum.totalAmount?.toNumber() || 0;
+    const overdueAmountValue =
+      overdueStatements._sum.totalAmount?.toNumber() || 0;
+    const pendingAmountValue =
+      pendingStatements._sum.totalAmount?.toNumber() || 0;
+
+    // Calculate additional metrics
+    const outstandingAmount = overdueAmountValue + pendingAmountValue;
+    const activeCustomers = topCustomers.length;
+    const paymentSuccessRate =
+      totalCount > 0 ? (paidStatements._count / totalCount) * 100 : 0;
+    const averageInvoiceValue =
+      totalCount > 0 ? totalRevenueValue / totalCount : 0;
 
     return {
       totalBillingStatements: totalCount,
-      totalRevenue: totalRevenue._sum.totalAmount?.toNumber() || 0,
-      paidAmount: paidStatements._sum.totalAmount?.toNumber() || 0,
-      overdueAmount: overdueStatements._sum.totalAmount?.toNumber() || 0,
-      pendingAmount: pendingStatements._sum.totalAmount?.toNumber() || 0,
+      totalRevenue: totalRevenueValue,
+      paidAmount: paidAmountValue,
+      overdueAmount: overdueAmountValue,
+      pendingAmount: pendingAmountValue,
+
+      // Computed fields for compatibility
+      totalInvoices: totalCount,
+      outstandingAmount,
+      activeCustomers,
+      newCustomers: 0, // Would need time-based calculation
+      overdueCount: overdueStatements._count,
+      revenueGrowthPercent: 0, // Would need period comparison
+      invoiceGrowthPercent: 0, // Would need period comparison
+      paymentSuccessRate,
+      averageInvoiceValue,
+      averagePaymentTime: 30, // Default estimate
+
       monthlyRevenue,
       statusBreakdown,
       topCustomers,
@@ -476,13 +530,21 @@ export async function getCustomerBillingReport(
   startDate?: Date,
   endDate?: Date
 ): Promise<{
-  customer: any;
-  billingStatements: any[];
-  totalAmount: number;
-  paidAmount: number;
-  outstandingAmount: number;
-  overdueAmount: number;
-  monthlyBreakdown: MonthlyRevenue[];
+  success: boolean;
+  data?: {
+    customerId: string;
+    customerName: string;
+    totalBilled: number;
+    totalPaid: number;
+    totalOutstanding: number;
+    recentInvoices: Array<{
+      invoiceNumber: string;
+      invoiceDate: Date;
+      totalAmount: number;
+      status: string;
+    }>;
+  };
+  error?: string;
 }> {
   try {
     const session = await getServerSession(authOptions);
@@ -569,25 +631,131 @@ export async function getCustomerBillingReport(
       .filter((stmt) => stmt.status === "OVERDUE")
       .reduce((sum, stmt) => sum + stmt.totalAmount.toNumber(), 0);
 
-    // Get monthly breakdown
-    const monthlyBreakdown = await getCustomerMonthlyBreakdown(
-      customerId,
-      startDate,
-      endDate
-    );
+    // Get recent invoices from billing statements with sales invoices
+    const recentInvoices = await prisma.salesInvoice.findMany({
+      where: {
+        billingStatement: {
+          customerId: customerId,
+          ...dateFilter,
+        },
+      },
+      take: 5,
+      orderBy: { invoiceDate: "desc" },
+      select: {
+        invoiceNumber: true,
+        invoiceDate: true,
+        totalAmount: true,
+        status: true,
+      },
+    });
 
     return {
-      customer,
-      billingStatements,
-      totalAmount,
-      paidAmount,
-      outstandingAmount,
-      overdueAmount,
-      monthlyBreakdown,
+      success: true,
+      data: {
+        customerId,
+        customerName: customer.name,
+        totalBilled: totalAmount,
+        totalPaid: paidAmount,
+        totalOutstanding: outstandingAmount,
+        recentInvoices: recentInvoices.map((invoice) => ({
+          invoiceNumber: invoice.invoiceNumber,
+          invoiceDate: invoice.invoiceDate,
+          totalAmount: invoice.totalAmount.toNumber(),
+          status: invoice.status,
+        })),
+      },
     };
   } catch (error) {
     console.error("Error fetching customer billing report:", error);
-    throw new Error("Failed to fetch customer billing report");
+    return {
+      success: false,
+      error: "Failed to fetch customer billing report",
+    };
+  }
+}
+
+// ==============================================
+// MONTHLY BILLING REPORT
+// ==============================================
+
+export async function getMonthlyBillingReport(
+  month?: number,
+  year?: number
+): Promise<{
+  totalRevenue: number;
+  totalInvoices: number;
+  paidInvoices: number;
+  averageInvoiceValue: number;
+  topCustomers?: Array<{
+    customerName: string;
+    invoiceCount: number;
+    totalRevenue: number;
+  }>;
+}> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new Error("Unauthorized");
+    }
+
+    // Default to current month if not specified
+    const targetMonth = month ?? new Date().getMonth();
+    const targetYear = year ?? new Date().getFullYear();
+
+    const startDate = new Date(targetYear, targetMonth, 1);
+    const endDate = new Date(targetYear, targetMonth + 1, 0);
+
+    const dateFilter = {
+      billingDate: {
+        gte: startDate,
+        lte: endDate,
+      },
+    };
+
+    // Get basic metrics
+    const [totalRevenue, totalInvoices, paidInvoices] = await Promise.all([
+      prisma.billingStatement.aggregate({
+        where: { ...dateFilter, status: "PAID" },
+        _sum: { totalAmount: true },
+      }),
+      prisma.billingStatement.count({
+        where: dateFilter,
+      }),
+      prisma.billingStatement.count({
+        where: { ...dateFilter, status: "PAID" },
+      }),
+    ]);
+
+    // Get top customers for the month
+    const topCustomersData = await prisma.billingStatement.groupBy({
+      by: ["customerId", "customerName"],
+      where: dateFilter,
+      _count: true,
+      _sum: { totalAmount: true },
+      orderBy: {
+        _sum: { totalAmount: "desc" },
+      },
+      take: 5,
+    });
+
+    const totalRevenueValue = totalRevenue._sum.totalAmount?.toNumber() || 0;
+    const averageInvoiceValue =
+      totalInvoices > 0 ? totalRevenueValue / totalInvoices : 0;
+
+    return {
+      totalRevenue: totalRevenueValue,
+      totalInvoices,
+      paidInvoices,
+      averageInvoiceValue,
+      topCustomers: topCustomersData.map((customer) => ({
+        customerName: customer.customerName || "Unknown Customer",
+        invoiceCount: customer._count,
+        totalRevenue: customer._sum.totalAmount?.toNumber() || 0,
+      })),
+    };
+  } catch (error) {
+    console.error("Error fetching monthly billing report:", error);
+    throw new Error("Failed to fetch monthly billing report");
   }
 }
 
@@ -657,33 +825,47 @@ export async function getOverduePaymentsReport(): Promise<{
       { range: "90+ days", count: 0, amount: 0 },
     ];
 
-    overdueStatements.forEach((stmt) => {
-      if (!stmt.dueDate) return;
-
-      const daysPastDue = Math.floor(
-        (now.getTime() - stmt.dueDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
+    // Convert statements to the format expected by the page
+    const formattedStatements = overdueStatements.map((stmt) => {
+      const daysPastDue = stmt.dueDate
+        ? Math.floor(
+            (now.getTime() - stmt.dueDate.getTime()) / (1000 * 60 * 60 * 24)
+          )
+        : 0;
       const amount = stmt.totalAmount.toNumber();
 
-      if (daysPastDue <= 30) {
-        agingAnalysis[0].count++;
-        agingAnalysis[0].amount += amount;
-      } else if (daysPastDue <= 60) {
-        agingAnalysis[1].count++;
-        agingAnalysis[1].amount += amount;
-      } else if (daysPastDue <= 90) {
-        agingAnalysis[2].count++;
-        agingAnalysis[2].amount += amount;
-      } else {
-        agingAnalysis[3].count++;
-        agingAnalysis[3].amount += amount;
+      // Update aging analysis
+      if (stmt.dueDate) {
+        if (daysPastDue <= 30) {
+          agingAnalysis[0].count++;
+          agingAnalysis[0].amount += amount;
+        } else if (daysPastDue <= 60) {
+          agingAnalysis[1].count++;
+          agingAnalysis[1].amount += amount;
+        } else if (daysPastDue <= 90) {
+          agingAnalysis[2].count++;
+          agingAnalysis[2].amount += amount;
+        } else {
+          agingAnalysis[3].count++;
+          agingAnalysis[3].amount += amount;
+        }
       }
+
+      return {
+        statementNumber: stmt.statementNumber,
+        customerName:
+          stmt.customerName || stmt.customer?.name || "Unknown Customer",
+        customerEmail: stmt.customer?.email || "",
+        dueDate: stmt.dueDate || new Date(),
+        outstandingAmount: amount,
+        daysOverdue: daysPastDue,
+      };
     });
 
     return {
       totalOverdue,
       totalAmount,
-      statements: overdueStatements,
+      statements: formattedStatements,
       agingAnalysis,
     };
   } catch (error) {
@@ -1160,7 +1342,7 @@ async function getAdvancedDeliveryMethodBreakdown(
         }
       : {};
 
-  // Since we simplified the schema and removed deliveryMethod field, 
+  // Since we simplified the schema and removed deliveryMethod field,
   // we'll provide a single "Standard Delivery" method (Requirements 3.1, 3.2)
   const totalDeliveries = await prisma.deliveryReceipt.count({
     where: dateFilter,
@@ -1173,7 +1355,8 @@ async function getAdvancedDeliveryMethodBreakdown(
     },
   });
 
-  const successRate = totalDeliveries > 0 ? (successfulDeliveries / totalDeliveries) * 100 : 0;
+  const successRate =
+    totalDeliveries > 0 ? (successfulDeliveries / totalDeliveries) * 100 : 0;
 
   return [
     {
@@ -1271,9 +1454,10 @@ async function getRecentDeliveryActivity(
     receiptNumber: receipt.receiptNumber,
     deliveryDate: receipt.deliveryDate,
     status: receipt.deliveryStatus as DeliveryStatus,
-    customerName: receipt.billingStatement?.customerName || 
-                  receipt.billingStatement?.customer?.name || 
-                  "Unknown",
+    customerName:
+      receipt.billingStatement?.customerName ||
+      receipt.billingStatement?.customer?.name ||
+      "Unknown",
     deliveryMethod: "Standard", // Simplified delivery method since we removed complex tracking
   }));
 }

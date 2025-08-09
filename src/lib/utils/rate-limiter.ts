@@ -1,246 +1,274 @@
-/**
- * Rate limiting utility for API endpoints
- * In production, this should be replaced with Redis-based storage
- */
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-interface RateLimitEntry {
-  count: number
-  resetTime: number
-  violations: number
-  lastViolation?: number
+// Define which roles belong to each portal
+const PORTAL_ROLES = {
+  ADMIN_PORTAL: ["ADMIN"],
+  WORKER_PORTAL: ["WORKER"],
+  INSPECTOR_PORTAL: ["INSPECTOR"],
+  DELIVERY_PORTAL: ["DELIVERY"],
+};
+
+// Portal path mappings
+const PORTAL_PATHS = {
+  ADMIN_PORTAL: "/admin",
+  WORKER_PORTAL: "/worker",
+  INSPECTOR_PORTAL: "/inspector",
+  DELIVERY_PORTAL: "/delivery",
+};
+
+// Rate limiting configuration (more reasonable limits)
+const RATE_LIMIT_CONFIG = {
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  maxRequests: 1000, // Increased general request limit for normal usage
+  loginMaxRequests: 50, // Increased login page visits (for legitimate portal switching)
+};
+
+// Simple in-memory rate limiting store (use Redis in production)
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+
+// Clear rate limits for an IP (useful for legitimate users after logout)
+function clearRateLimit(ip: string) {
+  rateLimitStore.delete(ip);
 }
 
-interface RateLimitConfig {
-  windowMs: number // Time window in milliseconds
-  maxRequests: number // Maximum requests per window
-  skipSuccessfulRequests?: boolean // Don't count successful requests
-  skipFailedRequests?: boolean // Don't count failed requests
-  keyGenerator?: (ip: string, path?: string) => string // Custom key generator
+// Rate limiting function
+function checkRateLimit(
+  ip: string,
+  maxRequests: number = RATE_LIMIT_CONFIG.maxRequests
+): boolean {
+  const now = Date.now();
+  const windowMs = RATE_LIMIT_CONFIG.windowMs;
+
+  const existing = rateLimitStore.get(ip);
+
+  if (!existing || now > existing.resetTime) {
+    rateLimitStore.set(ip, { count: 1, resetTime: now + windowMs });
+    return true;
+  }
+
+  if (existing.count >= maxRequests) {
+    return false;
+  }
+
+  existing.count++;
+  return true;
 }
 
-interface RateLimitResult {
-  allowed: boolean
-  remaining: number
-  resetTime: number
-  retryAfter?: number
+// Security headers configuration
+function addSecurityHeaders(response: NextResponse): NextResponse {
+  // Prevent clickjacking
+  response.headers.set("X-Frame-Options", "DENY");
+
+  // Prevent MIME type sniffing
+  response.headers.set("X-Content-Type-Options", "nosniff");
+
+  // Enable XSS protection
+  response.headers.set("X-XSS-Protection", "1; mode=block");
+
+  // Referrer policy
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  // Content Security Policy (basic)
+  response.headers.set(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;"
+  );
+
+  // Strict Transport Security (if HTTPS)
+  if (process.env.NODE_ENV === "production") {
+    response.headers.set(
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains"
+    );
+  }
+
+  return response;
 }
 
-// In-memory storage (replace with Redis in production)
-const rateLimitStore = new Map<string, RateLimitEntry>()
+// Validate role access to specific paths
+function hasRoleAccess(userRole: string, pathname: string): boolean {
+  // Extract portal from pathname
+  const portalMatch = pathname.match(/^\/(admin|worker|inspector|delivery)/);
+  if (!portalMatch) return true; // Allow access to non-portal routes
 
-// Default configuration
-const DEFAULT_CONFIG: RateLimitConfig = {
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 10,
-  skipSuccessfulRequests: false,
-  skipFailedRequests: false,
-  keyGenerator: (ip: string, path?: string) => `rate_limit:${ip}${path ? `:${path}` : ''}`
+  const portal = portalMatch[1].toUpperCase() + "_PORTAL";
+  const allowedRoles = PORTAL_ROLES[portal as keyof typeof PORTAL_ROLES] || [];
+
+  return allowedRoles.includes(userRole);
 }
 
-/**
- * Check if a request should be rate limited
- */
-export function checkRateLimit(
-  ip: string, 
-  config: Partial<RateLimitConfig> = {},
-  path?: string
-): RateLimitResult {
-  const finalConfig = { ...DEFAULT_CONFIG, ...config }
-  const key = finalConfig.keyGenerator!(ip, path)
-  const now = Date.now()
-  
-  let entry = rateLimitStore.get(key)
-  
-  // Initialize or reset if window expired
-  if (!entry || now > entry.resetTime) {
-    entry = {
-      count: 1,
-      resetTime: now + finalConfig.windowMs,
-      violations: entry?.violations || 0,
-      lastViolation: entry?.lastViolation
+export default async function middleware(req: NextRequest) {
+  const pathname = req.nextUrl.pathname;
+  const ip =
+    req.headers.get("x-forwarded-for") ||
+    req.headers.get("x-real-ip") ||
+    req.headers.get("cf-connecting-ip") ||
+    "unknown";
+
+  // Skip API routes and static files
+  if (
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/_next/") ||
+    pathname.includes(".") ||
+    pathname.startsWith("/favicon")
+  ) {
+    return NextResponse.next();
+  }
+
+  // Rate limiting check (more lenient in development)
+  const isLoginPage = pathname.includes("/login");
+  const maxRequests = isLoginPage
+    ? RATE_LIMIT_CONFIG.loginMaxRequests
+    : RATE_LIMIT_CONFIG.maxRequests;
+
+  // Skip rate limiting in development for better developer experience
+  if (process.env.NODE_ENV === "development") {
+    // Only check rate limiting for actual login attempts (not just visiting login pages)
+    if (req.method === "POST" && isLoginPage) {
+      if (!checkRateLimit(ip, 10)) {
+        // 10 actual login attempts per 15 minutes
+        console.warn(`Login rate limit exceeded for IP: ${ip}`);
+        return new NextResponse("Too Many Login Attempts", { status: 429 });
+      }
     }
-    rateLimitStore.set(key, entry)
-    
-    return {
-      allowed: true,
-      remaining: finalConfig.maxRequests - 1,
-      resetTime: entry.resetTime
-    }
-  }
-  
-  // Check if limit exceeded
-  if (entry.count >= finalConfig.maxRequests) {
-    // Record violation
-    entry.violations++
-    entry.lastViolation = now
-    
-    const retryAfter = Math.ceil((entry.resetTime - now) / 1000)
-    
-    return {
-      allowed: false,
-      remaining: 0,
-      resetTime: entry.resetTime,
-      retryAfter
-    }
-  }
-  
-  // Increment count
-  entry.count++
-  
-  return {
-    allowed: true,
-    remaining: finalConfig.maxRequests - entry.count,
-    resetTime: entry.resetTime
-  }
-}
-
-/**
- * Log rate limit violations for monitoring
- */
-export function logRateLimitViolation(
-  ip: string, 
-  path: string, 
-  userAgent?: string,
-  additionalInfo?: Record<string, any>
-): void {
-  const timestamp = new Date().toISOString()
-  const logEntry = {
-    timestamp,
-    ip,
-    path,
-    userAgent,
-    type: 'RATE_LIMIT_VIOLATION',
-    ...additionalInfo
-  }
-  
-  // In production, send this to your logging service
-  console.warn('[RATE_LIMIT_VIOLATION]', JSON.stringify(logEntry))
-}
-
-/**
- * Get rate limit statistics for an IP
- */
-export function getRateLimitStats(ip: string, path?: string): {
-  current: number
-  violations: number
-  lastViolation?: number
-  resetTime?: number
-} | null {
-  const key = DEFAULT_CONFIG.keyGenerator!(ip, path)
-  const entry = rateLimitStore.get(key)
-  
-  if (!entry) {
-    return null
-  }
-  
-  return {
-    current: entry.count,
-    violations: entry.violations,
-    lastViolation: entry.lastViolation,
-    resetTime: entry.resetTime
-  }
-}
-
-/**
- * Clean up expired entries (should be called periodically)
- */
-export function cleanupExpiredEntries(): number {
-  const now = Date.now()
-  let cleaned = 0
-  
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (now > entry.resetTime) {
-      rateLimitStore.delete(key)
-      cleaned++
+    // Skip general rate limiting in development
+  } else {
+    // Apply full rate limiting in production
+    if (!checkRateLimit(ip, maxRequests)) {
+      console.warn(`Rate limit exceeded for IP: ${ip} on path: ${pathname}`);
+      return new NextResponse("Too Many Requests", { status: 429 });
     }
   }
-  
-  return cleaned
-}
 
-/**
- * Rate limiting configurations for different endpoints
- */
-export const RATE_LIMIT_CONFIGS = {
-  // Shared documents - more restrictive
-  SHARED_DOCUMENTS: {
-    windowMs: 60 * 1000, // 1 minute
-    maxRequests: 10,
-    keyGenerator: (ip: string) => `shared_docs:${ip}`
-  },
-  
-  // Share link generation - very restrictive
-  SHARE_LINK_GENERATION: {
-    windowMs: 60 * 1000, // 1 minute
-    maxRequests: 5,
-    keyGenerator: (ip: string) => `share_gen:${ip}`
-  },
-  
-  // General API - less restrictive
-  GENERAL_API: {
-    windowMs: 60 * 1000, // 1 minute
-    maxRequests: 100,
-    keyGenerator: (ip: string, path?: string) => `api:${ip}${path ? `:${path.split('/')[1]}` : ''}`
+  // Create response
+  let response = NextResponse.next();
+
+  // Add security headers to all responses
+  response = addSecurityHeaders(response);
+
+  // Public routes (allow access without authentication)
+  // Include shareable document routes as public (handle both singular and plural forms)
+  const isShareableRoute = pathname.match(
+    /^\/(billing-statements?|sales-invoices?|delivery-receipts?)\/share\/[^\/]+$/
+  );
+
+  // Debug logging for shareable routes
+  if (pathname.includes("/share/")) {
+    console.log(`🔍 Checking shareable route: ${pathname}`);
+    console.log(`🔍 Is shareable route: ${!!isShareableRoute}`);
+    console.log(
+      `🔍 Regex test result: ${/^\/(billing-statements?|sales-invoices?|delivery-receipts?)\/share\/[^\/]+$/.test(pathname)}`
+    );
   }
-} as const
 
-/**
- * Middleware helper for Next.js API routes
- */
-export function createRateLimitMiddleware(config: Partial<RateLimitConfig> = {}) {
-  return (req: Request): RateLimitResult => {
-    // Extract IP address
-    const forwarded = req.headers.get('x-forwarded-for')
-    const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown'
-    
-    // Extract path for logging
-    const url = new URL(req.url)
-    const path = url.pathname
-    
-    return checkRateLimit(ip, config, path)
-  }
-}
+  if (
+    pathname === "/" ||
+    pathname === "/install-app" ||
+    pathname === "/offline" ||
+    pathname.includes("/login") ||
+    isShareableRoute
+  ) {
+    try {
+      // Check if user is already authenticated
+      const token = await getToken({
+        req,
+        secret: process.env.NEXTAUTH_SECRET,
+      });
 
-/**
- * Initialize periodic cleanup of expired rate limit entries
- * Call this once when your application starts
- */
-export function initRateLimitCleanup(intervalMs: number = 5 * 60 * 1000): NodeJS.Timeout {
-  return setInterval(() => {
-    const cleaned = cleanupExpiredEntries()
-    if (cleaned > 0) {
-      console.log(`[RATE_LIMIT_CLEANUP] Cleaned up ${cleaned} expired entries`)
+      // If authenticated and trying to access login, redirect to appropriate dashboard
+      if (token && isLoginPage) {
+        const portalMatch = pathname.match(
+          /^\/(admin|worker|inspector|delivery)/
+        );
+        const portal = portalMatch ? portalMatch[1] : "admin";
+
+        // Validate role access before redirecting
+        if (hasRoleAccess(token.role as string, `/${portal}/dashboard`)) {
+          return NextResponse.redirect(
+            new URL(`/${portal}/dashboard`, req.url)
+          );
+        } else {
+          // If user doesn't have access to this portal, redirect to their appropriate portal
+          const userRole = (token.role as string).toLowerCase();
+          return NextResponse.redirect(
+            new URL(`/${userRole}/dashboard`, req.url)
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error checking authentication token:", error);
+      // Continue to allow access to public routes even if token check fails
     }
-  }, intervalMs)
+
+    return response;
+  }
+
+  // Protected routes - require authentication and proper role access
+  try {
+    const token = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
+
+    // No valid session - redirect to appropriate login
+    if (!token) {
+      const portalMatch = pathname.match(
+        /^\/(admin|worker|inspector|delivery)/
+      );
+      const portal = portalMatch ? portalMatch[1] : "admin";
+
+      console.info(
+        `Unauthenticated access attempt to ${pathname}, redirecting to ${portal}/login`
+      );
+      return NextResponse.redirect(new URL(`/${portal}/login`, req.url));
+    }
+
+    // Check role-based access
+    if (!hasRoleAccess(token.role as string, pathname)) {
+      console.warn(
+        `Unauthorized access attempt by ${token.email} (${token.role}) to ${pathname}`
+      );
+
+      // Redirect to appropriate dashboard based on user's actual role
+      const userRole = (token.role as string).toLowerCase();
+      return NextResponse.redirect(new URL(`/${userRole}/dashboard`, req.url));
+    }
+
+    // Add user context to headers for server components
+    response.headers.set("x-user-id", token.id as string);
+    response.headers.set("x-user-role", token.role as string);
+    response.headers.set("x-user-email", (token.email as string) || "");
+
+    // Log successful access for audit purposes
+    if (process.env.NODE_ENV === "development") {
+      console.info(
+        `✅ Authorized access: ${token.email} (${token.role}) → ${pathname}`
+      );
+    }
+  } catch (error) {
+    console.error("Middleware authentication error:", error);
+
+    // On token validation error, redirect to login
+    const portalMatch = pathname.match(/^\/(admin|worker|inspector|delivery)/);
+    const portal = portalMatch ? portalMatch[1] : "admin";
+    return NextResponse.redirect(new URL(`/${portal}/login`, req.url));
+  }
+
+  return response;
 }
 
-/**
- * Get all rate limit statistics (for monitoring/debugging)
- */
-export function getAllRateLimitStats(): Array<{
-  key: string
-  current: number
-  violations: number
-  lastViolation?: number
-  resetTime: number
-}> {
-  const stats: Array<{
-    key: string
-    current: number
-    violations: number
-    lastViolation?: number
-    resetTime: number
-  }> = []
-  
-  for (const [key, entry] of rateLimitStore.entries()) {
-    stats.push({
-      key,
-      current: entry.count,
-      violations: entry.violations,
-      lastViolation: entry.lastViolation,
-      resetTime: entry.resetTime
-    })
-  }
-  
-  return stats
-}
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder files
+     */
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*|public).*)",
+  ],
+};

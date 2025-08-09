@@ -75,31 +75,12 @@ import {
   getAdvancedSalesReport,
   getCustomerBillingReport,
   getOverduePaymentsReport,
+  getMonthlyBillingReport,
 } from "@/lib/actions/billing-reports";
 import { getAllCustomers } from "@/lib/actions/customers";
 
-// Helper function to convert Decimal values to numbers
-function convertDecimalsToNumbers(obj: any): any {
-  if (obj === null || obj === undefined) return obj;
-  
-  if (typeof obj === 'object' && obj !== null && 'toNumber' in obj) {
-    return obj.toNumber();
-  }
-  
-  if (Array.isArray(obj)) {
-    return obj.map(convertDecimalsToNumbers);
-  }
-  
-  if (typeof obj === 'object' && obj !== null) {
-    const result: any = {};
-    for (const [key, value] of Object.entries(obj)) {
-      result[key] = convertDecimalsToNumbers(value);
-    }
-    return result;
-  }
-  
-  return obj;
-}
+// Server actions already convert Decimal values to numbers
+// No need for manual conversion
 
 export default function BillingReportsPage() {
   // States
@@ -137,25 +118,26 @@ export default function BillingReportsPage() {
         analyticsResult,
         overdueResult,
         customersResult,
+        monthlyResult,
       ] = await Promise.all([
         getComprehensiveBillingAnalytics(),
         getOverduePaymentsReport(),
         getAllCustomers(),
+        getMonthlyBillingReport(),
       ]);
 
-      // Convert Decimal values to numbers to prevent serialization errors
-      const convertedAnalytics = convertDecimalsToNumbers(analyticsResult);
-      const convertedOverdue = convertDecimalsToNumbers(overdueResult);
-      const convertedCustomers = convertDecimalsToNumbers(customersResult);
-
-      if (convertedAnalytics) {
-        setSalesAnalytics(convertedAnalytics);
+      // No need for decimal conversion - server actions handle this
+      if (analyticsResult) {
+        setSalesAnalytics(analyticsResult);
       }
-      if (convertedOverdue?.statements) {
-        setOverdueReport(convertedOverdue.statements);
+      if (overdueResult?.statements) {
+        setOverdueReport(overdueResult.statements);
       }
-      if (convertedCustomers) {
-        setCustomers(convertedCustomers);
+      if (customersResult) {
+        setCustomers(customersResult);
+      }
+      if (monthlyResult) {
+        setMonthlyReport(monthlyResult);
       }
     } catch (error) {
       console.error("Error loading report data:", error);
@@ -179,10 +161,10 @@ export default function BillingReportsPage() {
     
     try {
       const result = await getCustomerBillingReport(customerId);
-      // Convert Decimal values to numbers to prevent serialization errors
-      const convertedResult = convertDecimalsToNumbers(result);
-      if (convertedResult?.success && convertedResult.data) {
-        setCustomerReport([convertedResult.data]);
+      if (result?.success && result.data) {
+        setCustomerReport([result.data]);
+      } else if (result?.error) {
+        toast.error(result.error);
       }
     } catch (error) {
       console.error("Error loading customer report:", error);
