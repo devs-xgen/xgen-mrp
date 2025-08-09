@@ -39,13 +39,12 @@ export default async function ProductsPage() {
     ]);
 
     return (
-      <div className="flex flex-col gap-6 p-8">
-        <div className="flex items-center justify-between">
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+        {/* Page Header - Following Sales Invoices Pattern */}
+        <div className="flex items-center justify-between space-y-2">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Products Management
-            </h1>
-            <p className="text-muted-foreground">
+            <h2 className="text-3xl font-bold tracking-tight">Products Management</h2>
+            <p className="text-muted-foreground mt-1">
               Manage your product inventory and variants
             </p>
           </div>
@@ -72,22 +71,40 @@ export default async function ProductsPage() {
   } catch (error) {
     console.error("Error loading products page:", error);
     return (
-      <div className="flex flex-col items-center justify-center h-full p-8">
-        <h1 className="text-2xl font-bold text-red-500 mb-4">
-          Error Loading Products
-        </h1>
-        <p className="text-gray-600">
-          There was an error loading the products management page. Please try
-          again later.
-        </p>
-        <Button
-          className="mt-4"
-          onClick={() => {
-            window.location.reload();
-          }}
-        >
-          Retry
-        </Button>
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+        {/* Error Page Header */}
+        <div className="flex items-center justify-between space-y-2">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-destructive">
+              Error Loading Products
+            </h2>
+            <p className="text-muted-foreground mt-1">
+              Unable to load the products management page
+            </p>
+          </div>
+        </div>
+
+        {/* Error Content */}
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="text-center max-w-md">
+            <div className="w-16 h-16 mx-auto mb-4 bg-destructive/10 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Something went wrong</h3>
+            <p className="text-muted-foreground mb-6">
+              There was an error loading the products management page. Please try again later.
+            </p>
+            <Button
+              onClick={() => {
+                window.location.reload();
+              }}
+            >
+              Try Again
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }

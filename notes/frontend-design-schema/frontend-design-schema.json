@@ -1,13 +1,14 @@
 {
   "designSystem": {
-    "name": "XGen MRP Design System",
-    "version": "2.0.0",
-    "description": "A comprehensive design system for the XGen MRP application with strict component rules, table specifications, and consistency guidelines to prevent unnecessary component creation",
+    "name": "XGen MRP Admin Design System",
+    "version": "4.0.0", 
+    "description": "Design system based on actual sales-invoices patterns for consistent admin interface",
+    "referenceImplementation": "src/app/admin/(protected)/billing/sales-invoices",
     "philosophy": {
-      "consistency": "Use existing components and patterns. Never create new components when existing ones can be adapted.",
-      "simplicity": "Keep interfaces clean, direct, and focused on data presentation.",
-      "reusability": "All components must be reusable across different modules and contexts.",
-      "standardization": "Follow established patterns for all UI elements to maintain visual and functional consistency."
+      "consistency": "All admin pages follow the exact same layout patterns as sales-invoices",
+      "simplicity": "Clean, minimal interfaces with focused content presentation", 
+      "basePatterns": "Extract design patterns from working implementations, not theoretical designs",
+      "manufacturing": "Large touch targets and clear hierarchy for industrial environments"
     },
     "colorTheme": {
       "philosophy": "Enhanced color system using Tailwind CSS custom properties to automatically apply subtle backgrounds throughout the application. Standard classes like bg-white now use #F2F3F4 instead of pure white.",
@@ -146,6 +147,46 @@
       "md": "0.375rem",
       "lg": "0.5rem",
       "full": "9999px"
+    }
+  },
+  "actualPatterns": {
+    "description": "Extracted from sales-invoices pages - these are the ACTUAL patterns to follow",
+    "listPages": {
+      "container": "flex-1 space-y-4 p-4 md:p-8 pt-6",
+      "header": {
+        "structure": "flex items-center justify-between space-y-2",
+        "title": "text-3xl font-bold tracking-tight",
+        "element": "h2"
+      },
+      "spacing": "space-y-4",
+      "components": [
+        "DashboardComponent",
+        "ClientComponent (with DataTable)"
+      ]
+    },
+    "formPages": {
+      "container": "flex flex-col gap-6 p-8 bg-background min-h-screen",
+      "header": {
+        "structure": "flex items-center justify-between",
+        "backButton": "Button variant='ghost' size='sm' with ArrowLeft icon",
+        "title": "text-3xl font-bold tracking-tight",
+        "element": "h1",
+        "actions": "flex items-center gap-2"
+      },
+      "layout": "grid grid-cols-1 lg:grid-cols-3 gap-6",
+      "mainContent": "lg:col-span-2 space-y-6",
+      "sidebar": "space-y-6"
+    },
+    "cards": {
+      "standard": "bg-card border rounded-lg",
+      "header": "pb-4",
+      "title": "text-lg",
+      "content": "default CardContent padding"
+    },
+    "responsive": {
+      "breakpoint": "md (768px)",
+      "padding": "p-4 md:p-8 pt-6",
+      "gridBreakpoint": "lg (1024px)"
     }
   },
   "componentRules": {
