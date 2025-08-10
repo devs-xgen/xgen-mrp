@@ -804,8 +804,112 @@ export async function getInventoryItemsForRequest() {
   }
 }
 
+
 // Get inventory issue reports for worker
 export async function getInventoryIssueReports(
+  status?: string[],
+  page: number = 1,
+  pageSize: number = 10
+): Promise<{
+  issues: InventoryIssueReport[];
+  pagination: InventoryPagination;
+}> {
+
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    // Get accessible location IDs for this worker
+    const accessibleLocationIds = await getWorkerLocationIds(session.user.id);
+
+    if (accessibleLocationIds.length === 0) {
+      return {
+        issues: [],
+        pagination: {
+          page,
+          pageSize,
+          totalItems: 0,
+          totalPages: 0
+        }
+      };
+    }
+
+    // Build query
+    const where: any = {
+      inventoryItem: {
+        locationId: { in: accessibleLocationIds }
+      }
+    };
+    if (status && status.length > 0) {
+      where.status = { in: status };
+    }
+
+    // Calculate pagination
+    const skip = (page - 1) * pageSize;
+    const totalItems = await prisma.inventoryIssueReport.count({ where });
+    const totalPages = Math.ceil(totalItems / pageSize);
+
+    // Get issue reports
+    const issues = await prisma.inventoryIssueReport.findMany({
+      where,
+      orderBy: [
+        { status: 'asc' },
+        { severity: 'desc' },
+        { reportDate: 'desc' }
+      ],
+      skip,
+      take: pageSize,
+      include: {
+        inventoryItem: {
+          select: {
+            name: true,
+            sku: true,
+            unit: true,
+            currentStock: true,
+            minimumStockLevel: true,
+            criticalStockLevel: true,
+            location: {
+              select: { name: true }
+            }
+          }
+        },
+        reportedBy: {
+          select: { email: true }
+        }
+      }
+    });
+    // Map to our type
+    const mappedIssues: InventoryIssueReport[] = issues.map(issue => ({
+      id: issue.id,
+      inventoryItemId: issue.inventoryItemId,
+      inventoryItemName: issue.inventoryItem.name,
+      reportType: issue.reportType as any,
+      reportDate: issue.reportDate,
+      reportedById: issue.reportedById,
+      reportedByName: issue.reportedBy.email || "Unknown User",
+      description: issue.description,
+      severity: issue.severity as any,
+      status: issue.status as any,
+      resolvedDate: issue.resolvedDate || undefined,
+      resolution: issue.resolution || undefined
+    }));
+    return {
+      issues: mappedIssues,
+      pagination: {
+        page,
+        pageSize,
+        totalItems,
+        totalPages
+      }
+    };
+  } catch (error) {
+    console.error("Error fetching inventory issue reports:", error);
+    throw new Error("Failed to fetch inventory issue reports");
+  }
+}
+
+//GetAllInventoryIssueReports
+export async function getAllInventoryIssueReports(
 status?: string[],
   page: number = 1,
   pageSize: number = 10
