@@ -806,7 +806,7 @@ export async function getInventoryItemsForRequest() {
 
 // Get inventory issue reports for worker
 export async function getInventoryIssueReports(
-  status?: string[],
+status?: string[],
   page: number = 1,
   pageSize: number = 10
 ): Promise<{
@@ -814,13 +814,39 @@ export async function getInventoryIssueReports(
   pagination: InventoryPagination;
 }> {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error("Unauthorized");
+    console.log("Starting getAllInventoryIssueReportsForInspector function...");
 
-    // Get accessible location IDs for this worker
-    const accessibleLocationIds = await getWorkerLocationIds(session.user.id);
+    // 1. Check for an authenticated session
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      console.error("Error: Unauthorized access. No user session found.");
+      throw new Error("Unauthorized");
+    }
+    console.log(`Inspector session found for user ID: ${session.user.id}`);
+
+    // NOTE: This version bypasses the location-based filtering entirely.
+    // The inspector is assumed to have global access to all reports.
+
+    // 2. Build the database query
+    // The 'where' clause is now simplified to only filter by status, if provided.
+    const where: any = {};
+
+    if (status && status.length > 0) {
+      where.status = { in: status };
+    }
+
+    console.log("Prisma query 'where' clause:", JSON.stringify(where, null, 2));
+
+    // 3. Calculate pagination and get total count
+    const skip = (page - 1) * pageSize;
+    const totalItems = await prisma.inventoryIssueReport.count({ where });
+    const totalPages = Math.ceil(totalItems / pageSize);
+
+    console.log(`Total items matching query: ${totalItems}`);
+    console.log(`Fetching items from ${skip} to ${skip + pageSize}`);
     
-    if (accessibleLocationIds.length === 0) {
+    if (totalItems === 0) {
+      console.log("No inventory issue reports found matching the criteria.");
       return {
         issues: [],
         pagination: {
@@ -832,23 +858,7 @@ export async function getInventoryIssueReports(
       };
     }
 
-    // Build query
-    const where: any = {
-      inventoryItem: {
-        locationId: { in: accessibleLocationIds }
-      }
-    };
-
-    if (status && status.length > 0) {
-      where.status = { in: status };
-    }
-
-    // Calculate pagination
-    const skip = (page - 1) * pageSize;
-    const totalItems = await prisma.inventoryIssueReport.count({ where });
-    const totalPages = Math.ceil(totalItems / pageSize);
-
-    // Get issue reports
+    // 4. Get all issue reports
     const issues = await prisma.inventoryIssueReport.findMany({
       where,
       orderBy: [
@@ -878,7 +888,9 @@ export async function getInventoryIssueReports(
       }
     });
 
-    // Map to our type
+    console.log(`Successfully fetched ${issues.length} total inventory issues.`);
+
+    // 5. Map to the required type
     const mappedIssues: InventoryIssueReport[] = issues.map(issue => ({
       id: issue.id,
       inventoryItemId: issue.inventoryItemId,
@@ -903,12 +915,14 @@ export async function getInventoryIssueReports(
         totalPages
       }
     };
-  } catch (error) {
-    console.error("Error fetching inventory issue reports:", error);
-    throw new Error("Failed to fetch inventory issue reports");
+  } catch (error: any) {
+    console.error("Caught an error fetching all inventory issue reports:", error);
+    if (error.message === "Unauthorized") {
+      throw new Error("Failed to authenticate user. Please log in again.");
+    }
+    throw new Error(`Failed to fetch all inventory issue reports: ${error.message}`);
   }
 }
-
 // Export inventory data as CSV
 export async function exportInventoryData(): Promise<{
   csvContent: string;
