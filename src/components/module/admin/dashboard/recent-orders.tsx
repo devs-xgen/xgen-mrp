@@ -23,6 +23,7 @@ import { getRecentOrders } from "@/lib/actions/dashboard";
 import { RecentOrder } from "@/types/admin/dashboard";
 import { format } from "date-fns";
 import { ShoppingBag } from "lucide-react";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 export function RecentOrders() {
   const [orders, setOrders] = useState<RecentOrder[]>([]);
@@ -104,7 +105,7 @@ export function RecentOrders() {
                     {format(new Date(order.date), "MMM d, yyyy")}
                   </TableCell>
                   <TableCell className="text-right">
-                    ${parseFloat(order.amount.toString()).toFixed(2)}
+                    {formatCurrencyPHP(parseFloat(order.amount.toString()))}
                   </TableCell>
                   <TableCell className="text-right">
                     {getStatusBadge(order.status)}

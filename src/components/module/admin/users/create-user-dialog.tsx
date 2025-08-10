@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -11,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -35,6 +37,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { PlusCircle } from "lucide-react";
 import {
   getAvailableInspectors,
 } from "@/lib/actions/user-inspector";
@@ -87,19 +90,17 @@ const formSchema = z.object({
 });
 
 interface CreateUserDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
 }
 
 export function CreateUserDialog({
-  open,
-  onOpenChange,
   onSuccess,
 }: CreateUserDialogProps) {
+  const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [availableInspectors, setAvailableInspectors] = useState<any[]>([]);
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -185,9 +186,12 @@ export function CreateUserDialog({
 
       // Reset form and close dialog
       form.reset();
-      onOpenChange(false);
+      setOpen(false);
       
-      // Call onSuccess callback
+      // Refresh the page to show updated data
+      router.refresh();
+      
+      // Call onSuccess callback if provided
       if (onSuccess) {
         onSuccess();
       }
@@ -216,7 +220,13 @@ export function CreateUserDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add User
+        </Button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New User</DialogTitle>
@@ -603,7 +613,7 @@ export function CreateUserDialog({
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={() => setOpen(false)}
                 type="button"
                 disabled={isLoading}
               >

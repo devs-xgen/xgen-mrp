@@ -9,6 +9,7 @@ import { DataTableRowActions } from "./data-table-row-actions";
 import { formatDate } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { ProgressIndicator } from "@/components/ui/progress-indicator";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 export const columns: ColumnDef<ProductionOrderColumn>[] = [
   {
@@ -168,6 +169,67 @@ export const columns: ColumnDef<ProductionOrderColumn>[] = [
       <DataTableColumnHeader column={column} title="Customer Order" />
     ),
     cell: ({ row }) => row.getValue("customerOrderNumber") || "—",
+  },
+  {
+    accessorKey: "plannedMaterialCost",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Planned Cost" />
+    ),
+    cell: ({ row }) => {
+      const cost = row.getValue("plannedMaterialCost") as number;
+      return (
+        <div className="text-right font-medium">
+          {formatCurrencyPHP(cost)}
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "actualMaterialCost",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Actual Cost" />
+    ),
+    cell: ({ row }) => {
+      const cost = row.getValue("actualMaterialCost") as number;
+      return (
+        <div className="text-right font-medium">
+          {formatCurrencyPHP(cost)}
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "materialVariance",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Variance" />
+    ),
+    cell: ({ row }) => {
+      const variance = row.getValue("materialVariance") as number;
+      const isPositive = variance >= 0;
+      return (
+        <div className={`text-right font-medium ${
+          isPositive ? "text-green-600" : "text-red-600"
+        }`}>
+          {isPositive ? "+" : ""}{formatCurrencyPHP(Math.abs(variance))}
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "completedQuantity",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Completed" />
+    ),
+    cell: ({ row }) => {
+      const completed = row.getValue("completedQuantity") as number;
+      const total = row.getValue("quantity") as number;
+      return (
+        <div className="text-center">
+          <span className="font-medium">{completed}</span>
+          <span className="text-muted-foreground"> / {total}</span>
+        </div>
+      );
+    },
   },
   {
     id: "actions",

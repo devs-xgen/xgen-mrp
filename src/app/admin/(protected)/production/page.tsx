@@ -78,17 +78,18 @@ export default async function ProductionOrdersPage() {
   }).length;
 
   return (
-    <div className="flex flex-col gap-6 p-8">
-      <div className="flex items-start justify-between">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      {/* Page Header - Following Sales Invoices Pattern */}
+      <div className="flex items-center justify-between space-y-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">
-            Production Orders
-          </h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-3xl font-bold tracking-tight">Production Orders</h2>
+          <p className="text-muted-foreground mt-1">
             Manage and track production orders across your manufacturing process
           </p>
         </div>
-        <ProductionOrderDialog products={products} workCenters={workCenters} />
+        <div className="flex items-center gap-2">
+          <ProductionOrderDialog products={products} workCenters={workCenters} />
+        </div>
       </div>
 
       {/* Production Statistics */}
@@ -120,7 +121,7 @@ export default async function ProductionOrdersPage() {
       </div>
 
       {/* Quick Filters */}
-      <div className="flex flex-wrap gap-2 my-2">
+      <div className="flex flex-wrap gap-2">
         <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
           All ({totalOrders})
         </Badge>
@@ -144,9 +145,10 @@ export default async function ProductionOrdersPage() {
         </Badge>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Production Orders</CardTitle>
+      {/* Data Table - Following Design System Pattern */}
+      <Card className="bg-card border rounded-lg">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg">All Production Orders</CardTitle>
         </CardHeader>
         <CardContent>
           <DataTable columns={columns} data={tableData} />

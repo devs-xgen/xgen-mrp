@@ -20,6 +20,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSalesByCategory } from "@/lib/actions/dashboard";
 import { SalesByCategoryData } from "@/types/admin/dashboard";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 // Create a new interface for the processed data with number instead of Decimal
 interface ProcessedCategoryData {
@@ -67,7 +68,7 @@ export function SalesByCategoryChart() {
 
   // Custom tooltip formatter
   const formatTooltip = (value: number, name: string, props: any) => {
-    return [`$${value.toFixed(2)}`, name];
+    return [formatCurrencyPHP(value), name];
   };
 
   return (

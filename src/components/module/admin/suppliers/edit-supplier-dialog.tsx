@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useForm } from "react-hook-form"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -54,6 +55,7 @@ export function EditSupplierDialog({
 }: EditSupplierDialogProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
+    const router = useRouter()
 
     const form = useForm<FormData>({
         defaultValues: {
@@ -85,6 +87,7 @@ export function EditSupplierDialog({
                 description: "Supplier updated successfully",
             })
             setOpen(false)
+            router.refresh()
             onSuccess?.()
         } catch (error) {
             toast({

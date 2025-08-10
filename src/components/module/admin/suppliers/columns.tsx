@@ -15,10 +15,10 @@ import { EditSupplierDialog } from "./edit-supplier-dialog"
 import { DeleteSupplierDialog } from "./delete-supplier-dialog"
 
 interface DataTableColumnProps {
-    onSuccess?: () => Promise<void>  // onSuccess is the only prop needed now
+    onSuccess?: () => Promise<void>  // onSuccess is optional
 }
 
-export const createColumns = ({ onSuccess }: DataTableColumnProps): ColumnDef<Supplier>[] => [
+export const createColumns = ({ onSuccess }: DataTableColumnProps = {}): ColumnDef<Supplier>[] => [
     {
         id: "select",
         header: ({ table }) => (
@@ -94,7 +94,6 @@ export const createColumns = ({ onSuccess }: DataTableColumnProps): ColumnDef<Su
                                     Edit
                                 </DropdownMenuItem>
                             }
-                            open={false} // or manage the open state if needed
                         />
                         <DeleteSupplierDialog
                             supplier={supplier}
@@ -105,7 +104,6 @@ export const createColumns = ({ onSuccess }: DataTableColumnProps): ColumnDef<Su
                                     Delete
                                 </DropdownMenuItem>
                             }
-                            open={false}
                         />
                     </DropdownMenuContent>
                 </DropdownMenu>

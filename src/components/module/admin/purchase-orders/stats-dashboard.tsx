@@ -24,6 +24,7 @@ import {
 import { PurchaseOrder } from "@/types/admin/purchase-order";
 import { Status } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 interface PurchaseOrdersStatsProps {
   purchaseOrders: PurchaseOrder[];
@@ -95,75 +96,85 @@ export function PurchaseOrdersStats({
 
   return (
     <>
-      {/* Collapsible Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
+      {/* Statistics Cards - Following Design System Pattern */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-card border rounded-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <ClipboardList className="h-8 w-8 text-blue-500 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-muted-foreground truncate">
                   Total Orders
                 </p>
-                <h3 className="text-2xl font-bold">{totalOrders}</h3>
+                <p className="text-2xl font-bold mt-1">
+                  {totalOrders}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">
+                  {pendingOrders} pending, {completedOrders} completed
+                </p>
               </div>
-              <ClipboardList className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <div className="mt-2 flex justify-between text-xs text-muted-foreground">
-              <div>Pending: {pendingOrders}</div>
-              <div>Completed: {completedOrders}</div>
-              <div>Cancelled: {cancelledOrders}</div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
+        <Card className="bg-card border rounded-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <CircleDollarSign className="h-8 w-8 text-green-500 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-muted-foreground truncate">
                   Total Value
                 </p>
-                <h3 className="text-2xl font-bold">
-                  {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: "PHP",
-                    maximumFractionDigits: 0,
-                  }).format(totalAmount)}
-                </h3>
+                <p className="text-2xl font-bold mt-1">
+                  {formatCurrencyPHP(totalAmount)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">
+                  {formatCurrencyPHP(pendingAmount)} pending
+                </p>
               </div>
-              <CircleDollarSign className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">
-              Pending:{" "}
-              {new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "PHP",
-                maximumFractionDigits: 0,
-              }).format(pendingAmount)}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Month-over-Month
+        <Card className="bg-card border rounded-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <BarChart className="h-8 w-8 text-amber-500 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-muted-foreground truncate">
+                  Month Growth
                 </p>
-                <h3 className="text-2xl font-bold flex items-center">
+                <p className="text-2xl font-bold mt-1 flex items-center">
                   {orderGrowth}%
                   {orderGrowth >= 0 ? (
-                    <TrendingUp className="ml-2 h-5 w-5 text-green-500" />
+                    <TrendingUp className="ml-2 h-4 w-4 text-green-500" />
                   ) : (
-                    <TrendingUp className="ml-2 h-5 w-5 text-red-500 transform rotate-180" />
+                    <TrendingUp className="ml-2 h-4 w-4 text-red-500 transform rotate-180" />
                   )}
-                </h3>
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">
+                  {currentMonthOrders} orders this month
+                </p>
               </div>
-              <BarChart className="h-8 w-8 text-muted-foreground" />
             </div>
-            <div className="mt-2 text-xs text-muted-foreground">
-              {currentMonthOrders} orders this month
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border rounded-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <Package className="h-8 w-8 text-purple-500 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-muted-foreground truncate">
+                  Top Supplier
+                </p>
+                <p className="text-2xl font-bold mt-1">
+                  {topSupplier[1]}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">
+                  {topSupplier[0]}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

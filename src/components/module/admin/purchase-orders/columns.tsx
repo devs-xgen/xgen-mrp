@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { DataTableColumnHeader } from "./data-table-column-header"
 import { DataTableRowActions } from "./data-table-row-actions"
 import { formatDate } from "@/lib/utils"
+import { formatCurrencyPHP } from "@/lib/constant"
 import { Status } from "@prisma/client"
 
 export const columns: ColumnDef<PurchaseOrder>[] = [
@@ -81,11 +82,7 @@ export const columns: ColumnDef<PurchaseOrder>[] = [
     ),
     cell: ({ row }) => {
       const amount = row.getValue("totalAmount") as number
-      const formatted = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "PHP",
-      }).format(amount)
-      return <div className="font-medium">{formatted}</div>
+      return <div className="font-medium">{formatCurrencyPHP(amount)}</div>
     },
   },
   {

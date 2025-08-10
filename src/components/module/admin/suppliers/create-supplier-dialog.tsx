@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import * as z from "zod"
 import { useForm } from "react-hook-form"
 import { Status } from "@prisma/client"
@@ -64,6 +65,7 @@ interface CreateSupplierDialogProps {
 
 export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
     const [open, setOpen] = useState(false)
+    const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [barangay, setBarangay] = useState("")
     const [postalCodeLoading, setPostalCodeLoading] = useState(false)
@@ -196,6 +198,7 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
             })
             setOpen(false)
             form.reset()
+            router.refresh()
             await onSuccess?.()
         } catch (error) {
             toast({

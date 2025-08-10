@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Inspectors Management",
+  title: "Inspectors",
   description: "Manage and monitor your inspection personnel",
 };
 
@@ -27,18 +27,16 @@ export default async function InspectorsPage() {
   const specializations = await getSpecializations();
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      {/* Page Header - Following Sales Invoices Pattern */}
+      <div className="flex items-center justify-between space-y-2">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Inspectors Management
-          </h1>
-          <p className="text-muted-foreground">
+          <h2 className="text-3xl font-bold tracking-tight">Inspectors</h2>
+          <p className="text-muted-foreground mt-1">
             Manage and monitor your quality inspection personnel
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Inspector-specific dialogs */}
           <CreateInspectorDialog
             departments={departments}
             specializations={specializations}

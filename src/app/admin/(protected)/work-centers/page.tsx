@@ -10,7 +10,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Decimal } from "@prisma/client/runtime/library";
@@ -24,7 +23,6 @@ import {
   LucideSettings,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
   title: "Work Centers",
@@ -96,56 +94,98 @@ export default async function WorkCentersPage() {
   );
 
   return (
-    <div className="flex flex-col gap-6 p-8">
-      <div className="flex items-start justify-between">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 min-h-0">
+      {/* Page Header - Following Sales Invoices Pattern */}
+      <div className="flex items-center justify-between space-y-2">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Work Centers</h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-1">
             Manage your production work centers and their capacities
           </p>
         </div>
-        <WorkCenterDialog />
+        <div className="flex items-center gap-2">
+          <WorkCenterDialog />
+        </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="flex items-center py-6">
-            <LucideSettings className="w-8 h-8 mr-4 text-blue-500" />
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Total Work Centers
-              </p>
-              <h3 className="text-2xl font-bold">{totalWorkCenters}</h3>
+      {/* Statistics Cards - Following Design System Pattern */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-card border rounded-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <LucideSettings className="h-8 w-8 text-blue-500 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-muted-foreground truncate">
+                  Total Work Centers
+                </p>
+                <p className="text-2xl font-bold mt-1">
+                  {totalWorkCenters}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">
+                  Production facilities
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="flex items-center py-6">
-            <LucideActivity className="w-8 h-8 mr-4 text-green-500" />
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Active Centers
-              </p>
-              <h3 className="text-2xl font-bold">{activeWorkCenters}</h3>
+        <Card className="bg-card border rounded-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <LucideActivity className="h-8 w-8 text-green-500 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-muted-foreground truncate">
+                  Active Centers
+                </p>
+                <p className="text-2xl font-bold mt-1">
+                  {activeWorkCenters}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">
+                  Currently operational
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="flex items-center py-6">
-            <LucideUsers className="w-8 h-8 mr-4 text-amber-500" />
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Assigned Workers
-              </p>
-              <h3 className="text-2xl font-bold">{totalWorkers}</h3>
+        <Card className="bg-card border rounded-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <LucideUsers className="h-8 w-8 text-amber-500 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-muted-foreground truncate">
+                  Assigned Workers
+                </p>
+                <p className="text-2xl font-bold mt-1">
+                  {totalWorkers}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">
+                  Total workforce
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border rounded-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <LucideSettings className="h-8 w-8 text-purple-500 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-muted-foreground truncate">
+                  Inactive Centers
+                </p>
+                <p className="text-2xl font-bold mt-1">
+                  {inactiveWorkCenters}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">
+                  Not in operation
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="table" className="w-full">
-        <div className="flex justify-end mb-4">
+      <Tabs defaultValue="table" className="w-full space-y-4">
+        <div className="flex justify-end">
           <TabsList>
             <TabsTrigger value="table">
               <LucideList className="h-4 w-4 mr-2" />
@@ -159,9 +199,9 @@ export default async function WorkCentersPage() {
         </div>
 
         <TabsContent value="table">
-          <Card>
-            <CardHeader>
-              <CardTitle>All Work Centers</CardTitle>
+          <Card className="bg-card border rounded-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">All Work Centers</CardTitle>
             </CardHeader>
             <CardContent>
               <DataTable
@@ -173,7 +213,7 @@ export default async function WorkCentersPage() {
         </TabsContent>
 
         <TabsContent value="cards">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {formattedWorkCentersForCards.map((workCenter) => (
               <Card key={workCenter.id} className="overflow-hidden">
                 <CardHeader className="pb-3">

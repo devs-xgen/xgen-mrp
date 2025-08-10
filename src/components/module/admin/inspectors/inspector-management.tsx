@@ -39,61 +39,72 @@ export function InspectorManagement({
   }, [data]);
 
   return (
-    <>
-      <div className="flex items-center justify-between mb-6">
-        <Heading
-          title={`Inspectors (${data.length})`}
-          description="Manage your quality inspection personnel"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Inspectors
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {data.filter((i) => i.isActive).length} active inspectors
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              User Integration
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{linkedInspectors}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              inspectors linked to user accounts
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Unlinked Inspectors
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {data.length - linkedInspectors}
+    <div className="space-y-4">
+      {/* Analytics Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-card border rounded-lg">
+          <CardContent className="p-6 space-x-4">
+            <div className="flex items-center">
+              <div className="flex-1">
+                <p className="text-sm font-medium">Total Inspectors</p>
+                <p className="text-2xl font-bold mt-1">{data.length}</p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">
+                  {data.filter((i) => i.isActive).length} active inspectors
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              inspectors without user accounts
-            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border rounded-lg">
+          <CardContent className="p-6 space-x-4">
+            <div className="flex items-center">
+              <div className="flex-1">
+                <p className="text-sm font-medium">User Integration</p>
+                <p className="text-2xl font-bold mt-1">{linkedInspectors}</p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">
+                  inspectors linked to user accounts
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border rounded-lg">
+          <CardContent className="p-6 space-x-4">
+            <div className="flex items-center">
+              <div className="flex-1">
+                <p className="text-sm font-medium">Unlinked Inspectors</p>
+                <p className="text-2xl font-bold mt-1">
+                  {data.length - linkedInspectors}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">
+                  inspectors without user accounts
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border rounded-lg">
+          <CardContent className="p-6 space-x-4">
+            <div className="flex items-center">
+              <div className="flex-1">
+                <p className="text-sm font-medium">Active Rate</p>
+                <p className="text-2xl font-bold mt-1">
+                  {data.length > 0 ? Math.round((data.filter((i) => i.isActive).length / data.length) * 100) : 0}%
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">
+                  percentage of active inspectors
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="bg-muted/30 p-4 rounded-lg mb-6 flex items-center justify-between">
+      {/* User Integration Info */}
+      <div className="bg-muted/30 p-4 rounded-lg flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Badge className="bg-blue-100 text-blue-800 border-blue-200">
             <Link className="h-3 w-3 mr-1" />
@@ -115,9 +126,15 @@ export function InspectorManagement({
         </Button>
       </div>
 
-      <Separator className="my-4" />
-
-      <DataTable columns={columns} data={data} isLoading={isLoading} />
-    </>
+      {/* Data Table */}
+      <Card className="bg-card border rounded-lg">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg">All Inspectors</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DataTable columns={columns} data={data} isLoading={isLoading} />
+        </CardContent>
+      </Card>
+    </div>
   );
 }

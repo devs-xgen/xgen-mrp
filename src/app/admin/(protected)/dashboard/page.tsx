@@ -58,12 +58,15 @@ const ErrorBoundaryWrapper = ({
 
 export default function AdminDashboard() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-muted-foreground">
-          Overview of your inventory management system
-        </p>
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      {/* Page Header - Following Sales Invoices Pattern */}
+      <div className="flex items-center justify-between space-y-2">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-muted-foreground mt-1">
+            Overview of your inventory management system
+          </p>
+        </div>
       </div>
 
       <div className="mt-2 mb-6">

@@ -5,6 +5,7 @@ import { Customer } from "@prisma/client"
 import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header"
 import { DataTableRowActions } from "./data-table-row-actions"
+import { formatCurrencyPHP } from "@/lib/constant"
 
 export const columns: ColumnDef<Customer>[] = [
     {
@@ -36,6 +37,16 @@ export const columns: ColumnDef<Customer>[] = [
         header: ({ column }) => (
             <DataTableColumnHeader column={column} title="Phone" />
         ),
+    },
+    {
+        accessorKey: "creditLimit",
+        header: ({ column }) => (
+            <DataTableColumnHeader column={column} title="Credit Limit" />
+        ),
+        cell: ({ row }) => {
+            const creditLimit = row.getValue("creditLimit") as number | null
+            return creditLimit ? formatCurrencyPHP(creditLimit) : "—"
+        },
     },
     {
         accessorKey: "status",

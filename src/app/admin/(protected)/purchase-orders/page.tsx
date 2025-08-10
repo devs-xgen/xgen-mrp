@@ -6,7 +6,6 @@ import { CreatePurchaseOrderDialog } from "@/components/module/admin/purchase-or
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -35,29 +34,30 @@ export default async function PurchaseOrdersPage({ searchParams }: PageProps) {
   ]);
 
   return (
-    <div className="flex flex-col gap-6 p-8">
-      <div className="flex items-start justify-between">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      {/* Page Header - Following Sales Invoices Pattern */}
+      <div className="flex items-center justify-between space-y-2">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Purchase Orders</h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-1">
             Manage and track all purchase orders
           </p>
         </div>
-        <CreatePurchaseOrderDialog
-          materials={materials as any}
-          suppliers={suppliers}
-        />
+        <div className="flex items-center gap-2">
+          <CreatePurchaseOrderDialog
+            materials={materials as any}
+            suppliers={suppliers}
+          />
+        </div>
       </div>
 
       {/* Statistics Dashboard */}
       <PurchaseOrdersStats purchaseOrders={purchaseOrders} />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Purchase Orders</CardTitle>
-          <CardDescription>
-            A list of all purchase orders and their current status
-          </CardDescription>
+      {/* Data Table - Following Design System Pattern */}
+      <Card className="bg-card border rounded-lg">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg">All Purchase Orders</CardTitle>
         </CardHeader>
         <CardContent>
           <DataTable

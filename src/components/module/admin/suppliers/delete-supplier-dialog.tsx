@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import {
     AlertDialog,
     AlertDialogCancel,
@@ -29,6 +30,7 @@ export function DeleteSupplierDialog({
 }: DeleteSupplierDialogProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
+    const router = useRouter()
 
     const onDelete = async () => {
         try {
@@ -46,6 +48,7 @@ export function DeleteSupplierDialog({
                 description: "Supplier deleted successfully",
             })
             setOpen(false)
+            router.refresh()
             onSuccess?.()
         } catch (error) {
             toast({

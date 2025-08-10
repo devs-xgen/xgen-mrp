@@ -12,7 +12,6 @@ import {
     getPaginationRowModel,
     getSortedRowModel,
     useReactTable,
-    ColumnDef,
 } from "@tanstack/react-table"
 import {
     Table,
@@ -25,18 +24,12 @@ import {
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { DataTableToolbar } from "./data-table-toolbar"
 import { columns } from "./columns"
-import { Loader2 } from "lucide-react"
 
 interface DataTableProps {
     data: Customer[]
-    columns: ColumnDef<Customer>[]
-    onEdit: (customer: Customer) => void
-    onDelete: (customer: Customer) => void
-    onStatusChange: (customerId: string, newStatus: string) => Promise<void>
-    isLoading: boolean
 }
 
-export function DataTable({ data, columns, onEdit, onDelete, onStatusChange, isLoading }: DataTableProps) {
+export function CustomerDataTable({ data }: DataTableProps) {
     const [sorting, setSorting] = useState<SortingState>([])
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
@@ -83,13 +76,7 @@ export function DataTable({ data, columns, onEdit, onDelete, onStatusChange, isL
                         ))}
                     </TableHeader>
                     <TableBody>
-                        {isLoading ? (
-                            <TableRow>
-                                <TableCell colSpan={columns.length} className="h-24 text-center">
-                                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                                </TableCell>
-                            </TableRow>
-                        ) : table.getRowModel().rows?.length ? (
+                        {table.getRowModel().rows?.length ? (
                             table.getRowModel().rows.map((row) => (
                                 <TableRow
                                     key={row.id}

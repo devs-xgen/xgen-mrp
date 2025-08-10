@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getTopPerformingProducts } from "@/lib/actions/dashboard";
 import { ProductPerformance } from "@/types/admin/dashboard";
 import { TrendingUp } from "lucide-react";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 export function TopProducts() {
   const [products, setProducts] = useState<ProductPerformance[]>([]);
@@ -89,10 +90,10 @@ export function TopProducts() {
                     {product.salesCount}
                   </TableCell>
                   <TableCell className="text-right">
-                    ${parseFloat(product.revenue.toString()).toFixed(2)}
+                    {formatCurrencyPHP(parseFloat(product.revenue.toString()))}
                   </TableCell>
                   <TableCell className="text-right">
-                    ${parseFloat(product.profit.toString()).toFixed(2)}
+                    {formatCurrencyPHP(parseFloat(product.profit.toString()))}
                   </TableCell>
                   <TableCell className="text-right">
                     {product.profitMargin.toFixed(1)}%

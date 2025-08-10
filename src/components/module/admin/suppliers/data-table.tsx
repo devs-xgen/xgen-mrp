@@ -29,27 +29,21 @@ import {
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { createColumns } from "./columns"  // Adjusted to only use data
+import { createColumns } from "./columns"
 import { Supplier } from "@prisma/client"
 import { Loader2 } from "lucide-react"
 
 interface DataTableProps {
-    columns: any[] // Add the correct type here
     data: Supplier[]
-    onEdit: (supplier: Supplier) => void
-    onDelete: (supplier: Supplier) => void
-    onStatusChange: (supplierId: string, newStatus: string) => Promise<void>
-    onSuccess?: () => Promise<void>
-    isLoading?: boolean
 }
 
-export function SupplierDataTable({ data, onSuccess, isLoading }: DataTableProps) {
+export function SupplierDataTable({ data }: DataTableProps) {
     const [sorting, setSorting] = useState<SortingState>([])
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
     const [rowSelection, setRowSelection] = useState({})
 
-    const columns = createColumns({ onSuccess })  // Pass only onSuccess, no suppliers needed
+    const columns = createColumns({})
 
     const table = useReactTable({
         data,
@@ -127,13 +121,7 @@ export function SupplierDataTable({ data, onSuccess, isLoading }: DataTableProps
                         ))}
                     </TableHeader>
                     <TableBody>
-                        {isLoading ? (
-                            <TableRow>
-                                <TableCell colSpan={columns.length} className="h-24 text-center">
-                                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                                </TableCell>
-                            </TableRow>
-                        ) : table.getRowModel().rows?.length ? (
+                        {table.getRowModel().rows?.length ? (
                             table.getRowModel().rows.map((row) => (
                                 <TableRow
                                     key={row.id}
