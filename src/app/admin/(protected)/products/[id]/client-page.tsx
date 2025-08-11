@@ -39,6 +39,8 @@ import {
   ProductionOrderSummary,
   ProductWithNumberValues,
 } from "@/types/admin/product";
+import { EditProductDialog } from "@/components/module/admin/products/edit-product-dialog";
+import { ProductCategory } from "@prisma/client";
 
 interface WorkCenter {
   id: string;
@@ -59,12 +61,25 @@ export default function ProductDetailClientPage({
   product,
   workCenters,
 }: ProductDetailClientPageProps) {
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const [showProductionDialog, setShowProductionDialog] = useState(false);
   const [showStockDialog, setShowStockDialog] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
+
+
+
+  useEffect(() => {
+    async function fetchCategories() {
+      const response = await fetch('/api/categories'); // Adjust endpoint
+      const data = await response.json();
+      setCategories(data);
+    }
+    fetchCategories();
+  }, []);
 
   // Check if we should open the production dialog automatically
   useEffect(() => {
@@ -125,12 +140,23 @@ export default function ProductDetailClientPage({
         <div className="flex items-center gap-2">
           {/* Desktop: Show individual buttons */}
           <div className="hidden md:flex gap-2">
-            <Link href={`/admin/products/${id}/edit`}>
+            {/* <Link href={`/admin/products/${id}/edit`}>
               <Button variant="outline" size="sm">
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Product
               </Button>
-            </Link>
+            </Link> */}
+             <EditProductDialog
+                product={product}
+                categories={categories}
+                onSuccess={async () => router.refresh()}
+                trigger={
+                  <Button variant="outline" size="sm">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Product
+                  </Button>
+                }
+              />
             <Button size="sm" onClick={() => setShowProductionDialog(true)}>
               <Factory className="h-4 w-4 mr-2" />
               Create Production
