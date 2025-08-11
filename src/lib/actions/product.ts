@@ -864,3 +864,198 @@ export async function deleteCategory(categoryId: string) {
     };
   }
 }
+
+// ---------------- Variant Management Actions ----------------
+
+// Update a single product variant
+export async function updateProductVariant(
+  variantId: string,
+  data: {
+    sku?: string;
+    displayName?: string;
+    sizeName?: string | null;
+    sizeCode?: string | null;
+    colorName?: string | null;
+    colorCode?: string | null;
+    unitCost?: number;
+    sellingPrice?: number;
+    minimumStockLevel?: number;
+    sortOrder?: number;
+    isActive?: boolean;
+  }
+) {
+  try {
+    const updated = await prisma.productVariant.update({
+      where: { id: variantId },
+      data: { ...data, updatedAt: new Date() },
+      select: {
+        id: true,
+        productId: true,
+        sku: true,
+        displayName: true,
+        sizeName: true,
+        sizeCode: true,
+        colorName: true,
+        colorCode: true,
+        unitCost: true,
+        sellingPrice: true,
+        minimumStockLevel: true,
+        sortOrder: true,
+        isActive: true,
+        updatedAt: true,
+      },
+    });
+
+    // Revalidate relevant pages
+    revalidatePath("/admin/products");
+    if (updated.productId) {
+      revalidatePath(`/admin/products/${updated.productId}`);
+    }
+
+    return {
+      success: true,
+      data: convertDecimals(updated),
+      message: "Variant updated successfully",
+    };
+  } catch (error: any) {
+    console.error("Variant update error:", error);
+    if (error.code === "P2002") {
+      return { success: false, error: "A variant with this SKU already exists" };
+    }
+    if (error.code === "P2025") {
+      return { success: false, error: "Variant not found" };
+    }
+    return { success: false, error: "Error updating variant" };
+  }
+}
+
+// Toggle active status for a variant
+export async function toggleVariantActive(variantId: string, isActive: boolean) {
+  try {
+    const updated = await prisma.productVariant.update({
+      where: { id: variantId },
+      data: { isActive, updatedAt: new Date() },
+      select: { id: true, productId: true, isActive: true },
+    });
+    revalidatePath("/admin/products");
+    if (updated.productId) {
+      revalidatePath(`/admin/products/${updated.productId}`);
+    }
+    return { success: true, data: convertDecimals(updated) };
+  } catch (error: any) {
+    console.error("Toggle variant active error:", error);
+    if (error.code === "P2025") {
+      return { success: false, error: "Variant not found" };
+    }
+    return { success: false, error: "Error updating variant status" };
+  }
+}
+
+// Delete a variant
+export async function deleteVariant(variantId: string) {
+  try {
+    // Get productId before delete for revalidation
+    const existing = await prisma.productVariant.findUnique({
+      where: { id: variantId },
+      select: { productId: true },
+    });
+    await prisma.productVariant.delete({ where: { id: variantId } });
+    revalidatePath("/admin/products");
+    if (existing?.productId) {
+      revalidatePath(`/admin/products/${existing.productId}`);
+    }
+    return { success: true, message: "Variant deleted successfully" };
+  } catch (error: any) {
+    console.error("Variant deletion error:", error);
+    if (error.code === "P2025") {
+      return { success: false, error: "Variant not found" };
+    }
+    return { success: false, error: "Error deleting variant" };
+  }
+}
+
+// Add a single variant to an existing product
+export async function addProductVariant(
+  productId: string,
+  payload: {
+    sku: string;
+    displayName?: string;
+    sizeName?: string | null;
+    sizeCode?: string | null;
+    colorName?: string | null;
+    colorCode?: string | null;
+    styleName?: string | null;
+    materialName?: string | null;
+    unitCost: number;
+    sellingPrice: number;
+    minimumStockLevel: number;
+    sortOrder?: number;
+    isActive?: boolean;
+  }
+) {
+  try {
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!product) return { success: false, error: "Parent product not found" };
+
+    const created = await prisma.productVariant.create({
+      data: {
+        productId,
+        sku: payload.sku,
+        displayName:
+          payload.displayName || `${product.name}${payload.sizeName ? ` - ${payload.sizeName}` : ""}${payload.colorName ? ` ${payload.colorName}` : ""}`,
+        sizeName: payload.sizeName ?? null,
+        sizeCode: payload.sizeCode ?? null,
+        colorName: payload.colorName ?? null,
+        colorCode: payload.colorCode ?? null,
+        styleName: payload.styleName ?? null,
+        materialName: payload.materialName ?? null,
+        unitCost: payload.unitCost,
+        sellingPrice: payload.sellingPrice,
+        minimumStockLevel: payload.minimumStockLevel,
+        currentStock: 0,
+        sortOrder: payload.sortOrder ?? 0,
+        isActive: payload.isActive ?? true,
+      },
+    });
+
+    revalidatePath("/admin/products");
+    revalidatePath(`/admin/products/${productId}`);
+    return { success: true, data: convertDecimals(created), message: "Variant created" };
+  } catch (error: any) {
+    console.error("Add variant error:", error);
+    if (error.code === "P2002") {
+      return { success: false, error: "A variant with this SKU already exists" };
+    }
+    return { success: false, error: "Error creating variant" };
+  }
+}
+
+// Bulk update helper for variants of a product
+export async function bulkUpdateProductVariants(
+  updates: Array<{
+    id: string;
+    data: Parameters<typeof updateProductVariant>[1];
+  }>
+) {
+  try {
+    const results = await prisma.$transaction(
+      updates.map((u) =>
+        prisma.productVariant.update({
+          where: { id: u.id },
+          data: { ...u.data, updatedAt: new Date() },
+          select: { id: true, productId: true },
+        })
+      )
+    );
+    revalidatePath("/admin/products");
+    // Revalidate all affected product detail pages
+    const productIds = Array.from(new Set(results.map((r: any) => r.productId).filter(Boolean)));
+    for (const pid of productIds) {
+      revalidatePath(`/admin/products/${pid}`);
+    }
+    return { success: true, data: convertDecimals(results) };
+  } catch (error) {
+    console.error("Bulk update variants error:", error);
+    return { success: false, error: "Error bulk updating variants" };
+  }
+}

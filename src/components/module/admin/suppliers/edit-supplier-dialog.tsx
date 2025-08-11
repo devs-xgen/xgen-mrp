@@ -35,17 +35,26 @@ import { Supplier, Status } from "@prisma/client"
 
 interface FormData {
     name: string
+    code: string
     contactPerson: string
     email: string
     phone: string
+    address?: string
+    city?: string
+    state?: string
+    country?: string
+    postalCode?: string
+    paymentTerms?: string
+    leadTime?: number
     status: Status
+    notes?: string
 }
 
 interface EditSupplierDialogProps {
     supplier: Supplier
-    open: boolean
+    open?: boolean
     trigger: React.ReactNode
-    onSuccess?: () => void
+    onSuccess?: () => void | Promise<void>
 }
 
 export function EditSupplierDialog({
@@ -60,10 +69,19 @@ export function EditSupplierDialog({
     const form = useForm<FormData>({
         defaultValues: {
             name: supplier.name,
+            code: supplier.code || "",
             contactPerson: supplier.contactPerson || "",
             email: supplier.email || "",
             phone: supplier.phone || "",
+            address: supplier.address || "",
+            city: supplier.city || "",
+            state: supplier.state || "",
+            country: supplier.country || "",
+            postalCode: supplier.postalCode || "",
+            paymentTerms: supplier.paymentTerms || "",
+            leadTime: supplier.leadTime || 0,
             status: supplier.status,
+            notes: supplier.notes || "",
         },
     })
 
@@ -75,11 +93,14 @@ export function EditSupplierDialog({
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify(data),
+                body: JSON.stringify({
+                    ...data,
+                }),
             })
 
             if (!response.ok) {
-                throw new Error("Failed to update supplier")
+                const err = await response.json().catch(() => null)
+                throw new Error(err?.error || "Failed to update supplier")
             }
 
             toast({
@@ -88,11 +109,11 @@ export function EditSupplierDialog({
             })
             setOpen(false)
             router.refresh()
-            onSuccess?.()
-        } catch (error) {
+            await onSuccess?.()
+        } catch (error: any) {
             toast({
                 title: "Error",
-                description: "Failed to update supplier",
+                description: error?.message || "Failed to update supplier",
                 variant: "destructive",
             })
         } finally {
@@ -105,7 +126,7 @@ export function EditSupplierDialog({
             <DialogTrigger asChild>
                 {trigger}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[625px]">
+            <DialogContent className="w-[95vw] sm:max-w-[640px] md:max-w-[800px] lg:max-w-[900px] max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Edit Supplier</DialogTitle>
                     <DialogDescription>
@@ -121,6 +142,21 @@ export function EditSupplierDialog({
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Name</FormLabel>
+                                    <FormControl>
+                                        <Input {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="code"
+                            rules={{ required: "Code is required" }}
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Code</FormLabel>
                                     <FormControl>
                                         <Input {...field} />
                                     </FormControl>
@@ -175,6 +211,107 @@ export function EditSupplierDialog({
 
                         <FormField
                             control={form.control}
+                            name="address"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Address</FormLabel>
+                                    <FormControl>
+                                        <Textarea {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                              control={form.control}
+                              name="city"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>City</FormLabel>
+                                      <FormControl>
+                                          <Input {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <FormField
+                              control={form.control}
+                              name="state"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>State/Region</FormLabel>
+                                      <FormControl>
+                                          <Input {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                              control={form.control}
+                              name="country"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Country</FormLabel>
+                                      <FormControl>
+                                          <Input {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <FormField
+                              control={form.control}
+                              name="postalCode"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Postal Code</FormLabel>
+                                      <FormControl>
+                                          <Input {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                              control={form.control}
+                              name="paymentTerms"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Payment Terms</FormLabel>
+                                      <FormControl>
+                                          <Input {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <FormField
+                              control={form.control}
+                              name="leadTime"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Lead Time (hours)</FormLabel>
+                                      <FormControl>
+                                          <Input type="number" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                        </div>
+
+                        <FormField
+                            control={form.control}
                             name="status"
                             rules={{ required: "Status is required" }}
                             render={({ field }) => (
@@ -194,6 +331,20 @@ export function EditSupplierDialog({
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="notes"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Notes</FormLabel>
+                                    <FormControl>
+                                        <Textarea {...field} />
+                                    </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}

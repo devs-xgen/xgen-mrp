@@ -40,6 +40,10 @@ export function DataTableRowActions({
     router.push(`/admin/products/${product.id}`);
   };
 
+  const handleEditPage = () => {
+    router.push(`/admin/products/${product.id}/edit`);
+  };
+
   return (
     <TooltipProvider>
       <DropdownMenu>
@@ -64,6 +68,11 @@ export function DataTableRowActions({
               <p>View detailed information, variants, and BOM</p>
             </TooltipContent>
           </Tooltip>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleEditPage}>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit (Page)
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <EditProductDialog
             product={product}

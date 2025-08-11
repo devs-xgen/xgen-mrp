@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { VariantCreationDialog } from "./variant-creation-dialog";
+import { VariantEditDialog } from "./variant-edit-dialog";
 import { ProductWithNumberValues, ProductVariantWithNumberValues } from "@/types/admin/product";
 import { formatCurrencyPHP } from "@/lib/constant";
 
@@ -41,6 +42,8 @@ export function VariantManagementSection({
   onRefresh 
 }: VariantManagementSectionProps) {
   const [expandedVariants, setExpandedVariants] = useState<Record<string, boolean>>({});
+  const [editOpen, setEditOpen] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariantWithNumberValues | null>(null);
 
   const getStockStatus = (current: number, minimum: number) => {
     if (current === 0) return { 
@@ -156,7 +159,7 @@ export function VariantManagementSection({
             const isExpanded = expandedVariants[variant.id];
             
             return (
-                              <Card key={variant.id} className="border transition-all duration-200 hover:shadow-md">
+              <Card key={variant.id} className="border transition-all duration-200 hover:shadow-md">
                 <Collapsible
                   open={isExpanded}
                   onOpenChange={() => toggleVariantExpanded(variant.id)}
@@ -211,6 +214,19 @@ export function VariantManagementSection({
                             <Edit className="w-3 h-3 mr-1" />
                             Adjust
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedVariant(variant);
+                              setEditOpen(true);
+                            }}
+                            className="hover:bg-amber-50 hover:border-amber-300"
+                          >
+                            <Edit className="w-3 h-3 mr-1" />
+                            Edit
+                          </Button>
                         </div>
                       </div>
                     </CardHeader>
@@ -254,7 +270,7 @@ export function VariantManagementSection({
                                 <Label className="text-xs text-muted-foreground">Material</Label>
                                 <Badge variant="outline" className="bg-white/80">{variant.materialName}</Badge>
                               </div>
-                            )}4
+                            )}
                           </CardContent>
                         </Card>
 
@@ -357,6 +373,17 @@ export function VariantManagementSection({
             );
           })}
         </div>
+
+        {/* Global Variant Edit Dialog */}
+        <VariantEditDialog
+          open={editOpen}
+          variant={selectedVariant}
+          onOpenChange={(open) => {
+            setEditOpen(open);
+            if (!open) setSelectedVariant(null);
+          }}
+          onSuccess={onRefresh}
+        />
       </div>
     );
   }

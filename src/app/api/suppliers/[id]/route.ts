@@ -61,8 +61,15 @@ export async function DELETE(_: Request, { params }: RouteParams) {
             },
         });
         return new NextResponse('', { status: 204 });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Supplier deletion error:', error);
+        // Handle foreign key constraint violation (e.g., related materials or POs)
+        if (error.code === 'P2003') {
+            return NextResponse.json(
+                { error: "Cannot delete supplier because it is referenced by other records (e.g., materials or purchase orders)." },
+                { status: 409 }
+            );
+        }
         return NextResponse.json(
             { error: "Error deleting supplier" },
             { status: 500 }

@@ -18,9 +18,9 @@ import { Supplier } from "@prisma/client"
 
 interface DeleteSupplierDialogProps {
     supplier: Supplier
-    open: boolean
+    open?: boolean
     trigger: React.ReactNode
-    onSuccess?: () => void
+    onSuccess?: () => void | Promise<void>
 }
 
 export function DeleteSupplierDialog({
@@ -33,27 +33,68 @@ export function DeleteSupplierDialog({
     const router = useRouter()
 
     const onDelete = async () => {
+        if (loading) return
+        setLoading(true)
         try {
-            setLoading(true)
             const response = await fetch(`/api/suppliers/${supplier.id}`, {
                 method: "DELETE",
             })
 
             if (!response.ok) {
-                throw new Error("Failed to delete supplier")
+                // Treat 404 as idempotent success (already deleted)
+                if (response.status === 404) {
+                    // proceed as success
+                } else {
+                    let message = "Failed to delete supplier"
+                    try {
+                        const err = await response.json()
+                        if (err?.error) message = err.error
+                    } catch {}
+                    throw new Error(message)
+                }
             }
 
+            // Success path (including idempotent 404): perform UI updates in a safe block
             toast({
                 title: "Success",
                 description: "Supplier deleted successfully",
             })
             setOpen(false)
-            router.refresh()
-            onSuccess?.()
-        } catch (error) {
+            try {
+                router.refresh()
+                await onSuccess?.()
+            } catch (uiErr) {
+                console.error("Post-delete UI update error:", uiErr)
+            }
+        } catch (error: any) {
+            // Network failure or ambiguous state: verify if resource is actually gone (with one retry)
+            const verifyGone = async () => {
+                try {
+                    const verify1 = await fetch(`/api/suppliers/${supplier.id}`)
+                    if (verify1.status === 404) return true
+                    // small delay then retry to account for eventual consistency
+                    await new Promise((res) => setTimeout(res, 250))
+                    const verify2 = await fetch(`/api/suppliers/${supplier.id}`)
+                    return verify2.status === 404
+                } catch {
+                    return false
+                }
+            }
+            if (await verifyGone()) {
+                toast({ title: "Success", description: "Supplier deleted successfully" })
+                setOpen(false)
+                try {
+                    router.refresh()
+                    await onSuccess?.()
+                } catch (uiErr) {
+                    console.error("Post-delete UI update error:", uiErr)
+                }
+                return
+            }
+
             toast({
                 title: "Error",
-                description: "Failed to delete supplier",
+                description: error?.message || "Failed to delete supplier",
                 variant: "destructive",
             })
         } finally {
