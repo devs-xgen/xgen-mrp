@@ -5,6 +5,70 @@ import { prisma } from "@/lib/db";
 import { ProductForOrder } from "@/types/admin/product";
 import { Status, Prisma } from "@prisma/client";
 import { convertDecimals } from "../convertDecimals";
+import { Decimal } from "@prisma/client/runtime/library";
+import { revalidatePath } from "next/cache";
+
+
+// --- Helper Functions ---
+
+async function createVariantBOMsFromParent(
+  variantId: string,
+  parentBOMs: any[],
+  sizeName: string,
+  colorName: string,
+  modifications: any
+): Promise<number> {
+    console.log(`Skipping BOM creation for variant ${variantId}. Implementation needed.`);
+    return 0;
+}
+
+async function createAndLinkVariants(
+  productId: string,
+  sizes: string[],
+  colors: string[],
+  formData: {
+    sku: string;
+    name: string;
+    unitCost: number;
+    sellingPrice: number;
+    minimumStockLevel: number;
+  },
+  tx: Prisma.TransactionClient
+): Promise<any[]> {
+  const createdVariants = [];
+  const sizesForPrisma = sizes.map((size, index) => ({ name: size, code: size.toUpperCase(), sortOrder: index }));
+  const colorsForPrisma = colors.map(color => ({ name: color, code: color.replace(/\s/g, '').toUpperCase() }));
+
+  for (const size of sizesForPrisma) {
+    for (const color of colorsForPrisma) {
+      const sku = `${formData.sku}-${size.code}-${color.code}`;
+      const displayName = `${formData.name} - ${size.name} ${color.name}`;
+
+      // Create a variant for each size and color combination
+      const variant = await tx.productVariant.create({
+        data: {
+          productId,
+          sku,
+          sizeName: size.name,
+          sizeCode: size.code,
+          colorName: color.name,
+          colorCode: color.code,
+          displayName,
+          unitCost: new Decimal(formData.unitCost),
+          sellingPrice: new Decimal(formData.sellingPrice),
+          minimumStockLevel: formData.minimumStockLevel,
+          currentStock: 0,
+          isActive: true,
+          sortOrder: size.sortOrder,
+        },
+      });
+
+      createdVariants.push(variant);
+    }
+  }
+
+  return createdVariants;
+}
 
 export async function getAllProducts() {
   try {
@@ -363,6 +427,7 @@ export async function adjustVariantStock(
   }
 }
 
+
 // Create Product Server Action (replaces API route)
 export async function createProduct(formData: {
   name: string;
@@ -470,6 +535,100 @@ export async function createProduct(formData: {
     };
   }
 }
+
+export async function createProduct2(formData: {
+  name: string;
+  sku: string;
+  description?: string;
+  categoryId: string;
+  unitCost: number;
+  sellingPrice: number;
+  minimumStockLevel: number;
+  currentStock: number;
+  leadTime: number;
+  hasVariants?: boolean;
+  sizes?: string[]; // The simple string arrays from the form
+  colors?: string[]; // The simple string arrays from the form
+}) {
+  try {
+    console.log("createProduct server action received data:", {
+      name: formData.name,
+      hasVariants: formData.hasVariants,
+      sizes: formData.sizes,
+      colors: formData.colors,
+    });
+
+    const result = await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        // Create the main product
+        const product = await tx.product.create({
+          data: {
+            name: formData.name,
+            sku: formData.sku,
+            description: formData.description,
+            categoryId: formData.categoryId,
+            unitCost: formData.unitCost,
+            sellingPrice: formData.sellingPrice,
+            minimumStockLevel: formData.minimumStockLevel,
+            currentStock: formData.currentStock,
+            leadTime: formData.leadTime,
+            hasVariants: formData.hasVariants || false,
+            status: "ACTIVE" as Status,
+            // Store the sizes and colors on the product model for easy reference
+            sizeRange: formData.sizes || [],
+            colorOptions: formData.colors || [],
+          },
+        });
+
+        let createdVariants = [];
+
+        // If variants are enabled and we have sizes and colors, create them
+        if (formData.hasVariants && formData.sizes && formData.colors) {
+          createdVariants = await createAndLinkVariants(
+            product.id,
+            formData.sizes,
+            formData.colors,
+            {
+              sku: formData.sku,
+              name: formData.name,
+              unitCost: formData.unitCost,
+              sellingPrice: formData.sellingPrice,
+              minimumStockLevel: formData.minimumStockLevel,
+            },
+            tx // Pass the transaction client to the helper function
+          );
+        }
+        
+        return { product, createdVariants };
+      }
+    );
+
+    // Revalidate cache paths to show the new product
+    revalidatePath("/admin/products");
+
+    return {
+      success: true,
+      data: convertDecimals(result.product),
+      variants: convertDecimals(result.createdVariants),
+      message: `Product created successfully with ${result.createdVariants.length} variants.`,
+    };
+  } catch (error: any) {
+    console.error("Product creation error:", error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return {
+        success: false,
+        error: "A product with this SKU already exists. Please choose a different one.",
+      };
+    }
+
+    return {
+      success: false,
+      error: "Error creating product",
+    };
+  }
+}
+
 
 // Update Product Server Action
 export async function updateProduct(

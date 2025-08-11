@@ -254,7 +254,7 @@ export function VariantManagementSection({
                                 <Label className="text-xs text-muted-foreground">Material</Label>
                                 <Badge variant="outline" className="bg-white/80">{variant.materialName}</Badge>
                               </div>
-                            )}
+                            )}4
                           </CardContent>
                         </Card>
 
