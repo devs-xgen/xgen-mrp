@@ -25,15 +25,24 @@ const RATE_LIMIT_CONFIG = {
   loginMaxRequests: 50, // Increased login page visits (for legitimate portal switching)
 };
 
+// Exported specific configs for API routes
+export const RATE_LIMIT_CONFIGS = {
+  SHARED_DOCUMENTS: {
+    windowMs: 60 * 1000, // 1 minute
+    maxRequests: 60, // 60 req/min per IP for public shared documents
+  },
+};
+
 // Simple in-memory rate limiting store (use Redis in production)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+const apiRateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
 // Clear rate limits for an IP (useful for legitimate users after logout)
 function clearRateLimit(ip: string) {
   rateLimitStore.delete(ip);
 }
 
-// Rate limiting function
+// Rate limiting function (internal – boolean)
 function checkRateLimit(
   ip: string,
   maxRequests: number = RATE_LIMIT_CONFIG.maxRequests
@@ -54,6 +63,52 @@ function checkRateLimit(
 
   existing.count++;
   return true;
+}
+
+// Exported rate limiting function for API usage – returns metadata
+export function checkRateLimitForApi(
+  ip: string,
+  config: { windowMs: number; maxRequests: number }
+): { allowed: boolean; retryAfter?: number; resetTime: number } {
+  const now = Date.now();
+  const windowMs = config.windowMs;
+
+  const existing = apiRateLimitStore.get(ip);
+
+  if (!existing || now > existing.resetTime) {
+    apiRateLimitStore.set(ip, { count: 1, resetTime: now + windowMs });
+    return { allowed: true, resetTime: now + windowMs };
+  }
+
+  if (existing.count >= config.maxRequests) {
+    const retryAfterMs = existing.resetTime - now;
+    return {
+      allowed: false,
+      retryAfter: Math.ceil(retryAfterMs / 1000),
+      resetTime: existing.resetTime,
+    };
+  }
+
+  existing.count++;
+  return { allowed: true, resetTime: existing.resetTime };
+}
+
+// Lightweight violation logger for API routes (console-based)
+export function logRateLimitViolation(
+  ip: string,
+  endpoint: string,
+  userAgent: string,
+  details?: Record<string, any>
+) {
+  try {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[RATE_LIMIT] Violation from ${ip} → ${endpoint} | UA: ${userAgent}`,
+      details || {}
+    );
+  } catch {
+    // no-op
+  }
 }
 
 // Security headers configuration

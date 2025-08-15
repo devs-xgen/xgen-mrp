@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ActivityIcon } from "lucide-react"
 import { getProductionOrders, getProductionLogs } from "@/lib/actions/production-order"

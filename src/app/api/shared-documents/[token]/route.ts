@@ -14,10 +14,10 @@ import {
   SharedCustomerInfo,
   SharedCompanyInfo
 } from "@/lib/utils/shared-document-transformers"
-import { 
-  checkRateLimit, 
-  logRateLimitViolation, 
-  RATE_LIMIT_CONFIGS 
+import {
+  checkRateLimitForApi,
+  logRateLimitViolation,
+  RATE_LIMIT_CONFIGS,
 } from "@/lib/utils/rate-limiter"
 import {
   logDocumentAccessed,
@@ -71,7 +71,7 @@ export async function GET(
     const userAgent = req.headers.get('user-agent') || 'unknown'
 
     // Check rate limit
-    const rateLimitResult = checkRateLimit(ip, RATE_LIMIT_CONFIGS.SHARED_DOCUMENTS)
+    const rateLimitResult = checkRateLimitForApi(ip, RATE_LIMIT_CONFIGS.SHARED_DOCUMENTS)
     
     if (!rateLimitResult.allowed) {
       // Log the violation

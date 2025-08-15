@@ -1,5 +1,7 @@
 // Service Worker for XGEN MRP PWA
-const CACHE_NAME = 'xgen-mrp-v1';
+// Bump the version to invalidate old caches when deploying a new build
+const CACHE_VERSION = 'v3';
+const CACHE_NAME = `xgen-mrp-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   '/',
   '/admin/login',
@@ -25,7 +27,9 @@ self.addEventListener('install', (event) => {
         console.error('Cache installation failed:', error);
       })
   );
-  self.skipWaiting();
+  // Keep the new worker in waiting until explicitly told to activate,
+  // so we can prompt the user and avoid mid-session swaps.
+  // Do NOT call skipWaiting here; activation will be triggered via message.
 });
 
 // Activate Service Worker
@@ -43,42 +47,62 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+  // Take control of open clients after activation
   self.clients.claim();
 });
 
-// Fetch Strategy: Network First with Cache Fallback
+// Message handler to allow the page to tell the SW to activate immediately
+self.addEventListener('message', (event) => {
+  if (!event.data) return;
+  if (event.data.type === 'SKIP_WAITING') {
+    // Activate the newly installed worker immediately
+    self.skipWaiting();
+  }
+});
+
+// Strategy:
+// - For navigation requests (HTML), always go to network first to avoid stale app shell
+//   and fall back to cache/offline page.
+// - For other GET requests, network-first with cache fallback and background cache update.
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   
   // Skip non-HTTP requests
   if (!request.url.startsWith('http')) return;
   
-  // Skip API requests for real-time data
-  if (request.url.includes('/api/')) return;
+  // Skip API requests for real-time data and non-GET methods
+  if (request.url.includes('/api/') || request.method !== 'GET') return;
 
   event.respondWith(
-    caches.open(CACHE_NAME).then((cache) => {
-      return fetch(request)
-        .then((networkResponse) => {
-          // Update cache with fresh content
+    caches.open(CACHE_NAME).then(async (cache) => {
+      // For navigation requests (HTML), avoid staleness
+      if (request.mode === 'navigate' || (request.headers.get('accept') || '').includes('text/html')) {
+        try {
+          const networkResponse = await fetch(request);
+          // Optionally cache the latest shell
           if (networkResponse.status === 200) {
             cache.put(request, networkResponse.clone());
           }
           return networkResponse;
-        })
-        .catch(() => {
-          // Return cached version if network fails
-          return cache.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            // Return offline page for navigation requests
-            if (request.mode === 'navigate') {
-              return cache.match('/offline');
-            }
-            throw new Error('No cached content available');
-          });
-        });
+        } catch (err) {
+          const cached = await cache.match(request);
+          if (cached) return cached;
+          return cache.match('/offline');
+        }
+      }
+
+      // For other assets: network-first with cache fallback and background update
+      try {
+        const networkResponse = await fetch(request);
+        if (networkResponse.status === 200) {
+          cache.put(request, networkResponse.clone());
+        }
+        return networkResponse;
+      } catch (err) {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        throw err;
+      }
     })
   );
 });

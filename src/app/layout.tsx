@@ -6,19 +6,21 @@ import { Toaster } from "@/components/ui/toaster";
 import AuthProvider from "@/components/providers/auth-provider";
 import { FullscreenProvider } from "@/components/ui/fullscreen-context";
 import { GlobalFullscreenToggle } from "@/components/ui/global-fullscreen-toggle";
+import { ServiceWorkerManager } from "@/components/global/service-worker-manager";
 
-const inter = Inter({ 
+const inter = Inter({
   subsets: ["latin"],
-  display: 'swap',
+  display: "swap",
   preload: true,
 });
 
 export const metadata: Metadata = {
   title: {
     default: "XGen MRP - Inventory Management System",
-    template: "%s | XGen MRP"
+    template: "%s | XGen MRP",
   },
-  description: "A comprehensive inventory management system with role-based access control",
+  description:
+    "A comprehensive inventory management system with role-based access control",
   keywords: ["inventory", "management", "MRP", "production", "quality control"],
   authors: [{ name: "XGen Team" }],
   creator: "XGen",
@@ -28,45 +30,41 @@ export const metadata: Metadata = {
     follow: false,
   },
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
-    apple: '/favicon.ico',
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
   },
-  manifest: '/manifest.json',
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
-    title: 'XGEN MRP',
+    statusBarStyle: "default",
+    title: "XGEN MRP",
   },
   other: {
-    'mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-status-bar-style': 'default',
-    'apple-mobile-web-app-title': 'XGEN MRP',
-    'application-name': 'XGEN MRP',
-    'msapplication-TileColor': '#000000',
-    'msapplication-config': '/browserconfig.xml',
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "default",
+    "apple-mobile-web-app-title": "XGEN MRP",
+    "application-name": "XGEN MRP",
+    "msapplication-TileColor": "#000000",
+    "msapplication-config": "/browserconfig.xml",
   },
 };
 
 export const viewport: Viewport = {
-  width: 'device-width',
+  width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#000000' },
-    { media: '(prefers-color-scheme: dark)', color: '#000000' }
+    { media: "(prefers-color-scheme: light)", color: "#000000" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
   ],
 };
 
 // Error Boundary Component
 function GlobalErrorBoundary({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen">
-      {children}
-    </div>
-  );
+  return <div className="min-h-screen">{children}</div>;
 }
 
 // Security and Performance wrapper
@@ -77,12 +75,19 @@ function SecurityWrapper({ children }: { children: React.ReactNode }) {
       <meta httpEquiv="X-Content-Type-Options" content="nosniff" />
       <meta httpEquiv="X-Frame-Options" content="DENY" />
       <meta httpEquiv="X-XSS-Protection" content="1; mode=block" />
-      <meta httpEquiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
-      
+      <meta
+        httpEquiv="Referrer-Policy"
+        content="strict-origin-when-cross-origin"
+      />
+
       {/* Performance Hints */}
       <link rel="dns-prefetch" href="//fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="" />
-      
+      <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+        crossOrigin=""
+      />
+
       {children}
     </>
   );
@@ -114,30 +119,31 @@ export default function RootLayout({
           />
         </SecurityWrapper>
       </head>
-      <body className={`${inter.className} antialiased`} suppressHydrationWarning>
+      <body
+        className={`${inter.className} antialiased`}
+        suppressHydrationWarning
+      >
         <GlobalErrorBoundary>
           <AuthProvider>
             <FullscreenProvider>
               <div className="relative min-h-screen bg-background">
                 {/* Main content area */}
-                <main className="relative">
-                  {children}
-                </main>
-                
+                <main className="relative">{children}</main>
+
                 {/* Fixed UI elements */}
                 <div className="fixed bottom-4 right-4 z-50">
                   <GlobalFullscreenToggle />
                 </div>
-                
+
                 {/* Toast notifications */}
                 <Toaster />
               </div>
             </FullscreenProvider>
           </AuthProvider>
         </GlobalErrorBoundary>
-        
+
         {/* Performance monitoring script for development */}
-        {process.env.NODE_ENV === 'development' && (
+        {process.env.NODE_ENV === "development" && (
           <script
             dangerouslySetInnerHTML={{
               __html: `
@@ -169,60 +175,9 @@ export default function RootLayout({
             }}
           />
         )}
-        
-        {/* PWA Service Worker Registration */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js')
-                    .then(function(registration) {
-                      console.log('✅ Service Worker registered successfully:', registration.scope);
-                      
-                      // Check for updates
-                      registration.addEventListener('updatefound', function() {
-                        const newWorker = registration.installing;
-                        if (newWorker) {
-                          newWorker.addEventListener('statechange', function() {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                              // New content is available, show update notification
-                              if (window.confirm('A new version is available. Reload to update?')) {
-                                window.location.reload();
-                              }
-                            }
-                          });
-                        }
-                      });
-                    })
-                    .catch(function(error) {
-                      console.log('❌ Service Worker registration failed:', error);
-                    });
-                });
-              }
-              
-              // PWA Install Prompt Handling
-              let deferredPrompt;
-              window.addEventListener('beforeinstallprompt', function(e) {
-                e.preventDefault();
-                deferredPrompt = e;
-                console.log('📱 PWA Install prompt available');
-              });
-              
-              // Track PWA usage
-              window.addEventListener('appinstalled', function() {
-                console.log('🎉 PWA was installed');
-                deferredPrompt = null;
-              });
-              
-              // Detect if running as PWA
-              if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
-                console.log('📱 Running as PWA');
-                document.documentElement.classList.add('pwa-mode');
-              }
-            `,
-          }}
-        />
+
+        {/* PWA Service Worker Registration and update manager */}
+        <ServiceWorkerManager />
       </body>
     </html>
   );
