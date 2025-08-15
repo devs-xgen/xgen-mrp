@@ -5330,6 +5330,306 @@ export async function getAvailableCustomerOrders() {
   }
 }
 
+// =============================================
+// UNIFIED PRODUCTION CREATION SERVER ACTIONS
+// =============================================
+
+/**
+ * Unified production order creation that supports both standalone and customer-order-linked production
+ */
+export async function createProductionOrderUnified(input: {
+  productId: string;
+  productVariantId?: string;
+  quantity: number;
+  startDate: string;
+  dueDate: string;
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT" | "CRITICAL";
+  notes?: string;
+  customerOrderId?: string;
+  options?: { generateBOM?: boolean; reserveMaterials?: boolean };
+}): Promise<{ success: true; orderId: string; warnings?: string[] } | { success: false; error: string }> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    // Validate dates
+    const startDate = new Date(input.startDate);
+    const dueDate = new Date(input.dueDate);
+    if (dueDate <= startDate) {
+      return { success: false, error: "Due date must be after start date" };
+    }
+
+    // Validate product exists
+    const product = await prisma.product.findUnique({
+      where: { id: input.productId },
+      select: { id: true, name: true, hasVariants: true },
+    });
+
+    if (!product) {
+      return { success: false, error: "Product not found" };
+    }
+
+    // Validate variant if provided
+    if (input.productVariantId) {
+      const variant = await prisma.productVariant.findUnique({
+        where: { id: input.productVariantId },
+        select: { id: true, productId: true },
+      });
+
+      if (!variant || variant.productId !== input.productId) {
+        return { success: false, error: "Invalid product variant" };
+      }
+    }
+
+    // Create the production order
+    const order = await prisma.productionOrder.create({
+      data: {
+        productId: input.productId,
+        productVariantId: input.productVariantId || null,
+        quantity: input.quantity,
+        startDate: startDate,
+        dueDate: dueDate,
+        priority: input.priority,
+        customerOrderId: input.customerOrderId || null,
+        notes: input.notes || null,
+        status: "PENDING",
+        createdBy: session.user.id,
+      },
+      include: {
+        product: true,
+        productVariant: true,
+      },
+    });
+
+    const warnings: string[] = [];
+
+    // Generate BOM if requested
+    if (input.options?.generateBOM) {
+      try {
+        const bomResult = await generateProductionBOM(order.id);
+        if (bomResult.warnings && bomResult.warnings.length > 0) {
+          warnings.push(...bomResult.warnings);
+        }
+      } catch (bomError) {
+        warnings.push("Failed to generate BOM automatically");
+        console.error("BOM generation error:", bomError);
+      }
+    }
+
+    // Reserve materials if requested
+    if (input.options?.reserveMaterials && input.options?.generateBOM) {
+      try {
+        const reservationResult = await reserveMaterialsForOrder(order.id);
+        if (reservationResult.partials.length > 0) {
+          warnings.push(`Partial reservations: ${reservationResult.partials.length} materials have limited stock`);
+        }
+      } catch (reservationError) {
+        warnings.push("Failed to reserve materials automatically");
+        console.error("Material reservation error:", reservationError);
+      }
+    }
+
+    // Log the creation
+    try {
+      await prisma.activityLog.create({
+        data: {
+          type: "PRODUCTION_ORDER_CREATED",
+          userId: session.user.id,
+          details: {
+            productionOrderId: order.id,
+            productName: order.product.name,
+            productVariantName: order.productVariant?.displayName,
+            quantity: order.quantity,
+            source: input.customerOrderId ? "customer_order" : "standalone",
+            customerOrderId: input.customerOrderId,
+          },
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log production order creation:", logError);
+    }
+
+    revalidatePath("/admin/production");
+    revalidatePath("/admin/customer-orders");
+
+    return {
+      success: true,
+      orderId: order.id,
+      warnings: warnings.length > 0 ? warnings : undefined,
+    };
+  } catch (error) {
+    console.error("Error creating unified production order:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create production order",
+    };
+  }
+}
+
+/**
+ * Generate ProductionBOM entries for a production order
+ */
+export async function generateProductionBOM(orderId: string): Promise<{ count: number; warnings?: string[] }> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new Error("Unauthorized");
+    }
+
+    const order = await prisma.productionOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        product: true,
+        productVariant: true,
+      },
+    });
+
+    if (!order) {
+      throw new Error("Production order not found");
+    }
+
+    const warnings: string[] = [];
+    let bomEntries: any[] = [];
+
+    // Try to get BOM from variant first, then fallback to product BOM
+    if (order.productVariantId) {
+      bomEntries = await prisma.productVariantBOM.findMany({
+        where: { productVariantId: order.productVariantId },
+        include: { material: true },
+      });
+    }
+
+    // Fallback to product BOM if no variant BOM found
+    if (bomEntries.length === 0) {
+      bomEntries = await prisma.bOM.findMany({
+        where: { productId: order.productId },
+        include: { material: true },
+      });
+
+      if (order.productVariantId && bomEntries.length > 0) {
+        warnings.push("Using product BOM as fallback - no variant-specific BOM found");
+      }
+    }
+
+    if (bomEntries.length === 0) {
+      warnings.push("No BOM template found for this product");
+      return { count: 0, warnings };
+    }
+
+    // Create ProductionBOM entries
+    const productionBOMData = bomEntries.map((bom) => {
+      const quantityNeeded = Number(bom.quantityNeeded) * order.quantity;
+      const wasteQuantity = quantityNeeded * (Number(bom.wastePercentage) / 100);
+      const totalQuantityNeeded = quantityNeeded + wasteQuantity;
+
+      return {
+        productionOrderId: orderId,
+        materialId: bom.materialId,
+        originalBOMId: 'originalBOMId' in bom ? bom.id : undefined,
+        quantityNeeded: totalQuantityNeeded,
+        wastePercentage: Number(bom.wastePercentage),
+        unitCost: Number(bom.material.costPerUnit),
+        totalCost: totalQuantityNeeded * Number(bom.material.costPerUnit),
+        createdBy: session.user.id,
+      };
+    });
+
+    await prisma.productionBOM.createMany({
+      data: productionBOMData,
+    });
+
+    // Update production order with planned material cost
+    const totalMaterialCost = productionBOMData.reduce((sum, item) => sum + item.totalCost, 0);
+    await prisma.productionOrder.update({
+      where: { id: orderId },
+      data: { plannedMaterialCost: totalMaterialCost },
+    });
+
+    return { count: productionBOMData.length, warnings };
+  } catch (error) {
+    console.error("Error generating production BOM:", error);
+    throw error;
+  }
+}
+
+/**
+ * Reserve materials for a production order based on its BOM
+ */
+export async function reserveMaterialsForOrder(orderId: string): Promise<{
+  reservedCount: number;
+  partials: Array<{ materialId: string; requested: number; reserved: number }>;
+}> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new Error("Unauthorized");
+    }
+
+    const bomEntries = await prisma.productionBOM.findMany({
+      where: { productionOrderId: orderId },
+      include: { material: true },
+    });
+
+    if (bomEntries.length === 0) {
+      throw new Error("No BOM found for production order. Generate BOM first.");
+    }
+
+    const reservations: any[] = [];
+    const partials: Array<{ materialId: string; requested: number; reserved: number }> = [];
+
+    for (const bom of bomEntries) {
+      const requestedQuantity = Number(bom.quantityNeeded);
+      const availableQuantity = bom.material.currentStock - bom.material.committedStock;
+      const reservedQuantity = Math.min(requestedQuantity, Math.max(0, availableQuantity));
+
+      if (reservedQuantity > 0) {
+        reservations.push({
+          productionOrderId: orderId,
+          materialId: bom.materialId,
+          quantityReserved: reservedQuantity,
+          status: "RESERVED",
+          createdBy: session.user.id,
+        });
+
+        // Update material committed stock
+        await prisma.material.update({
+          where: { id: bom.materialId },
+          data: {
+            committedStock: {
+              increment: Math.round(reservedQuantity),
+            },
+          },
+        });
+      }
+
+      if (reservedQuantity < requestedQuantity) {
+        partials.push({
+          materialId: bom.materialId,
+          requested: requestedQuantity,
+          reserved: reservedQuantity,
+        });
+      }
+    }
+
+    // Create material reservations
+    if (reservations.length > 0) {
+      await prisma.materialReservation.createMany({
+        data: reservations,
+      });
+    }
+
+    return {
+      reservedCount: reservations.length,
+      partials,
+    };
+  } catch (error) {
+    console.error("Error reserving materials for order:", error);
+    throw error;
+  }
+}
+
 /**
  * Validates if a production order has all required role assignments before starting production
  * @param productionOrderId The ID of the production order to validate
