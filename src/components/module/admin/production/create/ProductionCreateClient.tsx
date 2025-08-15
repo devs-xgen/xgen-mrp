@@ -16,7 +16,7 @@ import {
   productionCreateSchema,
   type ProductionCreateForm,
 } from "@/lib/validation/production-create";
-import { useFormPersistence } from "@/hooks/use-form-persistence";
+import { useFormPersistence } from "@/hooks/use-simple-form-persistence";
 
 import { SourceStep } from "./steps/SourceStep";
 import { CustomerOrderStep } from "./steps/CustomerOrderStep";
@@ -83,7 +83,7 @@ export function ProductionCreateClient({
   });
 
   // Form persistence
-  useFormPersistence("production-create", form);
+  const { clearSavedData } = useFormPersistence("production-create", form);
 
   // Pre-fill from query params
   useEffect(() => {
@@ -224,6 +224,9 @@ export function ProductionCreateClient({
             toast.warning(warning);
           });
         }
+
+        // Clear saved form data on success
+        clearSavedData();
 
         router.push(`/admin/production/${result.orderId}`);
       } else {

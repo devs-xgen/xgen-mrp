@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-export const productionCreateSchema = z.object({
+// Base schema without refinements (for .pick() operations)
+const baseProductionCreateSchema = z.object({
   // Step 1: Source
   source: z.enum(["standalone", "customer_order"]),
   
@@ -23,7 +24,10 @@ export const productionCreateSchema = z.object({
   // Step 5: Options
   generateBOM: z.boolean().default(false),
   reserveMaterials: z.boolean().default(false),
-}).refine((data) => {
+});
+
+// Main schema with refinements
+export const productionCreateSchema = baseProductionCreateSchema.refine((data) => {
   // Validate dates
   const startDate = new Date(data.startDate);
   const dueDate = new Date(data.dueDate);
@@ -42,28 +46,28 @@ export const productionCreateSchema = z.object({
   path: ["customerOrderId"],
 });
 
-export type ProductionCreateForm = z.infer<typeof productionCreateSchema>;
+export type ProductionCreateForm = z.infer<typeof baseProductionCreateSchema>;
 
-// Individual step schemas for validation
-export const sourceStepSchema = productionCreateSchema.pick({
+// Individual step schemas for validation (using base schema for .pick())
+export const sourceStepSchema = baseProductionCreateSchema.pick({
   source: true,
 });
 
-export const customerOrderStepSchema = productionCreateSchema.pick({
+export const customerOrderStepSchema = baseProductionCreateSchema.pick({
   customerId: true,
   customerOrderId: true,
   orderLineId: true,
 });
 
-export const productStepSchema = productionCreateSchema.pick({
+export const productStepSchema = baseProductionCreateSchema.pick({
   productId: true,
 });
 
-export const variantStepSchema = productionCreateSchema.pick({
+export const variantStepSchema = baseProductionCreateSchema.pick({
   productVariantId: true,
 });
 
-export const detailsStepSchema = productionCreateSchema.pick({
+export const detailsStepSchema = baseProductionCreateSchema.pick({
   quantity: true,
   startDate: true,
   dueDate: true,
@@ -71,7 +75,7 @@ export const detailsStepSchema = productionCreateSchema.pick({
   notes: true,
 });
 
-export const optionsStepSchema = productionCreateSchema.pick({
+export const optionsStepSchema = baseProductionCreateSchema.pick({
   generateBOM: true,
   reserveMaterials: true,
 });

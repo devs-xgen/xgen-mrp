@@ -209,8 +209,7 @@ export function ReviewStep({
                   <span className="text-muted-foreground">Unit Price:</span>
                   <div className="font-medium">
                     {formatCurrencyPHP(
-                      selectedVariant?.sellingPrice ??
-                        selectedProduct.sellingPrice
+                      selectedVariant?.unitPrice ?? selectedProduct.unitPrice
                     )}
                   </div>
                 </div>

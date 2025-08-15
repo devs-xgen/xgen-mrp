@@ -14,7 +14,12 @@ export const CURRENCY_FORMATS = {
   }
 };
 
-export function formatCurrencyPHP(value: number) {
+export function formatCurrencyPHP(value: number | undefined | null): string {
+  // Handle undefined, null, or invalid values
+  if (value === undefined || value === null || isNaN(value)) {
+    return '₱0.00';
+  }
+  
   return value.toLocaleString('en-PH', {
     style: 'currency',
     currency: 'PHP',

@@ -1,10 +1,6 @@
 "use client";
 
 import { UseFormReturn } from "react-hook-form";
-import { useState } from "react";
-import { Search } from "lucide-react";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrencyPHP } from "@/lib/constant";
@@ -23,10 +19,9 @@ interface VariantStepProps {
       sku: string;
       sizeName?: string;
       colorName?: string;
-      sellingPrice: number;
+      unitPrice: number;
       currentStock: number;
       minimumStockLevel: number;
-      isActive: boolean;
     }>;
   };
 }
@@ -37,11 +32,14 @@ export function VariantStep({ form, selectedProduct }: VariantStepProps) {
     setValue,
     formState: { errors },
   } = form;
-  const [searchTerm, setSearchTerm] = useState("");
 
   const productVariantId = watch("productVariantId");
 
-  if (!selectedProduct?.hasVariants || !selectedProduct.variants) {
+  if (
+    !selectedProduct?.hasVariants ||
+    !selectedProduct.variants ||
+    selectedProduct.variants.length === 0
+  ) {
     return (
       <div className="text-center py-8">
         <p className="text-muted-foreground">
@@ -51,18 +49,13 @@ export function VariantStep({ form, selectedProduct }: VariantStepProps) {
     );
   }
 
-  const activeVariants = selectedProduct.variants.filter((v) => v.isActive);
-  const selectedVariant = activeVariants.find((v) => v.id === productVariantId);
-
-  const filteredVariants = activeVariants.filter(
-    (variant) =>
-      variant.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      variant.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      variant.sizeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      variant.colorName?.toLowerCase().includes(searchTerm.toLowerCase())
+  // All variants returned from server are already active (filtered in server action)
+  const availableVariants = selectedProduct.variants;
+  const selectedVariant = availableVariants.find(
+    (v) => v.id === productVariantId
   );
 
-  const handleVariantSelect = (variant: (typeof activeVariants)[0]) => {
+  const handleVariantSelect = (variant: (typeof availableVariants)[0]) => {
     setValue("productVariantId", variant.id);
   };
 
@@ -74,21 +67,6 @@ export function VariantStep({ form, selectedProduct }: VariantStepProps) {
           Choose the specific variant of <strong>{selectedProduct.name}</strong>{" "}
           to produce.
         </p>
-      </div>
-
-      {/* Search */}
-      <div className="space-y-2">
-        <Label htmlFor="variant-search">Search Variants</Label>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            id="variant-search"
-            placeholder="Search by name, SKU, size, or color..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
       </div>
 
       {/* Selected Variant Display */}
@@ -124,7 +102,7 @@ export function VariantStep({ form, selectedProduct }: VariantStepProps) {
               </div>
               <div className="text-right text-blue-900">
                 <div className="font-medium">
-                  {formatCurrencyPHP(selectedVariant.sellingPrice)}
+                  {formatCurrencyPHP(selectedVariant.unitPrice)}
                 </div>
                 <div className="text-sm">
                   Stock: {selectedVariant.currentStock}
@@ -143,7 +121,7 @@ export function VariantStep({ form, selectedProduct }: VariantStepProps) {
 
       {/* Variant List */}
       <div className="space-y-3 max-h-96 overflow-y-auto">
-        {filteredVariants.map((variant) => (
+        {availableVariants.map((variant) => (
           <Card
             key={variant.id}
             className={`cursor-pointer transition-colors hover:bg-muted/50 ${
@@ -175,7 +153,7 @@ export function VariantStep({ form, selectedProduct }: VariantStepProps) {
                 </div>
                 <div className="text-right">
                   <div className="font-medium">
-                    {formatCurrencyPHP(variant.sellingPrice)}
+                    {formatCurrencyPHP(variant.unitPrice)}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     Stock: {variant.currentStock}
@@ -192,18 +170,10 @@ export function VariantStep({ form, selectedProduct }: VariantStepProps) {
         ))}
       </div>
 
-      {filteredVariants.length === 0 && searchTerm && (
+      {availableVariants.length === 0 && (
         <div className="text-center py-8">
           <p className="text-muted-foreground">
-            No variants found matching "{searchTerm}"
-          </p>
-        </div>
-      )}
-
-      {filteredVariants.length === 0 && !searchTerm && (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">
-            No active variants available for this product.
+            No variants available for this product.
           </p>
         </div>
       )}
