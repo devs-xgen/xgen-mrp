@@ -1,10 +1,10 @@
 import { Metadata } from "next";
 import { getCustomerOrders } from "@/lib/actions/customer-order";
-import { getAllCustomers } from "@/lib/actions/customers";
-import { getProductsWithVariantsForOrders } from "@/lib/actions/product";
 import { columns } from "@/components/module/admin/customer-orders/columns";
 import { DataTable } from "@/components/module/admin/customer-orders/data-table";
-import { CreateCustomerOrderDialog } from "@/components/module/admin/customer-orders/create-dialog";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AnalyticsCard, analyticsCardVariants } from "@/components/ui/analytics-card";
@@ -17,11 +17,7 @@ export const metadata: Metadata = {
 };
 
 export default async function CustomerOrdersPage() {
-  const [customerOrders, customers, products] = await Promise.all([
-    getCustomerOrders(),
-    getAllCustomers(),
-    getProductsWithVariantsForOrders(),
-  ]);
+  const customerOrders = await getCustomerOrders();
 
   // Transform orders data for the table
   const tableData: CustomerOrderColumn[] = customerOrders.map((order) => ({
@@ -75,10 +71,12 @@ export default async function CustomerOrdersPage() {
             Manage customer orders and production planning with product variants
           </p>
         </div>
-        <CreateCustomerOrderDialog 
-          customers={customers} 
-          products={products} 
-        />
+        <Link href="/admin/production/create">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Order
+          </Button>
+        </Link>
       </div>
 
       {/* Customer Order Statistics */}

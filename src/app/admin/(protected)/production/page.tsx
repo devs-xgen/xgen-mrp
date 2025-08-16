@@ -5,12 +5,14 @@ import {
 } from "@/lib/actions/production-order";
 import { columns } from "@/components/module/admin/production/columns";
 import { DataTable } from "@/components/module/admin/production/data-table";
-import { ProductionOrderDialog } from "@/components/module/admin/production/create-production-order-dialog";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AnalyticsCard, analyticsCardVariants } from "@/components/ui/analytics-card";
 import { convertDecimals } from "@/lib/convertDecimals";
-import { getAvailableProducts, getAvailableWorkCenters } from "@/lib/actions/inspector/production-order";
+
 import { FloatingChatbox } from "@/components/global/floating-chatbox";
 
 export const metadata: Metadata = {
@@ -19,11 +21,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ProductionOrdersPage() {
-  const [ordersRaw, products, workCenters] = await Promise.all([
-    getProductionOrders(),
-    getAvailableProducts(),
-    getAvailableWorkCenters(),
-  ]);
+  const ordersRaw = await getProductionOrders();
 
   // Convert Decimal fields to numbers for client component compatibility
   const orders = convertDecimals(ordersRaw);
@@ -88,7 +86,12 @@ export default async function ProductionOrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <ProductionOrderDialog products={products} workCenters={workCenters} />
+          <Link href="/admin/production/create">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Production Order
+            </Button>
+          </Link>
         </div>
       </div>
 
