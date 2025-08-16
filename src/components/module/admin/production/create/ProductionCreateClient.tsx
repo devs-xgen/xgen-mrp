@@ -277,111 +277,193 @@ export function ProductionCreateClient({
   const progress = ((currentStep + 1) / visibleSteps.length) * 100;
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
-      {/* Header */}
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={() => router.push("/admin/production")}
-          className="mb-4"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Production
-        </Button>
-
-        <h1 className="text-3xl font-bold tracking-tight">
-          Create Production Order
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Follow the steps to create a new production order
-        </p>
+    <div className="flex flex-col lg:flex-row h-screen bg-background">
+      {/* Mobile Header - Only on small screens */}
+      <div className="lg:hidden bg-card border-b border-border p-4">
+        <div className="flex items-center justify-between mb-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/admin/production")}
+            size="sm"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+          <div className="text-right">
+            <div className="text-sm font-medium">
+              Step {currentStep + 1} of {visibleSteps.length}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {Math.round(progress)}% complete
+            </div>
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <h1 className="text-xl font-bold tracking-tight">
+            Create Production Order
+          </h1>
+          <Progress value={progress} className="w-full" />
+        </div>
       </div>
 
-      {/* Progress */}
-      <Card className="mb-6">
-        <CardContent className="pt-6">
+      {/* Left Sidebar - Desktop & Tablet */}
+      <div className="hidden lg:flex lg:w-80 xl:w-96 border-r border-border bg-card flex-col">
+        {/* Header */}
+        <div className="p-6 border-b border-border">
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/admin/production")}
+            className="mb-4 w-full justify-start"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Production
+          </Button>
+
+          <h1 className="text-2xl font-bold tracking-tight">
+            Create Production Order
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Follow the steps to create a new production order
+          </p>
+        </div>
+
+        {/* Progress Section */}
+        <div className="p-6 border-b border-border">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">
                 Step {currentStep + 1} of {visibleSteps.length}
               </span>
               <span className="text-sm text-muted-foreground">
-                {Math.round(progress)}% complete
+                {Math.round(progress)}%
               </span>
             </div>
             <Progress value={progress} className="w-full" />
-
-            {/* Step indicators */}
-            <div className="flex justify-between items-center">
-              {visibleSteps.map((stepId, index) => {
-                const step = STEPS.find((s) => s.id === stepId);
-                const isActive = index === currentStep;
-                const isCompleted = index < currentStep;
-
-                return (
-                  <div
-                    key={stepId}
-                    className="flex flex-col items-center space-y-2"
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                        isCompleted
-                          ? "bg-green-600 text-white"
-                          : isActive
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-200 text-gray-600"
-                      }`}
-                    >
-                      {isCompleted ? <Check className="w-4 h-4" /> : index + 1}
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xs font-medium">{step?.title}</div>
-                      <div className="text-xs text-muted-foreground hidden sm:block">
-                        {step?.description}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Current Step */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>
-            {STEPS.find((s) => s.id === currentStepId)?.title}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>{renderCurrentStep()}</CardContent>
-      </Card>
+        {/* Steps List */}
+        <div className="flex-1 p-6 space-y-3 overflow-y-auto">
+          {visibleSteps.map((stepId, index) => {
+            const step = STEPS.find((s) => s.id === stepId);
+            const isActive = index === currentStep;
+            const isCompleted = index < currentStep;
 
-      {/* Navigation */}
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={prevStep}
-          disabled={currentStep === 0}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Previous
-        </Button>
+            return (
+              <div
+                key={stepId}
+                className={`flex items-start space-x-3 p-3 rounded-lg transition-colors ${
+                  isActive
+                    ? "bg-primary/10 border-2 border-primary/20"
+                    : isCompleted
+                    ? "bg-green-50 border border-green-200"
+                    : "bg-muted/30 border border-border"
+                }`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 ${
+                    isCompleted
+                      ? "bg-green-600 text-white"
+                      : isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {isCompleted ? <Check className="w-4 h-4" /> : index + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm">{step?.title}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {step?.description}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
-        {currentStep === visibleSteps.length - 1 ? (
-          <Button
-            onClick={form.handleSubmit(onSubmit)}
-            disabled={!canGoNext() || isSubmitting}
-          >
-            {isSubmitting ? "Creating..." : "Create Production Order"}
-          </Button>
-        ) : (
-          <Button onClick={nextStep} disabled={!canGoNext()}>
-            Next
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        )}
+        {/* Navigation - Fixed at bottom */}
+        <div className="p-6 border-t border-border bg-background">
+          <div className="flex justify-between space-x-3">
+            <Button
+              variant="outline"
+              onClick={prevStep}
+              disabled={currentStep === 0}
+              className="flex-1"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Previous
+            </Button>
+
+            {currentStep === visibleSteps.length - 1 ? (
+              <Button
+                onClick={form.handleSubmit(onSubmit)}
+                disabled={!canGoNext() || isSubmitting}
+                className="flex-1"
+              >
+                {isSubmitting ? "Creating..." : "Create"}
+              </Button>
+            ) : (
+              <Button onClick={nextStep} disabled={!canGoNext()} className="flex-1">
+                Next
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Right Content Area - Scrollable */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Form Content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 md:p-6 lg:p-8">
+            <Card className="max-w-2xl mx-auto">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl">
+                  {STEPS.find((s) => s.id === currentStepId)?.title}
+                </CardTitle>
+                <p className="text-muted-foreground text-sm">
+                  {STEPS.find((s) => s.id === currentStepId)?.description}
+                </p>
+              </CardHeader>
+              <CardContent>
+                {renderCurrentStep()}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Mobile Navigation - Fixed at bottom on small screens */}
+        <div className="lg:hidden bg-card border-t border-border p-4">
+          <div className="flex justify-between space-x-3">
+            <Button
+              variant="outline"
+              onClick={prevStep}
+              disabled={currentStep === 0}
+              className="flex-1"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Previous
+            </Button>
+
+            {currentStep === visibleSteps.length - 1 ? (
+              <Button
+                onClick={form.handleSubmit(onSubmit)}
+                disabled={!canGoNext() || isSubmitting}
+                className="flex-1"
+              >
+                {isSubmitting ? "Creating..." : "Create"}
+              </Button>
+            ) : (
+              <Button onClick={nextStep} disabled={!canGoNext()} className="flex-1">
+                Next
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
