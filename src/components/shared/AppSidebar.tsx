@@ -16,6 +16,7 @@ import {
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getNavItems } from "@/config/nav";
+import { getLogoutCallbackUrl } from "@/lib/utils/logout-url";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -353,7 +354,7 @@ export default function AppSidebar({
             "text-slate-300 hover:bg-slate-700 hover:text-slate-100",
             isCollapsed ? "w-10 p-0" : "w-full justify-start"
           )}
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={() => signOut({ callbackUrl: getLogoutCallbackUrl() })}
           disabled={isLoading}
         >
           {isLoading ? (

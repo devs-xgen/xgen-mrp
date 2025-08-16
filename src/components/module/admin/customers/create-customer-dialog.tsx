@@ -60,7 +60,10 @@ const formSchema = z.object({
     country: z.string().optional(),
     postalCode: z.string().optional(),
     tinNumber: z.string().optional(),
-    creditLimit: z.string().optional(),
+    creditLimit: z.string().optional().refine(
+        (val) => !val || val === "" || !isNaN(parseFloat(val)),
+        "Credit limit must be a valid number"
+    ),
     paymentTerms: z.string().optional(),
     status: z.nativeEnum(Status),
     notes: z.string().optional(),

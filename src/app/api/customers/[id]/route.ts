@@ -15,14 +15,23 @@ export async function PATCH(
     }
 
     const body = await req.json();
+
+    // Process the data to handle empty strings for optional decimal fields
+    const processedData = {
+      ...body,
+      // Convert empty string to null for creditLimit (Decimal field)
+      creditLimit:
+        body.creditLimit === "" || body.creditLimit === undefined
+          ? null
+          : parseFloat(body.creditLimit),
+      modifiedBy: session.user.id,
+    };
+
     const customer = await prisma.customer.update({
       where: {
         id: id,
       },
-      data: {
-        ...body,
-        modifiedBy: session.user.id,
-      },
+      data: processedData,
     });
 
     return NextResponse.json(customer);
