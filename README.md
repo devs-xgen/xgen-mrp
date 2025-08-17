@@ -1,5 +1,8 @@
 # XGen MRP System
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/1eb5243d-cf88-4513-bac6-d50aa5b156b2/deploy-status)](https://app.netlify.com/projects/xgen-mrp/deploys)
+
+
 A comprehensive Material Requirements Planning (MRP) system designed for clothing manufacturers, providing end-to-end solutions for production planning, inventory management, quality control, and delivery management.
 
 ## System Overview
