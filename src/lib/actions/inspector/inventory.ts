@@ -25,6 +25,98 @@ import { getWorkCenterById } from "@/lib/data/worker/workCenters";
 import { getUserById } from "@/lib/data/worker/users";
 import { getLocationById } from "@/lib/data/worker/locations";
 import { getMaterialById } from "@/lib/data/worker/materials";
+import { convertDecimals } from "@/lib/convertDecimals";
+
+export async function getAllMaterials() {
+  try {
+    const materials = await prisma.material.findMany({
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        currentStock: true,
+        minimumStockLevel: true,
+        unitOfMeasure: {
+          select: {
+            symbol: true,
+          },
+        },
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    return convertDecimals(materials);
+  } catch (error) {
+    console.error("❌ Error fetching materials:", error);
+    throw new Error("Failed to fetch materials");
+  }
+}
+
+
+export async function getAllProducts() {
+  try {
+    const products = await prisma.product.findMany({
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        variants: {
+          select: {
+            id: true,
+            sku: true,
+            sizeName: true,
+            sizeCode: true,
+            colorName: true,
+            colorCode: true,
+            currentStock: true,
+            minimumStockLevel: true,
+            displayName: true,
+            isActive: true,
+            sortOrder: true,
+          },
+          where: {
+            isActive: true,
+          },
+          orderBy: [
+            { sortOrder: "asc" },
+            { sizeName: "asc" },
+            { colorName: "asc" },
+          ],
+        },
+        productionOrders: {
+          select: {
+            id: true,
+            status: true,
+            quantity: true,
+            dueDate: true,
+          },
+          where: {
+            status: {
+              in: ["PENDING", "IN_PROGRESS", "ACTIVE"],
+            },
+          },
+          take: 5,
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    return convertDecimals(products);
+  } catch (error) {
+    console.error("❌ Error fetching products:", error);
+    throw new Error("Failed to fetch products");
+  }
+}
 
 // Helper function to check worker access to locations
 async function getWorkerLocationIds(userId: string): Promise<string[]> {
