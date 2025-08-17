@@ -104,7 +104,8 @@ export function EditCustomerDialog({
             })
 
             if (!response.ok) {
-                throw new Error("Failed to update customer")
+                const errorText = await response.text()
+                throw new Error(errorText || "Failed to update customer")
             }
 
             toast({

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 
 export async function PATCH(
   req: Request,
@@ -34,10 +35,44 @@ export async function PATCH(
       data: processedData,
     });
 
+    // Revalidate the customers page to show fresh data
+    revalidatePath("/admin/customers");
+
     return NextResponse.json(customer);
-  } catch (error) {
+  } catch (error: any) {
     console.error("[CUSTOMER_PATCH]", error);
-    return new NextResponse("Internal error", { status: 500 });
+
+    // Handle Prisma unique constraint violations
+    if (error.code === "P2002") {
+      const field = error.meta?.target?.[0];
+      if (field === "code") {
+        return new NextResponse(
+          "Customer code already exists. Please use a different code.",
+          { status: 400 }
+        );
+      }
+      if (field === "tinNumber") {
+        return new NextResponse(
+          "TIN number already exists. Please use a different TIN number.",
+          { status: 400 }
+        );
+      }
+      return new NextResponse("A customer with these details already exists.", {
+        status: 400,
+      });
+    }
+
+    // Handle validation errors
+    if (error.code === "P2000") {
+      return new NextResponse(
+        "Invalid data provided. Please check your input.",
+        { status: 400 }
+      );
+    }
+
+    return new NextResponse("Failed to update customer. Please try again.", {
+      status: 500,
+    });
   }
 }
 
@@ -57,6 +92,9 @@ export async function DELETE(
         id: id,
       },
     });
+
+    // Revalidate the customers page to show fresh data
+    revalidatePath("/admin/customers");
 
     return NextResponse.json(customer);
   } catch (error) {

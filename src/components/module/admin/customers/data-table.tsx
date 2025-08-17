@@ -27,9 +27,10 @@ import { columns } from "./columns"
 
 interface DataTableProps {
     data: Customer[]
+    onCustomerUpdated?: () => Promise<void>
 }
 
-export function CustomerDataTable({ data }: DataTableProps) {
+export function CustomerDataTable({ data, onCustomerUpdated }: DataTableProps) {
     const [sorting, setSorting] = useState<SortingState>([])
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
@@ -46,6 +47,9 @@ export function CustomerDataTable({ data }: DataTableProps) {
         getFilteredRowModel: getFilteredRowModel(),
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
+        meta: {
+            onCustomerUpdated,
+        },
         state: {
             sorting,
             columnFilters,

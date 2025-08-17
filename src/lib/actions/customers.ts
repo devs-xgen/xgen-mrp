@@ -1,6 +1,6 @@
-'use server'
+"use server";
 
-import { prisma } from "@/lib/db"
+import { prisma } from "@/lib/db";
 
 export interface CustomerSearchFilters {
   search?: string;
@@ -13,9 +13,9 @@ export async function getAllCustomers(filters?: CustomerSearchFilters) {
   try {
     const {
       search,
-      status = 'ACTIVE',
+      status = "ACTIVE",
       limit = 100,
-      offset = 0
+      offset = 0,
     } = filters || {};
 
     // Build where clause for filtering
@@ -30,33 +30,33 @@ export async function getAllCustomers(filters?: CustomerSearchFilters) {
         {
           name: {
             contains: searchTerm,
-            mode: 'insensitive'
-          }
+            mode: "insensitive",
+          },
         },
         {
           email: {
             contains: searchTerm,
-            mode: 'insensitive'
-          }
+            mode: "insensitive",
+          },
         },
         {
           code: {
             contains: searchTerm,
-            mode: 'insensitive'
-          }
+            mode: "insensitive",
+          },
         },
         {
           phone: {
             contains: searchTerm,
-            mode: 'insensitive'
-          }
+            mode: "insensitive",
+          },
         },
         {
           contactPerson: {
             contains: searchTerm,
-            mode: 'insensitive'
-          }
-        }
+            mode: "insensitive",
+          },
+        },
       ];
     }
 
@@ -87,12 +87,12 @@ export async function getAllCustomers(filters?: CustomerSearchFilters) {
       },
       take: limit,
       skip: offset,
-    })
+    });
 
-    return customers
+    return customers;
   } catch (error) {
-    console.error("Error fetching customers:", error)
-    throw new Error("Failed to fetch customers")
+    console.error("Error fetching customers:", error);
+    throw new Error("Failed to fetch customers");
   }
 }
 
@@ -104,14 +104,14 @@ export async function searchCustomers(searchTerm: string, limit: number = 50) {
 
     const customers = await getAllCustomers({
       search: searchTerm,
-      status: 'ACTIVE',
-      limit
+      status: "ACTIVE",
+      limit,
     });
 
     return customers;
   } catch (error) {
-    console.error("Error searching customers:", error)
-    throw new Error("Failed to search customers")
+    console.error("Error searching customers:", error);
+    throw new Error("Failed to search customers");
   }
 }
 
@@ -150,7 +150,7 @@ export async function getCustomerById(customerId: string) {
             status: true,
           },
           orderBy: {
-            orderDate: 'desc'
+            orderDate: "desc",
           },
           take: 5, // Last 5 orders
         },
@@ -163,10 +163,10 @@ export async function getCustomerById(customerId: string) {
             status: true,
           },
           orderBy: {
-            billingDate: 'desc'
+            billingDate: "desc",
           },
           take: 5, // Last 5 billing statements
-        }
+        },
       },
     });
 
@@ -176,15 +176,15 @@ export async function getCustomerById(customerId: string) {
 
     return customer;
   } catch (error) {
-    console.error("Error fetching customer by ID:", error)
-    throw new Error("Failed to fetch customer details")
+    console.error("Error fetching customer by ID:", error);
+    throw new Error("Failed to fetch customer details");
   }
 }
 
 export async function validateCustomerForBilling(customerId: string) {
   try {
     const customer = await getCustomerById(customerId);
-    
+
     const validationResult = {
       isValid: true,
       customer,
@@ -193,17 +193,22 @@ export async function validateCustomerForBilling(customerId: string) {
     };
 
     // Check customer status
-    if (customer.status !== 'ACTIVE') {
-      validationResult.errors.push(`Customer status is ${customer.status}. Only active customers can be billed.`);
+    if (customer.status !== "ACTIVE") {
+      validationResult.errors.push(
+        `Customer status is ${customer.status}. Only active customers can be billed.`
+      );
       validationResult.isValid = false;
     }
 
     // Check credit limit if applicable
     if (customer.creditLimit && customer.creditLimit > 0) {
       // Calculate outstanding amount from billing statements
-      const outstandingAmount = customer.billingStatements
-        ?.filter(stmt => stmt.status !== 'PAID' && stmt.status !== 'CANCELLED')
-        .reduce((sum, stmt) => sum + stmt.totalAmount, 0) || 0;
+      const outstandingAmount =
+        customer.billingStatements
+          ?.filter(
+            (stmt) => stmt.status !== "PAID" && stmt.status !== "CANCELLED"
+          )
+          .reduce((sum, stmt) => sum + stmt.totalAmount, 0) || 0;
 
       if (outstandingAmount >= customer.creditLimit) {
         validationResult.warnings.push(
@@ -214,11 +219,15 @@ export async function validateCustomerForBilling(customerId: string) {
 
     // Check for missing essential information
     if (!customer.email) {
-      validationResult.warnings.push("Customer email is missing. This may affect billing delivery.");
+      validationResult.warnings.push(
+        "Customer email is missing. This may affect billing delivery."
+      );
     }
 
     if (!customer.address) {
-      validationResult.warnings.push("Customer address is missing. This may affect delivery.");
+      validationResult.warnings.push(
+        "Customer address is missing. This may affect delivery."
+      );
     }
 
     return validationResult;
@@ -230,5 +239,85 @@ export async function validateCustomerForBilling(customerId: string) {
       warnings: [],
       errors: ["Failed to validate customer information"],
     };
+  }
+}
+
+export async function getCustomerOrdersByCustomerId(customerId: string) {
+  try {
+    const customerOrders = await prisma.customerOrder.findMany({
+      where: {
+        customerId: customerId,
+      },
+      include: {
+        customer: true,
+        orderLines: {
+          include: {
+            product: true,
+            productVariant: true,
+          },
+        },
+        productionOrders: true,
+        billingStatements: true,
+        transaction: true,
+        _count: {
+          select: {
+            orderLines: true,
+            productionOrders: true,
+            billingStatements: true,
+          },
+        },
+      },
+      orderBy: {
+        orderDate: "desc",
+      },
+    });
+
+    return customerOrders;
+  } catch (error) {
+    console.error("Error fetching customer orders:", error);
+    throw new Error("Failed to fetch customer orders");
+  }
+}
+
+export async function getProductionOrdersByCustomerId(customerId: string) {
+  try {
+    // Get production orders that are linked to customer orders from this customer
+    const productionOrders = await prisma.productionOrder.findMany({
+      where: {
+        customerOrder: {
+          customerId: customerId,
+        },
+      },
+      include: {
+        product: true,
+        productVariant: true,
+        customerOrder: {
+          include: {
+            customer: true,
+          },
+        },
+        operations: true,
+        qualityChecks: true,
+        delivery: true,
+        costVariances: true,
+        materialReservations: true,
+        productionBatches: true,
+        _count: {
+          select: {
+            operations: true,
+            qualityChecks: true,
+            materialReservations: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return productionOrders;
+  } catch (error) {
+    console.error("Error fetching production orders for customer:", error);
+    throw new Error("Failed to fetch production orders");
   }
 }

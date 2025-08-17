@@ -64,6 +64,11 @@ export const columns: ColumnDef<Customer>[] = [
     },
     {
         id: "actions",
-        cell: ({ row }) => <DataTableRowActions row={row} />
+        cell: ({ row, table }) => (
+            <DataTableRowActions 
+                row={row} 
+                onCustomerUpdated={(table.options.meta as any)?.onCustomerUpdated}
+            />
+        )
     },
 ] 
