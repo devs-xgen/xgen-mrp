@@ -112,7 +112,7 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
         <Link href={`/admin/customer-orders/${order.id}/analyze`}>
           <Button variant="secondary">
             <Search className="h-4 w-4 mr-2" />
-            Analyze Stock
+            Stock Analysis & Production Planning
           </Button>
         </Link>
         <Button variant="outline">
@@ -439,7 +439,7 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
                 <Link href={`/admin/customer-orders/${order.id}/analyze`}>
                   <Button>
                     <Search className="h-4 w-4 mr-2" />
-                    Analyze Order
+                    Start Production Planning
                   </Button>
                 </Link>
               </CardContent>

@@ -46,6 +46,7 @@ import { RecommendedActionBadge } from "./RecommendedActionBadge";
 import { OrderAnalysisSummaryCard } from "./OrderAnalysisSummaryCard";
 import { ProductionPlanningDialog } from "./ProductionPlanningDialog";
 import { StockAllocationDialog } from "./StockAllocationDialog";
+import { ProductionPlanningActions } from "./ProductionPlanningActions";
 
 interface CustomerOrderAnalysisClientProps {
   orderAnalysis: CustomerOrderAnalysisResult;
@@ -212,7 +213,13 @@ export function CustomerOrderAnalysisClient({
           </CardContent>
         </Card>
 
-        {/* Action Buttons */}
+        {/* Production Planning Actions */}
+        <ProductionPlanningActions 
+          orderAnalysis={orderAnalysis}
+          orderId={orderId}
+        />
+
+        {/* Legacy Action Buttons - keeping for backwards compatibility */}
         {!orderAnalysis.canFulfillImmediately && (
           <div className="flex flex-wrap gap-3">
             {stockLines.length > 0 && (

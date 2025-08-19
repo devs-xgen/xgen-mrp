@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { ProductionCreateClient } from "@/components/module/admin/production/create/ProductionCreateClient";
 import { getProductsWithVariantsForOrders } from "@/lib/actions/product";
+import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 
 export const metadata: Metadata = {
   title: "Create Production Order",
@@ -46,14 +47,34 @@ export default async function CreateProductionPage({
     }
   }
 
+  const breadcrumbItems = [
+    { label: "Production Orders", href: "/admin/production" },
+    { label: "Create Order", href: "/admin/production/create" },
+  ];
+
   return (
-    <ProductionCreateClient
-      products={products}
-      customers={[]} // Empty array since we don't need customers for standalone production
-      customerOrders={[]} // Empty array since we don't need customer orders
-      prefillData={prefillData}
-      batchMode={batchMode}
-      batchItems={batchItems}
-    />
+    <div className="flex flex-col gap-6 p-8">
+      <div className="space-y-4">
+        <Breadcrumbs items={breadcrumbItems} />
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Create Production Order</h2>
+            <p className="text-muted-foreground">
+              Create a standalone production order for manufacturing. 
+              Customer orders are managed separately.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <ProductionCreateClient
+        products={products}
+        customers={[]} // Empty array since we don't need customers for standalone production
+        customerOrders={[]} // Empty array since we don't need customer orders
+        prefillData={prefillData}
+        batchMode={batchMode}
+        batchItems={batchItems}
+      />
+    </div>
   );
 }

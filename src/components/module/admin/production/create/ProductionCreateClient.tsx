@@ -345,7 +345,7 @@ export function ProductionCreateClient({
         
         <div className="space-y-2">
           <h1 className="text-xl font-bold tracking-tight">
-            {batchMode ? `Create ${batchItems.length} Production Orders` : "Create Production Order"}
+            {batchMode ? `Create ${batchItems.length} Production Orders` : "Standalone Production Order"}
           </h1>
           <Progress value={progress} className="w-full" />
         </div>
@@ -365,12 +365,12 @@ export function ProductionCreateClient({
           </Button>
 
           <h1 className="text-2xl font-bold tracking-tight">
-            {batchMode ? `Create ${batchItems.length} Production Orders` : "Create Production Order"}
+            {batchMode ? `Create ${batchItems.length} Production Orders` : "Standalone Production Order"}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             {batchMode 
               ? `Creating ${batchItems.length} production orders from customer order analysis`
-              : "Follow the steps to create a new production order"
+              : "Create production orders independently from customer orders"
             }
           </p>
         </div>

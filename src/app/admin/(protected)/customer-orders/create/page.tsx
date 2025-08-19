@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { getAllCustomers } from "@/lib/actions/customers";
 import { getProductsWithVariantsForOrders } from "@/lib/actions/product";
 import { CustomerOrderCreateClient } from "@/components/module/admin/customer-orders/create/CustomerOrderCreateClient";
+import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 
 export const metadata: Metadata = {
   title: "Create Customer Order",
@@ -15,15 +16,23 @@ export default async function CreateCustomerOrderPage() {
     getProductsWithVariantsForOrders(),
   ]);
 
+  const breadcrumbItems = [
+    { label: "Customer Orders", href: "/admin/customer-orders" },
+    { label: "Create Order", href: "/admin/customer-orders/create" },
+  ];
+
   return (
     <div className="flex flex-col gap-6 p-8">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Create Customer Order</h2>
-          <p className="text-muted-foreground">
-            Create a new customer order that will be saved for archiving purposes. 
-            Production planning can be done separately after order creation.
-          </p>
+      <div className="space-y-4">
+        <Breadcrumbs items={breadcrumbItems} />
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Create Customer Order</h2>
+            <p className="text-muted-foreground">
+              Create a new customer order that will be saved for archiving purposes. 
+              Production planning can be done separately after order creation.
+            </p>
+          </div>
         </div>
       </div>
 

@@ -33,6 +33,7 @@ import {
 
 import { createCustomerOrder } from "@/lib/actions/customer-order";
 import { formatCurrencyPHP } from "@/lib/constant";
+import { customerOrderCreateSchema, type CustomerOrderCreateForm } from "@/lib/validation/customer-order-create";
 import type { Customer } from "@prisma/client";
 
 // Types for the form
@@ -54,12 +55,8 @@ interface OrderLine {
   };
 }
 
-interface CustomerOrderForm {
-  customerId: string;
-  requiredDate: string;
-  notes?: string;
-  orderLines: OrderLine[];
-}
+// Use the validation schema types
+type CustomerOrderForm = CustomerOrderCreateForm;
 
 interface CustomerOrderCreateClientProps {
   customers: Customer[];
@@ -84,10 +81,7 @@ export function CustomerOrderCreateClient({
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
 
   const form = useForm<CustomerOrderForm>({
-    resolver: zodResolver(
-      // Basic validation - will create proper schema later
-      {} as any
-    ),
+    resolver: zodResolver(customerOrderCreateSchema),
     defaultValues: {
       customerId: "",
       requiredDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -98,7 +92,12 @@ export function CustomerOrderCreateClient({
     },
   });
 
-  const { watch, setValue, handleSubmit } = form;
+  const { 
+    watch, 
+    setValue, 
+    handleSubmit,
+    formState: { errors }
+  } = form;
   const customerId = watch("customerId");
 
   useEffect(() => {
@@ -211,10 +210,9 @@ export function CustomerOrderCreateClient({
 
     setIsSubmitting(true);
     try {
+      // Prepare the order data with order lines from state
       const orderData = {
-        customerId: data.customerId,
-        requiredDate: data.requiredDate,
-        notes: data.notes || "",
+        ...data,
         orderLines: orderLines.map((line) => ({
           productId: line.productId,
           productVariantId: line.productVariantId || null,
@@ -268,6 +266,11 @@ export function CustomerOrderCreateClient({
             ))}
           </SelectContent>
         </Select>
+        {errors.customerId && (
+          <p className="text-sm text-destructive mt-1">
+            {errors.customerId.message}
+          </p>
+        )}
       </div>
 
       {selectedCustomer && (
@@ -460,6 +463,11 @@ export function CustomerOrderCreateClient({
             value={watch("requiredDate")}
             onChange={(e) => setValue("requiredDate", e.target.value)}
           />
+          {errors.requiredDate && (
+            <p className="text-sm text-destructive mt-1">
+              {errors.requiredDate.message}
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -576,7 +584,7 @@ export function CustomerOrderCreateClient({
             <h1 className="text-lg font-semibold">Create Customer Order</h1>
           </div>
           <p className="text-muted-foreground text-sm mt-1">
-            Create an order that will be saved for archiving purposes
+            Create an order independently for archiving. Production planning happens separately.
           </p>
         </div>
 

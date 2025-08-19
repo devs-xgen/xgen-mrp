@@ -36,7 +36,8 @@ export default async function CustomerOrderAnalysisPage({
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Order Analysis</h2>
             <p className="text-muted-foreground">
-              Review stock availability and make production planning decisions for{" "}
+              Bridge between customer order and production planning. Review stock availability 
+              and decide fulfillment strategy for{" "}
               <span className="font-medium">{orderAnalysis.orderNumber}</span>
             </p>
           </div>
