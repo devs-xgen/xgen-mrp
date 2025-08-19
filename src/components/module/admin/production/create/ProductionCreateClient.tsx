@@ -19,7 +19,6 @@ import {
 import { useFormPersistence } from "@/hooks/use-simple-form-persistence";
 
 import { SourceStep } from "./steps/SourceStep";
-import { CustomerOrderStep } from "./steps/CustomerOrderStep";
 import { ProductStep } from "./steps/ProductStep";
 import { VariantStep } from "./steps/VariantStep";
 import { DetailsStep } from "./steps/DetailsStep";
@@ -52,12 +51,7 @@ interface ProductionCreateClientProps {
 }
 
 const STEPS = [
-  { id: "source", title: "Source", description: "Choose creation type" },
-  {
-    id: "customer_order",
-    title: "Customer Order",
-    description: "Select order",
-  },
+  { id: "source", title: "Source", description: "Production order type" },
   { id: "product", title: "Product", description: "Select product" },
   { id: "variant", title: "Variant", description: "Select variant" },
   { id: "details", title: "Details", description: "Quantity & dates" },
@@ -106,18 +100,8 @@ export function ProductionCreateClient({
         form.setValue("productVariantId", prefillData.productVariantId);
       }
     }
-    if (prefillData?.customerOrderId) {
-      form.setValue("source", "customer_order");
-      form.setValue("customerOrderId", prefillData.customerOrderId);
-      // Find customer from the order
-      const order = customerOrders.find(
-        (o) => o.id === prefillData.customerOrderId
-      );
-      if (order) {
-        form.setValue("customerId", order.customerId);
-      }
-    }
-  }, [prefillData, form, customerOrders]);
+    // Note: Customer order prefill removed - production orders are now standalone only
+  }, [prefillData, form]);
 
   const watchedValues = form.watch();
   const selectedProduct = products.find(
@@ -131,13 +115,7 @@ export function ProductionCreateClient({
       return ["details", "options", "review"];
     }
 
-    const steps = ["source"];
-
-    if (watchedValues.source === "customer_order") {
-      steps.push("customer_order");
-    } else {
-      steps.push("product");
-    }
+    const steps = ["source", "product"];
 
     // Show variant step only if product has variants
     if (selectedProduct?.hasVariants) {
@@ -156,9 +134,7 @@ export function ProductionCreateClient({
 
     switch (currentStepId) {
       case "source":
-        return !!watchedValues.source;
-      case "customer_order":
-        return !!(watchedValues.customerId && watchedValues.customerOrderId);
+        return true; // Always can proceed from source step
       case "product":
         return !!watchedValues.productId;
       case "variant":
@@ -312,14 +288,6 @@ export function ProductionCreateClient({
     switch (currentStepId) {
       case "source":
         return <SourceStep form={form} />;
-      case "customer_order":
-        return (
-          <CustomerOrderStep
-            form={form}
-            customers={customers}
-            customerOrders={customerOrders}
-          />
-        );
       case "product":
         return <ProductStep form={form} products={products} />;
       case "variant":

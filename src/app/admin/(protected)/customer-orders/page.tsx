@@ -176,7 +176,7 @@ export default async function CustomerOrdersPage() {
               Production Planning
             </Button>
           </Link>
-          <Link href="/admin/production/create">
+          <Link href="/admin/customer-orders/create">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               Create Order
