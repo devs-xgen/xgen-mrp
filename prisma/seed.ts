@@ -1,146 +1,78 @@
-import { PrismaClient, Role, UserStatus } from '@prisma/client'
-import { hash } from 'bcryptjs'
-import { config } from 'dotenv'
+import { PrismaClient, Role, UserStatus } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
-config()
-
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
 async function main() {
-    try {
-        // First delete existing users if they exist (for clean seeding)
-        console.log('Cleaning up existing seed data...')
-        await prisma.emergencyContact.deleteMany({})
-        await prisma.userProfile.deleteMany({})
-        await prisma.user.deleteMany({
-            where: {
-                email: {
-                    in: ['admin@example.com', 'worker@example.com', 'inspector@example.com', 'delivery@example.com']
-                }
-            }
-        })
-        
-        console.log('Creating seed users...')
-        
-        // Create Admin user
-        const admin = await prisma.user.create({
-            data: {
-              email: 'admin@example.com',
-              password: await hash('admin123', 12),
-              role: Role.ADMIN,
-              profile: {
-                create: {
-                  firstName: 'Admin',
-                  lastName: 'User',
-                  department: 'Administration',
-                  position: 'System Administrator',
-                  employeeId: 'ADM001',
-                }
-              }
-            },
-            include: {
-              profile: true
-            }
-        })
+  console.log("🌱 Starting database seeding...");
 
-        // Create Worker user
-        const worker = await prisma.user.create({
-            data: {
-                email: 'worker@example.com',
-                password: await hash('worker123', 12),
-                role: Role.WORKER,
-                profile: {
-                    create: {
-                        firstName: 'Worker',
-                        lastName: 'User',
-                        department: 'Production',
-                        position: 'Production Worker',
-                        employeeId: 'WRK001',
-                    }
-                }
-            },
-            include: {
-                profile: true
-            }
-        })
+  try {
+    // Check if admin user already exists
+    const existingAdmin = await prisma.user.findFirst({
+      where: {
+        role: Role.ADMIN,
+      },
+    });
 
-        // Create Inspector user
-        const inspector = await prisma.user.create({
-            data: {
-                email: 'inspector@example.com',
-                password: await hash('inspector123', 12),
-                role: Role.INSPECTOR,
-                profile: {
-                    create: {
-                        firstName: 'Quality',
-                        lastName: 'Inspector',
-                        department: 'Quality Control',
-                        position: 'Quality Inspector',
-                        employeeId: 'QC001',
-                    }
-                }
-            },
-            include: {
-                profile: true
-            }
-        })
-
-        // Create Delivery user
-        const delivery = await prisma.user.create({
-            data: {
-                email: 'delivery@example.com',
-                password: await hash('delivery123', 12),
-                role: Role.DELIVERY,
-                profile: {
-                    create: {
-                        firstName: 'Delivery',
-                        lastName: 'Personnel',
-                        department: 'Logistics',
-                        position: 'Delivery Driver',
-                        employeeId: 'DEL001',
-                    }
-                }
-            },
-            include: {
-                profile: true
-            }
-        })
-
-        // Create emergency contact for the worker
-        if (worker.profile) {
-            await prisma.emergencyContact.create({
-                data: {
-                    profileId: worker.profile.id,
-                    name: 'Emergency Contact',
-                    relationship: 'Family',
-                    phoneNumber: '+1234567890',
-                    email: 'emergency@example.com'
-                }
-            })
-        }
-
-        console.log('Seed completed successfully')
-        console.log('Created users:', {
-            admin: { email: admin.email, role: admin.role },
-            worker: { email: worker.email, role: worker.role },
-            inspector: { email: inspector.email, role: inspector.role },
-            delivery: { email: delivery.email, role: delivery.role }
-        })
-    } catch (error: any) {
-        console.error('Error seeding database:', error)
-        if (error.meta) console.error('Error metadata:', error.meta)
-        if (error.message) console.error('Error message:', error.message)
-        process.exit(1)
-    } finally {
-        await prisma.$disconnect()
+    if (existingAdmin) {
+      console.log("✅ Admin user already exists:", existingAdmin.email);
+      return;
     }
+
+    // Create admin user
+    const hashedPassword = await bcrypt.hash("admin123", 12);
+
+    const adminUser = await prisma.user.create({
+      data: {
+        email: "admin@xgen-mrp.com",
+        password: hashedPassword,
+        role: Role.ADMIN,
+        status: UserStatus.ACTIVE,
+        lastLoginAt: new Date(),
+        createdBy: "system",
+        profile: {
+          create: {
+            firstName: "System",
+            lastName: "Administrator",
+            phoneNumber: "+63 9XX XXX XXXX",
+            department: "Administration",
+            position: "System Administrator",
+            employeeId: "ADMIN001",
+            country: "Philippines",
+          },
+        },
+      },
+      include: {
+        profile: true,
+      },
+    });
+
+    console.log("✅ Admin user created successfully!");
+    console.log("📧 Email:", adminUser.email);
+    console.log("🔑 Password: admin123");
+    console.log("👤 Role:", adminUser.role);
+    console.log(
+      "📋 Profile:",
+      adminUser.profile?.firstName,
+      adminUser.profile?.lastName
+    );
+
+    console.log("\n🚀 You can now login with:");
+    console.log("   Email: admin@xgen-mrp.com");
+    console.log("   Password: admin123");
+    console.log("\n⚠️  Please change the password after first login!");
+  } catch (error) {
+    console.error("❌ Error creating admin user:", error);
+    throw error;
+  }
 }
 
 main()
-    .catch((e: any) => {
-        console.error(e)
-        process.exit(1)
-    })
-    .finally(async () => {
-        await prisma.$disconnect()
-    })
+  .catch((e) => {
+    console.error("❌ Seeding failed:", e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+    console.log("✅ Database connection closed.");
+  });

@@ -19,6 +19,8 @@
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} prisma/seed.ts",
+    "seed:materials-products": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} prisma/materials-products-seed.ts",
+    "seed:customers-suppliers": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} prisma/customers-suppliers-seed.ts",
     "seed:comprehensive": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} scripts/comprehensive-seed.ts",
     "seed:billing": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} scripts/enhanced-billing-seed.ts",
     "link:inspectors": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} scripts/link-inspectors.ts",

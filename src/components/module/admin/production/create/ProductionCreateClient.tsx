@@ -25,6 +25,7 @@ import { VariantStep } from "./steps/VariantStep";
 import { DetailsStep } from "./steps/DetailsStep";
 import { OptionsStep } from "./steps/OptionsStep";
 import { ReviewStep } from "./steps/ReviewStep";
+import { BatchReviewStep } from "./steps/BatchReviewStep";
 
 import type { ProductCategory, Customer, CustomerOrder } from "@prisma/client";
 
@@ -38,6 +39,16 @@ interface ProductionCreateClientProps {
     customerOrderId?: string;
     quantity?: number;
   };
+  // New batch mode support
+  batchMode?: boolean;
+  batchItems?: Array<{
+    productId: string;
+    productVariantId?: string;
+    quantity: number;
+    customerOrderId?: string;
+    priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT" | "CRITICAL";
+    notes?: string;
+  }>;
 }
 
 const STEPS = [
@@ -59,6 +70,8 @@ export function ProductionCreateClient({
   customers,
   customerOrders,
   prefillData,
+  batchMode = false,
+  batchItems = [],
 }: ProductionCreateClientProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
@@ -113,6 +126,11 @@ export function ProductionCreateClient({
 
   // Determine which steps to show based on form state
   const getVisibleSteps = () => {
+    if (batchMode) {
+      // In batch mode, skip to the common steps
+      return ["details", "options", "review"];
+    }
+
     const steps = ["source"];
 
     if (watchedValues.source === "customer_order") {
@@ -200,37 +218,87 @@ export function ProductionCreateClient({
         "@/lib/actions/production-order"
       );
 
-      const result = await createProductionOrderUnified({
-        productId: data.productId,
-        productVariantId: data.productVariantId || undefined,
-        quantity: data.quantity,
-        startDate: data.startDate,
-        dueDate: data.dueDate,
-        priority: data.priority,
-        notes: data.notes || undefined,
-        customerOrderId: data.customerOrderId || undefined,
-        options: {
-          generateBOM: data.generateBOM,
-          reserveMaterials: data.reserveMaterials,
-        },
-      });
+      if (batchMode && batchItems.length > 0) {
+        // Batch mode: create multiple production orders
+        const results = [];
+        const errors = [];
+        const warnings = [];
 
-      if (result.success) {
-        toast.success("Production order created successfully!");
-
-        // Show warnings if any
-        if (result.warnings && result.warnings.length > 0) {
-          result.warnings.forEach((warning) => {
-            toast.warning(warning);
+        for (const item of batchItems) {
+          const result = await createProductionOrderUnified({
+            productId: item.productId,
+            productVariantId: item.productVariantId || undefined,
+            quantity: item.quantity,
+            startDate: data.startDate,
+            dueDate: data.dueDate,
+            priority: item.priority || data.priority,
+            notes: item.notes || data.notes || undefined,
+            customerOrderId: item.customerOrderId || undefined,
+            options: {
+              generateBOM: data.generateBOM,
+              reserveMaterials: data.reserveMaterials,
+            },
           });
+
+          if (result.success) {
+            results.push(result);
+            if (result.warnings && result.warnings.length > 0) {
+              warnings.push(...result.warnings);
+            }
+          } else {
+            errors.push(`Failed to create production order: ${result.error}`);
+          }
         }
 
-        // Clear saved form data on success
-        clearSavedData();
+        // Show results
+        if (results.length > 0) {
+          toast.success(`Successfully created ${results.length} production orders!`);
+        }
+        if (warnings.length > 0) {
+          warnings.forEach((warning) => toast.warning(warning));
+        }
+        if (errors.length > 0) {
+          errors.forEach((error) => toast.error(error));
+        }
 
-        router.push(`/admin/production/${result.orderId}`);
+        if (results.length > 0) {
+          clearSavedData();
+          router.push("/admin/production");
+        }
       } else {
-        toast.error(result.error);
+        // Single mode: create one production order
+        const result = await createProductionOrderUnified({
+          productId: data.productId,
+          productVariantId: data.productVariantId || undefined,
+          quantity: data.quantity,
+          startDate: data.startDate,
+          dueDate: data.dueDate,
+          priority: data.priority,
+          notes: data.notes || undefined,
+          customerOrderId: data.customerOrderId || undefined,
+          options: {
+            generateBOM: data.generateBOM,
+            reserveMaterials: data.reserveMaterials,
+          },
+        });
+
+        if (result.success) {
+          toast.success("Production order created successfully!");
+
+          // Show warnings if any
+          if (result.warnings && result.warnings.length > 0) {
+            result.warnings.forEach((warning) => {
+              toast.warning(warning);
+            });
+          }
+
+          // Clear saved form data on success
+          clearSavedData();
+
+          router.push(`/admin/production/${result.orderId}`);
+        } else {
+          toast.error(result.error);
+        }
       }
     } catch (error) {
       console.error("Error creating production order:", error);
@@ -261,7 +329,15 @@ export function ProductionCreateClient({
       case "options":
         return <OptionsStep form={form} />;
       case "review":
-        return (
+        return batchMode ? (
+          <BatchReviewStep
+            form={form}
+            products={products}
+            customers={customers}
+            customerOrders={customerOrders}
+            batchItems={batchItems}
+          />
+        ) : (
           <ReviewStep
             form={form}
             products={products}
@@ -301,7 +377,7 @@ export function ProductionCreateClient({
         
         <div className="space-y-2">
           <h1 className="text-xl font-bold tracking-tight">
-            Create Production Order
+            {batchMode ? `Create ${batchItems.length} Production Orders` : "Create Production Order"}
           </h1>
           <Progress value={progress} className="w-full" />
         </div>
@@ -321,10 +397,13 @@ export function ProductionCreateClient({
           </Button>
 
           <h1 className="text-2xl font-bold tracking-tight">
-            Create Production Order
+            {batchMode ? `Create ${batchItems.length} Production Orders` : "Create Production Order"}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Follow the steps to create a new production order
+            {batchMode 
+              ? `Creating ${batchItems.length} production orders from customer order analysis`
+              : "Follow the steps to create a new production order"
+            }
           </p>
         </div>
 
@@ -402,7 +481,10 @@ export function ProductionCreateClient({
                 disabled={!canGoNext() || isSubmitting}
                 className="flex-1"
               >
-                {isSubmitting ? "Creating..." : "Create"}
+                {isSubmitting 
+                  ? (batchMode ? `Creating ${batchItems.length} Orders...` : "Creating...") 
+                  : (batchMode ? `Create ${batchItems.length} Orders` : "Create")
+                }
               </Button>
             ) : (
               <Button onClick={nextStep} disabled={!canGoNext()} className="flex-1">
@@ -454,7 +536,10 @@ export function ProductionCreateClient({
                 disabled={!canGoNext() || isSubmitting}
                 className="flex-1"
               >
-                {isSubmitting ? "Creating..." : "Create"}
+                {isSubmitting 
+                  ? (batchMode ? `Creating ${batchItems.length} Orders...` : "Creating...") 
+                  : (batchMode ? `Create ${batchItems.length} Orders` : "Create")
+                }
               </Button>
             ) : (
               <Button onClick={nextStep} disabled={!canGoNext()} className="flex-1">

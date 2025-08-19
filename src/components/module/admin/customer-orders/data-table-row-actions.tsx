@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Row } from "@tanstack/react-table"
-import { Eye, MoreHorizontal, Trash, Factory, Plus, FileText, Receipt } from "lucide-react"
+import { Eye, MoreHorizontal, Trash, Factory, Plus, FileText, Receipt, Search, Archive } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { CustomerOrderColumn } from "@/types/admin/customer-order"
 import { deleteCustomerOrder } from "@/lib/actions/customer-order"
+import { archiveCustomerOrder } from "@/lib/actions/order-archiving"
 import { useToast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +26,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { CustomerOrderSheet } from "./customer-order-sheet"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+
 import { ProductionOrdersDialog } from "./production-orders-dialog"
 import { CreateProductionOrdersDialog } from "./create-production-orders-dialog"
 import { CreateBillingStatementDialog } from "./create-billing-statement-dialog"
@@ -36,12 +48,14 @@ interface DataTableRowActionsProps {
 
 export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [showViewSheet, setShowViewSheet] = useState(false)
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false)
   const [showProductionDialog, setShowProductionDialog] = useState(false)
   const [showCreateProductionDialog, setShowCreateProductionDialog] = useState(false)
   const [showCreateBillingDialog, setShowCreateBillingDialog] = useState(false)
   const [showViewBillingDialog, setShowViewBillingDialog] = useState(false)
+  const [archiveReason, setArchiveReason] = useState("")
   const { toast } = useToast()
+  const router = useRouter()
   const customerOrder = row.original
 
   const onDelete = async () => {
@@ -63,6 +77,44 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
     }
   }
 
+  const onArchive = async () => {
+    if (!archiveReason.trim()) {
+      toast({
+        title: "Archive Reason Required",
+        description: "Please provide a reason for archiving this order.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const result = await archiveCustomerOrder(customerOrder.id, archiveReason)
+      
+      if (result.success) {
+        toast({
+          title: "Order Archived",
+          description: result.message,
+        })
+        setShowArchiveDialog(false)
+        setArchiveReason("")
+        // Refresh the page to update the list
+        window.location.reload()
+      } else {
+        toast({
+          title: "Archive Failed",
+          description: result.message,
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to archive customer order",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <>
       <DropdownMenu>
@@ -76,10 +128,17 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[180px]">
-          <DropdownMenuItem onClick={() => setShowViewSheet(true)}>
+          <DropdownMenuItem onClick={() => router.push(`/admin/customer-orders/${customerOrder.id}`)}>
             <Eye className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
             View Details
           </DropdownMenuItem>
+          
+          <DropdownMenuItem onClick={() => router.push(`/admin/customer-orders/${customerOrder.id}/analyze`)}>
+            <Search className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+            Analyze Stock
+          </DropdownMenuItem>
+          
+          <DropdownMenuSeparator />
           
           <DropdownMenuItem onClick={() => setShowCreateBillingDialog(true)}>
             <FileText className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
@@ -106,6 +165,11 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           )}
           
           <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setShowArchiveDialog(true)}>
+            <Archive className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+            Archive Order
+          </DropdownMenuItem>
+          
           <DropdownMenuItem
             onClick={() => setShowDeleteDialog(true)}
             className="text-destructive focus:text-destructive"
@@ -137,11 +201,45 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      <CustomerOrderSheet 
-        customerOrder={customerOrder}
-        open={showViewSheet}
-        onOpenChange={setShowViewSheet}
-      />
+      {/* Archive Dialog */}
+      <Dialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Archive Order</DialogTitle>
+            <DialogDescription>
+              Archive order {customerOrder.orderNumber} with complete history preservation. 
+              The order will be moved to archives but can be restored if needed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="archiveReason">Archive Reason</Label>
+              <Textarea
+                id="archiveReason"
+                placeholder="Please provide a reason for archiving this order..."
+                value={archiveReason}
+                onChange={(e) => setArchiveReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowArchiveDialog(false)
+                setArchiveReason("")
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={onArchive} disabled={!archiveReason.trim()}>
+              <Archive className="h-4 w-4 mr-2" />
+              Archive Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ProductionOrdersDialog
         customerOrderId={customerOrder.id}

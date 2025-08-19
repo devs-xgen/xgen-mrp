@@ -18,6 +18,13 @@ export interface OrderLine {
   quantity: number;
   unitPrice: number;
   status: Status;
+  // New fulfillment tracking fields
+  fulfillmentType?: FulfillmentType;
+  stockAllocated?: number;
+  productionQuantity?: number;
+  fulfillmentStatus?: FulfillmentStatus;
+  allocatedAt?: Date;
+  fulfilledAt?: Date;
   product?: {
     id: string;
     name: string;
@@ -104,6 +111,13 @@ export interface OrderLineForDisplay {
   quantity: number;
   unitPrice: number;
   status: Status;
+  // New fulfillment tracking fields
+  fulfillmentType?: FulfillmentType;
+  stockAllocated?: number;
+  productionQuantity?: number;
+  fulfillmentStatus?: FulfillmentStatus;
+  allocatedAt?: Date;
+  fulfilledAt?: Date;
   product?: {
     id: string;
     name: string;
@@ -277,6 +291,16 @@ export interface CustomerOrderColumn {
   billingStatements?: BillingStatementSummary[];
   notes: string | null;
   lastUpdated: Date;
+  // New fulfillment tracking fields
+  fulfillmentOverview?: {
+    overallCompletion: number; // 0-100 percentage
+    totalAllocated: number; // Total units allocated (stock + production)
+    fromStock: number; // Units fulfilled from inventory
+    fromProduction: number; // Units fulfilled from production
+    pendingItems: number; // Items still pending fulfillment
+    fulfilledItems: number; // Items completely fulfilled
+    estimatedFulfillmentDate?: Date;
+  };
 }
 
 // Add interface for products with variants for order selection
@@ -303,4 +327,27 @@ export interface ProductVariantForOrder {
   unitPrice: number;
   currentStock: number;
   minimumStockLevel: number;
+}
+
+// Enums for new fulfillment tracking
+
+/**
+ * Types of fulfillment methods for order lines
+ */
+export enum FulfillmentType {
+  PENDING = "PENDING", // Not yet determined
+  STOCK = "STOCK", // Fulfilled from existing stock
+  PRODUCTION = "PRODUCTION", // Fulfilled through production order
+  HYBRID = "HYBRID", // Partially from stock, partially from production
+}
+
+/**
+ * Status of fulfillment for order lines
+ */
+export enum FulfillmentStatus {
+  PENDING = "PENDING", // Not yet allocated or fulfilled
+  ALLOCATED = "ALLOCATED", // Stock allocated or production order created
+  PARTIALLY_FULFILLED = "PARTIALLY_FULFILLED", // Some quantity fulfilled
+  FULFILLED = "FULFILLED", // Completely fulfilled
+  CANCELLED = "CANCELLED", // Fulfillment cancelled
 }

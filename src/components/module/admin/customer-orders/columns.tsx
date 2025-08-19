@@ -6,6 +6,7 @@ import { CustomerOrderColumn } from "@/types/admin/customer-order"
 import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header"
 import { DataTableRowActions } from "./data-table-row-actions"
+import { FulfillmentIndicator } from "./FulfillmentIndicator"
 import { formatDate } from "@/lib/utils"
 import { formatCurrencyPHP } from "@/lib/constant"
 
@@ -56,6 +57,16 @@ export const columns: ColumnDef<CustomerOrderColumn>[] = [
           </div>
         </div>
       )
+    },
+  },
+  {
+    accessorKey: "fulfillmentOverview",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Fulfillment" />
+    ),
+    cell: ({ row }) => {
+      const fulfillmentOverview = row.getValue("fulfillmentOverview") as CustomerOrderColumn["fulfillmentOverview"]
+      return <FulfillmentIndicator fulfillmentOverview={fulfillmentOverview} />
     },
   },
   {

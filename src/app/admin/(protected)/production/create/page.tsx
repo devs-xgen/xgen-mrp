@@ -16,6 +16,7 @@ interface CreateProductionPageProps {
     variantId?: string;
     customerOrderId?: string;
     quantity?: string;
+    batch?: string; // New batch mode parameter
   }>;
 }
 
@@ -39,12 +40,28 @@ export default async function CreateProductionPage({
     quantity: params.quantity ? parseInt(params.quantity, 10) : 1,
   };
 
+  // Parse batch data if provided
+  let batchMode = false;
+  let batchItems: any[] = [];
+  
+  if (params.batch) {
+    try {
+      const batchData = JSON.parse(decodeURIComponent(params.batch));
+      batchMode = batchData.batchMode || false;
+      batchItems = batchData.batchItems || [];
+    } catch (error) {
+      console.error("Failed to parse batch data:", error);
+    }
+  }
+
   return (
     <ProductionCreateClient
       products={products}
       customers={customers}
       customerOrders={customerOrders}
       prefillData={prefillData}
+      batchMode={batchMode}
+      batchItems={batchItems}
     />
   );
 }

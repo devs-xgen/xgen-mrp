@@ -45,6 +45,8 @@ model User {
   profile                   UserProfile?
   UserWorkCenter            UserWorkCenter[]
   workCenterAssignments     WorkCenterAssignment[]
+  archivedOrders            CustomerOrderArchive[]          @relation("ArchivedOrders")
+  restoredOrders            CustomerOrderArchive[]          @relation("RestoredOrders")
 }
 
 model ProductionOrderHistoryLog {
@@ -609,22 +611,35 @@ model CustomerOrder {
 }
 
 model OrderLine {
-  id               String             @id @default(cuid())
-  orderId          String
-  productId        String
-  productVariantId String?
-  quantity         Int
-  unitPrice        Decimal            @db.Decimal(10, 2)
-  status           Status             @default(ACTIVE)
-  notes            String?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  createdBy        String?
-  modifiedBy       String?
-  customerOrder    CustomerOrder      @relation(fields: [orderId], references: [id])
-  product          Product            @relation(fields: [productId], references: [id])
-  productVariant   ProductVariant?    @relation(fields: [productVariantId], references: [id])
-  variants         OrderLineVariant[]
+  id                 String             @id @default(cuid())
+  orderId            String
+  productId          String
+  productVariantId   String?
+  quantity           Int
+  unitPrice          Decimal            @db.Decimal(10, 2)
+  status             Status             @default(ACTIVE)
+  notes              String?
+  // Fulfillment tracking fields
+  fulfillmentType    FulfillmentType?   @default(PENDING)
+  stockAllocated     Int?               @default(0)
+  productionQuantity Int?               @default(0)
+  fulfillmentStatus  FulfillmentStatus? @default(PENDING)
+  allocatedAt        DateTime?
+  fulfilledAt        DateTime?
+  // Audit fields
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  createdBy          String?
+  modifiedBy         String?
+  // Relationships
+  customerOrder      CustomerOrder      @relation(fields: [orderId], references: [id])
+  product            Product            @relation(fields: [productId], references: [id])
+  productVariant     ProductVariant?    @relation(fields: [productVariantId], references: [id])
+  variants           OrderLineVariant[]
+
+  @@index([fulfillmentStatus])
+  @@index([fulfillmentType])
+  @@index([allocatedAt])
 }
 
 model Transaction {
@@ -1231,4 +1246,46 @@ enum ShareableDocType {
   BILLING_STATEMENT
   SALES_INVOICE
   DELIVERY_RECEIPT
+}
+
+enum FulfillmentType {
+  PENDING
+  STOCK
+  PRODUCTION
+  HYBRID
+}
+
+enum FulfillmentStatus {
+  PENDING
+  ALLOCATED
+  PARTIALLY_FULFILLED
+  FULFILLED
+  CANCELLED
+}
+
+model CustomerOrderArchive {
+  id                 String    @id @default(cuid())
+  orderId            String    @unique
+  orderNumber        String
+  customerName       String
+  archivedAt         DateTime  @default(now())
+  archivedBy         String
+  archivedByUser     User      @relation("ArchivedOrders", fields: [archivedBy], references: [id])
+  archiveReason      String
+  originalData       Json // Complete order snapshot
+  fulfillmentSummary Json // Fulfillment summary at time of archiving
+  billingStatus      String
+  totalValue         Decimal   @db.Decimal(12, 2)
+  restorable         Boolean   @default(true)
+  restoredAt         DateTime?
+  restoredBy         String?
+  restoredByUser     User?     @relation("RestoredOrders", fields: [restoredBy], references: [id])
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([archivedAt])
+  @@index([customerName])
+  @@index([archiveReason])
+  @@index([billingStatus])
+  @@index([totalValue])
 }

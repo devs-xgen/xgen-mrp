@@ -219,6 +219,213 @@ export async function getCustomerOrdersForBilling(options?: {
   }
 }
 
+/**
+ * Get customer orders with enhanced fulfillment tracking data
+ * for the admin interface data table
+ */
+export async function getCustomerOrdersWithFulfillment(): Promise<
+  CustomerOrder[]
+> {
+  try {
+    const orders = await prisma.customerOrder.findMany({
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            address: true,
+            paymentTerms: true,
+            creditLimit: true,
+          },
+        },
+        orderLines: {
+          select: {
+            id: true,
+            productId: true,
+            productVariantId: true,
+            quantity: true,
+            unitPrice: true,
+            status: true,
+            notes: true,
+            // Fulfillment tracking fields
+            fulfillmentType: true,
+            stockAllocated: true,
+            productionQuantity: true,
+            fulfillmentStatus: true,
+            allocatedAt: true,
+            fulfilledAt: true,
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                sellingPrice: true,
+                description: true,
+              },
+            },
+            productVariant: {
+              select: {
+                id: true,
+                sku: true,
+                displayName: true,
+                sizeName: true,
+                colorName: true,
+                sellingPrice: true,
+              },
+            },
+          },
+        },
+        productionOrders: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+              },
+            },
+          },
+        },
+        billingStatements: {
+          select: {
+            id: true,
+            statementNumber: true,
+            status: true,
+            totalAmount: true,
+            billingDate: true,
+            salesInvoice: {
+              select: {
+                id: true,
+                invoiceNumber: true,
+                status: true,
+              },
+            },
+            deliveryReceipts: {
+              select: {
+                id: true,
+                receiptNumber: true,
+                deliveryStatus: true,
+                deliveryDate: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            productionOrders: true,
+            orderLines: true,
+            billingStatements: true,
+          },
+        },
+      },
+      orderBy: {
+        orderDate: "desc",
+      },
+    });
+
+    // Transform the data to include fulfillment tracking
+    return orders.map((order) => ({
+      ...order,
+      customer: {
+        id: order.customer.id,
+        name: order.customer.name,
+        email: order.customer.email,
+        phone: order.customer.phone,
+        address: order.customer.address,
+        paymentTerms: order.customer.paymentTerms,
+        creditLimit: order.customer.creditLimit,
+      },
+      orderLines: order.orderLines.map((line) => ({
+        id: line.id,
+        productId: line.productId,
+        productVariantId: line.productVariantId,
+        quantity: line.quantity,
+        unitPrice:
+          line.unitPrice instanceof Decimal
+            ? line.unitPrice.toNumber()
+            : Number(line.unitPrice),
+        status: line.status,
+        notes: line.notes,
+        // Include fulfillment fields
+        fulfillmentType: line.fulfillmentType,
+        stockAllocated: line.stockAllocated,
+        productionQuantity: line.productionQuantity,
+        fulfillmentStatus: line.fulfillmentStatus,
+        allocatedAt: line.allocatedAt,
+        fulfilledAt: line.fulfilledAt,
+        product: line.product
+          ? {
+              id: line.product.id,
+              name: line.product.name,
+              sku: line.product.sku,
+              description: line.product.description,
+              sellingPrice:
+                line.product.sellingPrice instanceof Decimal
+                  ? line.product.sellingPrice.toNumber()
+                  : Number(line.product.sellingPrice),
+            }
+          : undefined,
+        productVariant: line.productVariant
+          ? {
+              id: line.productVariant.id,
+              sku: line.productVariant.sku,
+              displayName: line.productVariant.displayName,
+              sizeName: line.productVariant.sizeName,
+              colorName: line.productVariant.colorName,
+              sellingPrice:
+                line.productVariant.sellingPrice instanceof Decimal
+                  ? line.productVariant.sellingPrice.toNumber()
+                  : Number(line.productVariant.sellingPrice),
+            }
+          : undefined,
+      })),
+      productionOrders: order.productionOrders?.map((po) => ({
+        id: po.id,
+        quantity: po.quantity,
+        status: po.status,
+        priority: po.priority,
+        startDate: po.startDate,
+        dueDate: po.dueDate,
+        completedQuantity: po.completedQuantity,
+        product: {
+          id: po.product.id,
+          name: po.product.name,
+          sku: po.product.sku,
+        },
+      })),
+      billingStatements: order.billingStatements?.map((bs) => ({
+        id: bs.id,
+        statementNumber: bs.statementNumber,
+        status: bs.status,
+        totalAmount:
+          bs.totalAmount instanceof Decimal
+            ? bs.totalAmount.toNumber()
+            : Number(bs.totalAmount),
+        billingDate: bs.billingDate,
+        salesInvoice: bs.salesInvoice
+          ? {
+              id: bs.salesInvoice.id,
+              invoiceNumber: bs.salesInvoice.invoiceNumber,
+              status: bs.salesInvoice.status,
+            }
+          : undefined,
+        deliveryReceipts: bs.deliveryReceipts?.map((dr) => ({
+          id: dr.id,
+          receiptNumber: dr.receiptNumber,
+          deliveryStatus: dr.deliveryStatus,
+          deliveryDate: dr.deliveryDate,
+        })),
+      })),
+      _count: order._count,
+    }));
+  } catch (error) {
+    console.error("Error fetching customer orders with fulfillment:", error);
+    throw new Error("Failed to fetch customer orders");
+  }
+}
+
 export async function getCustomerOrders(): Promise<CustomerOrder[]> {
   try {
     const orders = await prisma.customerOrder.findMany({
@@ -772,10 +979,8 @@ export async function createCustomerOrder(data: CreateCustomerOrderInput) {
       throw new Error("Invalid required date format");
     }
 
-    // Use the checkInventoryLevels helper function to determine production needs
-    const productsNeedingProduction = await checkInventoryLevels(
-      data.orderLines
-    );
+    // Note: Inventory analysis and production order creation are now handled separately
+    // This allows for better order archiving and flexible production planning
 
     // Create the customer order
     const customerOrder = await prisma.customerOrder.create({
@@ -829,62 +1034,14 @@ export async function createCustomerOrder(data: CreateCustomerOrderInput) {
       },
     });
 
-    // Create production orders for products with insufficient inventory
-    const createdProductionOrders = [];
-
-    // Get default work center for operations
-    const defaultWorkCenter = await prisma.workCenter.findFirst({
-      where: {
-        status: Status.ACTIVE,
-      },
-    });
-
-    if (!defaultWorkCenter) {
-      console.warn("No active work center found for production orders");
-    }
-
-    for (const item of productsNeedingProduction) {
-      if (!defaultWorkCenter) continue; // Skip if no default work center
-
-      const startDate = new Date();
-      const dueDate = new Date(requiredDate);
-      dueDate.setDate(dueDate.getDate() - 1); // Set due date one day before required date
-
-      try {
-        const productionOrder = await createProductionOrder({
-          productId: item.product.id,
-          quantity: item.requiredQuantity,
-          startDate,
-          dueDate,
-          priority: Priority.HIGH,
-          customerOrderId: customerOrder.id,
-          notes: `Auto-generated for Customer Order ${orderNumber} - Reason: ${item.reason}`,
-          operations: [
-            {
-              workCenterId: defaultWorkCenter.id,
-              startTime: startDate,
-              endTime: dueDate,
-              cost: 0, // Default cost, to be updated later
-            },
-          ],
-        });
-
-        createdProductionOrders.push(productionOrder);
-      } catch (error) {
-        console.error(
-          `Failed to create production order for product ${item.product.name}:`,
-          error
-        );
-      }
-    }
+    // Production orders are now created separately through the order analysis workflow
+    // This allows for better control over production planning and mixed fulfillment scenarios
 
     revalidatePath("/admin/customer-orders");
 
-    // Return both the customer order and any created production orders
-    return {
-      customerOrder,
-      productionOrders: createdProductionOrders,
-    };
+    // Return the created customer order
+    // Production orders can be created separately through the order analysis workflow
+    return customerOrder;
   } catch (error) {
     console.error("Error creating customer order:", error);
     throw new Error("Failed to create customer order");
