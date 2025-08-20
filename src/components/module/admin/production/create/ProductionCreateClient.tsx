@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 
 import {
   productionCreateSchema,
@@ -26,7 +25,7 @@ import { OptionsStep } from "./steps/OptionsStep";
 import { ReviewStep } from "./steps/ReviewStep";
 import { BatchReviewStep } from "./steps/BatchReviewStep";
 
-import type { ProductCategory, Customer, CustomerOrder } from "@prisma/client";
+import type { Customer, CustomerOrder } from "@prisma/client";
 
 interface ProductionCreateClientProps {
   products: any[]; // From getProductsWithVariantsForOrders
@@ -103,13 +102,21 @@ export function ProductionCreateClient({
     // Note: Customer order prefill removed - production orders are now standalone only
   }, [prefillData, form]);
 
-  const watchedValues = form.watch();
-  const selectedProduct = products.find(
-    (p) => p.id === watchedValues.productId
+  const productId = form.watch("productId");
+  const productVariantId = form.watch("productVariantId");
+  const quantity = form.watch("quantity");
+  const startDate = form.watch("startDate");
+  const dueDate = form.watch("dueDate");
+  const priority = form.watch("priority");
+  
+  // Memoize selected product to prevent infinite re-renders
+  const selectedProduct = useMemo(() => 
+    products.find((p) => p.id === productId),
+    [products, productId]
   );
 
-  // Determine which steps to show based on form state
-  const getVisibleSteps = () => {
+  // Memoize visible steps to prevent infinite re-renders
+  const visibleSteps = useMemo(() => {
     if (batchMode) {
       // In batch mode, skip to the common steps
       return ["details", "options", "review"];
@@ -124,29 +131,26 @@ export function ProductionCreateClient({
 
     steps.push("details", "options", "review");
     return steps;
-  };
-
-  const visibleSteps = getVisibleSteps();
+  }, [batchMode, selectedProduct?.hasVariants]);
   const currentStepId = visibleSteps[currentStep];
 
   const canGoNext = () => {
-    const currentStepData = getCurrentStepData();
 
     switch (currentStepId) {
       case "source":
         return true; // Always can proceed from source step
       case "product":
-        return !!watchedValues.productId;
+        return !!productId;
       case "variant":
         return (
-          !selectedProduct?.hasVariants || !!watchedValues.productVariantId
+          !selectedProduct?.hasVariants || !!productVariantId
         );
       case "details":
         return !!(
-          watchedValues.quantity &&
-          watchedValues.startDate &&
-          watchedValues.dueDate &&
-          watchedValues.priority
+          quantity &&
+          startDate &&
+          dueDate &&
+          priority
         );
       case "options":
         return true; // Options are optional
@@ -159,18 +163,20 @@ export function ProductionCreateClient({
 
   const getCurrentStepData = () => {
     return {
-      source: watchedValues.source,
-      customerId: watchedValues.customerId,
-      customerOrderId: watchedValues.customerOrderId,
-      productId: watchedValues.productId,
-      productVariantId: watchedValues.productVariantId,
-      quantity: watchedValues.quantity,
-      startDate: watchedValues.startDate,
-      dueDate: watchedValues.dueDate,
-      priority: watchedValues.priority,
-      notes: watchedValues.notes,
-      generateBOM: watchedValues.generateBOM,
-      reserveMaterials: watchedValues.reserveMaterials,
+      source: form.watch("source"),
+      customerId: form.watch("customerId"),
+      customerOrderId: form.watch("customerOrderId"),
+      productId: productId,
+      productVariantId: productVariantId,
+      customerOrderId: form.watch("customerOrderId"),
+      quantity: quantity,
+      startDate: startDate,
+      dueDate: dueDate,
+      priority: priority,
+      notes: form.watch("notes"),
+      generateBOM: form.watch("generateBOM"),
+      reserveMaterials: form.watch("reserveMaterials"),
+      customInstructions: form.watch("customInstructions"),
     };
   };
 
@@ -222,7 +228,7 @@ export function ProductionCreateClient({
               warnings.push(...result.warnings);
             }
           } else {
-            errors.push(`Failed to create production order: ${result.error}`);
+            errors.push(`Failed to create production order: ${'error' in result ? result.error : 'Unknown error'}`);
           }
         }
 
@@ -273,7 +279,7 @@ export function ProductionCreateClient({
 
           router.push(`/admin/production/${result.orderId}`);
         } else {
-          toast.error(result.error);
+          toast.error('error' in result ? result.error : 'Unknown error');
         }
       }
     } catch (error) {

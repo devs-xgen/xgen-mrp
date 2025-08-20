@@ -177,7 +177,14 @@ export async function getProductsWithVariantsForOrders() {
       where: {
         status: "ACTIVE", // Only include active products for ordering
       },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        sellingPrice: true,
+        currentStock: true,
+        minimumStockLevel: true,
+        hasVariants: true,
         variants: {
           where: {
             isActive: true, // Only include active variants
@@ -201,6 +208,7 @@ export async function getProductsWithVariantsForOrders() {
       orderBy: {
         name: "asc",
       },
+      take: 100, // Limit results to prevent performance issues
     });
 
     // Map to expected format with variants

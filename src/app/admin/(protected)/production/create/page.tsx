@@ -23,7 +23,7 @@ export default async function CreateProductionPage({
 }: CreateProductionPageProps) {
   const params = await searchParams;
 
-  // Fetch required data for the form
+  // Fetch required data for the form with performance optimizations
   const products = await getProductsWithVariantsForOrders();
 
   // Pre-fill data from query params
