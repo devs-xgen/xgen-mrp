@@ -1,17 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
+import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DataTable } from "@/components/ui/data-table";
-import { AnalyticsCard, analyticsCardVariants } from "@/components/ui/analytics-card";
-import {
+import { 
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -20,39 +16,26 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
+import { 
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
-import {
-  Archive,
-  ArrowLeft,
-  RefreshCw,
-  Search,
-  Filter,
-  Eye,
-  RotateCcw,
-  Calendar,
-  DollarSign,
-  Package,
-  TrendingUp,
-  FileText,
-  AlertCircle,
-} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Eye, RotateCcw, ArrowLeft, RefreshCw, Search, Filter, FileText, TrendingUp } from "lucide-react";
+import { OrderArchiveEntry } from "@/lib/actions/order-archiving";
+import { restoreCustomerOrder } from "@/lib/actions/order-archiving";
 import { formatDate } from "@/lib/utils";
 import { formatCurrencyPHP } from "@/lib/constant";
-import { useToast } from "@/hooks/use-toast";
-import { restoreCustomerOrder } from "@/lib/actions/order-archiving";
-import type { OrderArchiveEntry } from "@/lib/actions/order-archiving";
+import { AnalyticsCard, analyticsCardVariants } from "@/components/ui/analytics-card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 interface ArchivedOrdersClientProps {
   initialData: {
@@ -143,7 +126,7 @@ export function ArchivedOrdersClient({
     const queryParams = new URLSearchParams();
     
     Object.entries(filters).forEach(([key, value]) => {
-      if (value && value.toString().trim() !== "") {
+      if (value && value.toString().trim() !== "" && value !== "all") {
         queryParams.set(key, value.toString());
       }
     });
@@ -359,7 +342,7 @@ export function ArchivedOrdersClient({
                       <SelectValue placeholder="All statuses" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All statuses</SelectItem>
+                      <SelectItem value="all">All statuses</SelectItem>
                       <SelectItem value="NOT_BILLED">Not Billed</SelectItem>
                       <SelectItem value="DRAFT">Draft</SelectItem>
                       <SelectItem value="SENT">Sent</SelectItem>
@@ -442,10 +425,6 @@ export function ArchivedOrdersClient({
               <DataTable
                 data={initialData.archives}
                 columns={columns}
-                searchKey="orderNumber"
-                pageCount={initialData.pageCount}
-                page={currentPage}
-                pageSize={pageSize}
               />
             </CardContent>
           </Card>

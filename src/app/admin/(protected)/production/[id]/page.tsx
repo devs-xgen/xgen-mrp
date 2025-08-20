@@ -183,13 +183,13 @@ import { getAvailableWorkCenters } from "@/lib/actions/inspector/production-orde
 import { ProductionOrderDetails } from "@/components/module/admin/production/production-order-details"
 
 interface ProductionOrderPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function generateMetadata({ params }: ProductionOrderPageProps): Promise<Metadata> {
-  const { id } = params
+  const { id } = await params
   const orderData = await getProductionOrderWithPhaseStatus(id)
   if (!orderData) return { title: "Production Order Not Found" }
   return {
@@ -199,7 +199,7 @@ export async function generateMetadata({ params }: ProductionOrderPageProps): Pr
 }
 
 export default async function ProductionOrderPage({ params }: ProductionOrderPageProps) {
-  const { id } = params
+  const { id } = await params
 
   // Get enhanced production order data with phase status
   const [orderDataRaw, workCenters, deliveryUsers] = await Promise.all([

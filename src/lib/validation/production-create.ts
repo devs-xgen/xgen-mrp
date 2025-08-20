@@ -24,6 +24,7 @@ const baseProductionCreateSchema = z.object({
   // Step 5: Options
   generateBOM: z.boolean().default(false),
   reserveMaterials: z.boolean().default(false),
+  customInstructions: z.string().optional(),
 });
 
 // Main schema with refinements

@@ -168,7 +168,6 @@ export function ProductionCreateClient({
       customerOrderId: form.watch("customerOrderId"),
       productId: productId,
       productVariantId: productVariantId,
-      customerOrderId: form.watch("customerOrderId"),
       quantity: quantity,
       startDate: startDate,
       dueDate: dueDate,

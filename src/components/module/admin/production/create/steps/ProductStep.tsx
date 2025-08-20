@@ -199,7 +199,7 @@ export function ProductStep({ form, products }: ProductStepProps) {
               </div>
               <div className="text-right text-blue-900">
                 <div className="font-medium">
-                  {formatCurrencyPHP(selectedProduct.unitPrice)}
+                  {formatCurrencyPHP(selectedProduct.sellingPrice)}
                 </div>
                 <div className="text-sm">
                   Stock: {selectedProduct.currentStock}
@@ -253,7 +253,7 @@ export function ProductStep({ form, products }: ProductStepProps) {
                   </div>
                   <div className="text-right">
                     <div className="font-medium">
-                      {formatCurrencyPHP(product.unitPrice)}
+                      {formatCurrencyPHP(product.sellingPrice)}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Stock: {product.currentStock}
