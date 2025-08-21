@@ -84,7 +84,10 @@ export default async function CustomerOrdersPage() {
 
   // Calculate statistics
   const totalOrders = customerOrders.length;
-  const totalRevenue = customerOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+  const totalRevenue = customerOrders.reduce((sum, order) => {
+    const amount = order.totalAmount ?? 0;
+    return sum + Number(amount);
+  }, 0);
 
   // Count statuses
   const statusCounts = {

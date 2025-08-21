@@ -27,6 +27,19 @@ export function formatCurrencyPHP(value: number | undefined | null): string {
     maximumFractionDigits: 2,
   });
 }
+// lib/constant.ts (or wherever formatCurrencyPHP is defined)
+// export const formatCurrencyPHP = (amount: number): string => {
+//   if (typeof amount !== 'number' || isNaN(amount)) {
+//     // Handle non-numeric input gracefully, e.g., return "N/A" or "₱0.00"
+//     return "₱0.00";
+//   }
+//   return new Intl.NumberFormat("en-PH", {
+//     style: "currency",
+//     currency: "PHP",
+//     minimumFractionDigits: 2,
+//     maximumFractionDigits: 2,
+//   }).format(amount);
+// };
 
 // Company information for shareable documents
 export const DEFAULT_COMPANY_INFO = {
