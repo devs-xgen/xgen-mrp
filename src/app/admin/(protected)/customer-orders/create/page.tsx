@@ -3,6 +3,7 @@ import { getAllCustomers } from "@/lib/actions/customers";
 import { getProductsWithVariantsForOrders } from "@/lib/actions/product";
 import { CustomerOrderCreateClient } from "@/components/module/admin/customer-orders/create/CustomerOrderCreateClient";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
+import { Customer } from "@prisma/client";
 
 export const metadata: Metadata = {
   title: "Create Customer Order",
@@ -15,6 +16,14 @@ export default async function CreateCustomerOrderPage() {
     getAllCustomers(),
     getProductsWithVariantsForOrders(),
   ]);
+
+   const serializableCustomers = customers.map(customer => ({
+    ...customer,
+    creditLimit: customer.creditLimit !== null ? customer.creditLimit.toString() : null,
+    // Ensure any other non-serializable fields are also converted if present
+    // e.g., if you had a Date object that wasn't correctly serialized, you might do:
+    // createdAt: customer.createdAt.toISOString(),
+  }));
 
   const breadcrumbItems = [
     { label: "Customer Orders", href: "/admin/customer-orders" },
@@ -37,7 +46,7 @@ export default async function CreateCustomerOrderPage() {
       </div>
 
       <CustomerOrderCreateClient 
-        customers={customers}
+        customers={serializableCustomers as Customer[]}
         products={products}
       />
     </div>
