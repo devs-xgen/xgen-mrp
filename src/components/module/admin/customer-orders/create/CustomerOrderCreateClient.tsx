@@ -864,7 +864,7 @@ export function CustomerOrderCreateClient({
                                 <div className="flex flex-col">
                                   <span>{product.name}</span>
                                   <span className="text-sm text-muted-foreground">
-                                    {product.sku} - {formatCurrencyPHP(product.sellingPrice)}
+                                    {product.sku} - {formatCurrencyPHP(product.unitPrice)}
                                   </span>
                                 </div>
                               </SelectItem>
