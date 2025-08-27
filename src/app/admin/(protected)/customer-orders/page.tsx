@@ -366,8 +366,14 @@ import { getOrdersRequiringAnalysis } from "@/lib/actions/order-analysis";
 import { columns } from "@/components/module/admin/customer-orders/columns";
 import { DataTable } from "@/components/module/admin/customer-orders/data-table";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, BarChart, CheckCircle, GitBranch, Factory, AlertTriangle, TrendingUp, Archive } from "lucide-react";
+import { Plus, Search, BarChart, CheckCircle, GitBranch, Factory, AlertTriangle, TrendingUp, Archive, Menu, ChevronDown } from "lucide-react";
 import Link from "next/link";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 // Note: Removed unused AnalyticsCard and other imports since they are now in the analytics page
@@ -455,25 +461,35 @@ export default async function CustomerOrdersPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          {/* CORRECT LINK TO THE ANALYTICS PAGE */}
-          <Link href="/admin/customer-orders/analytics">
-            <Button variant="outline">
-              <BarChart className="mr-2 h-4 w-4" /> {/* Use the BarChart icon here */}
-              View Analytics
-            </Button>
-          </Link>
-          <Link href="/admin/customer-orders/archives">
-            <Button variant="outline">
-              <Archive className="mr-2 h-4 w-4" />
-              View Archives
-            </Button>
-          </Link>
-          <Link href="/admin/production/planning">
-            <Button variant="outline">
-              <BarChart className="mr-2 h-4 w-4" />
-              Production Planning
-            </Button>
-          </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Menu className="mr-2 h-4 w-4" />
+                Actions
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href="/admin/customer-orders/analytics" className="flex items-center">
+                  <BarChart className="mr-2 h-4 w-4" />
+                  View Analytics
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/admin/customer-orders/archives" className="flex items-center">
+                  <Archive className="mr-2 h-4 w-4" />
+                  View Archives
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/admin/production/planning" className="flex items-center">
+                  <BarChart className="mr-2 h-4 w-4" />
+                  Production Planning
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Link href="/admin/customer-orders/create">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
