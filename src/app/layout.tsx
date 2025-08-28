@@ -7,6 +7,8 @@ import AuthProvider from "@/components/providers/auth-provider";
 import { FullscreenProvider } from "@/components/ui/fullscreen-context";
 import { GlobalFullscreenToggle } from "@/components/ui/global-fullscreen-toggle";
 import { ServiceWorkerManager } from "@/components/global/service-worker-manager";
+import { MaintenanceProvider } from "@/components/providers/maintenance-provider";
+import { MaintenanceAlertWrapper } from "@/components/global/maintenance-alert-wrapper";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -93,6 +95,7 @@ function SecurityWrapper({ children }: { children: React.ReactNode }) {
   );
 }
 
+
 export default function RootLayout({
   children,
 }: {
@@ -124,22 +127,27 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <GlobalErrorBoundary>
-          <AuthProvider>
-            <FullscreenProvider>
-              <div className="relative min-h-screen bg-background">
-                {/* Main content area */}
-                <main className="relative">{children}</main>
+          <MaintenanceProvider>
+            <AuthProvider>
+              <FullscreenProvider>
+                <div className="relative min-h-screen bg-background">
+                  {/* Maintenance Alert Banner */}
+                  <MaintenanceAlertWrapper />
+                  
+                  {/* Main content area */}
+                  <main className="relative">{children}</main>
 
-                {/* Fixed UI elements */}
-                <div className="fixed bottom-4 right-4 z-50">
-                  <GlobalFullscreenToggle />
+                  {/* Fixed UI elements */}
+                  <div className="fixed bottom-4 right-4 z-50">
+                    <GlobalFullscreenToggle />
+                  </div>
+
+                  {/* Toast notifications */}
+                  <Toaster />
                 </div>
-
-                {/* Toast notifications */}
-                <Toaster />
-              </div>
-            </FullscreenProvider>
-          </AuthProvider>
+              </FullscreenProvider>
+            </AuthProvider>
+          </MaintenanceProvider>
         </GlobalErrorBoundary>
 
         {/* Performance monitoring script for development */}

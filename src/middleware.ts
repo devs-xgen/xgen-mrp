@@ -117,6 +117,15 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Check maintenance mode first - this will work immediately when env changes
+  if (process.env.MAINTENANCE_MODE === 'true') {
+    // Allow access to maintenance page itself to avoid infinite redirects
+    if (pathname !== '/maintenance') {
+      return NextResponse.redirect(new URL('/maintenance', req.url));
+    }
+    return NextResponse.next();
+  }
+
   // Rate limiting check (more lenient in development)
   const isLoginPage = pathname.includes("/login");
   const maxRequests = isLoginPage
