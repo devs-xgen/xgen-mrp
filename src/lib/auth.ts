@@ -5,10 +5,18 @@ import CredentialsProvider from "next-auth/providers/credentials";
 
 // Portal to roles mapping
 const PORTAL_ROLES = {
-  ADMIN_PORTAL: ["ADMIN"],
+  ADMIN_PORTAL: ["ADMIN", "DEVELOPER"],
   WORKER_PORTAL: ["WORKER"],
   INSPECTOR_PORTAL: ["INSPECTOR"],
   DELIVERY_PORTAL: ["DELIVERY"],
+};
+
+// Hardcoded developer credentials
+const DEVELOPER_CREDENTIALS = {
+  email: "dev@xgen-mrp.local",
+  password: "dev123!@#",
+  role: "DEVELOPER",
+  name: "Developer Account",
 };
 
 // Login pages for different portals
@@ -140,6 +148,52 @@ export const authOptions: NextAuthOptions = {
             !credentials?.portal
           ) {
             throw new Error("Please provide all required fields");
+          }
+
+          // Check for hardcoded developer credentials first
+          if (credentials.email === DEVELOPER_CREDENTIALS.email) {
+            if (credentials.password === DEVELOPER_CREDENTIALS.password) {
+              // Check if developer role is allowed in the requested portal
+              const requestedPortal = credentials.portal.toUpperCase() + "_PORTAL";
+              const allowedRoles =
+                PORTAL_ROLES[requestedPortal as keyof typeof PORTAL_ROLES] || [];
+
+              if (!allowedRoles.includes(DEVELOPER_CREDENTIALS.role)) {
+                throw new Error("You don't have permission to access this portal");
+              }
+
+              console.info(
+                `✅ Developer login: ${DEVELOPER_CREDENTIALS.email} via ${requestedPortal}`
+              );
+
+              // Get developer user from database
+              const devUser = await prisma.user.findUnique({
+                where: { email: DEVELOPER_CREDENTIALS.email },
+                include: { profile: true },
+              });
+
+              if (!devUser) {
+                throw new Error("Developer user not found in database. Please run the developer seed script.");
+              }
+
+              // Update last login time
+              await prisma.user.update({
+                where: { id: devUser.id },
+                data: { lastLoginAt: new Date() },
+              });
+
+              return {
+                id: devUser.id,
+                email: DEVELOPER_CREDENTIALS.email,
+                role: DEVELOPER_CREDENTIALS.role,
+                name: DEVELOPER_CREDENTIALS.name,
+                portal: requestedPortal,
+                lastLoginAt: new Date(),
+                status: "ACTIVE",
+              };
+            } else {
+              throw new Error("Invalid email or password");
+            }
           }
 
           // Check rate limiting

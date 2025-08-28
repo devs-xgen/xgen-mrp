@@ -25,6 +25,7 @@ import {
   FileText,
   TrendingUp,
   CreditCard,
+  MessageCircle,
 } from "lucide-react";
 
 interface NavItem {
@@ -165,6 +166,12 @@ export const adminNavItems: NavItem[] = [
     description: "User management",
   },
   {
+    icon: MessageCircle,
+    label: "Support",
+    href: "/admin/support",
+    description: "Customer support management",
+  },
+  {
     icon: Settings,
     label: "Settings",
     href: "/admin/settings",
@@ -273,6 +280,12 @@ export const workerNavItems: NavItem[] = [
   // },
 
   {
+    icon: MessageCircle,
+    label: "Support",
+    href: "/worker/support",
+    description: "Customer support and help",
+  },
+  {
     icon: Settings,
     label: "Settings",
     href: "/worker/settings",
@@ -339,6 +352,12 @@ export const inspectorNavItems: NavItem[] = [
   },
 
   {
+    icon: MessageCircle,
+    label: "Support",
+    href: "/inspector/support",
+    description: "Customer support and help",
+  },
+  {
     icon: Settings,
     label: "Settings",
     href: "/inspector/settings",
@@ -373,6 +392,12 @@ export const deliveryNavItems: NavItem[] = [
   },
 
   {
+    icon: MessageCircle,
+    label: "Support",
+    href: "/delivery/support",
+    description: "Customer support and help",
+  },
+  {
     icon: Settings,
     label: "Settings",
     href: "/delivery/settings",
@@ -380,10 +405,39 @@ export const deliveryNavItems: NavItem[] = [
   },
 ];
 
+export const developerNavItems: NavItem[] = [
+  {
+    icon: LayoutDashboard,
+    label: "Dashboard",
+    href: "/developer/dashboard",
+    description: "Developer overview and system metrics",
+  },
+  {
+    icon: MessageCircle,
+    label: "Support Management",
+    href: "/developer/support",
+    description: "Manage all customer support tickets",
+  },
+  {
+    icon: Users,
+    label: "User Management",
+    href: "/admin/users",
+    description: "Manage system users",
+  },
+  {
+    icon: Settings,
+    label: "System Settings",
+    href: "/admin/settings",
+    description: "System configuration and maintenance",
+  },
+];
+
 export const getNavItems = (role: string) => {
   switch (role) {
     case "ADMIN":
       return adminNavItems;
+    case "DEVELOPER":
+      return developerNavItems;
     case "WORKER":
       return workerNavItems;
     case "INSPECTOR":

@@ -4,7 +4,7 @@ import { getToken } from "next-auth/jwt";
 
 // Define which roles belong to each portal
 const PORTAL_ROLES = {
-  ADMIN_PORTAL: ["ADMIN"],
+  ADMIN_PORTAL: ["ADMIN", "DEVELOPER"],
   WORKER_PORTAL: ["WORKER"],
   INSPECTOR_PORTAL: ["INSPECTOR"],
   DELIVERY_PORTAL: ["DELIVERY"],
@@ -200,9 +200,10 @@ export default async function middleware(req: NextRequest) {
           );
         } else {
           // If user doesn't have access to this portal, redirect to their appropriate portal
-          const userRole = (token.role as string).toLowerCase();
+          const userRole = token.role as string;
+          const dashboardPath = userRole === "DEVELOPER" ? "/developer/dashboard" : `/${userRole.toLowerCase()}/dashboard`;
           return NextResponse.redirect(
-            new URL(`/${userRole}/dashboard`, req.url)
+            new URL(dashboardPath, req.url)
           );
         }
       }
@@ -241,8 +242,9 @@ export default async function middleware(req: NextRequest) {
       );
 
       // Redirect to appropriate dashboard based on user's actual role
-      const userRole = (token.role as string).toLowerCase();
-      return NextResponse.redirect(new URL(`/${userRole}/dashboard`, req.url));
+      const userRole = token.role as string;
+      const dashboardPath = userRole === "DEVELOPER" ? "/developer/dashboard" : `/${userRole.toLowerCase()}/dashboard`;
+      return NextResponse.redirect(new URL(dashboardPath, req.url));
     }
 
     // Add user context to headers for server components

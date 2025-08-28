@@ -47,6 +47,8 @@ model User {
   workCenterAssignments     WorkCenterAssignment[]
   archivedOrders            CustomerOrderArchive[]          @relation("ArchivedOrders")
   restoredOrders            CustomerOrderArchive[]          @relation("RestoredOrders")
+  supportTickets            SupportTicket[]                 @relation("UserSupportTickets")
+  supportMessages           SupportMessage[]                @relation("UserSupportMessages")
 }
 
 model ProductionOrderHistoryLog {
@@ -1124,6 +1126,7 @@ enum Role {
   WORKER
   INSPECTOR
   DELIVERY
+  DEVELOPER
 }
 
 enum UserStatus {
@@ -1288,4 +1291,51 @@ model CustomerOrderArchive {
   @@index([archiveReason])
   @@index([billingStatus])
   @@index([totalValue])
+}
+
+// Customer Support System Models
+model SupportTicket {
+  id          String             @id @default(cuid())
+  userId      String
+  title       String
+  description String
+  status      SupportStatus      @default(OPEN)
+  priority    SupportPriority    @default(MEDIUM)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  resolvedAt  DateTime?
+  user        User               @relation("UserSupportTickets", fields: [userId], references: [id])
+  messages    SupportMessage[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SupportMessage {
+  id        String        @id @default(cuid())
+  ticketId  String
+  userId    String
+  message   String
+  isAdmin   Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user      User          @relation("UserSupportMessages", fields: [userId], references: [id])
+
+  @@index([ticketId])
+  @@index([createdAt])
+}
+
+enum SupportStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum SupportPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }
