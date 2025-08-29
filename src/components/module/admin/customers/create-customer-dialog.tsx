@@ -38,8 +38,7 @@ import {
     SelectValue 
 } from "@/components/ui/select"
 import { generatePostalCode } from "@/lib/utils/location"
-
-
+import { PhoneInput } from "@/components/ui/phone-input"
 
 // Function to check if customer code exists
 const checkCustomerCodeExists = async (code: string): Promise<boolean> => {
@@ -145,6 +144,7 @@ export function CreateCustomerDialog({ onSuccess }: CreateCustomerDialogProps) {
 
     const form = useForm<FormData>({
         resolver: zodResolver(formSchema),
+        mode: "onChange",
         defaultValues: {
             name: "",
             code: "",
@@ -422,7 +422,17 @@ export function CreateCustomerDialog({ onSuccess }: CreateCustomerDialogProps) {
                                             <FormItem>
                                                 <FormLabel>Email Address *</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="e.g. contact@company.com.ph" {...field} />
+                                                    <Input 
+                                                        placeholder="e.g. contact@company.com.ph" 
+                                                        {...field} 
+                                                        className={`${
+                                                            form.formState.errors.email 
+                                                                ? 'border-red-500 focus:border-red-500' 
+                                                                : (form.watch('email') && !form.getFieldState('email').invalid) 
+                                                                    ? 'border-green-500 focus:border-green-500' 
+                                                                    : ''
+                                                        }`}
+                                                    />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -435,9 +445,17 @@ export function CreateCustomerDialog({ onSuccess }: CreateCustomerDialogProps) {
                                             <FormItem>
                                                 <FormLabel>Phone Number *</FormLabel>
                                                 <FormControl>
-                                                    <Input 
-                                                        placeholder="e.g. +639123456789 (mobile) or +632234567890 (landline)"
-                                                        {...field}
+                                                    <PhoneInput
+                                                        value={field.value}
+                                                        onChange={field.onChange}
+                                                        allowedCountryCodes={["63"]}
+                                                        status={
+                                                            form.formState.errors.phone 
+                                                                ? 'error' 
+                                                                : (form.watch('phone') && !form.getFieldState('phone').invalid) 
+                                                                    ? 'success' 
+                                                                    : undefined
+                                                        }
                                                     />
                                                 </FormControl>
                                                 <FormDescription>
@@ -620,7 +638,30 @@ export function CreateCustomerDialog({ onSuccess }: CreateCustomerDialogProps) {
                                             <FormItem>
                                                 <FormLabel>TIN Number (Optional)</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="e.g. 123-456-789-000" {...field} />
+                                                    <Input 
+                                                        placeholder="e.g. 123-456-789-000" 
+                                                        {...field}
+                                                        inputMode="numeric"
+                                                        maxLength={15}
+                                                        onChange={(e) => {
+                                                            const digits = e.target.value.replace(/\D/g, '').slice(0, 12)
+                                                            const len = digits.length
+                                                            let formatted = ''
+                                                            if (len <= 3) {
+                                                                formatted = digits
+                                                            } else if (len <= 6) {
+                                                                formatted = `${digits.slice(0,3)}-${digits.slice(3)}`
+                                                            } else if (len <= 9) {
+                                                                formatted = `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6)}`
+                                                            } else {
+                                                                formatted = `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6,9)}-${digits.slice(9)}`
+                                                            }
+                                                            if ((len === 3 || len === 6 || len === 9) && len < 12) {
+                                                                formatted += '-'
+                                                            }
+                                                            field.onChange(formatted)
+                                                        }}
+                                                    />
                                                 </FormControl>
                                                 <FormDescription>
                                                     Philippine Tax Identification Number (format: XXX-XXX-XXX-XXX)

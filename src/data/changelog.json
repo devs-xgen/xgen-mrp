@@ -1,10 +1,15 @@
-{
+ {
   "project": "XGen MRP",
   "entries": [
     {
-      "version": "1.5.0",
+      "version": "1.5.1",
       "date": "2025-08-29",
       "changes": [
+        "Fix: TIN input now auto-formats to XXX-XXX-XXX-XXX and is validated in create/edit customer dialogs.",
+        "Enhancement: Real-time email/phone/TIN validation with visual feedback in customer forms.",
+        "UI: Phone input restricted to Philippines (+63) with clear success/error styling.",
+        "Fix: Dashboard currency display aligned to correct currency (₱) across widgets and totals.",
+        "Fix: PhoneInput fallback PH flag shown correctly if country code fetch fails.",
         "Improved login rate limiting to reduce false positives.",
         "Enhanced proxy-aware IP detection in middleware.",
         "Added public changelog page.",

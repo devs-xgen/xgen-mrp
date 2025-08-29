@@ -38,20 +38,41 @@ const formSchema = z.object({
     code: z.string().min(1, "Code is required"),
     contactPerson: z.string().min(1, "Contact person is required"),
     email: z.string().email("Invalid email address"),
-    phone: z.string().regex(/^\+\d{1,3}\d+$/, "Invalid phone number format"),
+    phone: z.string().refine((val) => {
+        // Philippine phone number validation
+        const mobilePattern = /^\+639\d{9}$/ // +639XXXXXXXXX
+        const landlinePattern = /^\+63[2-9]\d{7,9}$/ // +63XXXXXXXXXX
+        return mobilePattern.test(val) || landlinePattern.test(val)
+    }, "Please enter a valid Philippine phone number (+639XXXXXXXXX for mobile or +63XXXXXXXXXX for landline)"),
     address: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
     country: z.string().optional(),
     postalCode: z.string().optional(),
-    tinNumber: z.string().optional(),
+    tinNumber: z.string().optional().refine((val) => {
+        if (!val || val === "") return true
+        const tinPattern = /^\d{3}-\d{3}-\d{3}-\d{3}$/
+        return tinPattern.test(val)
+    }, "TIN must be in format XXX-XXX-XXX-XXX (e.g., 123-456-789-000)"),
     creditLimit: z.string().optional().refine(
-        (val) => !val || val === "" || !isNaN(parseFloat(val)),
-        "Credit limit must be a valid number"
+        (val) => !val || val === "" || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0),
+        "Credit limit must be a valid positive number"
     ),
     paymentTerms: z.string().optional(),
     status: z.nativeEnum(Status),
     notes: z.string().optional(),
+}).superRefine((data, ctx) => {
+    if (data.country === "Philippines") {
+        if (!data.address || data.address.trim() === "") {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Complete address is required for Philippine customers", path: ["address"] })
+        }
+        if (!data.city || data.city.trim() === "") {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "City is required for Philippine customers", path: ["city"] })
+        }
+        if (!data.state || data.state.trim() === "") {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Province/Region is required for Philippine customers", path: ["state"] })
+        }
+    }
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -73,6 +94,7 @@ export function EditCustomerDialog({
 
     const form = useForm<FormData>({
         resolver: zodResolver(formSchema),
+        mode: "onChange",
         defaultValues: {
             name: customer.name,
             code: customer.code,
@@ -187,7 +209,17 @@ export function EditCustomerDialog({
                                     <FormItem>
                                         <FormLabel>Email</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="Email address" {...field} />
+                                            <Input 
+                                                placeholder="Email address" 
+                                                {...field}
+                                                className={`${
+                                                    form.formState.errors.email
+                                                        ? 'border-red-500 focus:border-red-500'
+                                                        : (form.watch('email') && !form.getFieldState('email').invalid)
+                                                            ? 'border-green-500 focus:border-green-500'
+                                                            : ''
+                                                }`}
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -200,7 +232,18 @@ export function EditCustomerDialog({
                                     <FormItem>
                                         <FormLabel>Phone</FormLabel>
                                         <FormControl>
-                                            <PhoneInput {...field} />
+                                            <PhoneInput 
+                                                value={field.value}
+                                                onChange={field.onChange}
+                                                allowedCountryCodes={["63"]}
+                                                status={
+                                                    form.formState.errors.phone
+                                                        ? 'error'
+                                                        : (form.watch('phone') && !form.getFieldState('phone').invalid)
+                                                            ? 'success'
+                                                            : undefined
+                                                }
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -288,7 +331,30 @@ export function EditCustomerDialog({
                                     <FormItem>
                                         <FormLabel>TIN Number</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="Tax Identification Number" {...field} />
+                                            <Input 
+                                                placeholder="e.g. 123-456-789-000" 
+                                                {...field}
+                                                inputMode="numeric"
+                                                maxLength={15}
+                                                onChange={(e) => {
+                                                    const digits = e.target.value.replace(/\D/g, '').slice(0, 12)
+                                                    const len = digits.length
+                                                    let formatted = ''
+                                                    if (len <= 3) {
+                                                        formatted = digits
+                                                    } else if (len <= 6) {
+                                                        formatted = `${digits.slice(0,3)}-${digits.slice(3)}`
+                                                    } else if (len <= 9) {
+                                                        formatted = `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6)}`
+                                                    } else {
+                                                        formatted = `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6,9)}-${digits.slice(9)}`
+                                                    }
+                                                    if ((len === 3 || len === 6 || len === 9) && len < 12) {
+                                                        formatted += '-'
+                                                    }
+                                                    field.onChange(formatted)
+                                                }}
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
