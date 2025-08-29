@@ -224,6 +224,113 @@ async function createVariantBOMsFromParent(
 // GROUPED PRODUCT DISPLAY
 // =============================================
 
+// export async function getGroupedProductsWithVariants(): Promise<
+//   GroupedProductForDisplay[]
+// > {
+//   try {
+//     const products = await prisma.product.findMany({
+//       include: {
+//         category: true,
+//         variants: {
+//           include: {
+//             boms: {
+//               include: {
+//                 material: true,
+//               },
+//             },
+//           },
+//         },
+//       },
+//       orderBy: [{ hasVariants: "desc" }, { name: "asc" }],
+//     });
+
+//     return products.map((product) => {
+//       const variants = product.variants.map((variant) => {
+//         const totalMaterialCost = variant.boms.reduce(
+//           (sum, bom) =>
+//             sum + Number(bom.quantityNeeded) * Number(bom.material.costPerUnit),
+//           0
+//         );
+
+//         return {
+//           id: variant.id,
+//           productId: variant.productId,
+//           sku: variant.sku,
+//           sizeName: variant.sizeName,
+//           sizeCode: variant.sizeCode,
+//           colorName: variant.colorName,
+//           colorCode: variant.colorCode,
+//           styleName: variant.styleName,
+//           materialName: variant.materialName,
+//           unitCost: Number(variant.unitCost),
+//           sellingPrice: Number(variant.sellingPrice),
+//           currentStock: variant.currentStock,
+//           minimumStockLevel: variant.minimumStockLevel,
+//           expectedStock: variant.expectedStock,
+//           committedStock: variant.committedStock,
+//           displayName: variant.displayName,
+//           isActive: variant.isActive,
+//           sortOrder: variant.sortOrder,
+//           createdAt: variant.createdAt,
+//           updatedAt: variant.updatedAt,
+//           createdBy: variant.createdBy,
+//           modifiedBy: variant.modifiedBy,
+//           boms: variant.boms.map((bom) => ({
+//             id: bom.id,
+//             materialId: bom.materialId,
+//             materialName: bom.material.name,
+//             materialSku: bom.material.sku,
+//             quantityNeeded: Number(bom.quantityNeeded),
+//             wastePercentage: Number(bom.wastePercentage),
+//             unitCost: Number(bom.material.costPerUnit),
+//             totalCost:
+//               Number(bom.quantityNeeded) * Number(bom.material.costPerUnit),
+//             notes: bom.notes,
+//           })),
+//           totalMaterialCost,
+//           availableStock: variant.currentStock - variant.committedStock,
+//           stockStatus:
+//             variant.currentStock <= 0
+//               ? ("OUT_OF_STOCK" as const)
+//               : variant.currentStock <= variant.minimumStockLevel
+//                 ? ("LOW_STOCK" as const)
+//                 : ("IN_STOCK" as const),
+//         };
+//       });
+
+//       const totalStock = variants.reduce((sum, v) => sum + v.currentStock, 0);
+//       const totalValue = variants.reduce(
+//         (sum, v) => sum + v.currentStock * v.unitCost,
+//         0
+//       );
+//       const lowStockVariants = variants.filter(
+//         (v) => v.stockStatus === "LOW_STOCK" || v.stockStatus === "OUT_OF_STOCK"
+//       ).length;
+
+//       return {
+//         id: product.id,
+//         name: product.name,
+//         sku: product.sku,
+//         description: product.description ?? undefined,
+//         hasVariants: product.hasVariants,
+//         variantCount: variants.length,
+//         totalStock,
+//         totalValue,
+//         lowStockVariants,
+//         category: {
+//           id: product.category.id,
+//           name: product.category.name,
+//         },
+//         variants,
+//         createdAt: product.createdAt,
+//         updatedAt: product.updatedAt,
+//       };
+//     });
+//   } catch (error: any) {
+//     console.error("Error fetching grouped products:", error);
+//     return [];
+//   }
+// }
 export async function getGroupedProductsWithVariants(): Promise<
   GroupedProductForDisplay[]
 > {
@@ -331,7 +438,6 @@ export async function getGroupedProductsWithVariants(): Promise<
     return [];
   }
 }
-
 // =============================================
 // UTILITY FUNCTIONS
 // =============================================

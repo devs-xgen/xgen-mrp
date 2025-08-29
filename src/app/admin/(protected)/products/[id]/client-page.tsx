@@ -203,7 +203,7 @@ export default function ProductDetailClientPage({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <AnalyticsCard
           title="Total Stock"
-          value={totalStock}
+          value={product.currentStock + totalStock}
           icon="Package"
           {...analyticsCardVariants.blue}
         />
@@ -323,6 +323,7 @@ export default function ProductDetailClientPage({
         <TabsContent value="overview" className="space-y-6">
           <ProductDetailsCard 
             product={product} 
+            totalStock={totalStock} // <--- Pass the correct value here
             onStockAdjust={() => openStockDialog()}
             onCreateProduction={() => setShowProductionDialog(true)}
           />
