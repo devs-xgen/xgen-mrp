@@ -20,6 +20,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { getMaterialUtilization } from "@/lib/actions/dashboard";
 import { MaterialUtilization as MaterialUtilizationType } from "@/types/admin/dashboard";
+import { formatCurrencyPHP } from "@/lib/constant";
 import { Recycle } from "lucide-react";
 
 export function MaterialUtilization() {
@@ -102,7 +103,7 @@ export function MaterialUtilization() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    ${parseFloat(material.costImpact.toString()).toFixed(2)}
+                    {formatCurrencyPHP(parseFloat(material.costImpact.toString()))}
                   </TableCell>
                 </TableRow>
               ))}
