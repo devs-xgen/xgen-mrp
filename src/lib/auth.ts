@@ -33,56 +33,55 @@ const loginAttempts = new Map<
   { count: number; lastAttempt: number; blockedUntil?: number }
 >();
 
-// Rate limiting for login attempts
-function checkLoginRateLimit(email: string): {
+// Rate limiting configuration for login attempts
+const LOGIN_RATE_LIMIT = {
+  maxAttempts: 10, // allow more attempts before blocking
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  blockDurationMs: 15 * 60 * 1000, // 15 minutes block (reduced from 30)
+};
+
+// Check if account is currently blocked (without incrementing)
+function isLoginBlocked(email: string): { blocked: boolean; blockedUntil?: Date } {
+  const now = Date.now();
+  const attempts = loginAttempts.get(email);
+  if (attempts?.blockedUntil && now < attempts.blockedUntil) {
+    return { blocked: true, blockedUntil: new Date(attempts.blockedUntil) };
+  }
+  return { blocked: false };
+}
+
+// Record a failed login attempt and return limit status
+function registerFailedLoginAttempt(email: string): {
   allowed: boolean;
   attemptsLeft?: number;
   blockedUntil?: Date;
 } {
   const now = Date.now();
-  const maxAttempts = 5;
-  const windowMs = 15 * 60 * 1000; // 15 minutes
-  const blockDuration = 30 * 60 * 1000; // 30 minutes
-
   const attempts = loginAttempts.get(email);
 
   if (!attempts) {
     loginAttempts.set(email, { count: 1, lastAttempt: now });
-    return { allowed: true, attemptsLeft: maxAttempts - 1 };
+    return { allowed: true, attemptsLeft: LOGIN_RATE_LIMIT.maxAttempts - 1 };
   }
 
-  // Check if still blocked
-  if (attempts.blockedUntil && now < attempts.blockedUntil) {
-    return {
-      allowed: false,
-      blockedUntil: new Date(attempts.blockedUntil),
-    };
-  }
-
-  // Reset if window expired
-  if (now - attempts.lastAttempt > windowMs) {
+  // Reset window if expired
+  if (now - attempts.lastAttempt > LOGIN_RATE_LIMIT.windowMs) {
     loginAttempts.set(email, { count: 1, lastAttempt: now });
-    return { allowed: true, attemptsLeft: maxAttempts - 1 };
+    return { allowed: true, attemptsLeft: LOGIN_RATE_LIMIT.maxAttempts - 1 };
   }
 
-  // Increment attempts
   attempts.count++;
   attempts.lastAttempt = now;
 
-  if (attempts.count >= maxAttempts) {
-    attempts.blockedUntil = now + blockDuration;
-    console.warn(
-      `🚨 Account blocked due to excessive login attempts: ${email}`
-    );
-    return {
-      allowed: false,
-      blockedUntil: new Date(attempts.blockedUntil),
-    };
+  if (attempts.count >= LOGIN_RATE_LIMIT.maxAttempts) {
+    attempts.blockedUntil = now + LOGIN_RATE_LIMIT.blockDurationMs;
+    console.warn(`🚨 Account blocked due to excessive login attempts: ${email}`);
+    return { allowed: false, blockedUntil: new Date(attempts.blockedUntil) };
   }
 
   return {
     allowed: true,
-    attemptsLeft: maxAttempts - attempts.count,
+    attemptsLeft: LOGIN_RATE_LIMIT.maxAttempts - attempts.count,
   };
 }
 
@@ -196,10 +195,10 @@ export const authOptions: NextAuthOptions = {
             }
           }
 
-          // Check rate limiting
-          const rateLimitCheck = checkLoginRateLimit(credentials.email);
-          if (!rateLimitCheck.allowed) {
-            const blockedUntil = rateLimitCheck.blockedUntil;
+          // Early block check (do not increment attempts here)
+          const blockCheck = isLoginBlocked(credentials.email);
+          if (blockCheck.blocked) {
+            const blockedUntil = blockCheck.blockedUntil;
             const blockedMessage = blockedUntil
               ? `Account temporarily blocked until ${blockedUntil.toLocaleTimeString()}`
               : "Too many login attempts. Please try again later.";
@@ -216,6 +215,13 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!user) {
+            const rl = registerFailedLoginAttempt(credentials.email);
+            if (!rl.allowed) {
+              const blockedMessage = rl.blockedUntil
+                ? `Account temporarily blocked until ${rl.blockedUntil.toLocaleTimeString()}`
+                : "Too many login attempts. Please try again later.";
+              throw new Error(blockedMessage);
+            }
             throw new Error("Invalid email or password");
           }
 
@@ -232,6 +238,13 @@ export const authOptions: NextAuthOptions = {
           );
 
           if (!isPasswordValid) {
+            const rl = registerFailedLoginAttempt(credentials.email);
+            if (!rl.allowed) {
+              const blockedMessage = rl.blockedUntil
+                ? `Account temporarily blocked until ${rl.blockedUntil.toLocaleTimeString()}`
+                : "Too many login attempts. Please try again later.";
+              throw new Error(blockedMessage);
+            }
             throw new Error("Invalid email or password");
           }
 

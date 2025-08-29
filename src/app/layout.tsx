@@ -125,7 +125,7 @@ export default function RootLayout({
       <body
         className={`${inter.className} antialiased`}
         suppressHydrationWarning
-      >
+      > 
         <GlobalErrorBoundary>
           <MaintenanceProvider>
             <AuthProvider>

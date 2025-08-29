@@ -56,6 +56,27 @@ function checkRateLimit(
   return true;
 }
 
+// Robust client IP extraction (supports multiple proxy headers)
+function getClientIp(req: NextRequest): string {
+  try {
+    const xff = req.headers.get("x-forwarded-for");
+    if (xff) {
+      const first = xff.split(",")[0]?.trim();
+      if (first) return first;
+    }
+    const cf = req.headers.get("cf-connecting-ip");
+    if (cf) return cf;
+    const xri = req.headers.get("x-real-ip");
+    if (xri) return xri;
+    // Next.js may expose ip on the request in some runtimes
+    // @ts-expect-error - not always typed
+    if (req.ip) return (req as any).ip as string;
+  } catch {
+    // no-op
+  }
+  return "unknown";
+}
+
 // Security headers configuration
 function addSecurityHeaders(response: NextResponse): NextResponse {
   // Prevent clickjacking
@@ -101,11 +122,7 @@ function hasRoleAccess(userRole: string, pathname: string): boolean {
 
 export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
-  const ip =
-    req.headers.get("x-forwarded-for") ||
-    req.headers.get("x-real-ip") ||
-    req.headers.get("cf-connecting-ip") ||
-    "unknown";
+  const ip = getClientIp(req);
 
   // Skip API routes and static files
   if (
@@ -114,6 +131,11 @@ export default async function middleware(req: NextRequest) {
     pathname.includes(".") ||
     pathname.startsWith("/favicon")
   ) {
+    return NextResponse.next();
+  }
+
+  // Skip non-mutating or preflight requests
+  if (req.method === "HEAD" || req.method === "OPTIONS") {
     return NextResponse.next();
   }
 
@@ -145,9 +167,18 @@ export default async function middleware(req: NextRequest) {
     // Skip general rate limiting in development
   } else {
     // Apply full rate limiting in production
-    if (!checkRateLimit(ip, maxRequests)) {
-      console.warn(`Rate limit exceeded for IP: ${ip} on path: ${pathname}`);
-      return new NextResponse("Too Many Requests", { status: 429 });
+    // Avoid over-limiting when IP cannot be determined (behind certain proxies)
+    if (ip !== "unknown") {
+      // Do NOT rate-limit login page views (GET). Only guard heavy navigation/general traffic.
+      if (!isLoginPage) {
+        if (!checkRateLimit(ip, maxRequests)) {
+          console.warn(`Rate limit exceeded for IP: ${ip} on path: ${pathname}`);
+          const retryAfter = Math.ceil(RATE_LIMIT_CONFIG.windowMs / 1000).toString();
+          const res = new NextResponse("Too Many Requests", { status: 429 });
+          res.headers.set("Retry-After", retryAfter);
+          return res;
+        }
+      }
     }
   }
 
@@ -175,6 +206,7 @@ export default async function middleware(req: NextRequest) {
   if (
     pathname === "/" ||
     pathname === "/install-app" ||
+    pathname === "/changelog" ||
     pathname === "/offline" ||
     pathname.includes("/login") ||
     isShareableRoute

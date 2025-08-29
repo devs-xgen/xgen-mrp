@@ -75,22 +75,11 @@ const nextConfig = {
     
     return config;
   },
-  // Enable CORS
-  async headers() {
-    return [
-      {
-        source: '/api/:path*',
-        headers: [
-          { key: 'Access-Control-Allow-Credentials', value: 'true' },
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET,OPTIONS,PATCH,DELETE,POST,PUT' },
-          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version' },
-        ],
-      },
-    ];
-  },
+  
   env: {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    // Expose the app version to the client for diagnostics/UI
+    NEXT_PUBLIC_APP_VERSION: require('./package.json').version,
   },
   
   // Add redirects to handle plural form URLs
@@ -112,6 +101,38 @@ const nextConfig = {
         permanent: true,
       },
     ]
+  },
+  // Add caching headers to ensure critical PWA files update promptly
+  async headers() {
+    const existing = [
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Credentials', value: 'true' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,OPTIONS,PATCH,DELETE,POST,PUT' },
+          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version' },
+        ],
+      },
+    ];
+    const pwaHeaders = [
+      {
+        // Ensure the browser always re-fetches the service worker file
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
+      {
+        // Manifest changes should not be aggressively cached
+        source: '/manifest.json',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache' },
+        ],
+      },
+    ];
+    return [...existing, ...pwaHeaders];
   },
 }
 

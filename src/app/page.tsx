@@ -121,6 +121,15 @@ export default function Home() {
                 Download our app
               </Button>
             </Link>
+            <Link href="/changelog">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-gray-600 hover:text-gray-900"
+              >
+                Changelog
+              </Button>
+            </Link>
             {/* LALAGYAN TO NG GOOGLE FORM */}
             <Button variant="ghost" size="sm" className="text-gray-600">
               Help & Support

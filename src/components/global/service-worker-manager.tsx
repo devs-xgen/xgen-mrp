@@ -15,10 +15,34 @@ export function ServiceWorkerManager() {
     if (!("serviceWorker" in navigator)) return;
 
     let registration: ServiceWorkerRegistration | null = null;
+    // Helper: detect if app is running as an installed PWA
+    const isStandalone = () =>
+      (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+      // iOS Safari
+      (navigator as any).standalone === true;
+
+    // Helper: if there's a waiting SW, either auto-apply (standalone) or prompt (browser)
+    const handleWaitingSW = (reg: ServiceWorkerRegistration) => {
+      if (!reg.waiting) return;
+      if (isStandalone()) {
+        // Installed app: update immediately to keep users on latest
+        reg.waiting.postMessage({ type: "SKIP_WAITING" });
+        return;
+      }
+      const toastId = toast.info("A new version is available.", {
+        action: {
+          label: "Update",
+          onClick: () => reg.waiting?.postMessage({ type: "SKIP_WAITING" }),
+        },
+        duration: 15000,
+      });
+      window.setTimeout(() => toast.dismiss(toastId as any), 16000);
+    };
 
     const registerServiceWorker = async () => {
       try {
-        registration = await navigator.serviceWorker.register("/sw.js", {
+        const swUrl = `/sw.js?v=${process.env.NEXT_PUBLIC_APP_VERSION || 'dev'}`;
+        registration = await navigator.serviceWorker.register(swUrl, {
           updateViaCache: "none",
           scope: "/",
         });
@@ -27,17 +51,7 @@ export function ServiceWorkerManager() {
         await registration.update();
 
         // If there's already a waiting service worker (from a previous visit), offer update
-        if (registration.waiting) {
-          const toastId = toast.info("A new version is ready.", {
-            action: {
-              label: "Update",
-              onClick: () =>
-                registration?.waiting?.postMessage({ type: "SKIP_WAITING" }),
-            },
-            duration: 15000,
-          });
-          window.setTimeout(() => toast.dismiss(toastId as any), 16000);
-        }
+        if (registration.waiting) handleWaitingSW(registration);
 
         if (updateCheckTimerRef.current === null) {
           updateCheckTimerRef.current = window.setInterval(() => {
@@ -54,22 +68,7 @@ export function ServiceWorkerManager() {
               installing.state === "installed" &&
               navigator.serviceWorker.controller // means a new SW is waiting
             ) {
-              // Offer update to the user
-              const toastId = toast.info("A new version is available.", {
-                action: {
-                  label: "Update",
-                  onClick: () => {
-                    // Tell the waiting SW to activate immediately
-                    registration?.waiting?.postMessage({
-                      type: "SKIP_WAITING",
-                    });
-                  },
-                },
-                duration: 15000,
-              });
-
-              // Auto-dismiss any previous toasts after some time
-              window.setTimeout(() => toast.dismiss(toastId as any), 16000);
+              handleWaitingSW(registration!);
             }
           });
         });
@@ -81,6 +80,32 @@ export function ServiceWorkerManager() {
             window.location.reload();
           }, 100);
         });
+
+        // Check updates when user refocuses the app or it becomes visible again
+        const onVisibilityChange = () => {
+          if (document.visibilityState === "visible") {
+            registration?.update().then(() => {
+              if (registration) handleWaitingSW(registration);
+            }).catch(() => {});
+          }
+        };
+        const onFocus = () => {
+          registration?.update().then(() => {
+            if (registration) handleWaitingSW(registration);
+          }).catch(() => {});
+        };
+        window.addEventListener("visibilitychange", onVisibilityChange);
+        window.addEventListener("focus", onFocus);
+
+        // Cleanup visibility/focus listeners on page unload
+        window.addEventListener(
+          "unload",
+          () => {
+            window.removeEventListener("visibilitychange", onVisibilityChange);
+            window.removeEventListener("focus", onFocus);
+          },
+          { once: true }
+        );
       } catch (err) {
         // Non-fatal: app should still work without SW
         // console.error("Service worker registration failed", err);
