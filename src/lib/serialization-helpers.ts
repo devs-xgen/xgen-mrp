@@ -1,9 +1,26 @@
 // Helper functions to serialize Prisma objects for client components
 
-export function serializeDecimal(value: any): number | null {
-  if (value === null || value === undefined) return null
-  return Number(value)
+import { Prisma } from "@prisma/client";
+
+// export function serializeDecimal(value: any): number | null {
+//   if (value === null || value === undefined) return null
+//   return Number(value)
+// }
+
+function serializeDecimal(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (obj instanceof Prisma.Decimal) return obj.toString();
+  if (Array.isArray(obj)) return obj.map(serializeDecimal);
+  if (typeof obj === "object") {
+    const result: any = {};
+    for (const key in obj) {
+      result[key] = serializeDecimal(obj[key]);
+    }
+    return result;
+  }
+  return obj;
 }
+
 
 export function serializeBillingStatement(billingStatement: any) {
   if (!billingStatement) return null

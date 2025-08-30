@@ -3,12 +3,31 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { CustomerOrderDetailsClient } from "@/components/module/admin/customer-orders/CustomerOrderDetailsClient";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
+import { Prisma } from "@prisma/client";
 
 interface CustomerOrderDetailsPageProps {
   params: Promise<{
     id: string;
   }>;
 }
+
+// Recursive serializer to convert Prisma Decimal instances to strings
+function serializeDecimal(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (obj instanceof Prisma.Decimal) return obj.toString();
+  if (Array.isArray(obj)) return obj.map(serializeDecimal);
+  if (typeof obj === "object") {
+    const newObj: any = {};
+    for (const key in obj) {
+      if (Object.hasOwnProperty.call(obj, key)) {
+        newObj[key] = serializeDecimal(obj[key]);
+      }
+    }
+    return newObj;
+  }
+  return obj;
+}
+
 
 async function getCustomerOrderDetails(orderId: string) {
   try {
