@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { UserDataTable } from "@/components/module/admin/users/data-table";
+import UsersPageClient from "@/components/module/admin/users/users-page-client";
 import { CreateUserDialog } from "@/components/module/admin/users/create-user-dialog";
 import { getUsers } from "@/lib/actions/users";
 import {
@@ -37,7 +37,7 @@ export default async function UsersPage() {
 
       {/* Data Table */}
       <SectionCard heading="All Users">
-        <UserDataTable data={users} />
+        <UsersPageClient data={users} />
       </SectionCard>
     </PageContainer>
   );

@@ -14,7 +14,8 @@
         "Enhanced proxy-aware IP detection in middleware.",
         "Added public changelog page.",
         "PWA: Installed apps now auto-update to the latest deploy (auto-activate service worker in standalone and reload).",
-        "PWA: Versioned service worker registration and no-store caching for /sw.js, plus update checks on focus/visibility."
+        "PWA: Versioned service worker registration and no-store caching for /sw.js, plus update checks on focus/visibility.",
+        "FIXING TABLES UI and UX of the system"
       ],
       "mediaLink": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=1200&q=80&auto=format&fit=crop"
     },

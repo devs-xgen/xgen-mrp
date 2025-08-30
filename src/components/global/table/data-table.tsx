@@ -42,6 +42,8 @@ export function DataTable<TData, TValue>({
   pageSize = 10,
   className,
   emptyMessage = "No results found.",
+  filterOptions = [],
+  customToolbarActions,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
@@ -84,6 +86,8 @@ export function DataTable<TData, TValue>({
           searchPlaceholder={searchPlaceholder}
           enableFiltering={enableFiltering}
           enableColumnVisibility={enableColumnVisibility}
+          filterOptions={filterOptions}
+          customActions={customToolbarActions}
         />
       )}
       

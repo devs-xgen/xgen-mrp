@@ -17,6 +17,8 @@ export interface DataTableProps<TData, TValue = unknown> {
   pageSize?: number;
   className?: string;
   emptyMessage?: string;
+  filterOptions?: FilterOption[];
+  customToolbarActions?: React.ReactNode;
 }
 
 // Table toolbar props

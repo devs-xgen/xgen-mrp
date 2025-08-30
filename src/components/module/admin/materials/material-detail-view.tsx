@@ -23,91 +23,6 @@ export function MaterialDetailView({
 }: MaterialDetailViewProps) {
   return (
     <div className="space-y-6">
-<<<<<<< HEAD
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/admin/materials">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Materials
-            </Button>
-          </Link>
-          <h1 className="text-2xl font-bold">{material.name}</h1>
-          <Badge variant="outline">{material.sku}</Badge>
-        </div>
-        {/* <Link href={`/admin/materials/${material.id}/edit`}>
-          <Button>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Material
-          </Button>
-        </Link> */}
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="flex border-b">
-        <button
-          className={`px-4 py-2 ${
-            activeTab === "details"
-              ? "border-b-2 border-primary font-medium"
-              : "text-muted-foreground"
-          }`}
-          onClick={() => setActiveTab("details")}
-        >
-          Material Details
-        </button>
-        <button
-          className={`px-4 py-2 ${
-            activeTab === "usage"
-              ? "border-b-2 border-primary font-medium"
-              : "text-muted-foreground"
-          }`}
-          onClick={() => setActiveTab("usage")}
-        >
-          Usage in Products
-        </button>
-      </div>
-
-      {/* Material Details Tab */}
-      {activeTab === "details" && (
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Material Information</CardTitle>
-              <CardDescription>
-                Basic information about this material
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">
-                    Name
-                  </h3>
-                  <p>{material.name}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">
-                    SKU
-                  </h3>
-                  <p>{material.sku}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">
-                    Type
-                  </h3>
-                  <p>{material.type?.name || "Not specified"}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">
-                    Unit of Measure
-                  </h3>
-                  <p>
-                    {material.unitOfMeasure
-                      ? `${material.unitOfMeasure.name} (${material.unitOfMeasure.symbol})`
-                      : "Not specified"}
-                  </p>
-                </div>
-=======
       {/* Material Information */}
       <Card>
         <CardHeader>
@@ -123,7 +38,6 @@ export function MaterialDetailView({
                 <div><span className="font-medium">Type:</span> {material.type?.name || "-"}</div>
                 <div><span className="font-medium">Unit:</span> {material.unitOfMeasure ? `${material.unitOfMeasure.name} (${material.unitOfMeasure.symbol})` : "-"}</div>
                 <div><span className="font-medium">Status:</span> <Badge variant={material.status === "ACTIVE" ? "default" : "secondary"}>{material.status}</Badge></div>
->>>>>>> 21843c7 (feat: add billing statements and delivery receipts data tables with actions)
               </div>
             </div>
             <div>

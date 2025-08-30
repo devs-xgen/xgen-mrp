@@ -2,7 +2,7 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,9 +13,15 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import type { UserData } from "@/types/admin/user";
-import type { ExtendedTableMeta } from "@/types/admin/table";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  createSelectionColumn, 
+  createSortableHeader, 
+  createDateColumn
+} from "@/components/global/table";
+import { EditUserDialog } from "./edit-user-dialog";
+import { DeleteUserDialog } from "./delete-user-dialog";
 
 async function updateUserStatus(userId: string, newStatus: string) {
   const response = await fetch(`/api/users/${userId}`, {
@@ -36,34 +42,176 @@ async function updateUserStatus(userId: string, newStatus: string) {
   return response.json();
 }
 
-export const columns: ColumnDef<UserData, unknown>[] = [
+// User Row Actions Component
+interface UserRowActionsProps {
+  user: UserData;
+  onSuccess?: () => Promise<void>;
+}
+
+function UserRowActions({ user, onSuccess }: UserRowActionsProps) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Open menu</span>
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuItem onClick={() => setEditOpen(true)}>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit User
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setDeleteOpen(true)}
+            className="text-destructive"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete User
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <EditUserDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        user={user}
+        onSuccess={onSuccess}
+      />
+      
+      <DeleteUserDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        user={user}
+        onSuccess={onSuccess}
+      />
+    </>
+  );
+}
+
+// Status Column Component
+function StatusColumn({ user, onSuccess }: { user: UserData; onSuccess?: () => Promise<void> }) {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const status = user.status;
+
+  const handleStatusChange = async (newStatus: string) => {
+    try {
+      setIsLoading(true);
+      await updateUserStatus(user.id, newStatus);
+      if (onSuccess) {
+        await onSuccess();
+      }
+      toast({
+        title: "Status Updated",
+        description: "User status has been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to update status",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          className="h-8 px-2 py-1"
+          disabled={isLoading}
+        >
+          <Badge
+            variant={
+              status === "ACTIVE"
+                ? "secondary"
+                : status === "SUSPENDED"
+                ? "outline"
+                : "destructive"
+            }
+          >
+            {status.charAt(0) + status.slice(1).toLowerCase()}
+          </Badge>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => handleStatusChange("ACTIVE")}
+          disabled={status === "ACTIVE" || isLoading}
+        >
+          Set as Active
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => handleStatusChange("SUSPENDED")}
+          disabled={status === "SUSPENDED" || isLoading}
+        >
+          Suspend User
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => handleStatusChange("INACTIVE")}
+          disabled={status === "INACTIVE" || isLoading}
+          className="text-destructive"
+        >
+          Deactivate User
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export const createColumns = (
+  onSuccess?: () => Promise<void>
+): ColumnDef<UserData>[] => [
+  createSelectionColumn<UserData>(),
   {
     id: "name",
-    header: "Name",
+    header: createSortableHeader("Name"),
     accessorFn: (row) => `${row.profile?.firstName} ${row.profile?.lastName}`,
     cell: ({ row }) => {
       const firstName = row.original.profile?.firstName || "";
       const lastName = row.original.profile?.lastName || "";
-      return <div>{`${firstName} ${lastName}`}</div>;
+      return <div className="font-medium">{`${firstName} ${lastName}`}</div>;
     },
   },
   {
     accessorKey: "email",
-    header: "Email",
+    header: createSortableHeader("Email"),
   },
   {
     id: "employeeId",
-    header: "Employee ID",
+    header: createSortableHeader("Employee ID"),
     accessorFn: (row) => row.profile?.employeeId,
+    cell: ({ row }) => {
+      const employeeId = row.original.profile?.employeeId;
+      return <div>{employeeId || "-"}</div>;
+    },
   },
   {
     id: "department",
-    header: "Department",
+    header: createSortableHeader("Department"),
     accessorFn: (row) => row.profile?.department,
+    cell: ({ row }) => {
+      const department = row.original.profile?.department;
+      return <div>{department || "-"}</div>;
+    },
   },
   {
     accessorKey: "role",
-    header: "Role",
+    header: createSortableHeader("Role"),
     cell: ({ row }) => {
       const role = row.getValue("role") as string;
 
@@ -85,6 +233,10 @@ export const columns: ColumnDef<UserData, unknown>[] = [
           color: "bg-amber-100 text-amber-800 hover:bg-amber-200",
           label: "Delivery",
         },
+        DEVELOPER: {
+          color: "bg-indigo-100 text-indigo-800 hover:bg-indigo-200",
+          label: "Developer",
+        },
       };
 
       const { color, label } = roleStyles[role] || {
@@ -101,113 +253,18 @@ export const columns: ColumnDef<UserData, unknown>[] = [
   },
   {
     accessorKey: "status",
-    header: "Status",
-    cell: ({ row, table }) => {
-      const [isLoading, setIsLoading] = useState(false);
-      const { toast } = useToast();
-      const status = row.getValue("status") as string;
-      const user = row.original;
-      const meta = table.options.meta as ExtendedTableMeta;
-
-      const handleStatusChange = async (newStatus: string) => {
-        try {
-          setIsLoading(true);
-          await updateUserStatus(user.id, newStatus);
-          meta.onStatusChange(user.id, newStatus);
-          toast({
-            title: "Status Updated",
-            description: "User status has been updated successfully.",
-          });
-        } catch (error) {
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description:
-              error instanceof Error
-                ? error.message
-                : "Failed to update status",
-          });
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="h-8 px-2 py-1"
-              disabled={isLoading}
-            >
-              <Badge
-                variant={
-                  status === "ACTIVE"
-                    ? "secondary"
-                    : status === "SUSPENDED"
-                    ? "outline"
-                    : "destructive"
-                }
-              >
-                {status.charAt(0) + status.slice(1).toLowerCase()}
-              </Badge>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Change Status</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => handleStatusChange("ACTIVE")}
-              disabled={status === "ACTIVE" || isLoading}
-            >
-              Set as Active
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleStatusChange("SUSPENDED")}
-              disabled={status === "SUSPENDED" || isLoading}
-            >
-              Suspend User
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleStatusChange("INACTIVE")}
-              disabled={status === "INACTIVE" || isLoading}
-              className="text-destructive"
-            >
-              Deactivate User
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
+    header: createSortableHeader("Status"),
+    cell: ({ row }) => (
+      <StatusColumn user={row.original} onSuccess={onSuccess} />
+    ),
   },
+  createDateColumn<UserData>("createdAt", "Created", false),
   {
     id: "actions",
-    cell: ({ row, table }) => {
-      const user = row.original;
-      const meta = table.options.meta as ExtendedTableMeta;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => meta.onEdit(user)}>
-              Edit User
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => meta.onDelete(user)}
-              className="text-destructive"
-            >
-              Delete User
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
+    cell: ({ row }) => (
+      <UserRowActions user={row.original} onSuccess={onSuccess} />
+    ),
+    enableSorting: false,
+    enableHiding: false,
   },
 ];
