@@ -66,12 +66,12 @@ export function MaterialDetailView({
           <h1 className="text-2xl font-bold">{material.name}</h1>
           <Badge variant="outline">{material.sku}</Badge>
         </div>
-        <Link href={`/admin/materials/${material.id}/edit`}>
+        {/* <Link href={`/admin/materials/${material.id}/edit`}>
           <Button>
             <Edit className="h-4 w-4 mr-2" />
             Edit Material
           </Button>
-        </Link>
+        </Link> */}
       </div>
 
       {/* Tab Navigation */}

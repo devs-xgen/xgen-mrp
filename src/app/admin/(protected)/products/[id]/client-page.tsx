@@ -71,7 +71,6 @@ export default function ProductDetailClientPage({
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
 
 
-
   useEffect(() => {
     async function fetchCategories() {
       const response = await fetch('/api/categories'); // Adjust endpoint
@@ -105,7 +104,6 @@ export default function ProductDetailClientPage({
     if (current <= minimum) return { label: 'Low Stock', color: 'bg-yellow-500', variant: 'secondary' as const };
     return { label: 'In Stock', color: 'bg-green-500', variant: 'default' as const };
   };
-
 
 
   const openStockDialog = (variant?: any) => {

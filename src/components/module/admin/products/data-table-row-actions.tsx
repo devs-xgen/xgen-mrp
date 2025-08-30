@@ -18,7 +18,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ProductWithRelations } from "./columns";
-import { EditProductDialog } from "./edit-product-dialog";
 import { DeleteProductDialog } from "./delete-product-dialog";
 import type { ProductCategory } from "@prisma/client";
 
@@ -71,20 +70,8 @@ export function DataTableRowActions({
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleEditPage}>
             <Edit className="mr-2 h-4 w-4" />
-            Edit (Page)
+            Edit
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <EditProductDialog
-            product={product}
-            categories={categories}
-            trigger={
-              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-            }
-            onSuccess={onSuccess}
-          />
           <DropdownMenuSeparator />
           <DeleteProductDialog
             product={product}
