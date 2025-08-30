@@ -17,7 +17,7 @@ export interface DataTableProps<TData, TValue = unknown> {
   pageSize?: number;
   className?: string;
   emptyMessage?: string;
-  filterOptions?: FilterOption[];
+  filterOptions?: readonly FilterOption[];
   customToolbarActions?: React.ReactNode;
 }
 
@@ -28,18 +28,18 @@ export interface DataTableToolbarProps<TData> {
   searchPlaceholder?: string;
   enableFiltering?: boolean;
   enableColumnVisibility?: boolean;
-  filterOptions?: FilterOption[];
+  filterOptions?: readonly FilterOption[];
   customActions?: ReactNode;
 }
 
 // Filter option interface
 export interface FilterOption {
-  column: string;
-  title: string;
-  options: {
-    label: string;
-    value: string;
-    icon?: React.ComponentType<{ className?: string }>;
+  readonly column: string;
+  readonly title: string;
+  readonly options: readonly {
+    readonly label: string;
+    readonly value: string;
+    readonly icon?: React.ComponentType<{ className?: string }>;
   }[];
 }
 
@@ -76,7 +76,7 @@ export interface TableConfig<TData> {
   emptyMessage: string;
   enableSelection?: boolean;
   enableFiltering?: boolean;
-  filterOptions?: FilterOption[];
+  filterOptions?: readonly FilterOption[];
   rowActions?: RowAction<TData>[];
   customToolbarActions?: ReactNode;
 }

@@ -159,6 +159,27 @@ export const tableConfigs = {
       },
     ],
   },
+
+  "delivery-receipts": {
+    searchKey: "receiptNumber",
+    searchPlaceholder: "Filter delivery receipts...",
+    emptyMessage: "No delivery receipts found.",
+    enableSelection: true,
+    enableFiltering: true,
+    filterOptions: [
+      {
+        column: "deliveryStatus",
+        title: "Status",
+        options: [
+          { value: "PENDING", label: "Pending" },
+          { value: "IN_TRANSIT", label: "In Transit" },
+          { value: "DELIVERED", label: "Delivered" },
+          { value: "FAILED", label: "Failed" },
+          { value: "RETURNED", label: "Returned" },
+        ],
+      },
+    ],
+  },
 } as const;
 
 // Helper function to get table config

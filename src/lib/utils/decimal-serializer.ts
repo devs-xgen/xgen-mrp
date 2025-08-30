@@ -11,26 +11,28 @@ export interface SerializableDecimal {
 /**
  * Type helper to convert Decimal fields to serializable strings
  */
-export type SerializableData<T> = {
-  [K in keyof T]: T[K] extends Decimal
-    ? string
-    : T[K] extends Decimal | null
-    ? string | null
-    : T[K] extends Decimal | undefined
-    ? string | undefined
-    : T[K] extends Array<infer U>
-    ? Array<SerializableData<U>>
-    : T[K] extends object
-    ? SerializableData<T[K]>
-    : T[K];
-};
+export type SerializableData<T> =
+  // Convert Prisma Decimal values to strings
+  T extends Decimal ? string :
+  T extends Decimal | null ? string | null :
+  T extends Decimal | undefined ? string | undefined :
+  // Preserve Date instances as-is (do not recurse into Date methods)
+  T extends Date ? Date :
+  // Preserve function types (e.g., methods on classes like Date)
+  T extends Function ? T :
+  // Recurse into arrays
+  T extends Array<infer U> ? Array<SerializableData<U>> :
+  // Recurse into plain objects by mapping properties
+  T extends object ? { [K in keyof T]: SerializableData<T[K]> } :
+  // Primitives
+  T;
 
 /**
  * Converts a Prisma Decimal object to a serializable string
  * @param decimal - The Decimal object to serialize
  * @returns The decimal value as a string, or null if input is null/undefined
  */
-export function serializeDecimal(decimal: Decimal | null | undefined): string | null {
+export function serializeDecimal(decimal: Decimal | string | number | null | undefined): string | null {
   if (decimal === null || decimal === undefined) {
     return null;
   }

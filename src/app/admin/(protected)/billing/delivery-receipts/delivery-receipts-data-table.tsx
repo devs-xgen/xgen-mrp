@@ -98,13 +98,27 @@ export function DeliveryReceiptsDataTable({
         );
       },
     },
-    createStatusColumn<DeliveryReceiptWithBilling>("deliveryStatus", "Status", {
-      PENDING: { variant: "outline", label: "Pending" },
-      IN_TRANSIT: { variant: "secondary", label: "In Transit" },
-      DELIVERED: { variant: "default", label: "Delivered" },
-      FAILED: { variant: "destructive", label: "Failed" },
-      RETURNED: { variant: "destructive", label: "Returned" },
-    }),
+    {
+      accessorKey: "deliveryStatus",
+      header: "Status",
+      cell: ({ row }) => {
+        const status = row.getValue("deliveryStatus") as string;
+        const statusConfig = {
+          PENDING: { variant: "outline" as const, label: "Pending" },
+          IN_TRANSIT: { variant: "secondary" as const, label: "In Transit" },
+          DELIVERED: { variant: "default" as const, label: "Delivered" },
+          FAILED: { variant: "destructive" as const, label: "Failed" },
+          RETURNED: { variant: "destructive" as const, label: "Returned" },
+        };
+        const config = statusConfig[status as keyof typeof statusConfig] || 
+                      { variant: "outline" as const, label: status };
+        return (
+          <Badge variant={config.variant} className="capitalize">
+            {config.label}
+          </Badge>
+        );
+      },
+    },
     {
       accessorKey: "customerName",
       header: "Customer",

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarIcon, Camera, Upload, Loader2, Package, Truck, MapPin, User } from "lucide-react";
+import { CalendarIcon, Camera, Upload, Loader2, Package, Truck, User } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -69,6 +69,89 @@ export function DeliveryReceiptForm({
   const [signaturePreview, setSignaturePreview] = useState<string>("");
   const [photoPreview, setPhotoPreview] = useState<string>("");
 
+  // Helpers to coerce serialized values coming from server actions
+  const toNumberMaybe = (v: unknown): number | unknown => {
+    if (typeof v === "string") {
+      const n = parseFloat(v);
+      return Number.isNaN(n) ? v : n;
+    }
+    return v;
+  };
+
+  const toDateMaybe = (v: unknown): Date | unknown => {
+    if (v instanceof Date) return v;
+    if (typeof v === "string") {
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? v : d;
+    }
+    return v;
+  };
+
+  // Transform a billing statement to align runtime types with BillingStatementWithRelations
+  const hydrateBillingStatement = (s: any): BillingStatementWithRelations => {
+    const hydrated: any = {
+      ...s,
+      // Top-level amounts
+      totalAmount: toNumberMaybe(s?.totalAmount),
+      taxAmount: toNumberMaybe(s?.taxAmount),
+      discountAmount: toNumberMaybe(s?.discountAmount),
+      netAmount: toNumberMaybe(s?.netAmount),
+      // Top-level dates
+      billingDate: toDateMaybe(s?.billingDate),
+      dueDate: s?.dueDate ? toDateMaybe(s.dueDate) : null,
+      paidDate: s?.paidDate ? toDateMaybe(s.paidDate) : null,
+      createdAt: toDateMaybe(s?.createdAt),
+      updatedAt: toDateMaybe(s?.updatedAt),
+    };
+
+    if (s?.customerOrder) {
+      hydrated.customerOrder = {
+        ...s.customerOrder,
+        orderDate: toDateMaybe(s.customerOrder.orderDate),
+        requiredDate: toDateMaybe(s.customerOrder.requiredDate),
+        totalAmount: toNumberMaybe(s.customerOrder.totalAmount),
+      };
+    }
+
+    if (s?.productionOrder) {
+      hydrated.productionOrder = {
+        ...s.productionOrder,
+        startDate: toDateMaybe(s.productionOrder.startDate),
+        dueDate: toDateMaybe(s.productionOrder.dueDate),
+        quantity: toNumberMaybe(s.productionOrder.quantity),
+      };
+    }
+
+    if (s?.salesInvoice) {
+      hydrated.salesInvoice = {
+        ...s.salesInvoice,
+        invoiceDate: toDateMaybe(s.salesInvoice.invoiceDate),
+        dueDate: s.salesInvoice.dueDate ? toDateMaybe(s.salesInvoice.dueDate) : null,
+        subtotal: toNumberMaybe(s.salesInvoice.subtotal),
+        taxRate: toNumberMaybe(s.salesInvoice.taxRate),
+        taxAmount: toNumberMaybe(s.salesInvoice.taxAmount),
+        discountAmount: toNumberMaybe(s.salesInvoice.discountAmount),
+        totalAmount: toNumberMaybe(s.salesInvoice.totalAmount),
+        invoiceItems: s.salesInvoice.invoiceItems?.map((item: any) => ({
+          ...item,
+          quantity: toNumberMaybe(item.quantity),
+          unitPrice: toNumberMaybe(item.unitPrice),
+          totalPrice: toNumberMaybe(item.totalPrice),
+          discountPercent: item.discountPercent != null ? toNumberMaybe(item.discountPercent) : null,
+        })) ?? [],
+      };
+    }
+
+    if (Array.isArray(s?.deliveryReceipts)) {
+      hydrated.deliveryReceipts = s.deliveryReceipts.map((r: any) => ({
+        ...r,
+        deliveryDate: toDateMaybe(r.deliveryDate),
+      }));
+    }
+
+    return hydrated as BillingStatementWithRelations;
+  };
+
   // Form setup with simplified fields only (Requirements 3.1, 3.2, 3.3, 3.4)
   const form = useForm<DeliveryReceiptFormData>({
     resolver: zodResolver(deliveryReceiptSchema),
@@ -87,49 +170,8 @@ export function DeliveryReceiptForm({
     },
   });
 
-  // Load billing statements on component mount
-  useEffect(() => {
-    const loadBillingStatements = async () => {
-      setIsLoading(true);
-      try {
-        const result = await getAllBillingStatements({}, 1, 100);
-        if (result.data) {
-          setBillingStatements(result.data);
-          
-          // If initialData has billingStatementId, find and set the selected statement
-          if (initialData?.billingStatementId) {
-            const statement = result.data.find(s => s.id === initialData.billingStatementId);
-            if (statement) {
-              setSelectedBillingStatement(statement);
-              // Auto-populate delivery address from customer data
-              populateDeliveryAddress(statement);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error loading billing statements:", error);
-        toast.error("Failed to load billing statements");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadBillingStatements();
-  }, [initialData?.billingStatementId]);
-
-  // Handle billing statement selection - required billingStatementId (Requirement 3.5)
-  const handleBillingStatementSelect = (statementId: string) => {
-    const statement = billingStatements.find(s => s.id === statementId);
-    setSelectedBillingStatement(statement || null);
-    form.setValue("billingStatementId", statementId);
-    
-    if (statement) {
-      populateDeliveryAddress(statement);
-    }
-  };
-
   // Auto-populate delivery address from billing statement customer data
-  const populateDeliveryAddress = (statement: BillingStatementWithRelations) => {
+  const populateDeliveryAddress = useCallback((statement: BillingStatementWithRelations) => {
     let address = "";
     
     if (statement.customer) {
@@ -154,7 +196,51 @@ export function DeliveryReceiptForm({
     if (address && !form.getValues("deliveryAddress")) {
       form.setValue("deliveryAddress", address);
     }
+  }, [form]);
+
+  // Load billing statements on component mount
+  useEffect(() => {
+    const loadBillingStatements = async () => {
+      setIsLoading(true);
+      try {
+        const result = await getAllBillingStatements({}, 1, 100);
+        if (result.data) {
+          const hydrated = result.data.map(hydrateBillingStatement);
+          setBillingStatements(hydrated);
+          
+          // If initialData has billingStatementId, find and set the selected statement
+          if (initialData?.billingStatementId) {
+            const statement = hydrated.find(s => s.id === initialData.billingStatementId);
+            if (statement) {
+              setSelectedBillingStatement(statement);
+              // Auto-populate delivery address from customer data
+              populateDeliveryAddress(statement);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error loading billing statements:", error);
+        toast.error("Failed to load billing statements");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadBillingStatements();
+  }, [initialData?.billingStatementId, populateDeliveryAddress]);
+
+  // Handle billing statement selection - required billingStatementId (Requirement 3.5)
+  const handleBillingStatementSelect = (statementId: string) => {
+    const statement = billingStatements.find(s => s.id === statementId);
+    setSelectedBillingStatement(statement || null);
+    form.setValue("billingStatementId", statementId);
+    
+    if (statement) {
+      populateDeliveryAddress(statement);
+    }
   };
+
+  
 
   // Handle signature file upload (Requirement 3.3 - optional proof)
   const handleSignatureUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
