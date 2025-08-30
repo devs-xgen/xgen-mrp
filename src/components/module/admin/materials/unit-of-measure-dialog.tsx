@@ -48,6 +48,7 @@ import {
   updateUnitOfMeasure,
   deleteUnitOfMeasure,
 } from "@/lib/actions/unit-of-measure";
+import { useRouter } from "next/navigation";
 
 const unitOfMeasureSchema = z.object({
   name: z
@@ -76,7 +77,7 @@ interface UnitOfMeasureDialogProps {
     description?: string | null;
     status: Status;
   }[];
-  onSuccess?: () => Promise<void>;
+  onSuccess?: () => Promise<void> | void;
 }
 
 export function UnitOfMeasureDialog({
@@ -94,6 +95,7 @@ export function UnitOfMeasureDialog({
     status: Status;
   } | null>(null);
   const { toast } = useToast();
+  const router = useRouter();
 
   const form = useForm<UnitOfMeasureFormValues>({
     resolver: zodResolver(unitOfMeasureSchema),
@@ -136,6 +138,7 @@ export function UnitOfMeasureDialog({
       form.reset();
       setEditingUnit(null);
       if (onSuccess) await onSuccess();
+      router.refresh();
     } catch (error) {
       console.error("Form submission error:", error);
       toast({
@@ -187,6 +190,7 @@ export function UnitOfMeasureDialog({
       });
 
       if (onSuccess) await onSuccess();
+      router.refresh();
     } catch (error) {
       toast({
         title: "Error",

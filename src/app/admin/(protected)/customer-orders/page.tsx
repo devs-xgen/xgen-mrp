@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { getCustomerOrdersWithFulfillment } from "@/lib/actions/customer-order";
 import { getOrdersRequiringAnalysis } from "@/lib/actions/order-analysis";
 import { columns } from "@/components/module/admin/customer-orders/columns";
-import { DataTable } from "@/components/module/admin/customer-orders/data-table";
+import { DataTable } from "@/components/global/table";
 import { Button } from "@/components/ui/button";
 import { Plus, BarChart, Archive, Menu, ChevronDown } from "lucide-react";
 import Link from "next/link";
@@ -134,7 +134,13 @@ export default async function CustomerOrdersPage() {
           <CardTitle>All Customer Orders</CardTitle>
         </CardHeader>
         <CardContent>
-          <DataTable columns={columns} data={tableData} />
+          <DataTable
+            columns={columns}
+            data={tableData}
+            searchKey="customerName"
+            searchPlaceholder="Filter orders..."
+            enableSelection={true}
+          />
         </CardContent>
       </Card>
     </div>

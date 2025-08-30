@@ -1,19 +1,38 @@
 import { Suspense } from "react";
 import { Metadata } from "next";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { revalidatePath } from "next/cache";
 
 // Import server actions and types
 import { getAllBillingStatements, getBillingAnalytics } from "@/lib/actions/billing-statements";
-import { BillingStatementsClient } from "@/components/module/admin/billing/billing-statements";
 import { BillingStatus } from "@/types/admin/billing";
+
+// Import page layout components
+import {
+  PageContainer,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+  PageDescription,
+  PageHeaderActions,
+  SectionCard,
+} from "@/components/shared/page-layout";
+import { BillingStatementsDataTable } from "./billing-statements-data-table";
+import { BillingStatementsDashboard } from "@/components/module/admin/billing/billing-statements/billing-statements-dashboard";
 
 export const metadata: Metadata = {
   title: "Billing Statements",
   description: "Manage customer billing statements and track payments",
 };
+
+// Server actions for data revalidation
+async function refreshData() {
+  "use server";
+  revalidatePath("/admin/billing/billing-statements");
+}
 
 interface BillingStatementsPageProps {
   searchParams: {
@@ -77,25 +96,46 @@ export default async function BillingStatementsPage({ searchParams }: BillingSta
   const analytics = await getBillingAnalytics();
 
   return (
-    <div className="container mx-auto py-10">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Billing Statements</h1>
-          <p className="text-muted-foreground">
+    <PageContainer>
+      {/* Page Header */}
+      <PageHeader>
+        <PageHeaderMain>
+          <PageTitle>Billing Statements</PageTitle>
+          <PageDescription>
             Manage customer billing statements and track payments
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/admin/billing/billing-statements/create">
-            <Plus className="mr-2 h-4 w-4" />
-            Create Statement
-          </Link>
-        </Button>
-      </div>
+          </PageDescription>
+        </PageHeaderMain>
+        <PageHeaderActions>
+          <Button asChild variant="outline">
+            <Link href="/admin/billing">
+              <FileText className="h-4 w-4 mr-2" />
+              Back to Billing
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/admin/billing/billing-statements/create">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Statement
+            </Link>
+          </Button>
+        </PageHeaderActions>
+      </PageHeader>
 
-      <Suspense fallback={<BillingStatementsTableSkeleton />}>
-        <BillingStatementsClient data={data} analytics={analytics} />
+      {/* Dashboard Analytics */}
+      <Suspense fallback={<div>Loading dashboard...</div>}>
+        <BillingStatementsDashboard analytics={analytics} />
       </Suspense>
-    </div>
+
+      {/* Data Table */}
+      <SectionCard heading="All Billing Statements">
+        <Suspense fallback={<BillingStatementsTableSkeleton />}>
+          <BillingStatementsDataTable 
+            data={data.data}
+            pagination={data.pagination}
+            onRefresh={refreshData}
+          />
+        </Suspense>
+      </SectionCard>
+    </PageContainer>
   );
 }

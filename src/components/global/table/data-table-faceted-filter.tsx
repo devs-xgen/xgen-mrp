@@ -1,3 +1,4 @@
+// src/components/global/table/data-table-faceted-filter.tsx
 "use client";
 
 import * as React from "react";
@@ -31,33 +32,15 @@ interface DataTableFacetedFilterProps<TData, TValue> {
     value: string;
     icon?: React.ComponentType<{ className?: string }>;
   }[];
-  onValueChange?: (values: string[]) => void;
 }
 
 export function DataTableFacetedFilter<TData, TValue>({
   column,
   title,
   options,
-  onValueChange,
 }: DataTableFacetedFilterProps<TData, TValue>) {
   const facets = column?.getFacetedUniqueValues();
   const selectedValues = new Set(column?.getFilterValue() as string[]);
-
-  const handleSelect = (value: string) => {
-    if (selectedValues.has(value)) {
-      selectedValues.delete(value);
-    } else {
-      selectedValues.add(value);
-    }
-    const filterValues = Array.from(selectedValues);
-    column?.setFilterValue(filterValues.length ? filterValues : undefined);
-    onValueChange?.(filterValues);
-  };
-
-  const handleClearFilters = () => {
-    column?.setFilterValue(undefined);
-    onValueChange?.([]);
-  };
 
   return (
     <Popover>
@@ -111,7 +94,17 @@ export function DataTableFacetedFilter<TData, TValue>({
                 return (
                   <CommandItem
                     key={option.value}
-                    onSelect={() => handleSelect(option.value)}
+                    onSelect={() => {
+                      if (isSelected) {
+                        selectedValues.delete(option.value);
+                      } else {
+                        selectedValues.add(option.value);
+                      }
+                      const filterValues = Array.from(selectedValues);
+                      column?.setFilterValue(
+                        filterValues.length ? filterValues : undefined
+                      );
+                    }}
                   >
                     <div
                       className={cn(
@@ -141,7 +134,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                 <CommandSeparator />
                 <CommandGroup>
                   <CommandItem
-                    onSelect={handleClearFilters}
+                    onSelect={() => column?.setFilterValue(undefined)}
                     className="justify-center text-center"
                   >
                     Clear filters

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getMaterialById } from "@/lib/actions/materials";
 import { getMaterialUsage } from "@/lib/actions/material-search";
 import { MaterialDetailView } from "@/components/module/admin/materials/material-detail-view";
+import { getMaterialTypes, getUnitOfMeasures, getSuppliers } from "@/lib/actions/materials";
 
 interface MaterialDetailPageProps {
   params: Promise<{
@@ -28,16 +29,27 @@ export default async function MaterialDetailPage({
   params,
 }: MaterialDetailPageProps) {
   const { id } = await params;
-  const [material, materialUsage] = await Promise.all([
-    getMaterialById(id),
-    getMaterialUsage(id),
-  ]);
+  const [material, materialUsage, materialTypes, unitOfMeasures, suppliers] =
+    await Promise.all([
+      getMaterialById(id),
+      getMaterialUsage(id),
+      getMaterialTypes(),
+      getUnitOfMeasures(),
+      getSuppliers(),
+    ]);
 
   if (!material) notFound();
 
   return (
-    <div className="container mx-auto py-6">
-      <MaterialDetailView material={material} materialUsage={materialUsage} />
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <MaterialDetailView
+        material={material}
+        materialUsage={materialUsage}
+        materialTypes={materialTypes}
+        unitOfMeasures={unitOfMeasures}
+        suppliers={suppliers}
+      />
     </div>
   );
 }
+

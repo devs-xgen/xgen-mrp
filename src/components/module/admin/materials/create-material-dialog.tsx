@@ -34,9 +34,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { createMaterial } from "@/lib/actions/materials";
+import { MaterialCreateInput } from "@/types/admin/materials";
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
 import { RichTextEditor } from "@/components/global/rich-text-editor";
+import { useRouter } from "next/navigation";
 
 const materialSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -72,7 +74,7 @@ interface CreateMaterialDialogProps {
   materialTypes: { id: string; name: string }[];
   unitOfMeasures: { id: string; name: string; symbol: string }[];
   suppliers: { id: string; name: string }[];
-  onSuccess?: () => Promise<void>;
+  onSuccess?: () => Promise<void> | void;
 }
 
 export function CreateMaterialDialog({
@@ -83,6 +85,7 @@ export function CreateMaterialDialog({
 }: CreateMaterialDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const form = useForm<MaterialFormInputs>({
     resolver: zodResolver(materialSchema),
@@ -100,9 +103,21 @@ export function CreateMaterialDialog({
 
   async function onSubmit(data: MaterialFormInputs) {
     try {
-      // The zodResolver has already transformed the values during validation,
-      // so we can safely pass the data to createMaterial
-      await createMaterial(data as unknown as MaterialFormValues);
+      // Build a strongly-typed payload for the server action
+      const payload: MaterialCreateInput = {
+        name: data.name,
+        sku: data.sku,
+        typeId: data.typeId,
+        unitOfMeasureId: data.unitOfMeasureId,
+        costPerUnit: Number(data.costPerUnit ?? 0),
+        currentStock: Number(data.currentStock ?? 0),
+        minimumStockLevel: Number(data.minimumStockLevel ?? 0),
+        leadTime: Number(data.leadTime ?? 0),
+        supplierId: data.supplierId,
+        notes: data.notes,
+      };
+
+      await createMaterial(payload);
       setOpen(false);
       form.reset();
       toast({
@@ -112,6 +127,7 @@ export function CreateMaterialDialog({
 
       // Call the onSuccess callback if provided
       if (onSuccess) await onSuccess();
+      router.refresh();
     } catch (error) {
       toast({
         title: "Error",

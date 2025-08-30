@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ListTree, Pencil, Trash, Loader2 } from "lucide-react";
-import { MaterialType, Status } from "@prisma/client";
+import { Status } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -43,6 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useRouter } from "next/navigation";
 
 import {
   createMaterialType,
@@ -72,7 +73,7 @@ interface MaterialTypeDialogProps {
     description?: string | null;
     status: Status;
   }[];
-  onSuccess?: () => Promise<void>;
+  onSuccess?: () => Promise<void> | void;
 }
 
 export function MaterialTypeDialog({
@@ -89,6 +90,7 @@ export function MaterialTypeDialog({
     status: Status;
   } | null>(null);
   const { toast } = useToast();
+  const router = useRouter();
 
   const form = useForm<MaterialTypeFormValues>({
     resolver: zodResolver(materialTypeSchema),
@@ -127,6 +129,7 @@ export function MaterialTypeDialog({
       form.reset();
       setEditingType(null);
       if (onSuccess) await onSuccess();
+      router.refresh();
     } catch (error) {
       toast({
         title: "Error",
@@ -159,6 +162,7 @@ export function MaterialTypeDialog({
       });
 
       if (onSuccess) await onSuccess();
+      router.refresh();
     } catch (error) {
       toast({
         title: "Error",

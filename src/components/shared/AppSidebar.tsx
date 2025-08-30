@@ -238,7 +238,7 @@ export default function AppSidebar({
   return (
     <div
       className={cn(
-        "flex h-screen flex-col bg-neutral-800 text-slate-100 transition-all duration-300 relative border-r border-slate-700",
+        "flex h-full flex-col bg-neutral-800 text-slate-100 transition-all duration-300 relative border-r border-slate-700",
         isCollapsed ? "w-20" : "w-64"
       )}
     >

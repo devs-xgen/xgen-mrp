@@ -9,8 +9,11 @@ import { DataTableRowActions } from "./data-table-row-actions"
 import { FulfillmentIndicator } from "./FulfillmentIndicator"
 import { formatDate } from "@/lib/utils"
 import { formatCurrencyPHP } from "@/lib/constant"
+import { createSelectionColumn } from "@/components/global/table"
 
 export const columns: ColumnDef<CustomerOrderColumn>[] = [
+  // Selection checkbox column
+  createSelectionColumn<CustomerOrderColumn>(),
   {
     accessorKey: "orderNumber",
     header: ({ column }) => (

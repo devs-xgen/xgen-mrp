@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { Metadata } from "next";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, FileText, Truck } from "lucide-react";
 import { revalidatePath } from "next/cache";
 
 import { Button } from "@/components/ui/button";
@@ -10,14 +10,25 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Import the new delivery receipts components
 import { getAllDeliveryReceipts } from "@/lib/actions/delivery-receipts";
 import { DeliveryReceiptsDashboard } from "@/components/module/admin/billing/delivery-receipts/delivery-receipts-dashboard";
-import { DataTable } from "@/components/module/admin/billing/delivery-receipts/data-table";
 import { DeliveryReceiptWithBilling, DeliveryAnalytics, DeliveryStatus } from "@/types/admin/billing";
+
+// Import page layout components
+import {
+  PageContainer,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+  PageDescription,
+  PageHeaderActions,
+  SectionCard,
+} from "@/components/shared/page-layout";
+import { DeliveryReceiptsDataTable } from "./delivery-receipts-data-table";
 
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: "Delivery Receipts",
-  description: "Track delivery confirmations and manage delivery receipts",
+  description: "Manage delivery receipts and tracking information",
 };
 
 // Server actions for data revalidation
@@ -26,7 +37,7 @@ async function revalidateDeliveryReceipts() {
   revalidatePath("/admin/billing/delivery-receipts");
 }
 
-async function refreshDeliveryReceipts() {
+async function refreshData() {
   "use server";
   revalidatePath("/admin/billing/delivery-receipts", "page");
 }
@@ -122,24 +133,30 @@ export default async function DeliveryReceiptsPage({
   };
 
   return (
-    <div className="flex flex-col gap-6 p-8 bg-background min-h-screen">
+    <PageContainer>
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Delivery Receipts</h1>
-          <p className="text-muted-foreground mt-1">
-            Track delivery confirmations linked to billing statements
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" asChild>
+      <PageHeader>
+        <PageHeaderMain>
+          <PageTitle>Delivery Receipts</PageTitle>
+          <PageDescription>
+            Manage delivery receipts and tracking information
+          </PageDescription>
+        </PageHeaderMain>
+        <PageHeaderActions>
+          <Button asChild variant="outline">
+            <Link href="/admin/billing">
+              <FileText className="h-4 w-4 mr-2" />
+              Back to Billing
+            </Link>
+          </Button>
+          <Button asChild>
             <Link href="/admin/billing/delivery-receipts/create">
-              <Plus className="mr-2 h-4 w-4" />
+              <Truck className="h-4 w-4 mr-2" />
               Create Receipt
             </Link>
           </Button>
-        </div>
-      </div>
+        </PageHeaderActions>
+      </PageHeader>
 
       {/* Dashboard Analytics */}
       <Suspense fallback={<div>Loading dashboard...</div>}>
@@ -150,9 +167,14 @@ export default async function DeliveryReceiptsPage({
       </Suspense>
 
       {/* Data Table */}
-      <Suspense fallback={<DeliveryReceiptsTableSkeleton />}>
-        <DataTable data={deliveryReceipts} />
-      </Suspense>
-    </div>
+      <SectionCard heading="All Delivery Receipts">
+        <Suspense fallback={<DeliveryReceiptsTableSkeleton />}>
+          <DeliveryReceiptsDataTable 
+            data={deliveryReceipts}
+            onRefresh={refreshData}
+          />
+        </Suspense>
+      </SectionCard>
+    </PageContainer>
   );
 }

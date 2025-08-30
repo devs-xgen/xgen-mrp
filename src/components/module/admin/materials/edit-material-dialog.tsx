@@ -36,14 +36,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { updateMaterial } from "@/lib/actions/materials";
-import { Separator } from "@/components/ui/separator";
 import { formatDate } from "@/lib/utils";
+import {
+  Material,
+  MaterialType,
+  UnitOfMeasure,
+  Supplier,
+} from "@/types/admin/materials";
+import { useRouter } from "next/navigation";
 
 // Schema for form validation
 const materialSchema = z.object({
@@ -82,43 +87,14 @@ const materialSchema = z.object({
 
 type MaterialFormValues = z.infer<typeof materialSchema>;
 
-// Define an interface that matches the expected format for the form
-interface Material {
-  id: string;
-  name: string;
-  sku: string;
-  typeId: string;
-  unitOfMeasureId: string;
-  costPerUnit: number; // We expect this as a number, not Decimal
-  currentStock: number;
-  expectedStock?: number;
-  committedStock?: number;
-  calculatedStock?: number;
-  minimumStockLevel: number;
-  leadTime: number;
-  supplierId: string;
-  status: Status;
-  createdAt?: Date;
-  updatedAt?: Date;
-  createdBy?: string | null;
-  modifiedBy?: string | null;
-  notes?: string | null;
-  // Relations
-  supplier?: { id: string; name: string };
-  type?: { id: string; name: string };
-  unitOfMeasure?: { id: string; name: string; symbol?: string };
-  boms?: any[];
-  purchaseOrderLines?: any[];
-}
-
 interface EditMaterialDialogProps {
   material?: Material;
-  materialTypes?: { id: string; name: string }[];
-  unitOfMeasures?: { id: string; name: string; symbol?: string }[];
-  suppliers?: { id: string; name: string }[];
+  materialTypes?: MaterialType[];
+  unitOfMeasures?: UnitOfMeasure[];
+  suppliers?: Supplier[];
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  onSuccess?: () => void;
+  onSuccess?: () => Promise<void> | void;
 }
 
 export function EditMaterialDialog({
@@ -140,6 +116,7 @@ export function EditMaterialDialog({
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const { toast } = useToast();
+  const router = useRouter();
 
   // Update local state when the open prop changes
   useEffect(() => {
@@ -233,7 +210,8 @@ export function EditMaterialDialog({
 
       console.log("Material updated successfully");
       handleOpenChange(false);
-      if (onSuccess) onSuccess();
+      if (onSuccess) await onSuccess();
+      router.refresh();
 
       toast({
         title: "Success",
@@ -250,12 +228,6 @@ export function EditMaterialDialog({
       setLoading(false);
     }
   }
-
-  // Calculate the effective stock level
-  const effectiveStock =
-    form.watch("currentStock") +
-    form.watch("expectedStock") -
-    form.watch("committedStock");
 
   // Update calculated stock when dependencies change
   useEffect(() => {

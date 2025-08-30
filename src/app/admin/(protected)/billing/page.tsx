@@ -20,14 +20,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AnalyticsCard, analyticsCardVariants } from "@/components/ui/analytics-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 // Import server actions
 import { getComprehensiveBillingAnalytics } from "@/lib/actions/billing-reports";
@@ -42,6 +34,17 @@ import { BillingTypeQuickActions } from "@/components/module/admin/billing/dashb
 import { BillingTypeAnalyticsCard } from "@/components/module/admin/billing/dashboard/billing-type-analytics-card";
 import { BillingRecommendationsCard } from "@/components/module/admin/billing/dashboard/billing-recommendations-card";
 import { EnhancedRecentStatements } from "@/components/module/admin/billing/dashboard/enhanced-recent-statements";
+
+// Import page layout components
+import {
+  PageContainer,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+  PageDescription,
+  PageHeaderActions,
+  SectionCard,
+} from "@/components/shared/page-layout";
 
 export const metadata: Metadata = {
   title: "Billing Dashboard",
@@ -145,39 +148,34 @@ async function BillingDashboardContent() {
         />
 
         {/* Additional Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Other Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                <Link href="/admin/billing/simple-billing-statements">
-                  <FileText className="h-6 w-6" />
-                  <span>Simple Billing</span>
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                <Link href="/admin/billing/sales-invoices/create">
-                  <Receipt className="h-6 w-6" />
-                  <span>Create Sales Invoice</span>
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                <Link href="/admin/billing/delivery-receipts/create">
-                  <Truck className="h-6 w-6" />
-                  <span>Create Delivery Receipt</span>
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                <Link href="/admin/billing/billing-reports">
-                  <TrendingUp className="h-6 w-6" />
-                  <span>View Reports</span>
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <SectionCard heading="Other Actions">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
+              <Link href="/admin/billing/simple-billing-statements">
+                <FileText className="h-6 w-6" />
+                <span>Simple Billing</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
+              <Link href="/admin/billing/sales-invoices/create">
+                <Receipt className="h-6 w-6" />
+                <span>Create Sales Invoice</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
+              <Link href="/admin/billing/delivery-receipts/create">
+                <Truck className="h-6 w-6" />
+                <span>Create Delivery Receipt</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
+              <Link href="/admin/billing/billing-reports">
+                <TrendingUp className="h-6 w-6" />
+                <span>View Reports</span>
+              </Link>
+            </Button>
+          </div>
+        </SectionCard>
 
         {/* Enhanced Analytics and Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -198,42 +196,39 @@ async function BillingDashboardContent() {
           <BillingRecommendationsCard recommendations={analytics.billingTypeRecommendations || []} />
 
           {/* Recent Sales Invoices */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Recent Sales Invoices</span>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/admin/billing/sales-invoices">View All</Link>
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentInvoices.data.slice(0, 5).map((invoice) => (
-                  <div key={invoice.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Receipt className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">{invoice.invoiceNumber}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {invoice.billingStatements?.[0]?.customer?.name || 'Unknown Customer'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatCurrencyPHP(invoice.totalAmount)}</p>
-                      <Badge 
-                        variant={invoice.status === 'PAID' ? 'secondary' : 
-                                invoice.status === 'SENT' ? 'outline' : 'default'}
-                      >
-                        {invoice.status}
-                      </Badge>
+          <SectionCard heading={
+            <div className="flex items-center justify-between">
+              <span>Recent Sales Invoices</span>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/admin/billing/sales-invoices">View All</Link>
+              </Button>
+            </div>
+          }>
+            <div className="space-y-4">
+              {recentInvoices.data.slice(0, 5).map((invoice) => (
+                <div key={invoice.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Receipt className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{invoice.invoiceNumber}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {invoice.billingStatements?.[0]?.customer?.name || 'Unknown Customer'}
+                      </p>
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="text-right">
+                    <p className="font-medium">{formatCurrencyPHP(invoice.totalAmount)}</p>
+                    <Badge 
+                      variant={invoice.status === 'PAID' ? 'secondary' : 
+                              invoice.status === 'SENT' ? 'outline' : 'default'}
+                    >
+                      {invoice.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
         </div>
       </div>
     );
@@ -267,15 +262,16 @@ async function BillingDashboardContent() {
 
 export default function BillingDashboard() {
   return (
-    <div className="flex flex-col gap-6 p-8">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Billing Dashboard</h2>
-          <p className="text-muted-foreground">
+    <PageContainer>
+      {/* Page Header - Using page-layout components */}
+      <PageHeader>
+        <PageHeaderMain>
+          <PageTitle>Billing Dashboard</PageTitle>
+          <PageDescription>
             Comprehensive billing management and financial analytics
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
+          </PageDescription>
+        </PageHeaderMain>
+        <PageHeaderActions>
           <Button asChild size="lg" className="shadow-lg hover:shadow-xl transition-all duration-200">
             <Link href="/admin/billing/billing-statements/create">
               <Plus className="h-5 w-5 mr-2" />
@@ -288,8 +284,8 @@ export default function BillingDashboard() {
               View All
             </Link>
           </Button>
-        </div>
-      </div>
+        </PageHeaderActions>
+      </PageHeader>
 
       <Suspense fallback={
         <div className="space-y-6">
@@ -303,11 +299,9 @@ export default function BillingDashboard() {
               </Card>
             ))}
           </div>
-          <Card>
-            <CardContent className="p-6">
-              <Skeleton className="h-40 w-full" />
-            </CardContent>
-          </Card>
+          <SectionCard>
+            <Skeleton className="h-40 w-full" />
+          </SectionCard>
         </div>
       }>
         <BillingDashboardContent />
@@ -315,6 +309,6 @@ export default function BillingDashboard() {
 
       {/* Floating Chat Support */}
       <FloatingChatbox />
-    </div>
+    </PageContainer>
   );
 }

@@ -208,7 +208,7 @@
 // src/components/module/admin/products/columns.tsx
 "use client";
 import { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, Factory } from "lucide-react";
+import { AlertTriangle, Factory, Edit, Trash2, Eye } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -219,14 +219,35 @@ import {
 } from "@/components/ui/tooltip";
 import { formatCurrencyPHP } from "@/lib/constant";
 import type { Product, ProductCategory, Status } from "@prisma/client";
+<<<<<<< HEAD
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 import { DataTableRowActions } from "./data-table-row-actions";
 import { Separator } from "@/components/ui/separator";
+=======
+import { 
+  createSelectionColumn, 
+  createSortableHeader, 
+  createCurrencyColumn,
+  createNumberColumn
+} from "@/components/global/table";
+import { EditProductDialog } from "./edit-product-dialog";
+import { DeleteProductDialog } from "./delete-product-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
+>>>>>>> 21843c7 (feat: add billing statements and delivery receipts data tables with actions)
 
 // Define the Product type with relations and variants
 export type ProductWithRelations = Product & {
   category: ProductCategory;
+<<<<<<< HEAD
   variants?: {
     id: string;
     sku: string;
@@ -234,15 +255,97 @@ export type ProductWithRelations = Product & {
     sellingPrice: number;
     currentStock: number;
   }[];
+=======
+  variants?: any[];
+  productionOrders?: any[];
+>>>>>>> 21843c7 (feat: add billing statements and delivery receipts data tables with actions)
   _count?: {
     productionOrders?: number;
   };
 };
 
+// Product Row Actions Component
+interface ProductRowActionsProps {
+  product: ProductWithRelations;
+  categories: ProductCategory[];
+  onSuccess?: () => Promise<void>;
+}
+
+function ProductRowActions({ product, categories, onSuccess }: ProductRowActionsProps) {
+  const handleViewDetails = () => {
+    window.location.href = `/admin/products/${product.id}`;
+  };
+
+  const handleEditPage = () => {
+    window.location.href = `/admin/products/${product.id}/edit`;
+  };
+
+  return (
+    <TooltipProvider>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className="flex h-8 w-8 p-0 data-[state=open]:bg-muted"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+            <span className="sr-only">Open menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-[160px]">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuItem onClick={handleViewDetails}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>View detailed information, variants, and BOM</p>
+            </TooltipContent>
+          </Tooltip>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleEditPage}>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit (Page)
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <EditProductDialog
+            product={product}
+            categories={categories}
+            trigger={
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+            }
+            onSuccess={onSuccess}
+          />
+          <DropdownMenuSeparator />
+          <DeleteProductDialog
+            product={product}
+            trigger={
+              <DropdownMenuItem
+                onSelect={(e) => e.preventDefault()}
+                className="text-red-600"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            }
+            onSuccess={onSuccess}
+          />
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </TooltipProvider>
+  );
+}
+
 export const createColumns = (
   categories: ProductCategory[],
   onSuccess?: () => Promise<void>
 ): ColumnDef<ProductWithRelations>[] => [
+<<<<<<< HEAD
   {
     id: "select",
     header: ({ table }) => (
@@ -270,9 +373,12 @@ export const createColumns = (
     enableSorting: false,
     enableHiding: false,
   },
+=======
+  createSelectionColumn<ProductWithRelations>(),
+>>>>>>> 21843c7 (feat: add billing statements and delivery receipts data tables with actions)
   {
     accessorKey: "name",
-    header: "Product Name",
+    header: createSortableHeader("Product Name"),
     cell: ({ row }) => (
       <TooltipProvider>
         <div>
@@ -310,9 +416,10 @@ export const createColumns = (
   },
   {
     accessorKey: "category",
-    header: "Category",
+    header: createSortableHeader("Category"),
     cell: ({ row }) => row.original.category?.name || "-",
   },
+<<<<<<< HEAD
   {
     accessorKey: "sellingPrice",
     header: "Selling Price",
@@ -347,9 +454,13 @@ export const createColumns = (
       return formatCurrencyPHP(Number(row.getValue("unitCost")));
     },
   },
+=======
+  createCurrencyColumn<ProductWithRelations>("sellingPrice", "Selling Price", "PHP"),
+  createCurrencyColumn<ProductWithRelations>("unitCost", "Unit Cost", "PHP"),
+>>>>>>> 21843c7 (feat: add billing statements and delivery receipts data tables with actions)
   {
     accessorKey: "currentStock",
-    header: "Current Stock",
+    header: createSortableHeader("Current Stock"),
     cell: ({ row }) => {
       const product = row.original;
       
@@ -421,11 +532,12 @@ export const createColumns = (
   },
   {
     accessorKey: "productionOrders",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Production" />
-    ),
+    header: createSortableHeader("Production"),
     cell: ({ row }) => {
-      const productionOrders = row.original._count?.productionOrders || 0;
+      const productionOrders =
+        typeof row.original._count?.productionOrders === "number"
+          ? (row.original._count?.productionOrders as number)
+          : (row.original as any).productionOrders?.length || 0;
       
       return (
         <div className="flex items-center">
@@ -443,7 +555,7 @@ export const createColumns = (
   },
   {
     accessorKey: "status",
-    header: "Status",
+    header: createSortableHeader("Status"),
     cell: ({ row }) => {
       const status = row.getValue("status") as Status;
       const product = row.original;
@@ -479,16 +591,17 @@ export const createColumns = (
       );
     },
   },
-  {
-    accessorKey: "leadTime",
-    header: "Lead Time",
-    cell: ({ row }) => {
-      const leadTime = row.getValue("leadTime") as number;
-      return `${leadTime} days`;
-    },
-  },
+  createNumberColumn<ProductWithRelations>("leadTime", "Lead Time", "days"),
   {
     id: "actions",
-    cell: ({ row }) => <DataTableRowActions row={row} categories={categories} onSuccess={onSuccess} />,
+    cell: ({ row }) => (
+      <ProductRowActions 
+        product={row.original} 
+        categories={categories} 
+        onSuccess={onSuccess} 
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
   },
 ];

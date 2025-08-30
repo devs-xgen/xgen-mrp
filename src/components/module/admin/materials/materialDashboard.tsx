@@ -1,19 +1,14 @@
 // src/components/module/admin/materials/materialDashboard.tsx
-"use client";
-
-import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MaterialType, Status, UnitOfMeasure } from "@prisma/client";
-import { Material } from "@/types/admin/materials";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { Package, AlertTriangle, Factory, Users } from "lucide-react";
+import type { Material, MaterialType, UnitOfMeasure, Supplier } from "@/types/admin/materials";
 
 interface MaterialsDashboardProps {
   materials: Material[];
-  materialTypes: { id: string; name: string }[];
-  unitOfMeasures: { id: string; name: string; symbol?: string }[];
-  suppliers: { id: string; name: string }[];
+  materialTypes: MaterialType[];
+  unitOfMeasures: UnitOfMeasure[];
+  suppliers: Supplier[];
 }
 
 export default function MaterialsDashboard({
@@ -22,114 +17,60 @@ export default function MaterialsDashboard({
   unitOfMeasures,
   suppliers,
 }: MaterialsDashboardProps) {
-  // Calculate statistics
-  const stats = useMemo(() => {
-    const totalMaterials = materials.length;
+  const totalMaterials = materials.length;
+  const activeMaterials = materials.filter((m) => m.status === "ACTIVE").length;
+  const inactiveMaterials = totalMaterials - activeMaterials;
+  const lowStockCount = materials.filter(
+    (m) => Number(m.currentStock) <= Number(m.minimumStockLevel)
+  ).length;
 
-    const activeMaterials = materials.filter(
-      (m) => m.status === Status.ACTIVE
-    ).length;
+  const totalTypes = materialTypes.length;
+  const totalUnits = unitOfMeasures.length;
+  const totalSuppliers = suppliers.length;
 
-    const lowStockMaterials = materials.filter((m) => {
-      // Handle potentially undefined values with nullish coalescing
-      const currentStock = m.currentStock ?? 0;
-      const minimumStockLevel = m.minimumStockLevel ?? 0;
-      return currentStock <= minimumStockLevel;
-    });
-
-    const totalValue = materials.reduce((acc, material) => {
-      // Convert any potential non-numeric values to numbers
-      const cost =
-        typeof material.costPerUnit === "number" ? material.costPerUnit : 0;
-      const stock =
-        typeof material.currentStock === "number" ? material.currentStock : 0;
-      return acc + cost * stock;
-    }, 0);
-
-    return {
-      totalMaterials,
-      activeMaterials,
-      lowStockMaterials,
-      totalValue,
-    };
-  }, [materials]);
+  const statCards = [
+    {
+      title: "Total Materials",
+      value: totalMaterials.toString(),
+      icon: Package,
+      footer: `${activeMaterials} active • ${inactiveMaterials} inactive`,
+    },
+    {
+      title: "Low Stock Items",
+      value: lowStockCount.toString(),
+      icon: AlertTriangle,
+      footer: lowStockCount > 0 ? "Review reorder levels" : "All good",
+    },
+    {
+      title: "Types & Units",
+      value: `${totalTypes} types` ,
+      icon: Factory,
+      footer: `${totalUnits} units of measure`,
+    },
+    {
+      title: "Suppliers",
+      value: totalSuppliers.toString(),
+      icon: Users,
+      footer: "Linked to materials",
+    },
+  ];
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Total Materials */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Materials
-            </CardTitle>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {statCards.map((card) => (
+        <Card key={card.title}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+            <card.icon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalMaterials}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.activeMaterials} active materials
-            </p>
-          </CardContent>
+                     <CardContent>
+             <div className="text-2xl font-bold">
+               {card.value}
+             </div>
+             <p className="text-xs text-muted-foreground mt-1">{card.footer}</p>
+           </CardContent>
         </Card>
-
-        {/* Material Types */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Material Types
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{materialTypes.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Categories for materials
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Units of Measure */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Units of Measure
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{unitOfMeasures.length}</div>
-            <p className="text-xs text-muted-foreground">Available units</p>
-          </CardContent>
-        </Card>
-
-        {/* Total Inventory Value */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Inventory Value
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "PHP",
-              }).format(stats.totalValue)}
-            </div>
-            <p className="text-xs text-muted-foreground">Total stock value</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Low Stock Alerts */}
-      {stats.lowStockMaterials.length > 0 && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Low Stock Alert</AlertTitle>
-          <AlertDescription>
-            You have {stats.lowStockMaterials.length} materials below minimum
-            stock level.
-          </AlertDescription>
-        </Alert>
-      )}
+      ))}
     </div>
   );
 }

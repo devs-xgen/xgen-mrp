@@ -6,16 +6,25 @@ import {
   getUnitOfMeasures,
   getSuppliers,
 } from "@/lib/actions/materials";
-import { DataTable } from "@/components/module/admin/materials/data-table";
 import { CreateMaterialDialog } from "@/components/module/admin/materials/create-material-dialog";
 import { MaterialTypeDialog } from "@/components/module/admin/materials/material-type-dialog";
 import { UnitOfMeasureDialog } from "@/components/module/admin/materials/unit-of-measure-dialog";
 import { revalidatePath } from "next/cache";
 import MaterialsDashboard from "@/components/module/admin/materials/materialDashboard";
 import { Button } from "@/components/ui/button";
+import {
+  PageContainer,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+  PageDescription,
+  PageHeaderActions,
+  SectionCard,
+} from "@/components/shared/page-layout";
+import { MaterialsDataTable } from "./materials-data-table";
 
 export const metadata: Metadata = {
-  title: "Materials Management",
+  title: "Materials",
   description: "Manage and monitor your material inventory",
 };
 
@@ -40,25 +49,23 @@ async function refreshData() {
 }
 
 export default async function MaterialsPage() {
-  // Fetch required data for materials management
   try {
-    // Load data with error handling for each resource
     const materials = await getAllMaterials();
     const materialTypes = await getMaterialTypes();
     const unitOfMeasures = await getUnitOfMeasures();
     const suppliers = await getSuppliers();
 
     return (
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        {/* Page Header - Following Sales Invoices Pattern */}
-        <div className="flex items-center justify-between space-y-2">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Materials Management</h2>
-            <p className="text-muted-foreground mt-1">
+      <PageContainer>
+        {/* Page Header - Consistent with Production page */}
+        <PageHeader>
+          <PageHeaderMain>
+            <PageTitle>Materials</PageTitle>
+            <PageDescription>
               Manage and monitor your material inventory
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
+            </PageDescription>
+          </PageHeaderMain>
+          <PageHeaderActions>
             <MaterialTypeDialog
               materialTypes={materialTypes}
               onSuccess={revalidateData}
@@ -73,10 +80,10 @@ export default async function MaterialsPage() {
               suppliers={suppliers}
               onSuccess={refreshData}
             />
-          </div>
-        </div>
+          </PageHeaderActions>
+        </PageHeader>
 
-        {/* Dashboard Component with stock statistics */}
+        {/* Materials Statistics - Direct layout like Production page */}
         <MaterialsDashboard
           materials={materials}
           materialTypes={materialTypes}
@@ -84,32 +91,31 @@ export default async function MaterialsPage() {
           suppliers={suppliers}
         />
 
-        {/* Data Table with materials and editing capabilities */}
-        <DataTable
-          data={materials}
-          materialTypes={materialTypes}
-          unitOfMeasures={unitOfMeasures}
-          suppliers={suppliers}
-        />
-      </div>
+        {/* Data Table */}
+        <SectionCard heading="All Materials">
+          <MaterialsDataTable
+            materials={materials}
+            materialTypes={materialTypes}
+            unitOfMeasures={unitOfMeasures}
+            suppliers={suppliers}
+            onRefresh={refreshData}
+          />
+        </SectionCard>
+      </PageContainer>
     );
   } catch (error) {
     console.error("Error loading materials page:", error);
     return (
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        {/* Error Page Header */}
-        <div className="flex items-center justify-between space-y-2">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight text-destructive">
-              Error Loading Materials
-            </h2>
-            <p className="text-muted-foreground mt-1">
+      <PageContainer>
+        <PageHeader>
+          <PageHeaderMain>
+            <PageTitle className="text-destructive">Error Loading Materials</PageTitle>
+            <PageDescription>
               Unable to load the materials management page
-            </p>
-          </div>
-        </div>
+            </PageDescription>
+          </PageHeaderMain>
+        </PageHeader>
 
-        {/* Error Content */}
         <div className="flex flex-col items-center justify-center py-12">
           <div className="text-center max-w-md">
             <div className="w-16 h-16 mx-auto mb-4 bg-destructive/10 rounded-full flex items-center justify-center">
@@ -121,16 +127,12 @@ export default async function MaterialsPage() {
             <p className="text-muted-foreground mb-6">
               There was an error loading the materials management page. Please try again later.
             </p>
-            <Button
-              onClick={() => {
-                window.location.reload();
-              }}
-            >
-              Try Again
+            <Button asChild>
+              <a href="/admin/materials">Try Again</a>
             </Button>
           </div>
         </div>
-      </div>
+      </PageContainer>
     );
   }
 }

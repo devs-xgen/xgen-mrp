@@ -15,18 +15,23 @@ const ThemeContext = createContext<ThemeContextType>({
 });
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState("dark");
 
   useEffect(() => {
-    // Get theme from localStorage or default to "dark"
-    const storedTheme = localStorage.getItem("theme") || "dark";
+    // Initialize theme from localStorage or default to "dark"
+    const storedTheme = (typeof window !== "undefined" && localStorage.getItem("theme")) || "dark";
     setTheme(storedTheme);
+    document.body.classList.toggle("dark", storedTheme === "dark");
     document.body.classList.toggle("light", storedTheme === "light");
   }, []);
 
   useEffect(() => {
     // Persist the theme in localStorage
-    localStorage.setItem("theme", theme);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("theme", theme);
+    }
+    // Toggle both dark and light classes for Tailwind and custom CSS
+    document.body.classList.toggle("dark", theme === "dark");
     document.body.classList.toggle("light", theme === "light");
   }, [theme]);
 
