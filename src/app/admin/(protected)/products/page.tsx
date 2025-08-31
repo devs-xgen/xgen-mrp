@@ -45,7 +45,7 @@ export default async function ProductsPage() {
       </PageHeader>
 
       <SectionCard heading="All Products">
-        <ProductsPageClient data={products as any} categories={categories as any} />
+        <ProductsPageClient data={products as any} />
       </SectionCard>
     </PageContainer>
   );

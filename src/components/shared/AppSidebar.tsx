@@ -9,8 +9,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Moon,
-  Sun,
   Loader2,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
@@ -23,13 +21,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useTheme } from "@/context/ThemeContext";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-// Define the props interface for AppSidebar
-interface AppSidebarProps {
-  theme?: string;
-  toggleTheme?: () => void;
-}
+// No props needed for AppSidebar
 
 // Define a proper type for navigation items
 interface NavItem {
@@ -181,18 +175,11 @@ function NavItemSkeleton({ isCollapsed }: { isCollapsed: boolean }) {
   );
 }
 
-export default function AppSidebar({
-  theme: propTheme,
-  toggleTheme: propToggleTheme,
-}: AppSidebarProps) {
+export default function AppSidebar() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [openItemId, setOpenItemId] = useState<string>("");
-
-  // Use context theme if prop theme is not provided
-  const themeContext = useTheme();
-  const theme = propTheme || themeContext.theme;
 
   // Get user data from session
   const user = session?.user;
@@ -219,13 +206,9 @@ export default function AppSidebar({
   // Get navigation items based on user role
   const navItems = getNavItems(role) as NavItem[];
 
-  const toggleLightMode = () => {
-    if (propToggleTheme) {
-      propToggleTheme();
-    } else {
-      themeContext.setTheme(theme === "dark" ? "light" : "dark");
-    }
-  };
+  // Derived user display info
+  const displayName = user?.name || (user?.email ? user.email.split("@")[0] : "User");
+  const initial = (displayName?.trim()?.charAt(0) || "U").toUpperCase();
 
   // Handle open/close of nav items to ensure only one is open at a time
   const handleNavItemToggle = (itemId: string) => {
@@ -258,7 +241,6 @@ export default function AppSidebar({
           ) : (
             <>
               <h1 className="text-xl font-bold">{portalType} Portal</h1>
-              <p className="text-sm text-slate-400 mt-1">{user?.email}</p>
             </>
           )}
         </div>
@@ -273,19 +255,6 @@ export default function AppSidebar({
             <ChevronRight className="h-5 w-5" />
           ) : (
             <ChevronLeft className="h-5 w-5" />
-          )}
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute right-10 top-1/2 -translate-y-1/2"
-          onClick={toggleLightMode}
-        >
-          {theme === "light" ? (
-            <Moon className="h-5 w-5" />
-          ) : (
-            <Sun className="h-5 w-5" />
           )}
         </Button>
       </div>
@@ -335,14 +304,35 @@ export default function AppSidebar({
           isCollapsed ? "items-center" : ""
         )}
       >
-        {!isCollapsed && !isLoading && (
-          <div className="mb-2 px-3 text-xs text-slate-400">
-            {user?.email} | {role} in {portalType} Portal
-          </div>
+        {/* Profile section */}
+        {!isLoading && (
+          <>
+            {!isCollapsed ? (
+              <div className="mb-3 px-3 py-2 rounded-md flex items-center gap-3">
+                <Avatar className="h-9 w-9">
+                  <AvatarFallback className="bg-neutral-800 border border-slate-700 text-slate-100 font-medium">
+                    {initial}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <div className="font-medium truncate">{displayName}</div>
+                  <div className="text-xs text-slate-400 truncate">{portalType} • {role || "User"}</div>
+                </div>
+              </div>
+            ) : (
+              <div className="mb-2 flex justify-center">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-neutral-800 border border-slate-700 text-slate-100 text-xs font-medium">
+                    {initial}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+            )}
+          </>
         )}
 
         {isLoading && !isCollapsed && (
-          <div className="mb-2 px-3 flex items-center">
+          <div className="mb-3 px-3 flex items-center">
             <Loader2 className="h-3 w-3 mr-2 animate-spin text-slate-400" />
             <div className="h-3 w-32 bg-slate-700 rounded animate-pulse"></div>
           </div>
@@ -351,7 +341,7 @@ export default function AppSidebar({
         <Button
           variant="ghost"
           className={cn(
-            "text-slate-300 hover:bg-slate-700 hover:text-slate-100",
+            "text-slate-300 hover:bg-slate-700 hover:text-slate-100 border border-slate-700",
             isCollapsed ? "w-10 p-0" : "w-full justify-start"
           )}
           onClick={() => signOut({ callbackUrl: getLogoutCallbackUrl() })}

@@ -8,7 +8,8 @@
         "Fix: Eliminated bottom whitespace on data-heavy pages by switching back to document-level scrolling (no nested scroll containers).",
         "Change: Simplified page wrappers—`PageContainer` and `PageBody` are now non-scrolling containers.",
         "Change: Updated `LayoutWithTheme` to use `min-h-screen` and removed overflow constraints while keeping the sidebar sticky.",
-        "Cleanup: Removed duplicate Toaster from `UnifiedLayout` to avoid potential layout interference."
+        "Cleanup: Removed duplicate Toaster from `UnifiedLayout` to avoid potential layout interference.",
+        "Minor UI bug fixes + app sidebar improvements"
       ]
     },
     {

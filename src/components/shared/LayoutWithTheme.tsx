@@ -1,16 +1,13 @@
 "use client";
 
-import { useTheme } from "@/context/ThemeContext";
 import AppSidebar from "@/components/shared/AppSidebar";
 
 export default function LayoutWithTheme({ children }: { children: React.ReactNode }) {
-  const { theme, toggleTheme } = useTheme();
-
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
       {/* Fixed Sidebar (left) */}
       <div className="sticky top-0 h-[100dvh] flex-shrink-0">
-        <AppSidebar theme={theme} toggleTheme={toggleTheme} />
+        <AppSidebar />
       </div>
 
       {/* Main Content (right) */}

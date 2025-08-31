@@ -23,7 +23,6 @@ import type { Product, ProductCategory, Status } from "@prisma/client";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 import { Separator } from "@/components/ui/separator";
-import { EditProductDialog } from "./edit-product-dialog";
 import { DeleteProductDialog } from "./delete-product-dialog";
 
 // Define the Product type with relations and variants
@@ -45,11 +44,10 @@ export type ProductWithRelations = Product & {
 // Product Row Actions Component
 interface ProductRowActionsProps {
   product: ProductWithRelations;
-  categories: ProductCategory[];
   onSuccess?: () => Promise<void>;
 }
 
-function ProductRowActions({ product, categories, onSuccess }: ProductRowActionsProps) {
+function ProductRowActions({ product, onSuccess }: ProductRowActionsProps) {
   const handleViewDetails = () => {
     window.location.href = `/admin/products/${product.id}`;
   };
@@ -85,20 +83,8 @@ function ProductRowActions({ product, categories, onSuccess }: ProductRowActions
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleEditPage}>
             <Edit className="mr-2 h-4 w-4" />
-            Edit (Page)
+            Edit
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <EditProductDialog
-            product={product}
-            categories={categories}
-            trigger={
-              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-            }
-            onSuccess={onSuccess}
-          />
           <DropdownMenuSeparator />
           <DeleteProductDialog
             product={product}
@@ -120,7 +106,6 @@ function ProductRowActions({ product, categories, onSuccess }: ProductRowActions
 }
 
 export const createColumns = (
-  categories: ProductCategory[],
   onSuccess?: () => Promise<void>
 ): ColumnDef<ProductWithRelations>[] => [
   {
@@ -383,7 +368,6 @@ export const createColumns = (
     cell: ({ row }) => (
       <ProductRowActions 
         product={row.original} 
-        categories={categories} 
         onSuccess={onSuccess} 
       />
     ),
