@@ -8,7 +8,7 @@ export const statusFilterOptions: FilterOption["options"] = [
     label: "Active",
   },
   {
-    value: "INACTIVE", 
+    value: "INACTIVE",
     label: "Inactive",
   },
   {
@@ -32,7 +32,7 @@ export const priorityFilterOptions: FilterOption["options"] = [
   },
   {
     value: "MEDIUM",
-    label: "Medium", 
+    label: "Medium",
   },
   {
     value: "HIGH",
@@ -56,6 +56,8 @@ export const tableConfigs = {
     emptyMessage: "No materials found.",
     enableSelection: true,
     enableFiltering: true,
+    enablePagination: true,
+    pageSize: 10,
     filterOptions: [
       {
         column: "status",
@@ -64,28 +66,32 @@ export const tableConfigs = {
       },
     ],
   },
-  
+
   products: {
-    searchKey: "name", 
+    searchKey: "name",
     searchPlaceholder: "Filter products...",
     emptyMessage: "No products found.",
     enableSelection: true,
     enableFiltering: true,
+    enablePagination: true,
+    pageSize: 10,
     filterOptions: [
       {
         column: "status",
-        title: "Status", 
+        title: "Status",
         options: statusFilterOptions,
       },
     ],
   },
-  
+
   production: {
     searchKey: "productName",
     searchPlaceholder: "Filter production orders...",
     emptyMessage: "No production orders found.",
     enableSelection: true,
     enableFiltering: true,
+    enablePagination: true,
+    pageSize: 10,
     filterOptions: [
       {
         column: "status",
@@ -93,19 +99,21 @@ export const tableConfigs = {
         options: statusFilterOptions,
       },
       {
-        column: "priority", 
+        column: "priority",
         title: "Priority",
         options: priorityFilterOptions,
       },
     ],
   },
-  
+
   customers: {
     searchKey: "name",
     searchPlaceholder: "Filter customers...",
     emptyMessage: "No customers found.",
     enableSelection: true,
     enableFiltering: true,
+    enablePagination: true,
+    pageSize: 10,
     filterOptions: [
       {
         column: "status",
@@ -114,13 +122,15 @@ export const tableConfigs = {
       },
     ],
   },
-  
+
   suppliers: {
     searchKey: "name",
-    searchPlaceholder: "Filter suppliers...", 
+    searchPlaceholder: "Filter suppliers...",
     emptyMessage: "No suppliers found.",
     enableSelection: true,
     enableFiltering: true,
+    enablePagination: true,
+    pageSize: 10,
     filterOptions: [
       {
         column: "status",
@@ -129,13 +139,15 @@ export const tableConfigs = {
       },
     ],
   },
-  
+
   users: {
     searchKey: "email",
     searchPlaceholder: "Filter users...",
     emptyMessage: "No users found.",
     enableSelection: true,
     enableFiltering: true,
+    enablePagination: true,
+    pageSize: 10,
     filterOptions: [
       {
         column: "role",
@@ -166,6 +178,8 @@ export const tableConfigs = {
     emptyMessage: "No delivery receipts found.",
     enableSelection: true,
     enableFiltering: true,
+    enablePagination: true,
+    pageSize: 10,
     filterOptions: [
       {
         column: "deliveryStatus",
@@ -201,7 +215,7 @@ export function formatCurrency(amount: number, currency = "PHP"): string {
 export function formatDate(date: Date | string): string {
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
-    month: "short", 
+    month: "short",
     day: "numeric",
   }).format(new Date(date));
 }

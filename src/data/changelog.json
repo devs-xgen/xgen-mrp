@@ -1,6 +1,16 @@
  {
   "project": "XGen MRP",
-  "entries": [
+ "entries": [
+    {
+      "version": "1.5.2",
+      "date": "2025-08-31",
+      "changes": [
+        "Fix: Eliminated bottom whitespace on data-heavy pages by switching back to document-level scrolling (no nested scroll containers).",
+        "Change: Simplified page wrappers—`PageContainer` and `PageBody` are now non-scrolling containers.",
+        "Change: Updated `LayoutWithTheme` to use `min-h-screen` and removed overflow constraints while keeping the sidebar sticky.",
+        "Cleanup: Removed duplicate Toaster from `UnifiedLayout` to avoid potential layout interference."
+      ]
+    },
     {
       "version": "1.5.1",
       "date": "2025-08-29",

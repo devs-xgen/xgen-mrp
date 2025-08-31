@@ -15,6 +15,7 @@ import {
   PageTitle,
   PageDescription,
   PageHeaderActions,
+  PageBody,
   SectionCard,
 } from "@/components/shared/page-layout";
 import { Badge } from "@/components/ui/badge";
@@ -106,75 +107,77 @@ export default async function ProductionOrdersPage() {
         </PageHeaderActions>
       </PageHeader>
 
-      {/* Production Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <AnalyticsCard
-          title="Total Orders"
-          value={totalOrders}
-          icon="ClipboardList"
-          {...analyticsCardVariants.blue}
-        />
-        <AnalyticsCard
-          title="Completed"
-          value={statusCounts["COMPLETED"]}
-          icon="CheckCircle"
-          {...analyticsCardVariants.green}
-        />
-        <AnalyticsCard
-          title="In Progress"
-          value={statusCounts["IN_PROGRESS"]}
-          icon="AlertTriangle"
-          {...analyticsCardVariants.amber}
-        />
-        <AnalyticsCard
-          title="Overdue"
-          value={overdueOrders}
-          icon="Timer"
-          {...analyticsCardVariants.red}
-        />
-      </div>
+      <PageBody className="space-y-6">
+        {/* Production Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <AnalyticsCard
+            title="Total Orders"
+            value={totalOrders}
+            icon="ClipboardList"
+            {...analyticsCardVariants.blue}
+          />
+          <AnalyticsCard
+            title="Completed"
+            value={statusCounts["COMPLETED"]}
+            icon="CheckCircle"
+            {...analyticsCardVariants.green}
+          />
+          <AnalyticsCard
+            title="In Progress"
+            value={statusCounts["IN_PROGRESS"]}
+            icon="AlertTriangle"
+            {...analyticsCardVariants.amber}
+          />
+          <AnalyticsCard
+            title="Overdue"
+            value={overdueOrders}
+            icon="Timer"
+            {...analyticsCardVariants.red}
+          />
+        </div>
 
-      {/* Quick Filters */}
-      <div className="flex flex-wrap gap-2">
-        <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
-          All ({totalOrders})
-        </Badge>
-        <Badge
-          variant="secondary"
-          className="cursor-pointer hover:bg-secondary"
-        >
-          In Progress ({statusCounts["IN_PROGRESS"]})
-        </Badge>
-        <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
-          Pending ({statusCounts["PENDING"]})
-        </Badge>
-        <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
-          Completed ({statusCounts["COMPLETED"]})
-        </Badge>
-        <Badge
-          variant="destructive"
-          className="cursor-pointer hover:bg-destructive/90"
-        >
-          Overdue ({overdueOrders})
-        </Badge>
-      </div>
+        {/* Quick Filters */}
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
+            All ({totalOrders})
+          </Badge>
+          <Badge
+            variant="secondary"
+            className="cursor-pointer hover:bg-secondary"
+          >
+            In Progress ({statusCounts["IN_PROGRESS"]})
+          </Badge>
+          <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
+            Pending ({statusCounts["PENDING"]})
+          </Badge>
+          <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
+            Completed ({statusCounts["COMPLETED"]})
+          </Badge>
+          <Badge
+            variant="destructive"
+            className="cursor-pointer hover:bg-destructive/90"
+          >
+            Overdue ({overdueOrders})
+          </Badge>
+        </div>
 
-      {/* Data Table - Shared Section Card */}
-      <SectionCard heading="All Production Orders">
-        <DataTable
-          columns={columns}
-          data={tableData}
-          searchKey={config.searchKey}
-          searchPlaceholder={config.searchPlaceholder}
-          emptyMessage={config.emptyMessage}
-          enableSelection={config.enableSelection}
-          enableFiltering={config.enableFiltering}
-          filterOptions={config.filterOptions}
-        />
-      </SectionCard>
+        {/* Data Table - Shared Section Card */}
+        <SectionCard heading="All Production Orders">
+          <DataTable
+            columns={columns}
+            data={tableData}
+            searchKey={config.searchKey}
+            searchPlaceholder={config.searchPlaceholder}
+            emptyMessage={config.emptyMessage}
+            enableSelection={config.enableSelection}
+            enableFiltering={config.enableFiltering}
+            filterOptions={config.filterOptions}
+          />
+        </SectionCard>
 
-      {/* Floating Chat Support */}
-      <FloatingChatbox />
+        {/* Floating Chat Support */}
+        <FloatingChatbox />
+      </PageBody>
     </PageContainer>
   );
 }

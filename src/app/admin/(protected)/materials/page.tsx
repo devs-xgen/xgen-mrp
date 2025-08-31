@@ -19,6 +19,7 @@ import {
   PageTitle,
   PageDescription,
   PageHeaderActions,
+  PageBody,
   SectionCard,
 } from "@/components/shared/page-layout";
 import { MaterialsDataTable } from "./materials-data-table";
@@ -83,24 +84,26 @@ export default async function MaterialsPage() {
           </PageHeaderActions>
         </PageHeader>
 
-        {/* Materials Statistics - Direct layout like Production page */}
-        <MaterialsDashboard
-          materials={materials}
-          materialTypes={materialTypes}
-          unitOfMeasures={unitOfMeasures}
-          suppliers={suppliers}
-        />
-
-        {/* Data Table */}
-        <SectionCard heading="All Materials">
-          <MaterialsDataTable
+        <PageBody className="space-y-6">
+          {/* Materials Statistics - Direct layout like Production page */}
+          <MaterialsDashboard
             materials={materials}
             materialTypes={materialTypes}
             unitOfMeasures={unitOfMeasures}
             suppliers={suppliers}
-            onRefresh={refreshData}
           />
-        </SectionCard>
+
+          {/* Data Table */}
+          <SectionCard heading="All Materials">
+            <MaterialsDataTable
+              materials={materials}
+              materialTypes={materialTypes}
+              unitOfMeasures={unitOfMeasures}
+              suppliers={suppliers}
+              onRefresh={refreshData}
+            />
+          </SectionCard>
+        </PageBody>
       </PageContainer>
     );
   } catch (error) {

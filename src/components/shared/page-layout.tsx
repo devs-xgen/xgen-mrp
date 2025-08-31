@@ -8,7 +8,7 @@ type DivProps = React.HTMLAttributes<HTMLDivElement>;
 export function PageContainer({ className, ...props }: DivProps) {
   return (
     <div
-      className={cn("flex-1 space-y-6 p-4 md:p-8 pt-6", className)}
+      className={cn("flex flex-col w-full space-y-6 p-4 md:p-8 pt-6", className)}
       {...props}
     />
   );
@@ -70,5 +70,14 @@ export function SectionCard({
       )}
       <CardContent className={cn("pt-0", contentClassName)}>{children}</CardContent>
     </Card>
+  );
+}
+
+export function PageBody({ className, ...props }: DivProps) {
+  return (
+    <div
+      className={cn("w-full", className)}
+      {...props}
+    />
   );
 }

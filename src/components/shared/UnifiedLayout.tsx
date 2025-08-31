@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { ThemeProvider } from "@/context/ThemeContext";
 import LayoutWithTheme from "@/components/shared/LayoutWithTheme";
-import { Toaster } from "@/components/ui/toaster";
 
 interface UnifiedLayoutProps {
   children: React.ReactNode;
@@ -35,7 +34,6 @@ export default async function UnifiedLayout({
       <LayoutWithTheme>
         {children}
       </LayoutWithTheme>
-      <Toaster />
     </ThemeProvider>
   );
 } 

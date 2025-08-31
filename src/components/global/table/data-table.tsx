@@ -77,6 +77,11 @@ export function DataTable<TData, TValue>({
     },
   });
 
+  // Compute rows to render: only current page when pagination is enabled
+  const rowsToRender = enablePagination
+    ? table.getPaginationRowModel().rows
+    : table.getRowModel().rows;
+
   return (
     <div className={cn("space-y-4", className)}>
       {enableFiltering && (
@@ -112,8 +117,8 @@ export function DataTable<TData, TValue>({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
+            {rowsToRender?.length ? (
+              rowsToRender.map((row) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}

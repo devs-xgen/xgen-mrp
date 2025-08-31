@@ -76,6 +76,8 @@ export interface TableConfig<TData> {
   emptyMessage: string;
   enableSelection?: boolean;
   enableFiltering?: boolean;
+  enablePagination?: boolean;
+  pageSize?: number;
   filterOptions?: readonly FilterOption[];
   rowActions?: RowAction<TData>[];
   customToolbarActions?: ReactNode;
