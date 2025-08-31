@@ -6,6 +6,15 @@ import { DataTable } from "@/components/module/admin/work-centers/data-table";
 import { WorkCenterDialog } from "@/components/module/admin/work-centers/create-work-center-dialog";
 import { WorkCenterUserCard } from "@/components/module/admin/work-centers/work-center-user-card";
 import {
+  PageContainer,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+  PageDescription,
+  PageHeaderActions,
+  SectionCard,
+} from "@/components/shared/page-layout";
+import {
   Card,
   CardContent,
   CardHeader,
@@ -94,19 +103,18 @@ export default async function WorkCentersPage() {
   );
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 min-h-0">
-      {/* Page Header - Following Sales Invoices Pattern */}
-      <div className="flex items-center justify-between space-y-2">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Work Centers</h2>
-          <p className="text-muted-foreground mt-1">
+    <PageContainer>
+      <PageHeader>
+        <PageHeaderMain>
+          <PageTitle>Work Centers</PageTitle>
+          <PageDescription>
             Manage your production work centers and their capacities
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+          </PageDescription>
+        </PageHeaderMain>
+        <PageHeaderActions>
           <WorkCenterDialog />
-        </div>
-      </div>
+        </PageHeaderActions>
+      </PageHeader>
 
       {/* Statistics Cards - Following Design System Pattern */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -199,17 +207,12 @@ export default async function WorkCentersPage() {
         </div>
 
         <TabsContent value="table">
-          <Card className="bg-card border rounded-lg">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">All Work Centers</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DataTable
-                columns={columns}
-                data={formattedWorkCentersForTable}
-              />
-            </CardContent>
-          </Card>
+          <SectionCard heading="All Work Centers">
+            <DataTable
+              columns={columns}
+              data={formattedWorkCentersForTable}
+            />
+          </SectionCard>
         </TabsContent>
 
         <TabsContent value="cards">
@@ -332,6 +335,6 @@ export default async function WorkCentersPage() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageContainer>
   );
 }

@@ -7,7 +7,15 @@ import { columns } from "@/components/module/admin/quality-checks/columns";
 import { DataTable } from "@/components/module/admin/quality-checks/data-table";
 import { CreateCheckDialog } from "@/components/module/admin/quality-checks/create-check-dialog";
 import { QualityMetricsDisplay } from "@/components/module/admin/quality-checks/quality-metrics";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  PageContainer,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+  PageDescription,
+  PageHeaderActions,
+  SectionCard,
+} from "@/components/shared/page-layout";
 
 export const metadata: Metadata = {
   title: "Quality Control",
@@ -34,29 +42,25 @@ export default async function QualityChecksPage() {
   }));
 
   return (
-    <div className="flex flex-col gap-6 p-8">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Quality Control</h2>
-          <p className="text-muted-foreground">
+    <PageContainer>
+      <PageHeader>
+        <PageHeaderMain>
+          <PageTitle>Quality Control</PageTitle>
+          <PageDescription>
             Manage and track quality inspections for production orders
-          </p>
-        </div>
-        <CreateCheckDialog productionOrders={productionOrders} />
-      </div>
+          </PageDescription>
+        </PageHeaderMain>
+        <PageHeaderActions>
+          <CreateCheckDialog productionOrders={productionOrders} />
+        </PageHeaderActions>
+      </PageHeader>
 
       {/* Quality metrics section */}
       <QualityMetricsDisplay />
 
-      {/* Quality checks table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quality Checks</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DataTable columns={columns} data={tableData} />
-        </CardContent>
-      </Card>
-    </div>
+      <SectionCard heading="Quality Checks">
+        <DataTable columns={columns} data={tableData} />
+      </SectionCard>
+    </PageContainer>
   );
 }

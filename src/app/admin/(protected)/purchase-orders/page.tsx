@@ -4,11 +4,14 @@ import { DataTable } from "@/components/module/admin/purchase-orders/data-table"
 import { columns } from "@/components/module/admin/purchase-orders/columns";
 import { CreatePurchaseOrderDialog } from "@/components/module/admin/purchase-orders/create-dialog";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  PageContainer,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+  PageDescription,
+  PageHeaderActions,
+  SectionCard,
+} from "@/components/shared/page-layout";
 import { getPurchaseOrders } from "@/lib/actions/purchase-order";
 import { getAllMaterials } from "@/lib/actions/materials";
 import { getAllSuppliers } from "@/lib/actions/suppliers";
@@ -34,39 +37,32 @@ export default async function PurchaseOrdersPage({ searchParams }: PageProps) {
   ]);
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      {/* Page Header - Following Sales Invoices Pattern */}
-      <div className="flex items-center justify-between space-y-2">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Purchase Orders</h2>
-          <p className="text-muted-foreground mt-1">
+    <PageContainer>
+      <PageHeader>
+        <PageHeaderMain>
+          <PageTitle>Purchase Orders</PageTitle>
+          <PageDescription>
             Manage and track all purchase orders
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+          </PageDescription>
+        </PageHeaderMain>
+        <PageHeaderActions>
           <CreatePurchaseOrderDialog
             materials={materials as any}
             suppliers={suppliers}
           />
-        </div>
-      </div>
+        </PageHeaderActions>
+      </PageHeader>
 
       {/* Statistics Dashboard */}
       <PurchaseOrdersStats purchaseOrders={purchaseOrders} />
 
-      {/* Data Table - Following Design System Pattern */}
-      <Card className="bg-card border rounded-lg">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">All Purchase Orders</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            columns={columns}
-            data={purchaseOrders}
-            highlightId={highlightId}
-          />
-        </CardContent>
-      </Card>
-    </div>
+      <SectionCard heading="All Purchase Orders">
+        <DataTable
+          columns={columns}
+          data={purchaseOrders}
+          highlightId={highlightId}
+        />
+      </SectionCard>
+    </PageContainer>
   );
 }

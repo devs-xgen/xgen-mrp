@@ -11,7 +11,7 @@ import { getTableConfig } from "@/components/global/table/table-utils";
 import { EditMaterialDialog } from "@/components/module/admin/materials/edit-material-dialog";
 import { deleteMaterial } from "@/lib/actions/materials";
 import { Material, MaterialType, UnitOfMeasure, Supplier } from "@/types/admin/materials";
-import { AlertTriangle, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { AlertTriangle, MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { 
   AlertDialog,
@@ -58,6 +59,7 @@ function MaterialActionsCell({
   onRefresh: () => void;
 }) {
   const { toast } = useToast();
+  const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -100,6 +102,10 @@ function MaterialActionsCell({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[180px]">
+          <DropdownMenuItem onClick={() => router.push(`/admin/materials/${material.id}`)}>
+            <Eye className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+            View
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setEditOpen(true)}>
             <Pencil className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
             Edit
@@ -171,7 +177,19 @@ export function MaterialsDataTable({
   // Create columns using global table helpers
   const columns = [
     createSelectionColumn<Material>(),
-    createTextColumn<Material>("name", "Material Name", "sku"),
+    {
+      accessorKey: "name",
+      header: "Material Name",
+      cell: ({ row }) => {
+        const material = row.original;
+        return (
+          <div>
+            <div className="font-medium">{material.name}</div>
+            <div className="text-xs text-muted-foreground">SKU: {material.sku}</div>
+          </div>
+        );
+      },
+    },
     {
       accessorKey: "type",
       header: "Type",

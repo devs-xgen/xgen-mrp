@@ -12,7 +12,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  PageContainer,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+  PageDescription,
+  PageHeaderActions,
+  SectionCard,
+} from "@/components/shared/page-layout";
 import { CustomerOrderColumn } from "@/types/admin/customer-order";
 
 export const metadata: Metadata = {
@@ -82,15 +90,15 @@ export default async function CustomerOrdersPage() {
   });
 
   return (
-    <div className="flex flex-col gap-6 p-8">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Customer Orders</h2>
-          <p className="text-muted-foreground">
+    <PageContainer>
+      <PageHeader>
+        <PageHeaderMain>
+          <PageTitle>Customer Orders</PageTitle>
+          <PageDescription>
             Manage customer orders, stock analysis, and production planning
-          </p>
-        </div>
-        <div className="flex gap-2">
+          </PageDescription>
+        </PageHeaderMain>
+        <PageHeaderActions>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
@@ -126,23 +134,18 @@ export default async function CustomerOrdersPage() {
               Create Order
             </Button>
           </Link>
-        </div>
-      </div>
+        </PageHeaderActions>
+      </PageHeader>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Customer Orders</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            columns={columns}
-            data={tableData}
-            searchKey="customerName"
-            searchPlaceholder="Filter orders..."
-            enableSelection={true}
-          />
-        </CardContent>
-      </Card>
-    </div>
+      <SectionCard heading="All Customer Orders">
+        <DataTable
+          columns={columns}
+          data={tableData}
+          searchKey="customerName"
+          searchPlaceholder="Filter orders..."
+          enableSelection={true}
+        />
+      </SectionCard>
+    </PageContainer>
   );
 }

@@ -4,7 +4,7 @@ import {
   getProductionOrders,
 } from "@/lib/actions/production-order";
 import { columns } from "@/components/module/admin/production/columns";
-import { DataTable } from "@/components/module/admin/production/data-table";
+import { DataTable, getTableConfig } from "@/components/global/table";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -60,6 +60,9 @@ export default async function ProductionOrdersPage() {
     materialVariance: order.materialVariance,
     completedQuantity: order.completedQuantity,
   }));
+
+  // Global table configuration for production
+  const config = getTableConfig("production");
 
   // Calculate statistics
   const totalOrders = orders.length;
@@ -158,7 +161,16 @@ export default async function ProductionOrdersPage() {
 
       {/* Data Table - Shared Section Card */}
       <SectionCard heading="All Production Orders">
-        <DataTable columns={columns} data={tableData} />
+        <DataTable
+          columns={columns}
+          data={tableData}
+          searchKey={config.searchKey}
+          searchPlaceholder={config.searchPlaceholder}
+          emptyMessage={config.emptyMessage}
+          enableSelection={config.enableSelection}
+          enableFiltering={config.enableFiltering}
+          filterOptions={config.filterOptions}
+        />
       </SectionCard>
 
       {/* Floating Chat Support */}

@@ -15,7 +15,7 @@ export default function LayoutWithTheme({ children }: { children: React.ReactNod
 
       {/* Main Content (right) */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-y-auto bg-muted/30">
+        <main className="flex-1 overflow-y-auto bg-background">
           <div className="min-h-0">
             {children}
           </div>

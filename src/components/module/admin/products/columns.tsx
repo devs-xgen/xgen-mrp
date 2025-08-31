@@ -1,9 +1,17 @@
 // src/components/module/admin/products/columns.tsx
 "use client";
 import { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, Factory, Edit, Trash2, Eye } from "lucide-react";
+import { AlertTriangle, Factory, Edit, Trash2, Eye, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -14,8 +22,9 @@ import { formatCurrencyPHP } from "@/lib/constant";
 import type { Product, ProductCategory, Status } from "@prisma/client";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
-import { DataTableRowActions } from "./data-table-row-actions";
 import { Separator } from "@/components/ui/separator";
+import { EditProductDialog } from "./edit-product-dialog";
+import { DeleteProductDialog } from "./delete-product-dialog";
 
 // Define the Product type with relations and variants
 export type ProductWithRelations = Product & {
