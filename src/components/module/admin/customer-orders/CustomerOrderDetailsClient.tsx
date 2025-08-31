@@ -115,10 +115,12 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
             Stock Analysis & Production Planning
           </Button>
         </Link>
-        <Button variant="outline">
-          <Edit className="h-4 w-4 mr-2" />
-          Edit Order
-        </Button>
+        <Link href={`/admin/customer-orders/${order.id}/edit`}>
+          <Button variant="outline">
+            <Edit className="h-4 w-4 mr-2" />
+            Edit Order
+          </Button>
+        </Link>
         {order.billingStatements?.length > 0 && (
           <Link href={`/admin/billing-statement/${order.billingStatements[0].id}`}>
             <Button variant="outline">

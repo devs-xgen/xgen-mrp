@@ -11,7 +11,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -36,13 +35,13 @@ import { formatCurrencyPHP } from "@/lib/constant";
 import { customerOrderCreateSchema, type CustomerOrderCreateForm } from "@/lib/validation/customer-order-create";
 import type { Customer } from "@prisma/client";
 
-// Types for the form
 interface OrderLine {
   productId: string;
   productVariantId?: string;
   quantity: number;
   unitPrice: number;
   product?: {
+    variants: any[];
     name: string;
     sku: string;
     sellingPrice: number;
@@ -55,7 +54,6 @@ interface OrderLine {
   };
 }
 
-// Use the validation schema types
 type CustomerOrderForm = CustomerOrderCreateForm;
 
 interface CustomerOrderCreateClientProps {
@@ -92,9 +90,9 @@ export function CustomerOrderCreateClient({
     },
   });
 
-  const { 
-    watch, 
-    setValue, 
+  const {
+    watch,
+    setValue,
     handleSubmit,
     formState: { errors }
   } = form;
@@ -109,8 +107,6 @@ export function CustomerOrderCreateClient({
     }
   }, [customerId, customers]);
 
-
-  // Update the form's orderLines when local state changes
   useEffect(() => {
     setValue("orderLines", orderLines, { shouldValidate: true, shouldDirty: true });
   }, [orderLines, setValue]);
@@ -157,10 +153,10 @@ export function CustomerOrderCreateClient({
     setOrderLines(newLines);
   };
 
-  const updateOrderLine = (index: number, field: string, value: any) => {
+ const updateOrderLine = (index: number, field: string, value: any) => {
   const newLines = [...orderLines];
   const line = newLines[index];
-  
+
   if (field === "productId") {
     const product = products.find((p) => p.id === value);
     if (product) {
@@ -170,21 +166,19 @@ export function CustomerOrderCreateClient({
         sku: product.sku,
         sellingPrice: product.sellingPrice,
         hasVariants: product.hasVariants,
+        variants: product.variants,
       };
-      line.unitPrice = product.sellingPrice;
-      // Reset variant selection when product changes
+      line.unitPrice = product.sellingPrice; // default to product's price
       line.productVariantId = "";
       line.productVariant = undefined;
     }
   } else if (field === "productVariantId") {
     const product = products.find((p) => p.id === line.productId);
     if (value === "none") {
-      // User selected "No variant"
       line.productVariantId = "";
       line.productVariant = undefined;
-      // Reset price to product's selling price
       if (line.product) {
-        line.unitPrice = line.product.sellingPrice;
+        line.unitPrice = line.product.sellingPrice; // reset to product price
       }
     } else if (product && value) {
       const variant = product.variants?.find((v: any) => v.id === value);
@@ -193,12 +187,11 @@ export function CustomerOrderCreateClient({
         line.productVariant = {
           displayName: variant.displayName,
           sku: variant.sku,
-          sellingPrice: variant.sellingPrice,
+          sellingPrice: variant.unitPrice, // This line was the issue - it was sellingPrice
         };
-        line.unitPrice = variant.sellingPrice;
+        line.unitPrice = variant.unitPrice; // This line was the issue - it was sellingPrice
       }
     } else {
-      // No variant selected (fallback)
       line.productVariantId = "";
       line.productVariant = undefined;
       if (line.product) {
@@ -208,9 +201,10 @@ export function CustomerOrderCreateClient({
   } else {
     (line as any)[field] = value;
   }
-  
+
   setOrderLines(newLines);
-  };
+};
+
   const calculateTotal = () => {
     return orderLines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
   };
@@ -220,30 +214,27 @@ export function CustomerOrderCreateClient({
       toast.error("Please add at least one order line");
       return;
     }
-      // Client-side validation for order lines before submission
     const invalidOrderLine = orderLines.some(line => line.productId === "" || line.quantity <= 0 || line.unitPrice < 0);
     if (invalidOrderLine) {
-        toast.error("Please ensure all order lines have a selected product, quantity greater than 0, and a valid unit price.");
-        return;
+      toast.error("Please ensure all order lines have a selected product, quantity greater than 0, and a valid unit price.");
+      return;
     }
 
     setIsSubmitting(true);
-      const normalizedOrderLines = orderLines.map((line) => ({
-    ...line,
-    productVariantId:
-      line.productVariantId && line.productVariantId.trim() !== ""
-        ? line.productVariantId
-        : null,
-  }));
-      try {
-        // Prepare the order data with order lines from state
-        const orderData = {
-          ...data,
-          orderLines: normalizedOrderLines,
-        };
+    const normalizedOrderLines = orderLines.map((line) => ({
+      ...line,
+      productVariantId:
+        line.productVariantId && line.productVariantId.trim() !== ""
+          ? line.productVariantId
+          : null,
+    }));
+    try {
+      const orderData = {
+        ...data,
+        orderLines: normalizedOrderLines,
+      };
 
       const result = await createCustomerOrder(orderData);
-      
       toast.success("Customer order created successfully!");
       router.push(`/admin/customer-orders/${result.id}`);
     } catch (error) {
@@ -292,20 +283,10 @@ export function CustomerOrderCreateClient({
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
-              <div>
-                <strong>Name:</strong> {selectedCustomer.name}
-              </div>
-              <div>
-                <strong>Email:</strong> {selectedCustomer.email}
-              </div>
-              <div>
-                <strong>Phone:</strong> {selectedCustomer.phone}
-              </div>
-              {selectedCustomer.address && (
-                <div>
-                  <strong>Address:</strong> {selectedCustomer.address}
-                </div>
-              )}
+              <div><strong>Name:</strong> {selectedCustomer.name}</div>
+              <div><strong>Email:</strong> {selectedCustomer.email}</div>
+              <div><strong>Phone:</strong> {selectedCustomer.phone}</div>
+              {selectedCustomer.address && <div><strong>Address:</strong> {selectedCustomer.address}</div>}
             </div>
           </CardContent>
         </Card>
@@ -354,95 +335,87 @@ export function CustomerOrderCreateClient({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orderLines.map((line, index) => {
-                  const product = products.find((p) => p.id === line.productId);
-                  return (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <Select
-                          value={line.productId || ""}
-                          onValueChange={(value) => updateOrderLine(index, "productId", value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select product" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {products.map((product) => (
-                              <SelectItem key={product.id} value={product.id}>
-                                <div className="flex flex-col">
-                                  <span>{product.name}</span>
-                                  <span className="text-sm text-muted-foreground">
-                                    {product.sku} - {formatCurrencyPHP(product.unitPrice)}
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        {product?.hasVariants && product.variants?.length > 0 ? (
+                {orderLines.map((line, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <Select
+                        value={line.productId || ""}
+                        onValueChange={(value) => updateOrderLine(index, "productId", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select product" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {products.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              <div className="flex flex-col">
+                                <span>{product.name}</span>
+                                <span className="text-sm text-muted-foreground">
+                                  {product.sku} - {formatCurrencyPHP(product.unitPrice)}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+
+                    <TableCell>
+                      {line.product?.hasVariants ? (
+                        <>
                           <Select
                             value={line.productVariantId || "none"}
-                            onValueChange={(value) =>
-                              updateOrderLine(index, "productVariantId", value)
-                            }
+                            onValueChange={(value) => updateOrderLine(index, "productVariantId", value)}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select variant" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">No variant</SelectItem>
-                              {product.variants.map((variant: any) => (
+                              {line.product.variants?.map((variant) => (
                                 <SelectItem key={variant.id} value={variant.id}>
                                   <div className="flex flex-col">
                                     <span>{variant.displayName}</span>
                                     <span className="text-sm text-muted-foreground">
-                                      {variant.sku} - {formatCurrencyPHP(variant.sellingPrice)}
+                                      {variant.sku} - {formatCurrencyPHP(variant.unitPrice)}
                                     </span>
                                   </div>
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">No variants</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={line.quantity ?? 1}
-                          onChange={(e) =>
-                            updateOrderLine(index, "quantity", parseInt(e.target.value) || 1)
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">No variants</span>
+                      )}
+                    </TableCell>
+
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={line.quantity ?? 1}
+                        onChange={(e) => updateOrderLine(index, "quantity", parseInt(e.target.value) || 1)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                       <Input
                           type="number"
                           step="0.01"
                           min="0"
                           value={line.unitPrice ?? 0}
-                          onChange={(e) =>
-                            updateOrderLine(index, "unitPrice", parseFloat(e.target.value) || 0)
-                          }
+                          readOnly={!line.product || !line.product.hasVariants || !line.productVariantId || line.productVariantId === "none"}
+                          onChange={(e) => updateOrderLine(index, "unitPrice", parseFloat(e.target.value) || 0)}
                         />
-                      </TableCell>
-                      <TableCell>{formatCurrencyPHP(line.quantity * line.unitPrice)}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeOrderLine(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                    </TableCell>
+                    <TableCell>{formatCurrencyPHP(line.quantity * line.unitPrice)}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" onClick={() => removeOrderLine(index)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </CardContent>
@@ -461,9 +434,7 @@ export function CustomerOrderCreateClient({
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h3 className="text-lg font-semibold">Order Details</h3>
-        <p className="text-muted-foreground">
-          Set the required date and add any notes for this order.
-        </p>
+        <p className="text-muted-foreground">Set the required date and add any notes for this order.</p>
       </div>
 
       <div className="space-y-4">
@@ -498,9 +469,7 @@ export function CustomerOrderCreateClient({
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h3 className="text-lg font-semibold">Review Order</h3>
-        <p className="text-muted-foreground">
-          Please review your order details before submitting.
-        </p>
+        <p className="text-muted-foreground">Please review your order details before submitting.</p>
       </div>
 
       <div className="space-y-4">
@@ -511,15 +480,9 @@ export function CustomerOrderCreateClient({
           <CardContent>
             {selectedCustomer && (
               <div className="space-y-2 text-sm">
-                <div>
-                  <strong>Name:</strong> {selectedCustomer.name}
-                </div>
-                <div>
-                  <strong>Email:</strong> {selectedCustomer.email}
-                </div>
-                <div>
-                  <strong>Phone:</strong> {selectedCustomer.phone}
-                </div>
+                <div><strong>Name:</strong> {selectedCustomer.name}</div>
+                <div><strong>Email:</strong> {selectedCustomer.email}</div>
+                <div><strong>Phone:</strong> {selectedCustomer.phone}</div>
               </div>
             )}
           </CardContent>
@@ -531,20 +494,10 @@ export function CustomerOrderCreateClient({
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
-              <div>
-                <strong>Required Date:</strong> {watch("requiredDate")}
-              </div>
-              {watch("notes") && (
-                <div>
-                  <strong>Notes:</strong> {watch("notes")}
-                </div>
-              )}
-              <div>
-                <strong>Total Items:</strong> {orderLines.length}
-              </div>
-              <div>
-                <strong>Total Amount:</strong> {formatCurrencyPHP(calculateTotal())}
-              </div>
+              <div><strong>Required Date:</strong> {watch("requiredDate")}</div>
+              {watch("notes") && <div><strong>Notes:</strong> {watch("notes")}</div>}
+              <div><strong>Total Items:</strong> {orderLines.length}</div>
+              <div><strong>Total Amount:</strong> {formatCurrencyPHP(calculateTotal())}</div>
             </div>
           </CardContent>
         </Card>
@@ -561,18 +514,14 @@ export function CustomerOrderCreateClient({
                     <div className="font-medium">
                       {line.product?.name}
                       {line.productVariant && (
-                        <span className="text-muted-foreground ml-2">
-                          ({line.productVariant.displayName})
-                        </span>
+                        <span className="text-muted-foreground ml-2">({line.productVariant.displayName})</span>
                       )}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Qty: {line.quantity} × {formatCurrencyPHP(line.unitPrice)}
                     </div>
                   </div>
-                  <div className="font-medium">
-                    {formatCurrencyPHP(line.quantity * line.unitPrice)}
-                  </div>
+                  <div className="font-medium">{formatCurrencyPHP(line.quantity * line.unitPrice)}</div>
                 </div>
               ))}
             </div>
@@ -599,9 +548,7 @@ export function CustomerOrderCreateClient({
 
   return (
     <div className="flex gap-6 h-[calc(100vh-200px)]">
-      {/* Left Sidebar - Steps */}
       <div className="w-80 flex flex-col border rounded-lg bg-card">
-        {/* Header */}
         <div className="p-6 border-b border-border">
           <div className="flex items-center gap-2 mb-2">
             <ShoppingCart className="h-5 w-5 text-primary" />
@@ -612,7 +559,6 @@ export function CustomerOrderCreateClient({
           </p>
         </div>
 
-        {/* Progress Section */}
         <div className="p-6 border-b border-border">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -627,7 +573,6 @@ export function CustomerOrderCreateClient({
           </div>
         </div>
 
-        {/* Steps List */}
         <div className="flex-1 p-6 space-y-3 overflow-y-auto">
           {STEPS.map((step, index) => {
             const isActive = index === currentStep;
@@ -657,16 +602,13 @@ export function CustomerOrderCreateClient({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm">{step.title}</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {step.description}
-                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">{step.description}</div>
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* Navigation - Fixed at bottom */}
         <div className="p-6 border-t border-border bg-background">
           <div className="flex justify-between space-x-3">
             <Button
@@ -697,9 +639,7 @@ export function CustomerOrderCreateClient({
         </div>
       </div>
 
-      {/* Right Content Area - Scrollable */}
       <div className="flex-1 flex flex-col min-h-0">
-        {/* Back Button */}
         <div className="mb-4">
           <Link href="/admin/customer-orders">
             <Button variant="outline" size="sm">
@@ -709,20 +649,16 @@ export function CustomerOrderCreateClient({
           </Link>
         </div>
 
-        {/* Form Content */}
         <div className="flex-1 overflow-y-auto">
           <Card className="max-w-4xl">
             <CardHeader className="pb-4">
               <CardTitle className="text-xl">{STEPS[currentStep]?.title}</CardTitle>
-              <p className="text-muted-foreground text-sm">
-                {STEPS[currentStep]?.description}
-              </p>
+              <p className="text-muted-foreground text-sm">{STEPS[currentStep]?.description}</p>
             </CardHeader>
             <CardContent>{renderCurrentStep()}</CardContent>
           </Card>
         </div>
 
-        {/* Mobile Navigation - Fixed at bottom on small screens */}
         <div className="lg:hidden bg-card border-t border-border p-4">
           <div className="flex justify-between space-x-3">
             <Button
