@@ -120,6 +120,17 @@ export function BillingStatementCreateClient() {
     try {
       setIsSubmitting(true);
 
+      // Create default invoice item based on billing details
+      const defaultInvoiceItem: SalesInvoiceItemFormData = {
+        description: `Billing for ${getCustomerName()}`,
+        quantity: 1,
+        unitPrice: billingDetailsData.subtotal,
+        productCode: "",
+        unit: "LOT",
+        discountPercent: 0,
+        taxable: true,
+      };
+
       // Prepare form data
       const formData: BillingStatementFormData = {
         customerName: getCustomerName(),
@@ -131,7 +142,7 @@ export function BillingStatementCreateClient() {
         paymentTerms: billingDetailsData.paymentTerms,
         dueDate: billingDetailsData.dueDate,
         notes: billingDetailsData.notes,
-        invoiceItems: [], // Initialize with empty array for now
+        invoiceItems: [defaultInvoiceItem], // Use default invoice item
       };
 
       const result = await createBillingStatement(formData);

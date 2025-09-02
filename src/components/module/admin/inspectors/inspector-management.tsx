@@ -31,12 +31,19 @@ export function InspectorManagement({
   const router = useRouter();
   const { toast } = useToast();
   const [linkedInspectors, setLinkedInspectors] = useState<number>(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Count linked inspectors on component mount
   useEffect(() => {
     const count = data.filter((inspector) => !!inspector.userId).length;
     setLinkedInspectors(count);
   }, [data]);
+
+  const refresh = () => {
+    setIsRefreshing(true);
+    router.refresh();
+    setTimeout(() => setIsRefreshing(false), 1000);
+  };
 
   return (
     <div className="space-y-4">
@@ -119,22 +126,15 @@ export function InspectorManagement({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => router.push("/admin/users")}
+          disabled={isRefreshing}
+          onClick={refresh}
         >
-          <UserPlus className="h-4 w-4 mr-2" />
-          Manage Users
+          {isRefreshing ? "Refreshing..." : "Refresh Data"}
         </Button>
       </div>
 
       {/* Data Table */}
-      <Card className="bg-card border rounded-lg">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">All Inspectors</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DataTable columns={columns} data={data} isLoading={isLoading} />
-        </CardContent>
-      </Card>
+      <DataTable columns={columns} data={data} isLoading={isLoading} />
     </div>
   );
 }

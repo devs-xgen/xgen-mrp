@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import type { UserData } from "@/types/admin/user"
+import { deleteUser } from "@/lib/actions/users"
 
 interface DeleteUserDialogProps {
     open: boolean
@@ -35,20 +36,13 @@ export function DeleteUserDialog({
             setIsLoading(true)
             setError(null)
 
-            const response = await fetch(`/api/users/${user.id}`, {
-                method: 'DELETE',
-            })
+            await deleteUser(user.id)
 
-            if (!response.ok) {
-                const data = await response.json()
-                throw new Error(data.error || 'Failed to delete user')
-            }
-
+            onOpenChange(false)
             onSuccess?.()
         } catch (error) {
             console.error('Error deleting user:', error)
             setError(error instanceof Error ? error.message : 'An error occurred')
-            onOpenChange(true)
         } finally {
             setIsLoading(false)
         }

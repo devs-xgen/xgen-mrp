@@ -11,6 +11,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toast } from "@/hooks/use-toast"
+import { deleteInspector } from "@/lib/actions/inspector"
 import { Inspector } from "@/lib/actions/inspector"
 
 interface DeleteInspectorDialogProps {
@@ -28,13 +29,7 @@ export function DeleteInspectorDialog({
 }: DeleteInspectorDialogProps) {
     const handleDelete = async () => {
         try {
-            const response = await fetch(`/api/inspectors/${inspector.inspectorId}`, {
-                method: "DELETE",
-            })
-
-            if (!response.ok) {
-                throw new Error("Failed to delete inspector")
-            }
+            await deleteInspector(inspector.inspectorId)
 
             toast({
                 title: "Success",

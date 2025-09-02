@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { PageContainer } from "@/components/shared/page-layout";
 
 // Import types and server actions
 import { 
@@ -37,7 +38,7 @@ export default async function BillingStatementPage({ params }: BillingStatementP
     if (isParamsResolutionError(error)) {
       // Handle params resolution errors gracefully
       return (
-        <div className="flex flex-col gap-6 p-8 bg-background min-h-screen">
+        <PageContainer>
           <div className="flex items-center justify-center h-96">
             <div className="text-center">
               <h2 className="text-2xl font-semibold mb-2">Invalid URL</h2>
@@ -51,7 +52,7 @@ export default async function BillingStatementPage({ params }: BillingStatementP
               </Button>
             </div>
           </div>
-        </div>
+        </PageContainer>
       );
     }
     
@@ -73,7 +74,7 @@ export default async function BillingStatementPage({ params }: BillingStatementP
   // If billing statement not found, show not found page
   if (!billingStatement) {
     return (
-      <div className="flex flex-col gap-6 p-8 bg-background min-h-screen">
+      <PageContainer>
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <h2 className="text-2xl font-semibold mb-2">Billing Statement Not Found</h2>
@@ -87,17 +88,19 @@ export default async function BillingStatementPage({ params }: BillingStatementP
             </Button>
           </div>
         </div>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <Suspense fallback={<BillingStatementPageSkeleton />}>
-      <BillingStatementClient 
-        billingStatement={billingStatement} 
-        billingStatementId={billingStatementId}
-      />
-    </Suspense>
+    <PageContainer>
+      <Suspense fallback={<BillingStatementPageSkeleton />}>
+        <BillingStatementClient 
+          billingStatement={billingStatement} 
+          billingStatementId={billingStatementId}
+        />
+      </Suspense>
+    </PageContainer>
   );
 }
 

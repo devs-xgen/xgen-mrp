@@ -80,19 +80,23 @@ export function EditUserDialog({
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/users/${user.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
+      // Prepare update data
+      const updateData = {
+        id: user.id,
+        role: values.role,
+        status: values.status,
+        profile: {
+          firstName: values.firstName,
+          lastName: values.lastName,
+          employeeId: values.employeeId || null,
+          department: values.department || null,
+          position: values.position || null,
         },
-        body: JSON.stringify(values),
-      });
+      };
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to update user");
-      }
+      await updateUser(updateData);
 
+      onOpenChange(false);
       onSuccess?.();
     } catch (error) {
       console.error("Error updating user:", error);

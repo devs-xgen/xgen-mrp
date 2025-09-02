@@ -1,7 +1,21 @@
 import { Suspense } from "react";
 import { Metadata } from "next";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BillingStatementCreateClient } from "@/components/module/admin/billing/billing-statement-create-client";
+
+// Import page layout components
+import {
+  PageContainer,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+  PageDescription,
+  PageHeaderActions,
+  PageBody,
+} from "@/components/shared/page-layout";
 
 export const metadata: Metadata = {
   title: "Create Billing Statement",
@@ -10,7 +24,7 @@ export const metadata: Metadata = {
 
 function CreateBillingStatementSkeleton() {
   return (
-    <div className="container mx-auto py-10 space-y-6">
+    <div className="space-y-6">
       <div className="space-y-2">
         <Skeleton className="h-8 w-[300px]" />
         <Skeleton className="h-4 w-[500px]" />
@@ -24,17 +38,31 @@ function CreateBillingStatementSkeleton() {
 
 export default async function CreateBillingStatementPage() {
   return (
-    <div className="container mx-auto py-10">
-      <div className="space-y-2 mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Create Billing Statement</h1>
-        <p className="text-muted-foreground">
-          Create a new billing statement by selecting a customer source and filling in the required details
-        </p>
-      </div>
+    <PageContainer>
+      {/* Page Header */}
+      <PageHeader>
+        <PageHeaderMain>
+          <PageTitle>Create Billing Statement</PageTitle>
+          <PageDescription>
+            Create a new billing statement by selecting a customer source and filling in the required details
+          </PageDescription>
+        </PageHeaderMain>
+        <PageHeaderActions>
+          <Button asChild variant="outline">
+            <Link href="/admin/billing/billing-statements">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Billing Statements
+            </Link>
+          </Button>
+        </PageHeaderActions>
+      </PageHeader>
 
-      <Suspense fallback={<CreateBillingStatementSkeleton />}>
-        <BillingStatementCreateClient />
-      </Suspense>
-    </div>
+      {/* Page Body */}
+      <PageBody>
+        <Suspense fallback={<CreateBillingStatementSkeleton />}>
+          <BillingStatementCreateClient />
+        </Suspense>
+      </PageBody>
+    </PageContainer>
   );
 }

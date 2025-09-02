@@ -1,6 +1,16 @@
- {
+{
   "project": "XGen MRP",
- "entries": [
+  "entries": [
+    {
+      "version": "1.5.3",
+      "date": "2025-09-02",
+      "changes": [
+        "Minor UI bug fixes",
+        "Fixing of View details of Customers",
+        "Fixed Billing Section Creation",
+        "Fixing CRUD of USER tot INSPECTOR page."
+      ]
+    },
     {
       "version": "1.5.2",
       "date": "2025-08-31",
@@ -33,9 +43,7 @@
     {
       "version": "1.4.2",
       "date": "2025-08-15",
-      "changes": [
-        "Fix: billing statement export edge case."
-      ]
+      "changes": ["Fix: billing statement export edge case."]
     }
   ]
 }

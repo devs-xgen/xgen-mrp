@@ -35,7 +35,7 @@ import Link from "next/link";
 
 interface CustomersDataTableProps {
   data: Customer[];
-  onRefresh: () => void;
+  onRefresh: () => Promise<void>;
 }
 
 // Customer Actions Cell Component
@@ -44,7 +44,7 @@ function CustomerActionsCell({
   onRefresh 
 }: { 
   customer: Customer; 
-  onRefresh: () => void;
+  onRefresh: () => Promise<void>;
 }) {
   const { toast } = useToast();
   const [editOpen, setEditOpen] = useState(false);
@@ -69,7 +69,7 @@ function CustomerActionsCell({
       });
 
       setDeleteOpen(false);
-      onRefresh();
+      await onRefresh();
     } catch (error) {
       toast({
         title: "❌ Delete Failed",
@@ -92,7 +92,7 @@ function CustomerActionsCell({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[180px]">
           <DropdownMenuItem asChild>
-            <Link href={`/admin/customers/${customer.id}`}>
+            <Link href={`/admin/customers/${customer.id}/orders`}>
               <Eye className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
               View Details
             </Link>

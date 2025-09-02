@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { PageBody } from "@/components/shared/page-layout";
 import {
   Form,
   FormControl,
@@ -238,7 +239,7 @@ export function BillingStatementClient({
   };
 
   return (
-    <div className="flex flex-col gap-6 p-8 bg-background min-h-screen">
+    <PageBody className="flex flex-col gap-6">
       {/* Page Header */}
       <div className="flex">
           <Link href="/admin/billing/billing-statements">
@@ -700,6 +701,6 @@ export function BillingStatementClient({
           </Card>
         </div>
       </div>
-    </div>
+    </PageBody>
   );
 }

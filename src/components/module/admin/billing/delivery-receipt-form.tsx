@@ -63,11 +63,9 @@ export function DeliveryReceiptForm({
   const [billingStatements, setBillingStatements] = useState<BillingStatementWithRelations[]>([]);
   const [selectedBillingStatement, setSelectedBillingStatement] = useState<BillingStatementWithRelations | null>(null);
   
-  // File upload states
-  const [signatureFile, setSignatureFile] = useState<File | null>(null);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [signaturePreview, setSignaturePreview] = useState<string>("");
-  const [photoPreview, setPhotoPreview] = useState<string>("");
+  // Image URL states (temporary until full upload implementation)
+  const [signatureImageUrl, setSignatureImageUrl] = useState<string>("");
+  const [photoEvidenceUrl, setPhotoEvidenceUrl] = useState<string>("");
 
   // Helpers to coerce serialized values coming from server actions
   const toNumberMaybe = (v: unknown): number | unknown => {
@@ -242,70 +240,26 @@ export function DeliveryReceiptForm({
 
   
 
-  // Handle signature file upload (Requirement 3.3 - optional proof)
-  const handleSignatureUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSignatureFile(file);
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setSignaturePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+  // Handle signature image URL change (temporary implementation)
+  const handleSignatureImageChange = (url: string) => {
+    setSignatureImageUrl(url);
+    form.setValue("signatureImage", url);
   };
 
-  // Handle photo file upload (Requirement 3.3 - optional proof)
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setPhotoFile(file);
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPhotoPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+  // Handle photo evidence URL change (temporary implementation)
+  const handlePhotoEvidenceChange = (url: string) => {
+    setPhotoEvidenceUrl(url);
+    form.setValue("photoEvidence", url);
   };
 
   // Form submission with simplified fields only
   const handleSubmit = async (data: DeliveryReceiptFormData) => {
     try {
-      // Convert files to base64 for storage (in a real app, you'd upload to cloud storage)
-      let signatureBase64 = data.signatureImage || "";
-      let photoBase64 = data.photoEvidence || "";
-      
-      if (signatureFile) {
-        const reader = new FileReader();
-        signatureBase64 = await new Promise((resolve) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(signatureFile);
-        });
-      }
-      
-      if (photoFile) {
-        const reader = new FileReader();
-        photoBase64 = await new Promise((resolve) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(photoFile);
-        });
-      }
-      
-      // Add file data to form data
-      const formDataWithFiles = {
-        ...data,
-        signatureImage: signatureBase64,
-        photoEvidence: photoBase64,
-      };
-      
-      await onSubmit(formDataWithFiles);
+      // Submit data directly (URLs are already set in form)
+      await onSubmit(data);
     } catch (error) {
       console.error("Error submitting form:", error);
-      toast.error("An unexpected error occurred");
+      toast.error("Failed to submit delivery receipt");
     }
   };
 
@@ -541,84 +495,100 @@ export function DeliveryReceiptForm({
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Camera className="h-5 w-5" />
-                  Proof of Delivery
+                  Proof of Delivery <Badge variant="outline" className="text-xs">Optional</Badge>
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Upload signature and photos as proof of delivery
+                  Provide image URLs for signature and delivery photos as proof of delivery
                 </p>
+                <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded border">
+                  <strong>Note:</strong> Full image upload functionality will be implemented in the future. 
+                  For now, please provide direct links to images stored in cloud services.
+                </div>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Signature Upload */}
-                <div className="space-y-4">
-                  <Label>Delivery Signature</Label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-                    <div className="text-center">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleSignatureUpload}
-                        className="hidden"
-                        id="signature-upload"
-                      />
-                      <label htmlFor="signature-upload" className="cursor-pointer">
-                        <div className="flex flex-col items-center gap-2">
-                          <Upload className="h-8 w-8 text-gray-400" />
-                          <p className="text-sm text-gray-600">
-                            Click to upload signature image
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            PNG, JPG up to 10MB
-                          </p>
-                        </div>
-                      </label>
-                    </div>
-                    {signaturePreview && (
-                      <div className="mt-4">
-                        <img
-                          src={signaturePreview}
-                          alt="Signature preview"
-                          className="max-w-full h-32 object-contain mx-auto border rounded"
+                {/* Signature Image URL */}
+                <FormField
+                  control={form.control}
+                  name="signatureImage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Upload className="h-4 w-4" />
+                        Delivery Signature Image URL
+                        <Badge variant="outline" className="text-xs">Optional</Badge>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="https://example.com/signature-image.jpg"
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            handleSignatureImageChange(e.target.value);
+                          }}
                         />
-                      </div>
-                    )}
-                  </div>
-                </div>
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Enter a direct link to the signature image (e.g., from Google Drive, Dropbox, etc.)
+                      </p>
+                      <FormMessage />
+                      {signatureImageUrl && (
+                        <div className="mt-2">
+                          <p className="text-xs text-green-600 mb-2">Image preview:</p>
+                          <img
+                            src={signatureImageUrl}
+                            alt="Signature preview"
+                            className="max-w-full h-32 object-contain border rounded"
+                            onError={() => {
+                              toast.error("Invalid image URL or image failed to load");
+                            }}
+                          />
+                        </div>
+                      )}
+                    </FormItem>
+                  )}
+                />
 
-                {/* Photo Evidence Upload */}
-                <div className="space-y-4">
-                  <Label>Photo Evidence</Label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-                    <div className="text-center">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoUpload}
-                        className="hidden"
-                        id="photo-upload"
-                      />
-                      <label htmlFor="photo-upload" className="cursor-pointer">
-                        <div className="flex flex-col items-center gap-2">
-                          <Camera className="h-8 w-8 text-gray-400" />
-                          <p className="text-sm text-gray-600">
-                            Click to upload delivery photo
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            PNG, JPG up to 10MB
-                          </p>
-                        </div>
-                      </label>
-                    </div>
-                    {photoPreview && (
-                      <div className="mt-4">
-                        <img
-                          src={photoPreview}
-                          alt="Photo preview"
-                          className="max-w-full h-48 object-contain mx-auto border rounded"
+                {/* Photo Evidence URL */}
+                <FormField
+                  control={form.control}
+                  name="photoEvidence"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Camera className="h-4 w-4" />
+                        Delivery Photo Evidence URL
+                        <Badge variant="outline" className="text-xs">Optional</Badge>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="https://example.com/delivery-photo.jpg"
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            handlePhotoEvidenceChange(e.target.value);
+                          }}
                         />
-                      </div>
-                    )}
-                  </div>
-                </div>
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Enter a direct link to the delivery photo evidence
+                      </p>
+                      <FormMessage />
+                      {photoEvidenceUrl && (
+                        <div className="mt-2">
+                          <p className="text-xs text-green-600 mb-2">Image preview:</p>
+                          <img
+                            src={photoEvidenceUrl}
+                            alt="Photo preview"
+                            className="max-w-full h-48 object-contain border rounded"
+                            onError={() => {
+                              toast.error("Invalid image URL or image failed to load");
+                            }}
+                          />
+                        </div>
+                      )}
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
           </div>

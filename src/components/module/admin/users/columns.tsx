@@ -22,24 +22,13 @@ import {
 } from "@/components/global/table";
 import { EditUserDialog } from "./edit-user-dialog";
 import { DeleteUserDialog } from "./delete-user-dialog";
+import { updateUser } from "@/lib/actions/users";
 
 async function updateUserStatus(userId: string, newStatus: string) {
-  const response = await fetch(`/api/users/${userId}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      status: newStatus,
-    }),
+  return await updateUser({
+    id: userId,
+    status: newStatus as any,
   });
-
-  if (!response.ok) {
-    const data = await response.json();
-    throw new Error(data.error || "Failed to update status");
-  }
-
-  return response.json();
 }
 
 // User Row Actions Component

@@ -19,6 +19,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
 
+// Import page layout components
+import {
+  PageContainer,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+  PageDescription,
+  PageBody,
+} from "@/components/shared/page-layout";
+
 // Loading fallback components
 const StatsCardsSkeleton = () => (
   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -58,62 +68,74 @@ const ErrorBoundaryWrapper = ({
 
 export default function AdminDashboard() {
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      {/* Page Header - Following Sales Invoices Pattern */}
-      <div className="flex items-center justify-between space-y-2">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-          <p className="text-muted-foreground mt-1">
+    <PageContainer>
+      {/* Page Header */}
+      <PageHeader>
+        <PageHeaderMain>
+          <PageTitle>Dashboard</PageTitle>
+          <PageDescription>
             Overview of your inventory management system
-          </p>
+          </PageDescription>
+        </PageHeaderMain>
+      </PageHeader>
+
+      {/* Page Body */}
+      <PageBody>
+        <div className="space-y-6">
+          {/* Workflow Connections */}
+          <div className="mb-6">
+            <WorkflowConnections />
+          </div>
+
+          {/* Stats Cards */}
+          <ErrorBoundaryWrapper componentName="Stats Cards">
+            <StatsCards />
+          </ErrorBoundaryWrapper>
+
+          {/* Alerts and Production Status */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <ErrorBoundaryWrapper componentName="Inventory Alerts">
+              <InventoryAlerts />
+            </ErrorBoundaryWrapper>
+
+            <ErrorBoundaryWrapper componentName="Production Status">
+              <ProductionStatusChart />
+            </ErrorBoundaryWrapper>
+          </div>
+
+          {/* Monthly Sales Chart */}
+          <ErrorBoundaryWrapper componentName="Monthly Sales Chart">
+            <MonthlySalesChart />
+          </ErrorBoundaryWrapper>
+
+          {/* Top Products and Sales by Category */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <ErrorBoundaryWrapper componentName="Top Products">
+              <TopProducts />
+            </ErrorBoundaryWrapper>
+
+            <ErrorBoundaryWrapper componentName="Sales by Category">
+              <SalesByCategoryChart />
+            </ErrorBoundaryWrapper>
+          </div>
+
+          {/* Recent Orders and Material Utilization */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <ErrorBoundaryWrapper componentName="Recent Orders">
+              <RecentOrders />
+            </ErrorBoundaryWrapper>
+
+            <ErrorBoundaryWrapper componentName="Material Utilization">
+              <MaterialUtilization />
+            </ErrorBoundaryWrapper>
+          </div>
+
+          {/* Operational Alerts */}
+          <ErrorBoundaryWrapper componentName="Operational Alerts">
+            <OperationalAlerts />
+          </ErrorBoundaryWrapper>
         </div>
-      </div>
-
-      <div className="mt-2 mb-6">
-        <WorkflowConnections />
-      </div>
-
-      <ErrorBoundaryWrapper componentName="Stats Cards">
-        <StatsCards />
-      </ErrorBoundaryWrapper>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <ErrorBoundaryWrapper componentName="Inventory Alerts">
-          <InventoryAlerts />
-        </ErrorBoundaryWrapper>
-
-        <ErrorBoundaryWrapper componentName="Production Status">
-          <ProductionStatusChart />
-        </ErrorBoundaryWrapper>
-      </div>
-
-      <ErrorBoundaryWrapper componentName="Monthly Sales Chart">
-        <MonthlySalesChart />
-      </ErrorBoundaryWrapper>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <ErrorBoundaryWrapper componentName="Top Products">
-          <TopProducts />
-        </ErrorBoundaryWrapper>
-
-        <ErrorBoundaryWrapper componentName="Sales by Category">
-          <SalesByCategoryChart />
-        </ErrorBoundaryWrapper>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <ErrorBoundaryWrapper componentName="Recent Orders">
-          <RecentOrders />
-        </ErrorBoundaryWrapper>
-
-        <ErrorBoundaryWrapper componentName="Material Utilization">
-          <MaterialUtilization />
-        </ErrorBoundaryWrapper>
-      </div>
-
-      <ErrorBoundaryWrapper componentName="Operational Alerts">
-        <OperationalAlerts />
-      </ErrorBoundaryWrapper>
-    </div>
+      </PageBody>
+    </PageContainer>
   );
 }
