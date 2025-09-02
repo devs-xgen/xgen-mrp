@@ -4960,34 +4960,113 @@ export async function updateProductionOrder(data: UpdateProductionOrderInput) {
   }
 }
 
+// export async function deleteProductionOrder(productionOrderId: string, notes?: string) {
+//   try {
+//     const session = await getServerSession(authOptions)
+//     if (!session?.user) throw new Error("Unauthorized")
+
+//     const orderToDelete = await prisma.productionOrder.findUnique({
+//       where: { id: productionOrderId },
+//       include: {
+//         product: true,
+//       },
+//     })
+
+//     if (!orderToDelete) {
+//       throw new Error("Production order not found")
+//     }
+
+//     // Business rule check: Only allow deletion if PENDING or CANCELLED
+//     if (orderToDelete.status !== "PENDING" && orderToDelete.status !== "CANCELLED") {
+//       throw new Error("Cannot delete production orders that are in progress or completed.")
+//     }
+
+//     // Release material reservations if the order was pending
+//     if (orderToDelete.status === "PENDING") {
+//       const releaseResult = await releaseMaterialReservations(productionOrderId, "Production order deleted")
+//       if (!releaseResult.success) {
+//         console.error("Failed to release material reservations during deletion:", releaseResult.error)
+//         // Decide if you want to throw here or continue with deletion
+//         // For now, we'll continue but log the error
+//       }
+//       // Log material release due to deletion
+//       try {
+//         await prisma.activityLog.create({
+//           data: {
+//             type: "MATERIAL_RELEASED",
+//             userId: session.user.id,
+//             details: {
+//               productionOrderId,
+//               reason: `Materials released due to deletion of production order ${productionOrderId}`,
+//               productName: orderToDelete.product.name,
+//               quantity: orderToDelete.quantity,
+//             },
+//           },
+//         })
+//       } catch (logError) {
+//         console.error("Failed to create material release activity log during deletion:", logError)
+//       }
+//     }
+
+//     // Perform the deletion
+//     await prisma.productionOrder.delete({
+//       where: { id: productionOrderId },
+//     })
+
+//     // Log the deletion using the ActivityLog model
+//     try {
+//       await prisma.activityLog.create({
+//         data: {
+//           type: "PRODUCTION_ORDER_DELETED",
+//           userId: session.user.id,
+//           details: {
+//             productionOrderId,
+//             productName: orderToDelete.product.name,
+//             productSku: orderToDelete.product.sku,
+//             deletedBy: session.user.email, // Or session.user.name
+//             notes: notes || null,
+//           },
+//         },
+//       })
+//     } catch (logError) {
+//       console.error("Failed to create production order deletion activity log:", logError)
+//     }
+
+//     revalidatePath("/admin/production")
+//     return { success: true }
+//   } catch (error) {
+//     console.error("Error deleting production order:", error)
+//     throw error
+//   }
+// }
+
 export async function deleteProductionOrder(productionOrderId: string, notes?: string) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) throw new Error("Unauthorized")
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
 
     const orderToDelete = await prisma.productionOrder.findUnique({
       where: { id: productionOrderId },
       include: {
         product: true,
       },
-    })
+    });
 
     if (!orderToDelete) {
-      throw new Error("Production order not found")
+      throw new Error("Production order not found");
     }
 
     // Business rule check: Only allow deletion if PENDING or CANCELLED
     if (orderToDelete.status !== "PENDING" && orderToDelete.status !== "CANCELLED") {
-      throw new Error("Cannot delete production orders that are in progress or completed.")
+      throw new Error("Cannot delete production orders that are in progress or completed.");
     }
 
     // Release material reservations if the order was pending
     if (orderToDelete.status === "PENDING") {
-      const releaseResult = await releaseMaterialReservations(productionOrderId, "Production order deleted")
+      const releaseResult = await releaseMaterialReservations(productionOrderId, "Production order deleted");
       if (!releaseResult.success) {
-        console.error("Failed to release material reservations during deletion:", releaseResult.error)
-        // Decide if you want to throw here or continue with deletion
-        // For now, we'll continue but log the error
+        console.error("Failed to release material reservations during deletion:", releaseResult.error);
+        // Continue with deletion even if release fails; you can adjust this behavior if desired
       }
       // Log material release due to deletion
       try {
@@ -5002,16 +5081,23 @@ export async function deleteProductionOrder(productionOrderId: string, notes?: s
               quantity: orderToDelete.quantity,
             },
           },
-        })
+        });
       } catch (logError) {
-        console.error("Failed to create material release activity log during deletion:", logError)
+        console.error("Failed to create material release activity log during deletion:", logError);
       }
     }
 
-    // Perform the deletion
+    // Delete dependent child records, e.g. Operations linked to this production order
+    await prisma.operation.deleteMany({
+      where: { productionOrderId: productionOrderId },
+    });
+
+    // Add other dependent deletes here if needed, e.g. quality checks, BOM, etc.
+
+    // Now delete the production order
     await prisma.productionOrder.delete({
       where: { id: productionOrderId },
-    })
+    });
 
     // Log the deletion using the ActivityLog model
     try {
@@ -5023,22 +5109,23 @@ export async function deleteProductionOrder(productionOrderId: string, notes?: s
             productionOrderId,
             productName: orderToDelete.product.name,
             productSku: orderToDelete.product.sku,
-            deletedBy: session.user.email, // Or session.user.name
+            deletedBy: session.user.email,
             notes: notes || null,
           },
         },
-      })
+      });
     } catch (logError) {
-      console.error("Failed to create production order deletion activity log:", logError)
+      console.error("Failed to create production order deletion activity log:", logError);
     }
 
-    revalidatePath("/admin/production")
-    return { success: true }
+    revalidatePath("/admin/production");
+    return { success: true };
   } catch (error) {
-    console.error("Error deleting production order:", error)
-    throw error
+    console.error("Error deleting production order:", error);
+    throw error;
   }
 }
+
 
 export async function addOperation(
   productionOrderId: string,
