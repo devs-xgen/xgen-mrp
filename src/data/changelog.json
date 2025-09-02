@@ -2,6 +2,15 @@
   "project": "XGen MRP",
   "entries": [
     {
+      "version": "1.5.4",
+      "date": "2025-09-03",
+      "changes": [
+        "UI: App Sidebar - Added left grouping line for dropdown submenus with fade/slide transition; true collapse with no extra spacing when closed.",
+        "Customer Orders: Added edit function for customer orders.",
+        "Customer Orders: Integrated billing actions from the customer order page (record payment flow improvements)."
+      ]
+    },
+    {
       "version": "1.5.3",
       "date": "2025-09-02",
       "changes": [

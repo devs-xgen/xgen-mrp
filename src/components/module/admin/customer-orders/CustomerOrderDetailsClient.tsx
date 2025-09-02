@@ -27,6 +27,8 @@ import {
 import { formatDate } from "@/lib/utils";
 import { formatCurrencyPHP } from "@/lib/constant";
 import { FulfillmentIndicator } from "./FulfillmentIndicator";
+import { CreateBillingStatementDialog } from "./create-billing-statement-dialog";
+import { RecordPaymentDialog } from "./record-payment-dialog";
 
 interface CustomerOrderDetailsClientProps {
   order: any; // We'll properly type this later
@@ -34,6 +36,8 @@ interface CustomerOrderDetailsClientProps {
 
 export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClientProps) {
   const [activeTab, setActiveTab] = useState("overview");
+  const [showCreateBillingDialog, setShowCreateBillingDialog] = useState(false);
+  const [showRecordPaymentDialog, setShowRecordPaymentDialog] = useState(false);
 
   // Calculate fulfillment statistics
   const fulfillmentStats = order.orderLines.reduce(
@@ -436,7 +440,7 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
                 <Factory className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium mb-2">No Production Orders</h3>
                 <p className="text-muted-foreground mb-4">
-                  This order doesn't have any associated production orders yet.
+                  This order doesn&apos;t have any associated production orders yet.
                 </p>
                 <Link href={`/admin/customer-orders/${order.id}/analyze`}>
                   <Button>
@@ -528,16 +532,33 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
                 <p className="text-muted-foreground mb-4">
                   No billing statements have been created for this order yet.
                 </p>
-                <Button>
+                <Button onClick={() => setShowCreateBillingDialog(true)}>
                   <Receipt className="h-4 w-4 mr-2" />
                   Create Billing Statement
                 </Button>
               </CardContent>
             </Card>
           )}
+          {/* Dialog for creating billing statement */}
+          <CreateBillingStatementDialog
+            customerOrder={{
+              id: order.id,
+              orderNumber: order.orderNumber,
+              customerName: order.customer.name,
+              totalAmount: order.totalAmount,
+            }}
+            open={showCreateBillingDialog}
+            onOpenChange={setShowCreateBillingDialog}
+          />
         </TabsContent>
 
         <TabsContent value="payments" className="space-y-6">
+          <div className="flex justify-end">
+            <Button onClick={() => setShowRecordPaymentDialog(true)}>
+              <CreditCard className="h-4 w-4 mr-2" />
+              Record Payment
+            </Button>
+          </div>
           {order.transaction && order.transaction.length > 0 ? (
             <div className="space-y-4">
               {order.transaction.map((tx: any) => (
@@ -586,13 +607,14 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
                 <p className="text-muted-foreground mb-4">
                   No payments have been recorded for this order yet.
                 </p>
-                <Button>
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Record Payment
-                </Button>
               </CardContent>
             </Card>
           )}
+          <RecordPaymentDialog
+            order={{ id: order.id, orderNumber: order.orderNumber }}
+            open={showRecordPaymentDialog}
+            onOpenChange={setShowRecordPaymentDialog}
+          />
         </TabsContent>
       </Tabs>
     </div>

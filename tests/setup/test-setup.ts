@@ -8,6 +8,7 @@ vi.mock('next/navigation', () => ({
     push: vi.fn(),
     replace: vi.fn(),
     back: vi.fn(),
+    refresh: vi.fn(),
   }),
   useSearchParams: () => new URLSearchParams(),
   usePathname: () => '/',
@@ -35,6 +36,8 @@ vi.mock('lucide-react', () => ({
   MapPin: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'map-pin-icon', className, ...props }),
   CreditCard: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'credit-card-icon', className, ...props }),
   ChevronDown: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'chevron-down-icon', className, ...props }),
+  ChevronUp: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'chevron-up-icon', className, ...props }),
+  ChevronLeft: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'chevron-left-icon', className, ...props }),
   ChevronRight: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'chevron-right-icon', className, ...props }),
   Info: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'info-icon', className, ...props }),
   RotateCcw: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'rotate-ccw-icon', className, ...props }),
@@ -49,6 +52,8 @@ vi.mock('lucide-react', () => ({
   Eye: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'eye-icon', className, ...props }),
   Globe: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'globe-icon', className, ...props }),
   RefreshCw: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'refresh-cw-icon', className, ...props }),
+  FileText: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'file-text-icon', className, ...props }),
+  Truck: ({ className, ...props }: any) => React.createElement('div', { 'data-testid': 'truck-icon', className, ...props }),
 }))
 
 // Global test utilities

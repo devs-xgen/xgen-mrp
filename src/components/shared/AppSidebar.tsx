@@ -112,18 +112,43 @@ function NavItem({
             </div>
           )}
         </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-0.5 pt-1">
-          {item.items.map((subItem) => (
-            <NavItem
-              key={subItem.href || subItem.label}
-              item={subItem}
-              isCollapsed={isCollapsed}
-              isActive={pathname === subItem.href}
-              isChild
-              itemId={`${itemId}-${subItem.label}`}
-              openItemId={openItemId}
-            />
-          ))}
+        <CollapsibleContent
+          forceMount
+          className={cn(
+            // No static padding; only when open
+            "data-[state=open]:pt-1 data-[state=closed]:pt-0",
+            // Collapse height when closed to prevent spacing
+            "overflow-hidden transition-[max-height,opacity,transform] duration-300",
+            "data-[state=open]:max-h-[1000px] data-[state=closed]:max-h-0",
+            // Optional subtle fade/slide without reserving space
+            "data-[state=open]:opacity-100 data-[state=closed]:opacity-0",
+            "data-[state=open]:translate-y-0 data-[state=closed]:-translate-y-1",
+            // Named group to toggle descendant styles based on state
+            "group/cc"
+          )}
+        >
+          <div className="relative ml-4 pl-3 space-y-0.5 before:absolute before:left-0 before:top-1 before:bottom-1 before:w-px before:bg-slate-700/60 before:transition-opacity group-data-[state=closed]/cc:before:opacity-0 group-data-[state=open]/cc:before:opacity-100">
+            {item.items.map((subItem, idx) => (
+              <div
+                key={`wrap-${subItem.href || subItem.label}`}
+                className={cn(
+                  "transition-all duration-200",
+                  "group-data-[state=open]/cc:opacity-100 group-data-[state=open]/cc:translate-y-0",
+                  "group-data-[state=closed]/cc:opacity-0 group-data-[state=closed]/cc:-translate-y-1"
+                )}
+                style={{ transitionDelay: `${idx * 30}ms` }}
+              >
+                <NavItem
+                  item={subItem}
+                  isCollapsed={isCollapsed}
+                  isActive={pathname === subItem.href}
+                  isChild
+                  itemId={`${itemId}-${subItem.label}`}
+                  openItemId={openItemId}
+                />
+              </div>
+            ))}
+          </div>
         </CollapsibleContent>
       </Collapsible>
     );

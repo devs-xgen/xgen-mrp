@@ -252,6 +252,7 @@ export default async function CustomerOrderDetailsPage({ params }: CustomerOrder
     transaction: order.transaction.map((tx) => ({
       ...tx,
       amount: tx.amount.toNumber(),
+      paymentDate: tx.paymentDate.toISOString(),
     })),
   };
 
