@@ -425,65 +425,50 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
 
   // Handle file upload
   const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const file = event.target.files?.[0];
+  if (!file) return;
 
-    setIsProcessingImage(true);
-    try {
-      const scanner = new Html5Qrcode("qr-file-reader");
-      const result = await scanner.scanFile(file, true);
-      await processScannedCode(result);
-    } catch (error: any) {
-      console.error("File scan error:", error);
-      showToast("Scan Failed", "Could not detect QR code in the uploaded image", "destructive");
-    } finally {
+  setIsProcessingImage(true);
+
+  try {
+    // Convert file to base64 data URL
+    const fileReader = new FileReader();
+    fileReader.onload = async (e) => {
+      const dataUrl = e.target?.result as string;
+
+      // Create a scanner instance or reuse existing
+      const scanner = html5QrCode ?? new Html5Qrcode("qr-file-reader");
+      if (!html5QrCode) setHtml5QrCode(scanner);
+
+      try {
+        // Pass data URL to scanFile
+        const result = await scanner.scanFile(dataUrl, true);
+        await processScannedCode(result);
+      } catch (scanError) {
+        console.error("File scan error:", scanError);
+        showToast("Scan Failed", "Could not detect QR code in the uploaded image", "destructive");
+      } finally {
+        setIsProcessingImage(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    };
+
+    fileReader.onerror = () => {
       setIsProcessingImage(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  }, [processScannedCode, showToast]);
+      showToast("File Error", "Failed to read the selected file. Please try again.", "destructive");
+    };
 
-  // Handle status update
-  const handleUpdateStatus = useCallback(async () => {
-    if (!scannedData || !newStatus || isUpdating) return;
+    fileReader.readAsDataURL(file);
 
-    setIsUpdating(true);
-    try {
-      const response = await fetch(`/api/worker/production-order/${scannedData.id}/update-status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          status: newStatus as Status,
-          notes: notes || `Status updated via QR scan to ${newStatus} at ${new Date().toLocaleString()}`
-        })
-      });
+  } catch (error) {
+    console.error("Error processing file upload:", error);
+    setIsProcessingImage(false);
+    showToast("Scan Failed", "Could not process the uploaded image", "destructive");
+  }
+}, [html5QrCode, processScannedCode, showToast]);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Update failed');
-      }
-
-      const result = await response.json();
-      console.log("Status update result:", result);
-      
-      setUpdateSuccess(true);
-      showToast("Status Updated", `Production order status updated to ${newStatus}`);
-      
-      // Update local state
-      setScannedData(prev => prev ? { ...prev, status: newStatus } : null);
-      setNewStatus("");
-      setNotes("");
-      
-    } catch (error: any) {
-      console.error("Status update error:", error);
-      showToast("Update Failed", error.message || "Failed to update production order status", "destructive");
-    } finally {
-      setIsUpdating(false);
-    }
-  }, [scannedData, newStatus, notes, isUpdating, showToast]);
 
   // Development test function
   const simulateScan = useCallback(async () => {
