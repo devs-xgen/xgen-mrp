@@ -20,6 +20,3 @@ services:
     stdin_open: true
     tty: true
     
-  postgres:
-    ports:
-      - "5432:5432"
