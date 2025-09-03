@@ -29,65 +29,111 @@ export const metadata: Metadata = {
 };
 
 export default async function CustomerOrdersPage() {
-  const [customerOrders] = await Promise.all([
-    getCustomerOrdersWithFulfillment(),
-    getOrdersRequiringAnalysis().catch(() => []),
-  ]);
+  // Fetch customer orders with robust error handling
+  let customerOrders: any[] = [];
+  
+  try {
+    customerOrders = await getCustomerOrdersWithFulfillment();
+  } catch (error) {
+    console.error("Failed to fetch customer orders:", error);
+    // Return empty array to prevent page crash
+    customerOrders = [];
+  }
 
-  const tableData: CustomerOrderColumn[] = customerOrders.map((order) => {
-    const orderLines = order.orderLines || [];
-    const totalQuantity = orderLines.reduce((sum, line) => sum + line.quantity, 0);
+  // Optional: Try to fetch analysis data, but don't let it break the page
+  try {
+    await getOrdersRequiringAnalysis();
+  } catch (error) {
+    console.warn("Orders analysis not available:", error);
+    // Continue without analysis data
+  }
 
-    const fulfilledItems = orderLines.filter(line =>
-      line.fulfillmentStatus === "FULFILLED"
-    ).length;
+  const tableData: CustomerOrderColumn[] = customerOrders
+    .filter(order => order && typeof order === 'object') // Filter out invalid orders
+    .map((order) => {
+      try {
+        const orderLines = order.orderLines || [];
+        const totalQuantity = orderLines.reduce((sum, line) => sum + (line?.quantity || 0), 0);
 
-    const pendingItems = orderLines.filter(line =>
-      line.fulfillmentStatus === "PENDING" || !line.fulfillmentStatus
-    ).length;
+        const fulfilledItems = orderLines.filter(line =>
+          line?.fulfillmentStatus === "FULFILLED"
+        ).length;
 
-    const totalAllocated = orderLines.reduce((sum, line) =>
-      sum + (line.stockAllocated || 0) + (line.productionQuantity || 0), 0
-    );
+        const pendingItems = orderLines.filter(line =>
+          line?.fulfillmentStatus === "PENDING" || !line?.fulfillmentStatus
+        ).length;
 
-    const fromStock = orderLines.reduce((sum, line) =>
-      sum + (line.stockAllocated || 0), 0
-    );
+        const totalAllocated = orderLines.reduce((sum, line) =>
+          sum + (line?.stockAllocated || 0) + (line?.productionQuantity || 0), 0
+        );
 
-    const fromProduction = orderLines.reduce((sum, line) =>
-      sum + (line.productionQuantity || 0), 0
-    );
+        const fromStock = orderLines.reduce((sum, line) =>
+          sum + (line?.stockAllocated || 0), 0
+        );
 
-    const overallCompletion = totalQuantity > 0
-      ? Math.round((totalAllocated / totalQuantity) * 100)
-      : 0;
+        const fromProduction = orderLines.reduce((sum, line) =>
+          sum + (line?.productionQuantity || 0), 0
+        );
 
-    return {
-      id: order.id,
-      orderNumber: order.orderNumber,
-      customerName: order.customer.name,
-      customerEmail: order.customer.email || null,
-      orderDate: order.orderDate,
-      requiredDate: order.requiredDate,
-      status: order.status,
-      totalAmount: Number(order.totalAmount),
-      itemCount: orderLines.length,
-      totalQuantity: totalQuantity,
-      productionOrderCount: order._count?.productionOrders || 0,
-      billingStatementCount: order._count?.billingStatements || 0,
-      billingStatements: order.billingStatements,
-      notes: order.notes || null,
-      lastUpdated: new Date(),
-      fulfillmentOverview: {
-        overallCompletion,
-        totalAllocated,
-        fromStock,
-        fromProduction,
-        pendingItems,
-        fulfilledItems,
-      },
-    };
-  });
+        const overallCompletion = totalQuantity > 0
+          ? Math.round((totalAllocated / totalQuantity) * 100)
+          : 0;
+
+        return {
+          id: order.id || '',
+          orderNumber: order.orderNumber || 'Unknown',
+          customerName: order.customer?.name || 'Unknown Customer',
+          customerEmail: order.customer?.email || null,
+          orderDate: order.orderDate || new Date().toISOString(),
+          requiredDate: order.requiredDate || new Date().toISOString(),
+          status: order.status || 'PENDING',
+          totalAmount: order.totalAmount ? Number(order.totalAmount) : 0,
+          itemCount: orderLines.length,
+          totalQuantity: totalQuantity,
+          productionOrderCount: order._count?.productionOrders || 0,
+          billingStatementCount: order._count?.billingStatements || 0,
+          billingStatements: order.billingStatements || [],
+          notes: order.notes || null,
+          lastUpdated: order.updatedAt || order.createdAt || new Date().toISOString(),
+          fulfillmentOverview: {
+            overallCompletion,
+            totalAllocated,
+            fromStock,
+            fromProduction,
+            pendingItems,
+            fulfilledItems,
+          },
+        };
+      } catch (error) {
+        console.error("Error processing order:", error, order);
+        // Return a minimal safe order object
+        return {
+          id: order?.id || '',
+          orderNumber: order?.orderNumber || 'Error',
+          customerName: 'Error loading customer',
+          customerEmail: null,
+          orderDate: new Date().toISOString(),
+          requiredDate: new Date().toISOString(),
+          status: 'PENDING',
+          totalAmount: 0,
+          itemCount: 0,
+          totalQuantity: 0,
+          productionOrderCount: 0,
+          billingStatementCount: 0,
+          billingStatements: [],
+          notes: 'Error loading order details',
+          lastUpdated: new Date().toISOString(),
+          fulfillmentOverview: {
+            overallCompletion: 0,
+            totalAllocated: 0,
+            fromStock: 0,
+            fromProduction: 0,
+            pendingItems: 0,
+            fulfilledItems: 0,
+          },
+        };
+      }
+    });
 
   return (
     <PageContainer>

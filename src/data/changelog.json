@@ -2,12 +2,13 @@
   "project": "XGen MRP",
   "entries": [
     {
-       "version": "1.5.5",
+      "version": "1.5.5",
       "date": "2025-09-03",
       "changes": [
         "Inspectors -  Dashboard: Deleted first the create quality button. later will fix it",
         "Admin - Production Orders Delete: Function deleteProductionOrder being revised a little.",
-        "Inspectors - QRScanner: Updating the page of QR scanner and its components to make it works"
+        "Inspectors - QRScanner: Updating the page of QR scanner and its components to make it works",
+        "Fix for product category, and Customer Order page client component error"
       ]
     },
     {

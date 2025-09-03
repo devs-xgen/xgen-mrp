@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { Status } from "@prisma/client"
+import { Status } from "@/lib/prisma-client-enums"
 import { PlusIcon } from "lucide-react"
 
 

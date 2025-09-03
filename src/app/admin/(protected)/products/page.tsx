@@ -11,6 +11,7 @@ import {
   SectionCard 
 } from "@/components/shared/page-layout";
 import { CreateProductButton } from "@/components/module/admin/products/create-product-button";
+import { ProductCategoryDialog } from "@/components/module/admin/products/product-category-dialog";
 import { revalidatePath } from "next/cache";
 
 export const metadata: Metadata = {
@@ -41,6 +42,7 @@ export default async function ProductsPage() {
         </PageHeaderMain>
         <PageHeaderActions>
           <CreateProductButton categories={categories as any} onSuccess={refreshData} />
+          <ProductCategoryDialog categories={categories as any} onSuccess={refreshData} />
         </PageHeaderActions>
       </PageHeader>
 

@@ -39,30 +39,44 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
   const [showCreateBillingDialog, setShowCreateBillingDialog] = useState(false);
   const [showRecordPaymentDialog, setShowRecordPaymentDialog] = useState(false);
 
-  // Calculate fulfillment statistics
-  const fulfillmentStats = order.orderLines.reduce(
+  // Ensure order and orderLines exist with safe defaults
+  if (!order) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <h3 className="text-lg font-medium mb-2">Order not found</h3>
+          <p className="text-muted-foreground">The requested order could not be loaded.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate fulfillment statistics with comprehensive null checks
+  const fulfillmentStats = (order.orderLines || []).reduce(
     (stats: any, line: any) => {
-      const allocated = (line.stockAllocated || 0) + (line.productionQuantity || 0);
-      const completion = line.quantity > 0 ? Math.round((allocated / line.quantity) * 100) : 0;
+      // Safe null checks for all line properties
+      const allocated = (line?.stockAllocated || 0) + (line?.productionQuantity || 0);
+      const quantity = line?.quantity || 0;
+      const completion = quantity > 0 ? Math.round((allocated / quantity) * 100) : 0;
       
       stats.totalItems++;
-      stats.totalQuantity += line.quantity;
+      stats.totalQuantity += quantity;
       stats.totalAllocated += allocated;
       stats.totalCompletion += completion;
       
-      if (line.fulfillmentStatus === "FULFILLED") {
+      if (line?.fulfillmentStatus === "FULFILLED") {
         stats.fulfilledItems++;
-      } else if (line.fulfillmentStatus === "ALLOCATED") {
+      } else if (line?.fulfillmentStatus === "ALLOCATED") {
         stats.allocatedItems++;
       } else {
         stats.pendingItems++;
       }
       
-      if (line.stockAllocated > 0) {
+      if ((line?.stockAllocated || 0) > 0) {
         stats.fromStock += line.stockAllocated;
       }
       
-      if (line.productionQuantity > 0) {
+      if ((line?.productionQuantity || 0) > 0) {
         stats.fromProduction += line.productionQuantity;
       }
       
@@ -143,9 +157,9 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrencyPHP(order.totalAmount)}</div>
+            <div className="text-2xl font-bold">{formatCurrencyPHP(order.totalAmount || 0)}</div>
             <p className="text-xs text-muted-foreground">
-              {order.orderLines.length} items • {fulfillmentStats.totalQuantity} units
+              {(order.orderLines || []).length} items • {fulfillmentStats.totalQuantity} units
             </p>
           </CardContent>
         </Card>
@@ -167,7 +181,7 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
             <Factory className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{order._count.productionOrders}</div>
+            <div className="text-2xl font-bold">{order._count?.productionOrders || 0}</div>
             <p className="text-xs text-muted-foreground">
               {fulfillmentStats.fromProduction} units from production
             </p>
@@ -179,11 +193,11 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
             <CardTitle className="text-sm font-medium">Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <Badge className={getStatusColor(order.status)}>
-              {order.status.toLowerCase().replace("_", " ")}
+            <Badge className={getStatusColor(order.status || 'PENDING')}>
+              {(order.status || 'pending').toLowerCase().replace("_", " ")}
             </Badge>
             <p className="text-xs text-muted-foreground mt-2">
-              Due: {formatDate(order.requiredDate)}
+              Due: {order.requiredDate ? formatDate(order.requiredDate) : 'Not set'}
             </p>
           </CardContent>
         </Card>
@@ -210,30 +224,30 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h3 className="font-semibold text-lg">{order.customer.name}</h3>
-                  <p className="text-sm text-muted-foreground">Code: {order.customer.code}</p>
+                  <h3 className="font-semibold text-lg">{order.customer?.name || 'Unknown Customer'}</h3>
+                  <p className="text-sm text-muted-foreground">Code: {order.customer?.code || 'N/A'}</p>
                 </div>
                 <Separator />
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Email</p>
-                    <p>{order.customer.email || "Not provided"}</p>
+                    <p>{order.customer?.email || "Not provided"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Phone</p>
-                    <p>{order.customer.phone || "Not provided"}</p>
+                    <p>{order.customer?.phone || "Not provided"}</p>
                   </div>
                   <div className="col-span-2">
                     <p className="text-muted-foreground">Address</p>
-                    <p>{order.customer.address || "Not provided"}</p>
+                    <p>{order.customer?.address || "Not provided"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Payment Terms</p>
-                    <p>{order.customer.paymentTerms || "Standard"}</p>
+                    <p>{order.customer?.paymentTerms || "Standard"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Credit Limit</p>
-                    <p>{order.customer.creditLimit ? formatCurrencyPHP(order.customer.creditLimit) : "Not set"}</p>
+                    <p>{order.customer?.creditLimit ? formatCurrencyPHP(order.customer.creditLimit) : "Not set"}</p>
                   </div>
                 </div>
               </CardContent>
@@ -251,19 +265,19 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Order Date</p>
-                    <p>{formatDate(order.orderDate)}</p>
+                    <p>{order.orderDate ? formatDate(order.orderDate) : 'Not set'}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Required Date</p>
-                    <p>{formatDate(order.requiredDate)}</p>
+                    <p>{order.requiredDate ? formatDate(order.requiredDate) : 'Not set'}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Created</p>
-                    <p>{formatDate(order.createdAt)}</p>
+                    <p>{order.createdAt ? formatDate(order.createdAt) : 'Not available'}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Last Updated</p>
-                    <p>{formatDate(order.updatedAt)}</p>
+                    <p>{order.updatedAt ? formatDate(order.updatedAt) : 'Not available'}</p>
                   </div>
                 </div>
                 {order.notes && (
@@ -284,25 +298,28 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
             <CardHeader>
               <CardTitle>Order Items</CardTitle>
               <CardDescription>
-                {order.orderLines.length} items totaling {fulfillmentStats.totalQuantity} units
+                {(order.orderLines || []).length} items totaling {fulfillmentStats.totalQuantity} units
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {order.orderLines.map((line: any, index: number) => {
-                  const productInfo = line.productVariant || line.product;
-                  const allocated = (line.stockAllocated || 0) + (line.productionQuantity || 0);
-                  const completion = line.quantity > 0 ? Math.round((allocated / line.quantity) * 100) : 0;
+                {(order.orderLines || []).map((line: any, index: number) => {
+                  // Safe access to product information with fallbacks
+                  const productInfo = line?.productVariant || line?.product || {};
+                  const allocated = (line?.stockAllocated || 0) + (line?.productionQuantity || 0);
+                  const quantity = line?.quantity || 0;
+                  const unitPrice = line?.unitPrice || 0;
+                  const completion = quantity > 0 ? Math.round((allocated / quantity) * 100) : 0;
                   
                   return (
-                    <div key={line.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={line?.id || index} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex-1">
                         <div className="flex items-center gap-3">
                           <span className="text-sm text-muted-foreground">#{index + 1}</span>
                           <div>
-                            <h4 className="font-medium">{productInfo.name}</h4>
+                            <h4 className="font-medium">{productInfo.name || 'Unknown Product'}</h4>
                             <p className="text-sm text-muted-foreground">
-                              SKU: {productInfo.sku} • {line.quantity} units @ {formatCurrencyPHP(line.unitPrice)}
+                              SKU: {productInfo.sku || 'N/A'} • {quantity} units @ {formatCurrencyPHP(unitPrice)}
                             </p>
                           </div>
                         </div>
@@ -310,9 +327,9 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
                       
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <p className="font-medium">{formatCurrencyPHP(line.quantity * line.unitPrice)}</p>
+                          <p className="font-medium">{formatCurrencyPHP(quantity * unitPrice)}</p>
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            {getFulfillmentStatusIcon(line.fulfillmentStatus || "PENDING")}
+                            {getFulfillmentStatusIcon(line?.fulfillmentStatus || "PENDING")}
                             <span>{completion}% fulfilled</span>
                           </div>
                         </div>
@@ -369,16 +386,16 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {order.orderLines.map((line: any) => (
+                {(order.orderLines || []).map((line: any) => (
                   <FulfillmentIndicator 
-                    key={line.id}
+                    key={line?.id || Math.random()}
                     fulfillmentOverview={{
-                      overallCompletion: line.quantity > 0 ? Math.round(((line.stockAllocated || 0) + (line.productionQuantity || 0)) / line.quantity * 100) : 0,
-                      totalAllocated: (line.stockAllocated || 0) + (line.productionQuantity || 0),
-                      fromStock: line.stockAllocated || 0,
-                      fromProduction: line.productionQuantity || 0,
-                      pendingItems: line.fulfillmentStatus === "PENDING" ? 1 : 0,
-                      fulfilledItems: line.fulfillmentStatus === "FULFILLED" ? 1 : 0,
+                      overallCompletion: (line?.quantity || 0) > 0 ? Math.round(((line?.stockAllocated || 0) + (line?.productionQuantity || 0)) / line.quantity * 100) : 0,
+                      totalAllocated: (line?.stockAllocated || 0) + (line?.productionQuantity || 0),
+                      fromStock: line?.stockAllocated || 0,
+                      fromProduction: line?.productionQuantity || 0,
+                      pendingItems: line?.fulfillmentStatus === "PENDING" ? 1 : 0,
+                      fulfilledItems: line?.fulfillmentStatus === "FULFILLED" ? 1 : 0,
                     }}
                   />
                 ))}
@@ -390,49 +407,55 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
         <TabsContent value="production" className="space-y-6">
           {order.productionOrders && order.productionOrders.length > 0 ? (
             <div className="space-y-4">
-              {order.productionOrders.map((po: any) => (
-                <Card key={po.id}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">Production Order #{po.id.slice(-8)}</CardTitle>
-                      <div className="flex items-center gap-2">
-                        <Badge className={getStatusColor(po.status)}>
-                          {po.status.toLowerCase().replace("_", " ")}
-                        </Badge>
-                        <Link href={`/admin/production/${po.id}`}>
-                          <Button size="sm" variant="outline">
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                        </Link>
+              {order.productionOrders.map((po: any) => {
+                // Safe access to production order data
+                const productInfo = po?.productVariant || po?.product || {};
+                return (
+                  <Card key={po?.id || Math.random()}>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">
+                          Production Order #{(po?.id || '').slice(-8) || 'Unknown'}
+                        </CardTitle>
+                        <div className="flex items-center gap-2">
+                          <Badge className={getStatusColor(po?.status || 'PENDING')}>
+                            {(po?.status || 'pending').toLowerCase().replace("_", " ")}
+                          </Badge>
+                          <Link href={`/admin/production/${po?.id || '#'}`}>
+                            <Button size="sm" variant="outline">
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
-                    </div>
-                    <CardDescription>
-                      {(po.productVariant || po.product).name} • {po.quantity} units
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Start Date</p>
-                        <p>{formatDate(po.startDate)}</p>
+                      <CardDescription>
+                        {productInfo.name || 'Unknown Product'} • {po?.quantity || 0} units
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Start Date</p>
+                          <p>{po?.startDate ? formatDate(po.startDate) : 'Not set'}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Due Date</p>
+                          <p>{po?.dueDate ? formatDate(po.dueDate) : 'Not set'}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Completed</p>
+                          <p>{po?.completedQuantity || 0} / {po?.quantity || 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Priority</p>
+                          <Badge variant="outline">{po?.priority || 'Normal'}</Badge>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-muted-foreground">Due Date</p>
-                        <p>{formatDate(po.dueDate)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Completed</p>
-                        <p>{po.completedQuantity} / {po.quantity}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Priority</p>
-                        <Badge variant="outline">{po.priority}</Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <Card>
@@ -457,15 +480,15 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
           {order.billingStatements && order.billingStatements.length > 0 ? (
             <div className="space-y-4">
               {order.billingStatements.map((bs: any) => (
-                <Card key={bs.id}>
+                <Card key={bs?.id || Math.random()}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle>Statement #{bs.statementNumber}</CardTitle>
+                      <CardTitle>Statement #{bs?.statementNumber || 'Unknown'}</CardTitle>
                       <div className="flex items-center gap-2">
-                        <Badge className={getStatusColor(bs.status)}>
-                          {bs.status.toLowerCase()}
+                        <Badge className={getStatusColor(bs?.status || 'PENDING')}>
+                          {(bs?.status || 'pending').toLowerCase()}
                         </Badge>
-                        <Link href={`/admin/billing-statement/${bs.id}`}>
+                        <Link href={`/admin/billing-statement/${bs?.id || '#'}`}>
                           <Button size="sm" variant="outline">
                             <ExternalLink className="h-4 w-4 mr-1" />
                             View
@@ -474,47 +497,47 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
                       </div>
                     </div>
                     <CardDescription>
-                      Created on {formatDate(bs.billingDate)}
+                      Created on {bs?.billingDate ? formatDate(bs.billingDate) : 'Unknown date'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <p className="text-muted-foreground">Total Amount</p>
-                        <p className="font-medium">{formatCurrencyPHP(bs.totalAmount)}</p>
+                        <p className="font-medium">{formatCurrencyPHP(bs?.totalAmount || 0)}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Tax Amount</p>
-                        <p>{formatCurrencyPHP(bs.taxAmount)}</p>
+                        <p>{formatCurrencyPHP(bs?.taxAmount || 0)}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Net Amount</p>
-                        <p className="font-medium">{formatCurrencyPHP(bs.netAmount)}</p>
+                        <p className="font-medium">{formatCurrencyPHP(bs?.netAmount || 0)}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Due Date</p>
-                        <p>{bs.dueDate ? formatDate(bs.dueDate) : "Not set"}</p>
+                        <p>{bs?.dueDate ? formatDate(bs.dueDate) : "Not set"}</p>
                       </div>
                     </div>
 
-                    {bs.salesInvoice && (
+                    {bs?.salesInvoice && (
                       <div className="mt-4 p-3 bg-muted rounded-md">
                         <h4 className="font-medium mb-2">Sales Invoice</h4>
                         <div className="flex items-center justify-between text-sm">
-                          <span>#{bs.salesInvoice.invoiceNumber}</span>
-                          <Badge variant="outline">{bs.salesInvoice.status}</Badge>
+                          <span>#{bs.salesInvoice.invoiceNumber || 'Unknown'}</span>
+                          <Badge variant="outline">{bs.salesInvoice.status || 'Unknown'}</Badge>
                         </div>
                       </div>
                     )}
 
-                    {bs.deliveryReceipts && bs.deliveryReceipts.length > 0 && (
+                    {bs?.deliveryReceipts && bs.deliveryReceipts.length > 0 && (
                       <div className="mt-4">
                         <h4 className="font-medium mb-2">Delivery Receipts</h4>
                         <div className="space-y-2">
                           {bs.deliveryReceipts.map((dr: any) => (
-                            <div key={dr.id} className="flex items-center justify-between text-sm p-2 bg-muted rounded">
-                              <span>#{dr.receiptNumber}</span>
-                              <Badge variant="outline">{dr.deliveryStatus}</Badge>
+                            <div key={dr?.id || Math.random()} className="flex items-center justify-between text-sm p-2 bg-muted rounded">
+                              <span>#{dr?.receiptNumber || 'Unknown'}</span>
+                              <Badge variant="outline">{dr?.deliveryStatus || 'Unknown'}</Badge>
                             </div>
                           ))}
                         </div>
@@ -542,10 +565,10 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
           {/* Dialog for creating billing statement */}
           <CreateBillingStatementDialog
             customerOrder={{
-              id: order.id,
-              orderNumber: order.orderNumber,
-              customerName: order.customer.name,
-              totalAmount: order.totalAmount,
+              id: order.id || '',
+              orderNumber: order.orderNumber || 'Unknown',
+              customerName: order.customer?.name || 'Unknown Customer',
+              totalAmount: order.totalAmount || 0,
             }}
             open={showCreateBillingDialog}
             onOpenChange={setShowCreateBillingDialog}
@@ -562,34 +585,34 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
           {order.transaction && order.transaction.length > 0 ? (
             <div className="space-y-4">
               {order.transaction.map((tx: any) => (
-                <Card key={tx.id}>
+                <Card key={tx?.id || Math.random()}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle>Payment #{tx.id.slice(-8)}</CardTitle>
-                      <Badge className={getStatusColor(tx.status)}>
-                        {tx.status.toLowerCase()}
+                      <CardTitle>Payment #{(tx?.id || '').slice(-8) || 'Unknown'}</CardTitle>
+                      <Badge className={getStatusColor(tx?.status || 'PENDING')}>
+                        {(tx?.status || 'pending').toLowerCase()}
                       </Badge>
                     </div>
                     <CardDescription>
-                      {tx.paymentMethod} • {formatDate(tx.paymentDate)}
+                      {(tx?.paymentMethod || 'Unknown method').replace("_", " ")} • {tx?.paymentDate ? formatDate(tx.paymentDate) : 'Unknown date'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                       <div>
                         <p className="text-muted-foreground">Amount</p>
-                        <p className="text-lg font-medium">{formatCurrencyPHP(tx.amount)}</p>
+                        <p className="text-lg font-medium">{formatCurrencyPHP(tx?.amount || 0)}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Method</p>
-                        <p>{tx.paymentMethod.replace("_", " ")}</p>
+                        <p>{(tx?.paymentMethod || 'Unknown').replace("_", " ")}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Handled By</p>
-                        <p>{tx.handledByUser.email}</p>
+                        <p>{tx?.handledByUser?.email || 'Unknown'}</p>
                       </div>
                     </div>
-                    {tx.notes && (
+                    {tx?.notes && (
                       <div className="mt-4">
                         <p className="text-muted-foreground text-sm mb-1">Notes</p>
                         <p className="text-sm bg-muted p-2 rounded">{tx.notes}</p>
@@ -611,7 +634,7 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
             </Card>
           )}
           <RecordPaymentDialog
-            order={{ id: order.id, orderNumber: order.orderNumber }}
+            order={{ id: order.id || '', orderNumber: order.orderNumber || 'Unknown' }}
             open={showRecordPaymentDialog}
             onOpenChange={setShowRecordPaymentDialog}
           />

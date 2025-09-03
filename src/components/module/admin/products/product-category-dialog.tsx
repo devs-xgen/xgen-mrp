@@ -32,8 +32,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   FolderPlus, 
   Edit2, 
@@ -73,6 +71,14 @@ export function ProductCategoryDialog({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [localCategories, setLocalCategories] = useState<ProductCategory[]>(categories);
+
+  useEffect(() => {
+    // Sync with parent props when dialog is closed or when categories prop changes
+    if (!open) {
+      setLocalCategories(categories);
+    }
+  }, [categories, open]);
 
   // Form for creating new categories
   const createForm = useForm<FormData>({
@@ -91,10 +97,12 @@ export function ProductCategoryDialog({
   });
 
   // Filter categories based on search term
-  const filteredCategories = categories.filter(category =>
-    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    category.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCategories = localCategories.filter((category) => {
+    const term = searchTerm.toLowerCase();
+    const name = category.name.toLowerCase();
+    const description = (category.description ?? "").toLowerCase();
+    return name.includes(term) || description.includes(term);
+  });
 
   // Handle creating new category
   const onCreateSubmit = async (data: FormData) => {
@@ -109,7 +117,10 @@ export function ProductCategoryDialog({
           description: `Category "${data.name}" created successfully`,
         });
         createForm.reset();
-        await onSuccess?.();
+        // Update local list immediately to avoid closing the dialog due to page refresh
+        setLocalCategories((prev) =>
+          [result.data as ProductCategory, ...prev].sort((a, b) => a.name.localeCompare(b.name))
+        );
       } else {
         throw new Error(result.error || "Failed to create category");
       }
@@ -152,9 +163,15 @@ export function ProductCategoryDialog({
           title: "Success",
           description: "Category updated successfully",
         });
+        // Update local list immediately
+        const currentId = editingId;
+        if (currentId) {
+          setLocalCategories((prev) =>
+            prev.map((c) => (c.id === currentId ? (result.data as ProductCategory) : c))
+          );
+        }
         setEditingId(null);
         editForm.reset();
-        await onSuccess?.();
       } else {
         throw new Error(result.error || "Failed to update category");
       }
@@ -184,8 +201,9 @@ export function ProductCategoryDialog({
           title: "Success",
           description: "Category deleted successfully",
         });
+        // Update local list immediately
+        setLocalCategories((prev) => prev.filter((c) => c.id !== deleteId));
         setDeleteId(null);
-        await onSuccess?.();
       } else {
         throw new Error(result.error || "Failed to delete category");
       }
@@ -201,17 +219,26 @@ export function ProductCategoryDialog({
     }
   };
 
+  // Defer parent refresh until the dialog closes to prevent unmount while managing
+  const handleOpenChange = (next: boolean) => {
+    if (!next && open) {
+      // Trigger parent refresh only when closing the dialog
+      onSuccess?.();
+    }
+    setOpen(next);
+  };
+
   return (
     <>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>
           <Button variant="outline" size="sm">
             <FolderPlus className="mr-2 h-4 w-4" />
             Manage Categories
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] p-0">
-          <div className="flex flex-col h-full">
+        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-0 overflow-hidden">
+          <div className="flex flex-col h-full min-h-0">
             <DialogHeader className="px-6 py-4 border-b">
               <DialogTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
@@ -222,10 +249,10 @@ export function ProductCategoryDialog({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="flex-1 overflow-hidden">
-              <div className="grid lg:grid-cols-2 h-full">
+            <div className="flex-1 overflow-hidden min-h-0">
+              <div className="grid lg:grid-cols-2 h-full min-h-0">
                 {/* Create Category Section */}
-                <div className="p-6 border-r">
+                <div className="p-6 border-r flex flex-col h-full min-h-0 overflow-auto">
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -288,12 +315,12 @@ export function ProductCategoryDialog({
                 </div>
 
                 {/* Categories List Section */}
-                <div className="flex flex-col h-full">
-                  <div className="p-6 pb-4">
+                <div className="flex flex-col h-full min-h-0 max-h-full overflow-y-auto overscroll-contain touch-pan-y">
+                  <div className="p-6 pb-4 sticky top-0 z-10 bg-background border-b">
                     <div className="flex items-center justify-between mb-4">
                       <div>
                         <h3 className="text-lg font-semibold">
-                          Existing Categories ({categories.length})
+                          Existing Categories ({localCategories.length})
                         </h3>
                         <p className="text-sm text-muted-foreground">
                           Manage your product categories
@@ -312,10 +339,7 @@ export function ProductCategoryDialog({
                       />
                     </div>
                   </div>
-
-                  <Separator />
-
-                  <ScrollArea className="flex-1 px-6">
+                  <div className="px-6 py-2">
                     {filteredCategories.length === 0 ? (
                       <div className="py-8 text-center">
                         <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -438,14 +462,14 @@ export function ProductCategoryDialog({
                         ))}
                       </div>
                     )}
-                  </ScrollArea>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="px-6 py-4 border-t bg-muted/30">
               <div className="flex justify-end">
-                <Button variant="outline" onClick={() => setOpen(false)}>
+                <Button variant="outline" onClick={() => handleOpenChange(false)}>
                   Close
                 </Button>
               </div>

@@ -1,7 +1,5 @@
-// src/app/admin/(protected)/products/loading.tsx
-// import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { PageSkeleton } from "@/components/shared/page-skeleton"
+import { CustomerOrderLoadingState } from "@/components/module/admin/customer-orders/CustomerOrderLoadingState";
 
 export default function Loading() {
-    return <PageSkeleton />
-  }
+  return <CustomerOrderLoadingState />;
+}

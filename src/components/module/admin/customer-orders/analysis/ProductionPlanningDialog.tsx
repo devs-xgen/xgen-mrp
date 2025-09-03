@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Priority } from "@prisma/client";
+import { Priority } from "@/lib/prisma-client-enums";
 
 import {
   Dialog,
@@ -103,7 +103,7 @@ export function ProductionPlanningDialog({
         productVariantId: line.productVariantId,
         quantity: line.quantityToProduce,
         customerOrderId: orderAnalysis.orderId,
-        priority: selection?.priority || "MEDIUM" as const,
+        priority: selection?.priority || Priority.MEDIUM,
         notes: selection?.notes || `Production required for order ${orderAnalysis.orderNumber}`,
       };
     });
