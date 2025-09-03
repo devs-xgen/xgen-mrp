@@ -41,21 +41,21 @@ export default async function CustomerOrderEditPage({ params }: CustomerOrderEdi
   // Transform data for client component
   const transformedOrder = {
     ...order,
-    totalAmount: order.totalAmount.toNumber(),
+    totalAmount: order.totalAmount ? (typeof order.totalAmount.toNumber === 'function' ? order.totalAmount.toNumber() : Number(order.totalAmount)) : 0,
     customer: {
       ...order.customer,
-      creditLimit: order.customer.creditLimit?.toNumber() || null,
+      creditLimit: order.customer.creditLimit ? (typeof order.customer.creditLimit.toNumber === 'function' ? order.customer.creditLimit.toNumber() : Number(order.customer.creditLimit)) : null,
     },
     orderLines: order.orderLines.map((line) => ({
       ...line,
-      unitPrice: line.unitPrice.toNumber(),
+      unitPrice: line.unitPrice ? (typeof line.unitPrice.toNumber === 'function' ? line.unitPrice.toNumber() : Number(line.unitPrice)) : 0,
       product: line.product ? {
         ...line.product,
-        sellingPrice: line.product.sellingPrice.toNumber(),
+        sellingPrice: line.product.sellingPrice ? (typeof line.product.sellingPrice.toNumber === 'function' ? line.product.sellingPrice.toNumber() : Number(line.product.sellingPrice)) : 0,
       } : undefined,
       productVariant: line.productVariant ? {
         ...line.productVariant,
-        sellingPrice: line.productVariant.sellingPrice.toNumber(),
+        sellingPrice: line.productVariant.sellingPrice ? (typeof line.productVariant.sellingPrice.toNumber === 'function' ? line.productVariant.sellingPrice.toNumber() : Number(line.productVariant.sellingPrice)) : 0,
       } : undefined,
     })),
   };
