@@ -1,23 +1,41 @@
 version: '3.8'
 
 services:
-  nextjs:
-    container_name: inventory-frontend
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    restart: always
+  # Development service - accessible at http://localhost:3001
+  dev:
+    image: node:18-alpine
+    container_name: inventory-dev
     working_dir: /app
     ports:
-      - '3002:3001'
+      - '3001:3001'
     environment:
       - DATABASE_URL=prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlfa2V5IjoiNDExNDFhOWEtM2Q2ZC00YzRmLWI1NDgtZWYwMzIwMzRkZDRmIiwidGVuYW50X2lkIjoiOTJlYmFkYzE3ODllNmMyYjk4OTgxYjUzZDFiMWEzM2ZlNWQ4OGRiMDg3MzcyNmU2NmIxNWFkNjA2OTE2MmU0YyIsImludGVybmFsX3NlY3JldCI6IjEwZjZlNTI2LTMzZTYtNDJjZS04YTA4LTM4ODgzNDY5NTk0MCJ9.GbS9SR5w8FqrR_ASXYCSQVZ2QI2ZX3cMHvzh4JLyy6w
-      - NEXTAUTH_URL=http://localhost:3002
+      - NEXTAUTH_URL=http://localhost:3001
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NODE_ENV=development
     volumes:
       - ./:/app
       - /app/node_modules
+    command: sh -c "npm install --ignore-scripts && npx prisma generate --no-engine && npm run dev"
+    networks:
+      - inventory_network
+
+  # Production service - accessible at http://localhost:3002
+  prod:
+    image: node:18-alpine
+    container_name: inventory-prod
+    working_dir: /app
+    ports:
+      - '3003:3000'
+    environment:
+      - DATABASE_URL=prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlfa2V5IjoiNDExNDFhOWEtM2Q2ZC00YzRmLWI1NDgtZWYwMzIwMzRkZDRmIiwidGVuYW50X2lkIjoiOTJlYmFkYzE3ODllNmMyYjk4OTgxYjUzZDFiMWEzM2ZlNWQ4OGRiMDg3MzcyNmU2NmIxNWFkNjA2OTE2MmU0YyIsImludGVybmFsX3NlY3JldCI6IjEwZjZlNTI2LTMzZTYtNDJjZS04YTA4LTM4ODgzNDY5NTk0MCJ9.GbS9SR5w8FqrR_ASXYCSQVZ2QI2ZX3cMHvzh4JLyy6w
+      - NEXTAUTH_URL=http://localhost:3003
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NODE_ENV=production
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    command: sh -c "npm install --ignore-scripts && npx prisma generate --no-engine && npm run build && npm run start"
     networks:
       - inventory_network
 
