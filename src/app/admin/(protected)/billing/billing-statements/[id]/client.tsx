@@ -53,6 +53,7 @@ import {
 } from "@/types/admin/billing";
 import { SerializableData } from "@/lib/utils/decimal-serializer";
 import { formatCurrencyPHP } from "@/lib/constant";
+import { formatDate } from "@/components/global/table/table-utils";
 import { 
   getBillingStatementById,
   updateBillingStatement,
@@ -110,6 +111,12 @@ export function BillingStatementClient({
       footerNotes: billingStatement.salesInvoice?.footerNotes || "",
     },
   });
+
+  // Safely convert a Date/string/number to yyyy-mm-dd for date inputs
+  const toDateInput = (v: unknown) => {
+    const d = v instanceof Date ? v : (typeof v === "string" || typeof v === "number") ? new Date(v as any) : null;
+    return d && !isNaN(d.getTime()) ? d.toISOString().split("T")[0] : "";
+  };
 
   // Handle form submission
   // Generate shareable link
@@ -392,7 +399,7 @@ export function BillingStatementClient({
                     <div className="space-y-2">
                       <Label>Billing Date</Label>
                       <Input 
-                        value={new Date(billingStatement.billingDate as unknown as string).toLocaleDateString()} 
+                        value={formatDate(billingStatement.billingDate as unknown as string, "—")} 
                         disabled 
                       />
                     </div>
@@ -405,7 +412,7 @@ export function BillingStatementClient({
                           <FormControl>
                             <Input
                               type="date"
-                              value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                              value={toDateInput(field.value)}
                               onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
                             />
                           </FormControl>
@@ -449,16 +456,11 @@ export function BillingStatementClient({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Billing Date</Label>
-                      <p className="text-sm">{new Date(billingStatement.billingDate as unknown as string).toLocaleDateString()}</p>
+                      <p className="text-sm">{formatDate(billingStatement.billingDate as unknown as string)}</p>
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
-                      <p className="text-sm">
-                        {billingStatement.dueDate 
-                          ? new Date(billingStatement.dueDate as unknown as string).toLocaleDateString()
-                          : "Not set"
-                        }
-                      </p>
+                      <p className="text-sm">{formatDate(billingStatement.dueDate as unknown as string, "Not set")}</p>
                     </div>
                   </div>
 
@@ -629,7 +631,7 @@ export function BillingStatementClient({
               {billingStatement.paidDate && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Paid Date:</span>
-                  <span className="text-sm">{new Date(billingStatement.paidDate as unknown as string).toLocaleDateString()}</span>
+                  <span className="text-sm">{formatDate(billingStatement.paidDate as unknown as string)}</span>
                 </div>
               )}
             </CardContent>
@@ -685,11 +687,11 @@ export function BillingStatementClient({
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Created:</span>
-                <span className="text-sm">{new Date(billingStatement.createdAt as unknown as string).toLocaleDateString()}</span>
+                <span className="text-sm">{formatDate(billingStatement.createdAt as unknown as string)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Updated:</span>
-                <span className="text-sm">{new Date(billingStatement.updatedAt as unknown as string).toLocaleDateString()}</span>
+                <span className="text-sm">{formatDate(billingStatement.updatedAt as unknown as string)}</span>
               </div>
               {billingStatement.createdByUser && (
                 <div className="flex items-center justify-between">

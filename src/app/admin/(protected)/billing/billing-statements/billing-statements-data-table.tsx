@@ -25,7 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { formatDate } from "@/lib/services/pdf-generator";
+import { formatDate } from "@/components/global/table/table-utils";
 import { ShareLinkDialog } from "@/components/shared/ShareLinkDialog";
 
 // Type alias for serialized billing statement data
@@ -230,12 +230,35 @@ export function BillingStatementsDataTable({
       CANCELLED: { variant: "destructive", label: "Cancelled" },
     }),
     createCurrencyColumn<SerializedBillingStatement>("totalAmount", "Total Amount", "PHP"),
-    createCurrencyColumn<SerializedBillingStatement>("paidAmount", "Paid Amount", "PHP"),
+    {
+      accessorKey: "paidAmount",
+      header: "Paid Amount",
+      cell: ({ row }) => {
+        const statement = row.original;
+        // Calculate paid amount based on sales invoice if it exists and is PAID
+        const paidAmount = statement.salesInvoice?.status === 'PAID' ? 
+          Number(statement.salesInvoice?.totalAmount || 0) : 0;
+        return (
+          <div className="font-medium">
+            {new Intl.NumberFormat("en-PH", {
+              style: "currency",
+              currency: "PHP",
+            }).format(paidAmount)}
+          </div>
+        );
+      },
+    },
     {
       accessorKey: "remainingBalance",
       header: "Balance",
       cell: ({ row }) => {
-        const remaining = Number(row.getValue("remainingBalance"));
+        const statement = row.original;
+        const totalAmount = Number(statement.totalAmount || 0);
+        // Calculate paid amount based on sales invoice if it exists and is PAID
+        const paidAmount = statement.salesInvoice?.status === 'PAID' ? 
+          Number(statement.salesInvoice?.totalAmount || 0) : 0;
+        const remaining = totalAmount - paidAmount;
+        
         return (
           <div className={`font-medium ${remaining > 0 ? 'text-red-600' : 'text-green-600'}`}>
             {new Intl.NumberFormat("en-PH", {
@@ -246,7 +269,7 @@ export function BillingStatementsDataTable({
         );
       },
     },
-    createDateColumn<SerializedBillingStatement>("issueDate", "Issue Date"),
+    createDateColumn<SerializedBillingStatement>("billingDate", "Billing Date"),
     createDateColumn<SerializedBillingStatement>("dueDate", "Due Date"),
     {
       accessorKey: "paymentTerms",
