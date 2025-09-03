@@ -4,6 +4,30 @@
 
 A comprehensive Material Requirements Planning (MRP) system designed for clothing manufacturers, providing end-to-end solutions for production planning, inventory management, quality control, and delivery management.
 
+## 🚀 Quick Installation
+
+### 🎯 For End Users (Easiest)
+**Want to use XGEN-MRP? Start here:**
+
+1. **📋 [EASY_INSTALL.md](./EASY_INSTALL.md)** - Super simple 3-step installation
+2. **📖 [QUICK_INSTALL.md](./QUICK_INSTALL.md)** - Detailed user-friendly guide with troubleshooting
+
+### 🔧 For Developers
+**Want to modify or contribute to XGEN-MRP?**
+
+1. **🐳 [DOCKER_TUTORIAL.md](./DOCKER_TUTORIAL.md)** - Complete Docker development guide
+2. **📚 [Development Setup](#development-setup)** - Traditional development environment
+
+---
+
+## 🎯 Choose Your Installation Method
+
+| User Type | Recommended Guide | What You Get |
+|-----------|-------------------|-------------|
+| **👥 End Users** | [EASY_INSTALL.md](./EASY_INSTALL.md) | Ready-to-use system in 5 minutes |
+| **👨‍💻 Developers** | [DOCKER_TUTORIAL.md](./DOCKER_TUTORIAL.md) | Dev + Prod environments |
+| **🏢 IT Teams** | [DEPLOYMENT_DOCKER.md](./DEPLOYMENT_DOCKER.md) | Enterprise deployment guide |
+
 ## System Architecture
 
 ### Technology Stack
