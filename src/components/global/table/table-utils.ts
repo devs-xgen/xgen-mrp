@@ -227,6 +227,23 @@ export const tableConfigs = {
       },
     ],
   },
+
+  "customer-orders-v2": {
+    searchKey: "orderNumber",
+    searchPlaceholder: "Filter customer orders...",
+    emptyMessage: "No customer orders found.",
+    enableSelection: true,
+    enableFiltering: true,
+    enablePagination: true,
+    pageSize: 10,
+    filterOptions: [
+      {
+        column: "status",
+        title: "Status",
+        options: statusFilterOptions,
+      },
+    ],
+  },
 } as const;
 
 // Helper function to get table config

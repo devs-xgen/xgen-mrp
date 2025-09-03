@@ -226,16 +226,18 @@ Environment: ${error.buildInfo?.nodeEnv || 'unknown'}
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button 
-          variant="outline" 
+          variant="ghost" 
           size="sm" 
-          className="fixed bottom-4 left-4 z-50 bg-background/80 backdrop-blur-sm"
+          className="fixed top-4 right-4 z-50 bg-background/20 hover:bg-background/40 backdrop-blur-sm rounded-full p-2 opacity-30 hover:opacity-100 transition-opacity duration-200"
+          title={`Debug Errors${(errors.length + manualErrors.length) > 0 ? ` (${errors.length + manualErrors.length})` : ''}`}
         >
-          <Bug className="h-4 w-4 mr-2" />
-          Debug Errors
+          <Bug className="h-4 w-4" />
           {(errors.length + manualErrors.length) > 0 && (
-            <Badge variant="destructive" className="ml-2">
-              {errors.length + manualErrors.length}
-            </Badge>
+            <div className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full flex items-center justify-center">
+              <span className="text-[10px] text-destructive-foreground font-bold">
+                {errors.length + manualErrors.length > 9 ? '9+' : errors.length + manualErrors.length}
+              </span>
+            </div>
           )}
         </Button>
       </DialogTrigger>
