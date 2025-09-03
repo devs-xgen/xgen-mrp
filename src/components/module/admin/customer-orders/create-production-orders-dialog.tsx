@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Loader2, Factory, Package, AlertTriangle, CheckCircle2, Calendar, Settings } from "lucide-react"
-import { analyzeCustomerOrder, createProductionOrdersWithDecisions } from "@/lib/actions/customer-order"
+import { analyzeCustomerOrder, createProductionOrdersWithDecisions, getCustomerOrderById } from "@/lib/actions/customer-order"
 import { CustomerOrderAnalysis, ProductionDecisionInput, OrderLineAnalysis, StockStatus } from "@/types/admin/customer-order"
 import { formatDate } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -76,20 +76,25 @@ export function CreateProductionOrdersDialog({
     try {
       setLoading(true)
       
-      // Get the customer order details first to extract order lines
-      const response = await fetch(`/api/customerOrder/${customerOrderId}`)
-      if (!response.ok) {
-        throw new Error(`Failed to fetch customer order: ${response.statusText}`)
-      }
+      // Get the customer order details using server action (no more fetch!)
+      const customerOrder = await getCustomerOrderById(customerOrderId)
       
-      const customerOrder = await response.json()
+      // Validate response data
+      if (!customerOrder || !customerOrder.orderLines) {
+        throw new Error('Invalid customer order data received')
+      }
       
       // Map order lines to the format expected by analyzeCustomerOrder
       const orderLines = customerOrder.orderLines.map((line: any) => ({
         productId: line.productId,
-        productVariantId: line.productVariantId, // 🆕 ADD: Include variant ID
+        productVariantId: line.productVariantId,
         quantity: line.quantity
       }))
+      
+      // Validate order lines
+      if (!orderLines || orderLines.length === 0) {
+        throw new Error('No order lines found in customer order')
+      }
       
       // Analyze the order lines
       const analysisResult = await analyzeCustomerOrder(orderLines)
@@ -98,7 +103,7 @@ export function CreateProductionOrdersDialog({
       // Initialize production decisions with recommended values
       const initialDecisions: ProductionDecisionInput[] = analysisResult.orderLines.map((lineAnalysis) => ({
         productId: lineAnalysis.productId,
-        productVariantId: lineAnalysis.productVariantId, // 🆕 ADD: Include variant ID
+        productVariantId: lineAnalysis.productVariantId,
         requiredQuantity: lineAnalysis.requestedQuantity,
         decision: lineAnalysis.recommendedOption,
         useAvailableStock: lineAnalysis.stockAvailability.stockStatus !== StockStatus.OUT_OF_STOCK,
@@ -109,11 +114,18 @@ export function CreateProductionOrdersDialog({
       setProductionDecisions(initialDecisions)
     } catch (error) {
       console.error("Failed to analyze customer order:", error)
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      
       toast({
         title: "Error",
-        description: "Failed to analyze customer order for production planning",
+        description: `Failed to analyze customer order: ${errorMessage}`,
         variant: "destructive",
       })
+      
+      // Reset state on error
+      setAnalysis(null)
+      setProductionDecisions([])
     } finally {
       setLoading(false)
     }
@@ -246,8 +258,17 @@ export function CreateProductionOrdersDialog({
               <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">Analysis Failed</h3>
               <p className="text-muted-foreground">
-                Unable to analyze this customer order.
+                Unable to analyze this customer order. Please try again.
               </p>
+              <Button 
+                variant="outline" 
+                onClick={fetchAnalysis}
+                className="mt-4"
+                disabled={loading}
+              >
+                <Loader2 className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Retry Analysis
+              </Button>
             </div>
           ) : (
             <div className="space-y-6">
@@ -449,4 +470,4 @@ export function CreateProductionOrdersDialog({
       </DialogContent>
     </Dialog>
   )
-} 
+}

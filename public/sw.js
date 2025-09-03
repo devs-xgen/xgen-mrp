@@ -1,6 +1,6 @@
 // Service Worker for XGEN MRP PWA
 // Bump the version to invalidate old caches when deploying a new build
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4'; // Bumped version to clear old cache
 const CACHE_NAME = `xgen-mrp-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   '/',
@@ -21,7 +21,15 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('Caching static assets');
-        return cache.addAll(STATIC_CACHE_URLS);
+        // Cache each URL individually to prevent one failure from breaking the whole install
+        const cachePromises = STATIC_CACHE_URLS.map(url => 
+          cache.add(url).catch(error => {
+            console.warn(`Failed to cache ${url}:`, error);
+            // Continue with other URLs even if one fails
+            return Promise.resolve();
+          })
+        );
+        return Promise.all(cachePromises);
       })
       .catch((error) => {
         console.error('Cache installation failed:', error);
@@ -72,36 +80,85 @@ self.addEventListener('fetch', (event) => {
   
   // Skip API requests for real-time data and non-GET methods
   if (request.url.includes('/api/') || request.method !== 'GET') return;
+  
+  // Skip font requests that might fail (let them fail naturally)
+  if (request.url.includes('/fonts/Geist')) {
+    console.warn('Skipping font request:', request.url);
+    return;
+  }
 
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
       // For navigation requests (HTML), avoid staleness
       if (request.mode === 'navigate' || (request.headers.get('accept') || '').includes('text/html')) {
         try {
-          const networkResponse = await fetch(request);
+          // Create timeout for navigation requests too
+          const navController = new AbortController();
+          const navTimeoutId = setTimeout(() => navController.abort(), 8000); // 8 second timeout for navigation
+          
+          const networkResponse = await fetch(request, {
+            signal: navController.signal,
+          });
+          
+          clearTimeout(navTimeoutId);
+          
           // Optionally cache the latest shell
           if (networkResponse.status === 200) {
-            cache.put(request, networkResponse.clone());
+            try {
+              cache.put(request, networkResponse.clone());
+            } catch (cacheError) {
+              console.warn('Failed to cache navigation response:', cacheError);
+            }
           }
           return networkResponse;
         } catch (err) {
+          console.warn('Navigation request failed:', request.url, err);
           const cached = await cache.match(request);
           if (cached) return cached;
-          return cache.match('/offline');
+          // Fallback to offline page
+          const offlinePage = await cache.match('/offline');
+          if (offlinePage) return offlinePage;
+          // Last resort: create a simple offline response
+          return new Response('Application offline', { 
+            status: 503, 
+            statusText: 'Service Unavailable',
+            headers: { 'Content-Type': 'text/html' }
+          });
         }
       }
 
       // For other assets: network-first with cache fallback and background update
       try {
-        const networkResponse = await fetch(request);
+        // Create a timeout controller for better error handling
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const networkResponse = await fetch(request, {
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
         if (networkResponse.status === 200) {
-          cache.put(request, networkResponse.clone());
+          // Only cache successful responses
+          try {
+            cache.put(request, networkResponse.clone());
+          } catch (cacheError) {
+            console.warn('Failed to cache response:', cacheError);
+          }
         }
         return networkResponse;
       } catch (err) {
+        console.warn('Network request failed:', request.url, err);
         const cached = await cache.match(request);
-        if (cached) return cached;
-        throw err;
+        if (cached) {
+          console.log('Serving from cache:', request.url);
+          return cached;
+        }
+        // Don't throw the error, return a basic response to prevent connection closed errors
+        return new Response('Resource not available', { 
+          status: 503, 
+          statusText: 'Service Unavailable'
+        });
       }
     })
   );

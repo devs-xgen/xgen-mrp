@@ -1861,3 +1861,261 @@ export async function createProductionOrdersWithDecisions(
     );
   }
 }
+
+/**
+ * Get customer order by ID with all related data
+ * Server action replacement for /api/customerOrder/[id] GET
+ */
+export async function getCustomerOrderById(id: string) {
+  try {
+    if (!id) {
+      throw new Error("Customer order ID is required");
+    }
+
+    const customerOrder = await prisma.customerOrder.findUnique({
+      where: { id },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            address: true,
+            paymentTerms: true,
+            creditLimit: true,
+          },
+        },
+        orderLines: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                sellingPrice: true,
+                description: true,
+              },
+            },
+            productVariant: {
+              select: {
+                id: true,
+                sku: true,
+                displayName: true,
+                sizeName: true,
+                colorName: true,
+                sellingPrice: true,
+              },
+            },
+          },
+        },
+        productionOrders: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+              },
+            },
+            productVariant: {
+              select: {
+                id: true,
+                sku: true,
+                displayName: true,
+              },
+            },
+          },
+        },
+        billingStatements: {
+          select: {
+            id: true,
+            statementNumber: true,
+            status: true,
+            totalAmount: true,
+            billingDate: true,
+            salesInvoice: {
+              select: {
+                id: true,
+                invoiceNumber: true,
+                status: true,
+              },
+            },
+            deliveryReceipts: {
+              select: {
+                id: true,
+                receiptNumber: true,
+                deliveryStatus: true,
+                deliveryDate: true,
+              },
+            },
+          },
+        },
+        transaction: true,
+        _count: {
+          select: {
+            orderLines: true,
+            productionOrders: true,
+            billingStatements: true,
+            transaction: true,
+          },
+        },
+      },
+    });
+
+    if (!customerOrder) {
+      throw new Error("Customer order not found");
+    }
+
+    return customerOrder;
+  } catch (error) {
+    console.error("Error fetching customer order by ID:", error);
+    throw new Error(
+      `Failed to fetch customer order: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+  }
+}
+
+/**
+ * Update customer order with order lines
+ * Server action replacement for /api/customerOrder/[id] PATCH
+ */
+export async function updateCustomerOrderWithLines(
+  id: string,
+  data: {
+    orderNumber?: string;
+    customerId?: string;
+    orderDate?: Date;
+    requiredDate?: Date;
+    status?: Status;
+    totalAmount?: number;
+    shippingAddress?: string;
+    billingAddress?: string;
+    notes?: string;
+    modifiedBy?: string;
+    orderLines?: Array<{
+      id?: string;
+      productId: string;
+      productVariantId?: string;
+      quantity: number;
+      unitPrice: number;
+      status?: Status;
+      notes?: string;
+      createdBy?: string;
+      modifiedBy?: string;
+    }>;
+  }
+) {
+  try {
+    if (!id) {
+      throw new Error("Customer order ID is required");
+    }
+
+    const updatedCustomerOrder = await prisma.customerOrder.update({
+      where: { id },
+      data: {
+        orderNumber: data.orderNumber,
+        customerId: data.customerId,
+        orderDate: data.orderDate,
+        requiredDate: data.requiredDate,
+        status: data.status,
+        totalAmount: data.totalAmount,
+        shippingAddress: data.shippingAddress,
+        billingAddress: data.billingAddress,
+        notes: data.notes,
+        modifiedBy: data.modifiedBy,
+        updatedAt: new Date(),
+        orderLines: data.orderLines ? {
+          upsert: data.orderLines.map((orderLineData) => ({
+            where: { id: orderLineData.id || "" },
+            update: {
+              productId: orderLineData.productId,
+              productVariantId: orderLineData.productVariantId,
+              quantity: orderLineData.quantity,
+              unitPrice: orderLineData.unitPrice,
+              status: orderLineData.status,
+              notes: orderLineData.notes,
+              modifiedBy: orderLineData.modifiedBy,
+              updatedAt: new Date(),
+            },
+            create: {
+              productId: orderLineData.productId,
+              productVariantId: orderLineData.productVariantId,
+              quantity: orderLineData.quantity,
+              unitPrice: orderLineData.unitPrice,
+              status: orderLineData.status,
+              notes: orderLineData.notes,
+              createdBy: orderLineData.createdBy,
+              modifiedBy: orderLineData.modifiedBy,
+            },
+          }))
+        } : undefined,
+      },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            address: true,
+            paymentTerms: true,
+            creditLimit: true,
+          },
+        },
+        orderLines: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                sellingPrice: true,
+                description: true,
+              },
+            },
+            productVariant: {
+              select: {
+                id: true,
+                sku: true,
+                displayName: true,
+                sizeName: true,
+                colorName: true,
+                sellingPrice: true,
+              },
+            },
+          },
+        },
+        productionOrders: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            orderLines: true,
+            productionOrders: true,
+            billingStatements: true,
+          },
+        },
+      },
+    });
+
+    // Revalidate related pages
+    revalidatePath("/admin/customer-orders");
+    revalidatePath(`/admin/customer-orders/${id}`);
+
+    return updatedCustomerOrder;
+  } catch (error) {
+    console.error("Error updating customer order:", error);
+    throw new Error(
+      `Failed to update customer order: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+  }
+}

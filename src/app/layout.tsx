@@ -7,6 +7,7 @@ import AuthProvider from "@/components/providers/auth-provider";
 import { FullscreenProvider } from "@/components/ui/fullscreen-context";
 import { GlobalFullscreenToggle } from "@/components/ui/global-fullscreen-toggle";
 import { ServiceWorkerManager } from "@/components/global/service-worker-manager";
+import { ConnectionErrorHandler } from "@/components/global/connection-error-handler";
 import { MaintenanceProvider } from "@/components/providers/maintenance-provider";
 import { MaintenanceAlertWrapper } from "@/components/global/maintenance-alert-wrapper";
 
@@ -64,7 +65,7 @@ export const viewport: Viewport = {
   ],
 };
 
-// Error Boundary Component
+// Error Boundary Component - Simplified server-side safe version
 function GlobalErrorBoundary({ children }: { children: React.ReactNode }) {
   return <div className="min-h-screen">{children}</div>;
 }
@@ -105,21 +106,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <SecurityWrapper>
-          {/* Critical CSS preload */}
-          <link
-            rel="preload"
-            href="/fonts/GeistVF.woff"
-            as="font"
-            type="font/woff"
-            crossOrigin=""
-          />
-          <link
-            rel="preload"
-            href="/fonts/GeistMonoVF.woff"
-            as="font"
-            type="font/woff"
-            crossOrigin=""
-          />
+          {/* Note: Font preloads removed - using Inter font from Google Fonts instead */}
+          <></>
         </SecurityWrapper>
       </head>
       <body
@@ -186,6 +174,9 @@ export default function RootLayout({
 
         {/* PWA Service Worker Registration and update manager */}
         <ServiceWorkerManager />
+        
+        {/* Global connection error handler */}
+        <ConnectionErrorHandler />
       </body>
     </html>
   );

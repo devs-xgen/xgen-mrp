@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XGen MRP - Offline</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+      }
+
+      .offline-container {
+        text-align: center;
+        max-width: 500px;
+        padding: 2rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .offline-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+      }
+
+      .offline-title {
+        font-size: 2rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+      }
+
+      .offline-message {
+        font-size: 1.1rem;
+        line-height: 1.6;
+        margin-bottom: 2rem;
+        opacity: 0.9;
+      }
+
+      .retry-button {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .retry-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+      }
+
+      .status-indicator {
+        margin-top: 2rem;
+        padding: 0.5rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+      }
+
+      .status-offline {
+        background: rgba(239, 68, 68, 0.2);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+      }
+
+      .status-online {
+        background: rgba(34, 197, 94, 0.2);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="offline-container">
+      <div class="offline-icon">📡</div>
+      <h1 class="offline-title">XGen MRP</h1>
+      <p class="offline-message">
+        You're currently offline. Please check your internet connection and try
+        again.
+        <br /><br />
+        The application will automatically retry when your connection is
+        restored.
+      </p>
+      <button class="retry-button" onclick="retryConnection()">
+        Retry Connection
+      </button>
+      <div id="status" class="status-indicator status-offline">
+        Status: Offline
+      </div>
+    </div>
+
+    <script>
+      function retryConnection() {
+        if (navigator.onLine) {
+          window.location.reload();
+        } else {
+          updateStatus("Still offline. Please check your connection.");
+        }
+      }
+
+      function updateStatus(message) {
+        const statusEl = document.getElementById("status");
+        statusEl.textContent = message;
+      }
+
+      // Monitor online/offline status
+      function handleOnline() {
+        const statusEl = document.getElementById("status");
+        statusEl.textContent = "Status: Back online! Redirecting...";
+        statusEl.className = "status-indicator status-online";
+
+        // Small delay to show the status, then reload
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
+
+      function handleOffline() {
+        const statusEl = document.getElementById("status");
+        statusEl.textContent = "Status: Offline";
+        statusEl.className = "status-indicator status-offline";
+      }
+
+      // Set up event listeners
+      window.addEventListener("online", handleOnline);
+      window.addEventListener("offline", handleOffline);
+
+      // Check initial status
+      if (navigator.onLine) {
+        handleOnline();
+      } else {
+        handleOffline();
+      }
+
+      // Auto-retry every 10 seconds if online
+      setInterval(() => {
+        if (navigator.onLine) {
+          fetch("/")
+            .then((response) => {
+              if (response.ok) {
+                handleOnline();
+              }
+            })
+            .catch(() => {
+              // Still having connection issues
+            });
+        }
+      }, 10000);
+    </script>
+  </body>
+</html>

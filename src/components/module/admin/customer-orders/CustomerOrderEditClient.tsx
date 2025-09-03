@@ -40,6 +40,7 @@ import { Badge } from "@/components/ui/badge";
 
 import { formatCurrencyPHP } from "@/lib/constant";
 import { customerOrderEditSchema, type CustomerOrderEditForm } from "@/lib/validation/customer-order-edit";
+import { updateCustomerOrderWithLines } from "@/lib/actions/customer-order";
 import type { Customer } from "@prisma/client";
 
 interface OrderLine {
@@ -210,17 +211,10 @@ export function CustomerOrderEditClient({
         })),
       };
 
-      const response = await fetch(`/api/customerOrder/${order.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updateData),
-      });
+      // Use server action instead of fetch - no more connection issues!
+      await updateCustomerOrderWithLines(order.id, updateData);
 
-      if (!response.ok) {
-        throw new Error("Failed to update order");
-      }
+      // Server action succeeded if we reach here
 
       toast.success("Order updated successfully!");
       router.push(`/admin/customer-orders/${order.id}`);
