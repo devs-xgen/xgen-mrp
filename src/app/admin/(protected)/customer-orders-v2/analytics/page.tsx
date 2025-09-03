@@ -6,6 +6,7 @@ import { formatCurrencyPHP } from "@/lib/constant";
 import { getCustomerOrdersWithFulfillment } from "@/lib/actions/customer-order";
 import { getOrdersRequiringAnalysis } from "@/lib/actions/order-analysis";
 import { OverallOrderStatus } from "@/types/admin/order-analysis";
+import { CustomerOrderAnalyticsCharts } from "@/components/module/admin/customer-order-ver/CustomerOrderAnalyticsCharts";
 
 export const metadata: Metadata = {
   title: "Customer Orders V2 — Analytics",
@@ -89,105 +90,133 @@ export default async function CustomerOrdersV2AnalyticsPage() {
         </PageHeaderMain>
       </PageHeader>
       <PageBody>
-        <div className="flex flex-col gap-6 p-2 md:p-4">
+        <div className="flex flex-col gap-4 md:gap-6">
+          {/* Key Metrics Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <div className="bg-card border rounded-lg p-3 md:p-4">
+              <div className="text-xs md:text-sm font-medium text-muted-foreground truncate">Total Orders</div>
+              <div className="text-lg md:text-2xl font-bold text-blue-600">{totalOrders}</div>
+            </div>
+            <div className="bg-card border rounded-lg p-3 md:p-4">
+              <div className="text-xs md:text-sm font-medium text-muted-foreground truncate">Completed</div>
+              <div className="text-lg md:text-2xl font-bold text-green-600">{statusCounts["COMPLETED"]}</div>
+            </div>
+            <div className="bg-card border rounded-lg p-3 md:p-4">
+              <div className="text-xs md:text-sm font-medium text-muted-foreground truncate">Revenue</div>
+              <div className="text-sm md:text-lg font-bold text-amber-600 truncate" title={formatCurrencyPHP(totalRevenue)}>
+                {totalRevenue > 1000000 ? `₱${(totalRevenue / 1000000).toFixed(1)}M` : formatCurrencyPHP(totalRevenue)}
+              </div>
+            </div>
+            <div className="bg-card border rounded-lg p-3 md:p-4">
+              <div className="text-xs md:text-sm font-medium text-muted-foreground truncate">Need Analysis</div>
+              <div className="text-lg md:text-2xl font-bold text-purple-600">{ordersRequiringAnalysis}</div>
+            </div>
+          </div>
+
+          {/* Status Breakdown */}
           <Card>
-            <CardHeader>
-              <CardTitle>Overall Metrics</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base md:text-lg">Order Status Breakdown</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <AnalyticsCard
-                title="Total Orders"
-                value={totalOrders}
-                icon="ShoppingCart"
-                {...analyticsCardVariants.blue}
-              />
-              <AnalyticsCard
-                title="Completed"
-                value={statusCounts["COMPLETED"]}
-                icon="CheckCircle"
-                {...analyticsCardVariants.green}
-              />
-              <AnalyticsCard
-                title="Revenue"
-                value={formatCurrencyPHP(totalRevenue)}
-                icon="Package"
-                {...analyticsCardVariants.amber}
-              />
-              <AnalyticsCard
-                title="Need Analysis"
-                value={ordersRequiringAnalysis}
-                icon="Search"
-                {...analyticsCardVariants.purple}
-              />
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                <div className="text-center p-2 md:p-3">
+                  <div className="text-xs md:text-sm text-muted-foreground">Pending</div>
+                  <div className="text-lg md:text-xl font-bold text-orange-600">{statusCounts["PENDING"]}</div>
+                </div>
+                <div className="text-center p-2 md:p-3">
+                  <div className="text-xs md:text-sm text-muted-foreground">In Progress</div>
+                  <div className="text-lg md:text-xl font-bold text-blue-600">{statusCounts["IN_PROGRESS"]}</div>
+                </div>
+                <div className="text-center p-2 md:p-3">
+                  <div className="text-xs md:text-sm text-muted-foreground">Completed</div>
+                  <div className="text-lg md:text-xl font-bold text-green-600">{statusCounts["COMPLETED"]}</div>
+                </div>
+                <div className="text-center p-2 md:p-3">
+                  <div className="text-xs md:text-sm text-muted-foreground">Cancelled</div>
+                  <div className="text-lg md:text-xl font-bold text-red-600">{statusCounts["CANCELLED"]}</div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
+          {/* Production Analysis - Compact Layout */}
           {ordersRequiringAnalysis > 0 && (
             <Card>
-              <CardHeader>
-                <CardTitle>Stock & Production</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base md:text-lg">Production Analysis</CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <AnalyticsCard
-                  title="Can Fulfill Immediately"
-                  value={ordersCanFulfillImmediately}
-                  icon="CheckCircle"
-                  {...analyticsCardVariants.green}
-                />
-                <AnalyticsCard
-                  title="Mixed (Stock + Production)"
-                  value={ordersMixed}
-                  icon="GitBranch"
-                  {...analyticsCardVariants.blue}
-                />
-                <AnalyticsCard
-                  title="Require Production"
-                  value={ordersRequireProduction}
-                  icon="Factory"
-                  {...analyticsCardVariants.orange}
-                />
-                <AnalyticsCard
-                  title="Material Shortages"
-                  value={ordersWithMaterialShortages}
-                  icon="AlertTriangle"
-                  {...analyticsCardVariants.red}
-                />
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-800 rounded-lg p-3 text-center">
+                    <div className="text-xs text-green-700 dark:text-green-300 font-medium truncate">Fulfill Now</div>
+                    <div className="text-lg font-bold text-green-600">{ordersCanFulfillImmediately}</div>
+                  </div>
+                  <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-center">
+                    <div className="text-xs text-blue-700 dark:text-blue-300 font-medium truncate">Mixed</div>
+                    <div className="text-lg font-bold text-blue-600">{ordersMixed}</div>
+                  </div>
+                  <div className="bg-orange-50 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-800 rounded-lg p-3 text-center">
+                    <div className="text-xs text-orange-700 dark:text-orange-300 font-medium truncate">Production</div>
+                    <div className="text-lg font-bold text-orange-600">{ordersRequireProduction}</div>
+                  </div>
+                  <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-lg p-3 text-center">
+                    <div className="text-xs text-red-700 dark:text-red-300 font-medium truncate">Shortages</div>
+                    <div className="text-lg font-bold text-red-600">{ordersWithMaterialShortages}</div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
 
+          {/* Fulfillment Summary - Compact Layout */}
           {customerOrders.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Fulfillment Overview</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <AnalyticsCard
-                  title="Fully Fulfilled"
-                  value={fulfillmentAggregates.fullyFulfilledOrders}
-                  icon="CheckCircle"
-                  {...analyticsCardVariants.green}
-                />
-                <AnalyticsCard
-                  title="Partially Fulfilled"
-                  value={fulfillmentAggregates.partiallyFulfilledOrders}
-                  icon="GitBranch"
-                  {...analyticsCardVariants.blue}
-                />
-                <AnalyticsCard
-                  title="From Stock"
-                  value={fulfillmentAggregates.totalFromStock}
-                  icon="Package"
-                  {...analyticsCardVariants.amber}
-                />
-                <AnalyticsCard
-                  title="From Production"
-                  value={fulfillmentAggregates.totalFromProduction}
-                  icon="Factory"
-                  {...analyticsCardVariants.orange}
-                />
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base md:text-lg">Fulfillment Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Fully Fulfilled</span>
+                      <span className="font-semibold text-green-600">{fulfillmentAggregates.fullyFulfilledOrders}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Partially Fulfilled</span>
+                      <span className="font-semibold text-blue-600">{fulfillmentAggregates.partiallyFulfilledOrders}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base md:text-lg">Fulfillment Sources</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">From Stock</span>
+                      <span className="font-semibold text-amber-600">{fulfillmentAggregates.totalFromStock.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">From Production</span>
+                      <span className="font-semibold text-orange-600">{fulfillmentAggregates.totalFromProduction.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Charts Section */}
+          {customerOrders.length > 0 && (
+            <CustomerOrderAnalyticsCharts 
+              orders={customerOrders}
+              statusCounts={statusCounts}
+              fulfillmentData={fulfillmentAggregates}
+            />
           )}
         </div>
       </PageBody>

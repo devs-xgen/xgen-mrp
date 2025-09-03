@@ -100,7 +100,7 @@
     "react-input-mask": "^2.0.4",
     "react-qr-code": "^2.0.15",
     "react-to-print": "^3.0.5",
-    "recharts": "^2.15.1",
+    "recharts": "^2.15.4",
     "sonner": "^1.7.1",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",

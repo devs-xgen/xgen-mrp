@@ -23,6 +23,7 @@ import { createProductionOrder } from "./production-order";
 import { createProductionBOMFromProduct } from "./production-bom";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { serializeDecimals } from "@/lib/utils/decimal-serializer";
 
 /**
  * Enhanced customer order retrieval for billing with search and filtering
@@ -325,101 +326,22 @@ export async function getCustomerOrdersWithFulfillment(): Promise<
       },
     });
 
-    // Transform the data to include fulfillment tracking
-    return orders.map((order) => ({
-      ...order,
-      customer: {
-        id: order.customer.id,
-        name: order.customer.name,
-        email: order.customer.email,
-        phone: order.customer.phone,
-        address: order.customer.address,
-        paymentTerms: order.customer.paymentTerms,
-        creditLimit: order.customer.creditLimit,
-      },
-      orderLines: order.orderLines.map((line) => ({
-        id: line.id,
-        productId: line.productId,
-        productVariantId: line.productVariantId,
-        quantity: line.quantity,
-        unitPrice:
-          line.unitPrice instanceof Decimal
-            ? line.unitPrice.toNumber()
-            : Number(line.unitPrice),
-        status: line.status,
-        notes: line.notes,
-        // Include fulfillment fields
-        fulfillmentType: line.fulfillmentType,
-        stockAllocated: line.stockAllocated,
-        productionQuantity: line.productionQuantity,
-        fulfillmentStatus: line.fulfillmentStatus,
-        allocatedAt: line.allocatedAt,
-        fulfilledAt: line.fulfilledAt,
-        product: line.product
-          ? {
-              id: line.product.id,
-              name: line.product.name,
-              sku: line.product.sku,
-              description: line.product.description,
-              sellingPrice:
-                line.product.sellingPrice instanceof Decimal
-                  ? line.product.sellingPrice.toNumber()
-                  : Number(line.product.sellingPrice),
-            }
-          : undefined,
-        productVariant: line.productVariant
-          ? {
-              id: line.productVariant.id,
-              sku: line.productVariant.sku,
-              displayName: line.productVariant.displayName,
-              sizeName: line.productVariant.sizeName,
-              colorName: line.productVariant.colorName,
-              sellingPrice:
-                line.productVariant.sellingPrice instanceof Decimal
-                  ? line.productVariant.sellingPrice.toNumber()
-                  : Number(line.productVariant.sellingPrice),
-            }
-          : undefined,
-      })),
-      productionOrders: order.productionOrders?.map((po) => ({
-        id: po.id,
-        quantity: po.quantity,
-        status: po.status,
-        priority: po.priority,
-        startDate: po.startDate,
-        dueDate: po.dueDate,
-        completedQuantity: po.completedQuantity,
-        product: {
-          id: po.product.id,
-          name: po.product.name,
-          sku: po.product.sku,
-        },
-      })),
-      billingStatements: order.billingStatements?.map((bs) => ({
-        id: bs.id,
-        statementNumber: bs.statementNumber,
-        status: bs.status,
-        totalAmount:
-          bs.totalAmount instanceof Decimal
-            ? bs.totalAmount.toNumber()
-            : Number(bs.totalAmount),
-        billingDate: bs.billingDate,
-        salesInvoice: bs.salesInvoice
-          ? {
-              id: bs.salesInvoice.id,
-              invoiceNumber: bs.salesInvoice.invoiceNumber,
-              status: bs.salesInvoice.status,
-            }
-          : undefined,
-        deliveryReceipts: bs.deliveryReceipts?.map((dr) => ({
-          id: dr.id,
-          receiptNumber: dr.receiptNumber,
-          deliveryStatus: dr.deliveryStatus,
-          deliveryDate: dr.deliveryDate,
+    // Transform the data to include fulfillment tracking and serialize decimals
+    return serializeDecimals(
+      orders.map((order) => ({
+        ...order,
+        orderLines: order.orderLines.map((line) => ({
+          ...line,
+          // Include fulfillment fields
+          fulfillmentType: line.fulfillmentType,
+          stockAllocated: line.stockAllocated,
+          productionQuantity: line.productionQuantity,
+          fulfillmentStatus: line.fulfillmentStatus,
+          allocatedAt: line.allocatedAt,
+          fulfilledAt: line.fulfilledAt,
         })),
-      })),
-      _count: order._count,
-    }));
+      }))
+    );
   } catch (error) {
     console.error("Error fetching customer orders with fulfillment:", error);
     throw new Error("Failed to fetch customer orders");

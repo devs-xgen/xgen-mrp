@@ -205,6 +205,9 @@ export function CustomerOrderV2Client({
               order.id === updatedOrder.id ? updatedOrder : order
             ));
           }}
+          onOrderDelete={(deletedOrderId) => {
+            setOrders(prev => prev.filter(order => order.id !== deletedOrderId));
+          }}
         />
       </SectionCard>
 

@@ -51,11 +51,13 @@ import { ProductionPlanningActions } from "./ProductionPlanningActions";
 interface CustomerOrderAnalysisClientProps {
   orderAnalysis: CustomerOrderAnalysisResult;
   orderId: string;
+  backHref?: string;
 }
 
 export function CustomerOrderAnalysisClient({
   orderAnalysis,
   orderId,
+  backHref = "/admin/customer-orders",
 }: CustomerOrderAnalysisClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -136,7 +138,7 @@ export function CustomerOrderAnalysisClient({
       <div className="space-y-6">
         {/* Header Navigation */}
         <div className="flex items-center gap-4">
-          <Link href="/admin/customer-orders">
+          <Link href={backHref}>
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Orders

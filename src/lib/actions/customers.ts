@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
+import { serializeDecimals } from "@/lib/utils/decimal-serializer";
 
 export interface CustomerSearchFilters {
   search?: string;
@@ -89,7 +90,7 @@ export async function getAllCustomers(filters?: CustomerSearchFilters) {
       skip: offset,
     });
 
-    return customers;
+    return serializeDecimals(customers);
   } catch (error) {
     console.error("Error fetching customers:", error);
     throw new Error("Failed to fetch customers");

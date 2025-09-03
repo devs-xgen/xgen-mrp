@@ -202,6 +202,7 @@ export async function archiveCustomerOrder(
     });
 
     revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
     revalidatePath("/admin/analytics/orders");
 
     return {
@@ -286,6 +287,7 @@ export async function restoreCustomerOrder(
     });
 
     revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
     revalidatePath("/admin/analytics/orders");
 
     return {

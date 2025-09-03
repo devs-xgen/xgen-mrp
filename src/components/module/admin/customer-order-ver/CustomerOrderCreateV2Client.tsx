@@ -176,16 +176,21 @@ export function CustomerOrderCreateV2Client({
     }
 
     setIsSubmitting(true);
+    // Normalize lines to match API input shape and strip view-only properties
     const normalizedOrderLines = orderLines.map((line) => ({
-      ...line,
+      productId: line.productId,
       productVariantId:
         line.productVariantId && line.productVariantId.trim() !== ""
           ? line.productVariantId
-          : null,
+          : undefined, // use undefined instead of null to satisfy input type
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
     }));
     try {
       const orderData = {
-        ...data,
+        customerId: data.customerId,
+        requiredDate: new Date(data.requiredDate),
+        notes: data.notes,
         orderLines: normalizedOrderLines,
       };
 
@@ -537,97 +542,146 @@ export function CustomerOrderCreateV2Client({
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      {/* Progress Header */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium">Create Customer Order</h3>
-              <span className="text-sm text-muted-foreground">
-                Step {currentStep + 1} of {STEPS.length}
-              </span>
-            </div>
-            
-            <Progress value={progress} className="w-full" />
-            
-            <div className="flex justify-between">
-              {STEPS.map((step, index) => (
-                <div
-                  key={step.id}
-                  className={`flex items-center space-x-2 ${
-                    index <= currentStep ? "text-primary" : "text-muted-foreground"
-                  }`}
-                >
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                      index < currentStep
-                        ? "bg-primary text-primary-foreground"
-                        : index === currentStep
-                        ? "bg-primary/20 text-primary"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {index < currentStep ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      index + 1
-                    )}
-                  </div>
-                  <div className="hidden sm:block">
-                    <p className="text-sm font-medium">{step.title}</p>
-                    <p className="text-xs text-muted-foreground">{step.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+    <div className="flex gap-6 h-[calc(100vh-200px)]">
+      {/* Left: Progress sidebar */}
+      <div className="w-80 flex flex-col border rounded-lg bg-card">
+        <div className="p-6 border-b border-border">
+          <div className="flex items-center gap-2 mb-2">
+            <ShoppingCart className="h-5 w-5 text-primary" />
+            <h1 className="text-lg font-semibold">Create Customer Order</h1>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Step Content */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{STEPS[currentStep].title}</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <form onSubmit={handleSubmit(onSubmit)}>
-            {renderCurrentStep()}
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* Navigation */}
-      <div className="flex justify-between">
-        <div>
-          {currentStep > 0 ? (
-            <Button variant="outline" onClick={prevStep}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Previous
-            </Button>
-          ) : (
-            <Button variant="outline" asChild>
-              <Link href="/admin/customer-orders-v2">
-                Cancel
-              </Link>
-            </Button>
-          )}
+          <p className="text-muted-foreground text-sm mt-1">
+            Create an order independently for archiving. Production planning happens separately.
+          </p>
         </div>
 
-        <div>
-          {currentStep < STEPS.length - 1 ? (
-            <Button onClick={nextStep} disabled={!canGoNext()}>
-              Next
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          ) : (
-            <Button 
-              onClick={handleSubmit(onSubmit)} 
-              disabled={isSubmitting || !canGoNext()}
+        <div className="p-6 border-b border-border">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">
+                Step {currentStep + 1} of {STEPS.length}
+              </span>
+              <span className="text-sm text-muted-foreground">{Math.round(progress)}%</span>
+            </div>
+            <Progress value={progress} className="w-full" />
+          </div>
+        </div>
+
+        <div className="flex-1 p-6 space-y-3 overflow-y-auto">
+          {STEPS.map((step, index) => {
+            const isActive = index === currentStep;
+            const isCompleted = index < currentStep;
+
+            return (
+              <div
+                key={step.id}
+                className={`flex items-start space-x-3 p-3 rounded-lg transition-colors ${
+                  isActive
+                    ? "bg-primary/10 border-2 border-primary/20"
+                    : isCompleted
+                    ? "bg-green-50 border border-green-200"
+                    : "bg-muted/30 border border-border"
+                }`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 ${
+                    isCompleted
+                      ? "bg-green-600 text-white"
+                      : isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {isCompleted ? <Check className="w-4 h-4" /> : index + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm">{step.title}</div>
+                  <div className="text-xs text-muted-foreground mt-1">{step.description}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="p-6 border-t border-border bg-background">
+          <div className="flex justify-between space-x-3">
+            <Button
+              variant="outline"
+              onClick={prevStep}
+              disabled={currentStep === 0}
+              className="flex-1"
             >
-              {isSubmitting ? "Creating..." : "Create Order"}
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Previous
             </Button>
-          )}
+
+            {currentStep === STEPS.length - 1 ? (
+              <Button
+                onClick={handleSubmit(onSubmit)}
+                disabled={!canGoNext() || isSubmitting}
+                className="flex-1"
+              >
+                {isSubmitting ? "Creating..." : "Create Order"}
+              </Button>
+            ) : (
+              <Button onClick={nextStep} disabled={!canGoNext()} className="flex-1">
+                Next
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Right: Form content */}
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="mb-4">
+          <Link href="/admin/customer-orders-v2">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Customer Orders
+            </Button>
+          </Link>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          <Card className="max-w-4xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl">{STEPS[currentStep]?.title}</CardTitle>
+              <p className="text-muted-foreground text-sm">{STEPS[currentStep]?.description}</p>
+            </CardHeader>
+            <CardContent>{renderCurrentStep()}</CardContent>
+          </Card>
+        </div>
+
+        {/* Mobile footer navigation */}
+        <div className="lg:hidden bg-card border-t border-border p-4">
+          <div className="flex justify-between space-x-3">
+            <Button
+              variant="outline"
+              onClick={prevStep}
+              disabled={currentStep === 0}
+              className="flex-1"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Previous
+            </Button>
+
+            {currentStep === STEPS.length - 1 ? (
+              <Button
+                onClick={handleSubmit(onSubmit)}
+                disabled={!canGoNext() || isSubmitting}
+                className="flex-1"
+              >
+                {isSubmitting ? "Creating..." : "Create Order"}
+              </Button>
+            ) : (
+              <Button onClick={nextStep} disabled={!canGoNext()} className="flex-1">
+                Next
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
