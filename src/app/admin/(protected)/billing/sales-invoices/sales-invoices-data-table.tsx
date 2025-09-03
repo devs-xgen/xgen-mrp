@@ -22,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
+import { formatDate } from "@/components/global/table/table-utils";
 import { PDFDownloadButton } from "@/components/module/admin/billing/sales-invoices/pdf-download-button";
 import { ShareLinkDialog } from "@/components/shared/ShareLinkDialog";
 import { useState } from "react";
