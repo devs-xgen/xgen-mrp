@@ -1,5 +1,6 @@
-import { updateFulfillmentStatus } from "@/lib/actions/stock-allocation";
 "use client";
+
+import { updateFulfillmentStatus } from "@/lib/actions/stock-allocation";
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

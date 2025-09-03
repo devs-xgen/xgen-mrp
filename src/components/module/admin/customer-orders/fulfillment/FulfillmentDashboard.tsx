@@ -1,5 +1,6 @@
-import { getOrderFulfillmentTracking } from "@/lib/actions/stock-allocation";
 "use client";
+
+import { getOrderFulfillmentTracking } from "@/lib/actions/stock-allocation";
 
 import { useState } from "react";
 import { FulfillmentTracker } from "./FulfillmentTracker";
