@@ -2010,46 +2010,64 @@ export async function updateCustomerOrderWithLines(
     if (!id) {
       throw new Error("Customer order ID is required");
     }
+    const session = await getServerSession(authOptions);
+    const userId = (session as any)?.user?.id || data.modifiedBy || undefined;
+
+    const normalizeDate = (d?: Date | string) => {
+      if (!d) return undefined;
+      return typeof d === "string" ? new Date(d) : d;
+    };
 
     const updatedCustomerOrder = await prisma.customerOrder.update({
       where: { id },
       data: {
         orderNumber: data.orderNumber,
         customerId: data.customerId,
-        orderDate: data.orderDate,
-        requiredDate: data.requiredDate,
+        orderDate: normalizeDate(data.orderDate),
+        requiredDate: normalizeDate(data.requiredDate),
         status: data.status,
-        totalAmount: data.totalAmount,
+        totalAmount:
+          typeof data.totalAmount === "number"
+            ? new Decimal(data.totalAmount)
+            : (data.totalAmount as any),
         shippingAddress: data.shippingAddress,
         billingAddress: data.billingAddress,
         notes: data.notes,
-        modifiedBy: data.modifiedBy,
+        modifiedBy: userId,
         updatedAt: new Date(),
-        orderLines: data.orderLines ? {
-          upsert: data.orderLines.map((orderLineData) => ({
-            where: { id: orderLineData.id || "" },
-            update: {
-              productId: orderLineData.productId,
-              productVariantId: orderLineData.productVariantId,
-              quantity: orderLineData.quantity,
-              unitPrice: orderLineData.unitPrice,
-              status: orderLineData.status,
-              notes: orderLineData.notes,
-              modifiedBy: orderLineData.modifiedBy,
-              updatedAt: new Date(),
-            },
-            create: {
-              productId: orderLineData.productId,
-              productVariantId: orderLineData.productVariantId,
-              quantity: orderLineData.quantity,
-              unitPrice: orderLineData.unitPrice,
-              status: orderLineData.status,
-              notes: orderLineData.notes,
-              createdBy: orderLineData.createdBy,
-              modifiedBy: orderLineData.modifiedBy,
-            },
-          }))
-        } : undefined,
+        orderLines: data.orderLines
+          ? {
+              upsert: data.orderLines.map((orderLineData) => ({
+                where: { id: orderLineData.id || "" },
+                update: {
+                  productId: orderLineData.productId,
+                  productVariantId: orderLineData.productVariantId ?? null,
+                  quantity: orderLineData.quantity,
+                  unitPrice:
+                    typeof orderLineData.unitPrice === "number"
+                      ? new Decimal(orderLineData.unitPrice)
+                      : (orderLineData.unitPrice as any),
+                  status: orderLineData.status as any,
+                  notes: orderLineData.notes,
+                  modifiedBy: userId || orderLineData.modifiedBy,
+                  updatedAt: new Date(),
+                },
+                create: {
+                  productId: orderLineData.productId,
+                  productVariantId: orderLineData.productVariantId ?? null,
+                  quantity: orderLineData.quantity,
+                  unitPrice:
+                    typeof orderLineData.unitPrice === "number"
+                      ? new Decimal(orderLineData.unitPrice)
+                      : (orderLineData.unitPrice as any),
+                  status: orderLineData.status as any,
+                  notes: orderLineData.notes,
+                  createdBy: orderLineData.createdBy || userId,
+                  modifiedBy: userId || orderLineData.modifiedBy,
+                },
+              })),
+            }
+          : undefined,
       },
       include: {
         customer: {

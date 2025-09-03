@@ -1,132 +1,19 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
 import { CustomerOrderEditClient } from "@/components/module/admin/customer-orders/CustomerOrderEditClient";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
-import { Prisma } from "@prisma/client";
+import { getCustomerOrderById } from "@/lib/actions/customer-order";
+import { getAllCustomers } from "@/lib/actions/customers";
+import { getProductsWithVariantsForOrders } from "@/lib/actions/product";
 
 interface CustomerOrderEditPageProps {
-  params: Promise<{
+  params: {
     id: string;
-  }>;
-}
-
-async function getCustomerOrderForEdit(orderId: string) {
-  try {
-    const order = await prisma.customerOrder.findUnique({
-      where: {
-        id: orderId,
-      },
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            email: true,
-            phone: true,
-            address: true,
-            city: true,
-            state: true,
-            country: true,
-            paymentTerms: true,
-            creditLimit: true,
-          },
-        },
-        orderLines: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                sku: true,
-                description: true,
-                sellingPrice: true,
-                currentStock: true,
-                minimumStockLevel: true,
-                committedStock: true,
-              },
-            },
-            productVariant: {
-              select: {
-                id: true,
-                sku: true,
-                displayName: true,
-                sizeName: true,
-                colorName: true,
-                sellingPrice: true,
-                currentStock: true,
-                minimumStockLevel: true,
-                committedStock: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    return order;
-  } catch (error) {
-    console.error("Error fetching customer order for edit:", error);
-    return null;
-  }
-}
-
-async function getCustomersAndProducts() {
-  try {
-    const [customers, products] = await Promise.all([
-      prisma.customer.findMany({
-        where: {
-          status: "ACTIVE",
-        },
-        select: {
-          id: true,
-          name: true,
-          code: true,
-          email: true,
-          phone: true,
-        },
-        orderBy: {
-          name: "asc",
-        },
-      }),
-      prisma.product.findMany({
-        where: {
-          status: "ACTIVE",
-        },
-        include: {
-          variants: {
-            where: {
-              isActive: true,
-            },
-            select: {
-              id: true,
-              sku: true,
-              displayName: true,
-              sizeName: true,
-              colorName: true,
-              sellingPrice: true,
-              currentStock: true,
-              minimumStockLevel: true,
-            },
-          },
-        },
-        orderBy: {
-          name: "asc",
-        },
-      }),
-    ]);
-
-    return { customers, products };
-  } catch (error) {
-    console.error("Error fetching customers and products:", error);
-    return { customers: [], products: [] };
-  }
+  };
 }
 
 export async function generateMetadata({ params }: CustomerOrderEditPageProps): Promise<Metadata> {
-  const resolvedParams = await params;
-  const order = await getCustomerOrderForEdit(resolvedParams.id);
+  const order = await getCustomerOrderById(params.id);
   
   if (!order) {
     return {
@@ -141,10 +28,10 @@ export async function generateMetadata({ params }: CustomerOrderEditPageProps): 
 }
 
 export default async function CustomerOrderEditPage({ params }: CustomerOrderEditPageProps) {
-  const resolvedParams = await params;
-  const [order, { customers, products }] = await Promise.all([
-    getCustomerOrderForEdit(resolvedParams.id),
-    getCustomersAndProducts(),
+  const [order, customers, productsForOrders] = await Promise.all([
+    getCustomerOrderById(params.id),
+    getAllCustomers(),
+    getProductsWithVariantsForOrders(),
   ]);
 
   if (!order) {
@@ -173,13 +60,13 @@ export default async function CustomerOrderEditPage({ params }: CustomerOrderEdi
     })),
   };
 
-  const transformedProducts = products.map((product) => ({
+  // Map server action products (unitPrice) to structure expected by the client (sellingPrice)
+  const transformedProducts = productsForOrders.map((product: any) => ({
     ...product,
-    unitCost: product.unitCost.toNumber(),
-    sellingPrice: product.sellingPrice.toNumber(),
-    variants: product.variants.map((variant) => ({
+    sellingPrice: product.unitPrice,
+    variants: (product.variants || []).map((variant: any) => ({
       ...variant,
-      sellingPrice: variant.sellingPrice.toNumber(),
+      sellingPrice: variant.unitPrice,
     })),
   }));
 

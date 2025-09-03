@@ -72,7 +72,7 @@ export function FulfillmentDashboard({
       const { getOrderFulfillmentTracking } = await import("@/lib/actions/stock-allocation");
       const updatedData = await getOrderFulfillmentTracking(orderId);
       // Update the fulfillment data
-      window.location.reload(); // Temporary solution - in production, use proper state management
+      router.refresh(); // Temporary solution - in production, use proper state management
     } catch (error) {
       console.error("Error refreshing data:", error);
     }

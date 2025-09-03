@@ -67,7 +67,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
       })
       setShowDeleteDialog(false)
       // Refresh the page to update the list
-      window.location.reload()
+      router.refresh()
     } catch (error) {
       toast({
         title: "Error",
@@ -98,7 +98,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         setShowArchiveDialog(false)
         setArchiveReason("")
         // Refresh the page to update the list
-        window.location.reload()
+        router.refresh()
       } else {
         toast({
           title: "Archive Failed",

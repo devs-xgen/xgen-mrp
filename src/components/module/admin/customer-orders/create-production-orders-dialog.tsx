@@ -182,7 +182,7 @@ export function CreateProductionOrdersDialog({
       onOpenChange(false)
       
       // Force a full page refresh to ensure the production order count is updated
-      window.location.reload()
+      router.refresh()
     } catch (error) {
       console.error("Failed to create production orders:", error)
       
