@@ -50,6 +50,39 @@ export const priorityFilterOptions: FilterOption["options"] = [
 
 // Predefined table configurations for common page types
 export const tableConfigs = {
+  "billing-statements": {
+    searchKey: "statementNumber",
+    searchPlaceholder: "Filter billing statements...",
+    emptyMessage: "No billing statements found.",
+    enableSelection: true,
+    enableFiltering: true,
+    enablePagination: true,
+    pageSize: 10,
+    filterOptions: [
+      {
+        column: "status",
+        title: "Status",
+        options: statusFilterOptions,
+      },
+    ],
+  },
+
+  "sales-invoices": {
+    searchKey: "invoiceNumber",
+    searchPlaceholder: "Filter sales invoices...",
+    emptyMessage: "No sales invoices found.",
+    enableSelection: true,
+    enableFiltering: true,
+    enablePagination: true,
+    pageSize: 10,
+    filterOptions: [
+      {
+        column: "status",
+        title: "Status",
+        options: statusFilterOptions,
+      },
+    ],
+  },
   materials: {
     searchKey: "name",
     searchPlaceholder: "Filter materials...",
@@ -212,21 +245,47 @@ export function formatCurrency(amount: number, currency = "PHP"): string {
 }
 
 // Helper function to format date
-export function formatDate(date: Date | string): string {
+// Internal safe date parsing utility to prevent "Invalid time value" errors
+function toSafeDate(value: unknown): Date | null {
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const d = new Date(trimmed);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  if (typeof value === "number") {
+    if (!isFinite(value)) return null;
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
+export function formatDate(date: Date | string | number | null | undefined, fallback: string = "—"): string {
+  const d = toSafeDate(date as unknown);
+  if (!d) return fallback;
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
-  }).format(new Date(date));
+  }).format(d);
 }
 
 // Helper function to format date and time
-export function formatDateTime(date: Date | string): string {
+export function formatDateTime(
+  date: Date | string | number | null | undefined,
+  fallback: string = "—"
+): string {
+  const d = toSafeDate(date as unknown);
+  if (!d) return fallback;
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(date));
+  }).format(d);
 }

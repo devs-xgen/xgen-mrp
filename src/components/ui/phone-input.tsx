@@ -30,7 +30,13 @@ export function PhoneInput({ value = "", onChange, className, allowedCountryCode
     React.useEffect(() => {
         async function fetchCountryCodes() {
             try {
-                const response = await fetch('https://restcountries.com/v3.1/all?fields=name,idd,flags')
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+                const response = await fetch('https://restcountries.com/v3.1/all?fields=name,idd,flags', {
+                    signal: controller.signal,
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+                clearTimeout(timeoutId);
                 const data = await response.json()
 
                 let codes: CountryCode[] = data
@@ -49,7 +55,7 @@ export function PhoneInput({ value = "", onChange, className, allowedCountryCode
 
                 setCountryCodes(codes)
             } catch (error) {
-                console.error('Failed to fetch country codes:', error)
+                console.warn('PhoneInput: Country codes fetch failed (timeout or connection issue):', error.name === 'AbortError' ? 'Request timeout' : error.message);
                 // Fallback to Philippines as default
                 const fallbackCode = allowedCountryCodes?.[0] || "63"
                 const fallbackCountry = fallbackCode === "63" ? "Philippines" : `+${fallbackCode}`

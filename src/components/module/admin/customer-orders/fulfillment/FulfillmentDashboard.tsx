@@ -1,3 +1,4 @@
+import { getOrderFulfillmentTracking } from "@/lib/actions/stock-allocation";
 "use client";
 
 import { useState } from "react";
@@ -69,7 +70,6 @@ export function FulfillmentDashboard({
   const handleRefresh = async () => {
     // In a real implementation, this would refetch data from the server
     try {
-      const { getOrderFulfillmentTracking } = await import("@/lib/actions/stock-allocation");
       const updatedData = await getOrderFulfillmentTracking(orderId);
       // Update the fulfillment data
       router.refresh(); // Temporary solution - in production, use proper state management

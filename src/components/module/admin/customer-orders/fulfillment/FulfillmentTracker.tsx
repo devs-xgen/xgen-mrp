@@ -1,3 +1,4 @@
+import { updateFulfillmentStatus } from "@/lib/actions/stock-allocation";
 "use client";
 
 import { useState, useEffect } from "react";
@@ -129,7 +130,6 @@ export function FulfillmentTracker({
 
   const handleStatusUpdate = async (orderLineId: string, newStatus: FulfillmentStatus) => {
     try {
-      const { updateFulfillmentStatus } = await import("@/lib/actions/stock-allocation");
       const result = await updateFulfillmentStatus(orderLineId, newStatus);
       
       if (result.success) {
