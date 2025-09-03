@@ -14,7 +14,7 @@
     "lint:fix": "next lint --fix",
     "format": "prettier --write \"**/*.{js,ts,tsx,md}\"",
     "type-check": "tsc --noEmit",
-    "prepare": "husky install",
+    "prepare": "husky || exit 0",
     "pre-commit": "lint-staged",
     "electron-dev": "electron .",
     "prisma:generate": "prisma generate --no-engine",
