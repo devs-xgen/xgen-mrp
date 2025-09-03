@@ -1,25 +1,51 @@
 [build]
-  command = "npm ci && npx prisma generate && npm run build"
+  command = "rm -rf .next && npm ci && npx prisma generate --no-engine && npm run build"
   publish = ".next"
 
 [build.environment]
-  NODE_VERSION = "18"
-  NPM_VERSION = "9"
+  NODE_VERSION = "22"
+  NPM_VERSION = "10"
+  SKIP_PREFLIGHT_CHECK = "true"
+  NODE_OPTIONS = "--max-old-space-size=4096"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
 [functions]
   node_bundler = "esbuild"
+  external_node_modules = ["@prisma/client", "prisma"]
 
+# Environment variables for different branches
+[context.production.environment]
+  NODE_ENV = "production"
+
+[context.deploy-preview.environment]
+  NODE_ENV = "development"
+
+[context.branch-deploy.environment]
+  NODE_ENV = "development"
+
+# Headers for security and caching
 [[headers]]
   for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
 
 [[headers]]
   for = "/_next/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# Redirects for handling client-side routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

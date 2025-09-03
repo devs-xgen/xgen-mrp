@@ -2,6 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  
+  // Netlify-specific optimizations
+  trailingSlash: false,
+  
   // Next.js 15 - moved serverComponentsExternalPackages out of experimental
   serverExternalPackages: ['@prisma/client', '@prisma/extension-accelerate', 'bcryptjs'],
   
@@ -38,13 +42,13 @@ const nextConfig = {
       type: 'asset/resource',
     });
 
-
-
-    if (!config.isServer) {
+    if (!isServer) {
       // Add server-only packages to client-side externals
       config.externals = [...(config.externals || []), 'bcryptjs'];
       
+      // Enhanced fallbacks for Netlify
       config.resolve.fallback = {
+        ...config.resolve.fallback,
         fs: false,
         dns: false,
         net: false,
@@ -70,8 +74,6 @@ const nextConfig = {
       test: /\.svg$/,
       use: ['@svgr/webpack'],
     });
-
-
     
     return config;
   },
@@ -81,6 +83,12 @@ const nextConfig = {
     // Expose the app version to the client for diagnostics/UI
     NEXT_PUBLIC_APP_VERSION: require('./package.json').version,
   },
+  
+  // Netlify-specific configurations
+  ...(process.env.NETLIFY && {
+    compress: true,
+    poweredByHeader: false,
+  }),
   
   // Add redirects to handle plural form URLs
   async redirects() {
