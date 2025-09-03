@@ -576,7 +576,3 @@ export interface MRPDashboardData {
     totalVarianceAmount: number
   }
 }
-
-export default {
-  // Export all types for easy importing
-} 

@@ -19,7 +19,7 @@ export type SerializableData<T> =
   // Preserve Date instances as-is (do not recurse into Date methods)
   T extends Date ? Date :
   // Preserve function types (e.g., methods on classes like Date)
-  T extends Function ? T :
+  T extends (...args: any[]) => unknown ? T :
   // Recurse into arrays
   T extends Array<infer U> ? Array<SerializableData<U>> :
   // Recurse into plain objects by mapping properties

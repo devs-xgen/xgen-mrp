@@ -53,7 +53,7 @@ export function ViewBillingDocumentsDialog({
   
   // Filter and limit billing documents
   const filteredDocuments = useMemo(() => {
-    let filtered = billingDocuments.filter(doc => 
+    const filtered = billingDocuments.filter(doc => 
       doc.statementNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.salesInvoice?.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||

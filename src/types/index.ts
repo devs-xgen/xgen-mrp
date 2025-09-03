@@ -5,5 +5,5 @@ export * from './admin'
 // export * from './worker' next na wala pa iniimport
 
 
-export interface Product extends PrismaProduct { }
-export interface ProductCategory extends PrismaProductCategory { }
+export type Product = PrismaProduct
+export type ProductCategory = PrismaProductCategory

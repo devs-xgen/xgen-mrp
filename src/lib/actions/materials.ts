@@ -241,7 +241,7 @@ export async function updateMaterial(data: MaterialUpdateInput) {
     const userId = session?.user?.id || "system"
 
     // Initialize update data with audit fields
-    let updateData: any = {
+    const updateData: any = {
       modifiedBy: userId,
       updatedAt: new Date(),
     };

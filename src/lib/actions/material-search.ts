@@ -30,7 +30,7 @@ export async function searchMaterials(query: string = ""): Promise<MaterialOptio
     const searchTerm = query.trim();
     
     // Fixed where clause using a simpler approach
-    let whereClause: any = { status: Status.ACTIVE };
+    const whereClause: any = { status: Status.ACTIVE };
     
     if (searchTerm) {
       whereClause.OR = [

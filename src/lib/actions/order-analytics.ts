@@ -274,9 +274,9 @@ export async function getFulfillmentAnalytics(dateRange?: {
     let pendingLines = 0;
 
     // Calculate fulfillment times
-    let stockFulfillmentTimes: number[] = [];
-    let productionFulfillmentTimes: number[] = [];
-    let hybridFulfillmentTimes: number[] = [];
+    const stockFulfillmentTimes: number[] = [];
+    const productionFulfillmentTimes: number[] = [];
+    const hybridFulfillmentTimes: number[] = [];
 
     orderLines.forEach((line) => {
       switch (line.fulfillmentType) {
