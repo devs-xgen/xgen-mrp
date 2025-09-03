@@ -2,85 +2,121 @@
 
 ## What is Docker?
 
-Docker is a **containerization platform** that packages your application and all its dependencies into a standardized unit called a **container**. Think of it as a lightweight, portable virtual machine.
+Docker is a **containerization platform** that packages your application and all its dependencies into a standardized unit called a **container**. Think of it as a lightweight, portable virtual machine that ensures your application runs consistently across different environments.
 
 ### Key Concepts
-- **Image**: A snapshot of your application (like a blueprint)
+- **Image**: A snapshot of your application with all dependencies (like a blueprint)
 - **Container**: A running instance of an image (like a running program)
 - **Dockerfile**: Instructions to build an image
 - **docker-compose.yml**: Defines multiple services that work together
 
 ## How Docker Works in Our Project
 
-Our xgen-mrp project uses Docker to run:
-- **Next.js application** (your main app)
-- **PostgreSQL database** (data storage)
-- **Adminer** (database management interface)
+Our xgen-mrp project uses Docker to provide **two environments**:
 
-## Quick Start Guide
+### 🔧 Development Environment (Port 3001)
+- **Purpose**: For developers working on the code
+- **Features**: Hot reload, development tools, source code debugging
+- **Access**: http://localhost:3001
+- **Use Case**: Code development, testing new features
+
+### 🏭 Production Environment (Port 3002)  
+- **Purpose**: For end users and production-like testing
+- **Features**: Optimized build, production performance
+- **Access**: http://localhost:3002
+- **Use Case**: User access, demos, production testing
+
+Both environments connect to your **cloud PostgreSQL database** via Prisma.
+
+## 🚀 Quick Start Guide
 
 ### Prerequisites
-- Docker Desktop installed
+- Docker Desktop installed ([Download here](https://docs.docker.com/get-docker/))
 - Terminal/command line access
 
-### Step 1: Fix Port Conflict
-```bash
-# Kill the process using port 3000
-kill -9 72385
-
-# Or use alternative port (edit docker-compose.yml first)
-# Change line 27: "3001:3000" instead of "3000:3000"
-```
-
-### Step 2: Start Services
+### Option 1: One-Click Setup (Recommended)
 ```bash
 # Navigate to project directory
-cd /Users/zafajardo/Documents/Development/inventory\ system/xgen-mrp
+cd "/Users/zafajardo/Documents/Development/inventory system/xgen-mrp"
 
-# Start all services
+# Run the automated setup script
+./docker-setup.sh
+```
+
+This script will:
+- ✅ Check Docker installation
+- 📝 Create environment configuration
+- 🔨 Build Docker images
+- 🚀 Start both services
+- 📊 Show status and access URLs
+
+### Option 2: Manual Setup
+```bash
+# Navigate to project directory
+cd "/Users/zafajardo/Documents/Development/inventory system/xgen-mrp"
+
+# Create environment file
+cp docker.env.example .env
+
+# Build and start services
+docker-compose build
 docker-compose up -d
 
 # Check status
 docker-compose ps
 ```
 
-### Step 3: Available Services
-- **App**: http://localhost:3002
-- **Database**: Uses your cloud PostgreSQL via Prisma
+### 🎯 Access Your Applications
+- **👨‍💻 Development**: http://localhost:3001 (for developers)
+- **👥 Production**: http://localhost:3002 (for users)
+- **💾 Database**: Your existing cloud PostgreSQL (no change needed)
 
-## Essential Docker Commands
+## 📋 Essential Docker Commands
 
 ### Service Management
 ```bash
-# Start services
+# Start both environments
 docker-compose up -d
 
-# Stop services
+# Stop all services
 docker-compose down
 
 # View logs
-docker-compose logs -f nextjs
-docker-compose logs -f postgres
+docker-compose logs -f xgen-dev     # Development logs
+docker-compose logs -f xgen-prod    # Production logs
+docker-compose logs -f              # Both services
 
 # Restart specific service
-docker-compose restart nextjs
+docker-compose restart xgen-dev     # Restart development
+docker-compose restart xgen-prod    # Restart production
+
+# Check service status
+docker-compose ps
 ```
 
 ### Container Operations
 ```bash
-# Execute commands inside container
-docker-compose exec nextjs npm run dev
-docker-compose exec postgres psql -U inventory_user -d inventory_db
+# Execute commands inside containers
+docker-compose exec xgen-dev npm run lint           # Run linting in dev
+docker-compose exec xgen-dev npm run test           # Run tests in dev
+docker-compose exec xgen-prod npm run start         # Check production start
 
 # Access container shell
-docker-compose exec nextjs sh
-docker-compose exec postgres bash
+docker-compose exec xgen-dev sh     # Development container shell
+docker-compose exec xgen-prod sh    # Production container shell
 ```
 
-### Development Mode
+### Development Workflow
 ```bash
-# Use development overrides for hot reload
-docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d
+# Start development environment only
+docker-compose up xgen-dev -d
+
+# Rebuild after code changes
+docker-compose build xgen-dev
+docker-compose up xgen-dev -d
+
+# Watch logs during development
+docker-compose logs -f xgen-dev
 ```
 
 ## Project Structure

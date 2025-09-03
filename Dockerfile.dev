@@ -1,14 +1,15 @@
 FROM node:18-alpine
 
+# Install required packages for hot reload
+RUN apk add --no-cache libc6-compat
+
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-
-# Copy prisma directory
 COPY prisma ./prisma/
 
-# Install dependencies and skip postinstall
+# Install dependencies and skip postinstall to avoid conflicts
 RUN npm install --ignore-scripts
 
 # Generate Prisma client
@@ -17,8 +18,14 @@ RUN npx prisma generate --no-engine
 # Copy source code
 COPY . .
 
+# Create .next directory with proper permissions
+RUN mkdir -p .next && chown -R node:node .next
+
+# Switch to non-root user
+USER node
+
 # Expose port
 EXPOSE 3001
 
-# Start development server
-CMD ["npm", "run", "dev"]
+# Start development server with hot reload
+CMD ["sh", "-c", "npm run dev"]
