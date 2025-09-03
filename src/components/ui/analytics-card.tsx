@@ -100,7 +100,8 @@ import {
   Ticket,
   Cog,
   Hammer,
-  Coins
+  Coins,
+  GitBranch
 } from "lucide-react"
 
 // Icon mapping
@@ -202,7 +203,8 @@ const iconMap = {
   Ticket,
   Cog,
   Hammer,
-  Coins
+  Coins,
+  GitBranch
 } as const
 
 export type IconName = keyof typeof iconMap
@@ -305,6 +307,11 @@ export const analyticsCardVariants = {
     iconColor: "text-red-500",
     bgColor: "bg-red-50/80 dark:bg-red-950/20",
     borderColor: "border-red-200/60 dark:border-red-800/40",
+  },
+  orange: {
+    iconColor: "text-orange-500",
+    bgColor: "bg-orange-50/80 dark:bg-orange-950/20",
+    borderColor: "border-orange-200/60 dark:border-orange-800/40",
   },
   purple: {
     iconColor: "text-purple-500",

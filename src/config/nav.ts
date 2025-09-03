@@ -102,6 +102,11 @@ export const adminNavItems: NavItem[] = [
         href: "/admin/customer-orders",
         description: "View and manage customer orders",
       },
+      {
+        label: "Customer Orders V2",
+        href: "/admin/customer-orders-v2",
+        description: "Enhanced customer order management with advanced features",
+      },
     ],
   },
   {
