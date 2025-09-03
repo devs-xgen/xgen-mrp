@@ -252,7 +252,7 @@ export function WorkCenterUsers({
               <DialogHeader>
                 <DialogTitle>Add User to Work Center</DialogTitle>
                 <DialogDescription>
-                  Assign a user to work center "{workCenterName}".
+                  Assign a user to work center &quot;{workCenterName}&quot;.
                 </DialogDescription>
               </DialogHeader>
               {filteredAvailableUsers.length === 0 ? (
@@ -330,7 +330,7 @@ export function WorkCenterUsers({
               <UserCircle className="mx-auto h-16 w-16 text-muted-foreground/60 mb-4" />
               <h3 className="text-lg font-medium mb-2">No Users Assigned</h3>
               <p className="text-muted-foreground mb-6">
-                This work center doesn't have any users assigned to it yet.
+                This work center doesn&apos;t have any users assigned to it yet.
               </p>
               <Button
                 onClick={() => setIsAddDialogOpen(true)}

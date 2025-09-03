@@ -569,7 +569,7 @@ export default function WorkflowConfiguration() {
                 ))}
                 {config.workCenterRules.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
-                    No work center rules configured. Click "Add Rule" to create one.
+                    No work center rules configured. Click &quot;Add Rule&quot; to create one.
                   </div>
                 )}
               </div>

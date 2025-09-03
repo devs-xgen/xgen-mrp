@@ -186,7 +186,7 @@ export function PWAStatusChecker() {
         <div className="mt-4 p-3 bg-blue-50 rounded-lg">
           <p className="text-sm text-blue-800">
             <strong>Note:</strong> Even if all requirements are met, the install prompt may not appear immediately. 
-            Chrome requires "user engagement" and may delay the prompt. Try interacting with the page or visiting multiple times.
+            Chrome requires &quot;user engagement&quot; and may delay the prompt. Try interacting with the page or visiting multiple times.
           </p>
         </div>
       </CardContent>

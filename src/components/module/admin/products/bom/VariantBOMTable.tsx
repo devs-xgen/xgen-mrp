@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -58,7 +58,7 @@ export function VariantBOMTable({
   const { toast } = useToast();
 
   // Fetch variant BOM data
-  const fetchVariantBOM = async () => {
+  const fetchVariantBOM = useCallback(async () => {
     try {
       setLoadingBOM(true);
       const bomData = await getVariantBOM(variant.id);
@@ -69,11 +69,11 @@ export function VariantBOMTable({
     } finally {
       setLoadingBOM(false);
     }
-  };
+  }, [variant.id]);
 
   useEffect(() => {
     fetchVariantBOM();
-  }, [variant.id]);
+  }, [fetchVariantBOM]);
 
   const handleEdit = (entry: any) => {
     const bomEntry: VariantBOMEntry = {

@@ -171,7 +171,7 @@ export default async function WorkerDashboard() {
       {/* Today's Tasks Section */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Today's Tasks</CardTitle>
+          <CardTitle>Today&apos;s Tasks</CardTitle>
           <Button asChild variant="ghost" size="sm" className="gap-1">
             <Link href="/worker/tasks">
               <span>View All</span>

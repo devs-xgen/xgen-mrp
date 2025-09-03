@@ -10,6 +10,8 @@ import { ServiceWorkerManager } from "@/components/global/service-worker-manager
 import { ConnectionErrorHandler } from "@/components/global/connection-error-handler";
 import { MaintenanceProvider } from "@/components/providers/maintenance-provider";
 import { MaintenanceAlertWrapper } from "@/components/global/maintenance-alert-wrapper";
+import { EnhancedErrorBoundary } from "@/components/global/enhanced-error-boundary";
+import { ErrorDebugPanel } from "@/components/global/error-debug-panel";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -65,9 +67,13 @@ export const viewport: Viewport = {
   ],
 };
 
-// Error Boundary Component - Simplified server-side safe version
+// Server-side safe wrapper for our enhanced error boundary
 function GlobalErrorBoundary({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-screen">{children}</div>;
+  return (
+    <EnhancedErrorBoundary enableErrorReporting={true}>
+      <div className="min-h-screen">{children}</div>
+    </EnhancedErrorBoundary>
+  );
 }
 
 // Security and Performance wrapper
@@ -168,6 +174,9 @@ export default function RootLayout({
         
         {/* Global connection error handler */}
         <ConnectionErrorHandler />
+        
+        {/* Error debug panel for development */}
+        <ErrorDebugPanel />
       </body>
     </html>
   );

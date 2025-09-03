@@ -62,7 +62,7 @@ export function DeleteWorkCenterDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Work Center</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete the work center "{workCenterName}"?
+            Are you sure you want to delete the work center &quot;{workCenterName}&quot;?
             This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>

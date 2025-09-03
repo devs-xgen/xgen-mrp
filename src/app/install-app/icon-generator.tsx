@@ -182,7 +182,7 @@ export function IconGeneratorSection() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-600 mb-4">
-            Here's how your icons are configured in the PWA manifest:
+            Here&apos;s how your icons are configured in the PWA manifest:
           </p>
           
           <div className="bg-gray-900 text-gray-300 p-4 rounded-lg font-mono text-xs overflow-x-auto">

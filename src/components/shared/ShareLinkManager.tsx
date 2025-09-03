@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { 
@@ -31,6 +31,13 @@ import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 
 export type DocumentType = 'billing-statement' | 'sales-invoice' | 'delivery-receipt'
+
+// stable mapping at module scope to avoid exhaustive-deps complaints
+const DOC_TYPE_TO_ENUM: Record<DocumentType, 'BILLING_STATEMENT' | 'SALES_INVOICE' | 'DELIVERY_RECEIPT'> = {
+  'billing-statement': 'BILLING_STATEMENT',
+  'sales-invoice': 'SALES_INVOICE',
+  'delivery-receipt': 'DELIVERY_RECEIPT',
+}
 
 interface ShareableLink {
   id: string
@@ -81,20 +88,7 @@ export function ShareLinkManager({
   const [copyingLinkId, setCopyingLinkId] = useState<string | null>(null)
   const { toast } = useToast()
 
-  const mapDocumentTypeToEnum = (docType: DocumentType): string => {
-    switch (docType) {
-      case 'billing-statement':
-        return 'BILLING_STATEMENT'
-      case 'sales-invoice':
-        return 'SALES_INVOICE'
-      case 'delivery-receipt':
-        return 'DELIVERY_RECEIPT'
-      default:
-        return docType.toUpperCase().replace('-', '_')
-    }
-  }
-
-  const fetchLinks = async (showRefreshIndicator = false) => {
+  const fetchLinks = useCallback(async (showRefreshIndicator = false) => {
     if (showRefreshIndicator) {
       setIsRefreshing(true)
     } else {
@@ -103,7 +97,7 @@ export function ShareLinkManager({
 
     try {
       const params = new URLSearchParams({
-        documentType: mapDocumentTypeToEnum(documentType),
+        documentType: DOC_TYPE_TO_ENUM[documentType],
         documentId,
       })
 
@@ -126,7 +120,7 @@ export function ShareLinkManager({
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }
+  }, [documentType, documentId, toast])
 
   const revokeLink = async (linkId: string) => {
     setRevokingLinkId(linkId)
@@ -211,7 +205,7 @@ export function ShareLinkManager({
 
   useEffect(() => {
     fetchLinks()
-  }, [documentType, documentId])
+  }, [fetchLinks])
 
   if (isLoading) {
     return (
@@ -257,7 +251,7 @@ export function ShareLinkManager({
           <div className="text-center py-8 text-muted-foreground">
             <Globe className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No share links have been created for this document yet.</p>
-            <p className="text-sm mt-1">Use the "Generate Share Link" button to create one.</p>
+            <p className="text-sm mt-1">Use the &quot;Generate Share Link&quot; button to create one.</p>
           </div>
         ) : (
           <div className="space-y-4">

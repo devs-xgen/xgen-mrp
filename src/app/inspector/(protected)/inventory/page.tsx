@@ -217,9 +217,7 @@ async function getCombinedInventoryData() {
 export default async function InventoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    // ... (your existing search params)
-  }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const combinedData = await getCombinedInventoryData();
   const materials = await getAllMaterials(); // Separate fetch for filters and dashboard

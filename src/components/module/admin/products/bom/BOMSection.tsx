@@ -1,7 +1,7 @@
 // src/components/module/admin/products/bom/EnhancedBOMSection.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getBOMForProduct } from "@/lib/actions/bom";
 import { ProductBOM } from "@/types/admin/bom";
 import { useToast } from "@/hooks/use-toast";
@@ -24,7 +24,7 @@ export function BOMSection({
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchBOMData = async () => {
+  const fetchBOMData = useCallback(async () => {
     try {
       setLoading(true);
       const bomData = await getBOMForProduct(productId);
@@ -39,12 +39,12 @@ export function BOMSection({
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId, toast]);
 
   // Initial data fetch
   useEffect(() => {
     fetchBOMData();
-  }, [productId]);
+  }, [fetchBOMData]);
 
   return (
     <div className="mt-6">
@@ -60,3 +60,4 @@ export function BOMSection({
     </div>
   );
 }
+

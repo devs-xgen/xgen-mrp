@@ -222,7 +222,7 @@ function AddMultipleItems({ onAddItems, onClose, disabled, maxItems }: AddMultip
           aria-describedby="base-description-help"
         />
         <p id="base-description-help" className="text-xs text-muted-foreground mt-1">
-          Items will be named: "{baseItem.description} 1", "{baseItem.description} 2", etc.
+          Items will be named: &quot;{baseItem.description} 1&quot;, &quot;{baseItem.description} 2&quot;, etc.
         </p>
       </div>
 

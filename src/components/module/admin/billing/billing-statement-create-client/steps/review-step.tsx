@@ -226,7 +226,7 @@ export function ReviewStep({
           
           <div className="mt-4 p-3 bg-background rounded-lg border">
             <p className="text-sm text-muted-foreground text-center">
-              Click "Create Billing Statement" to generate the billing statement with the above information.
+              Click &quot;Create Billing Statement&quot; to generate the billing statement with the above information.
             </p>
           </div>
         </CardContent>

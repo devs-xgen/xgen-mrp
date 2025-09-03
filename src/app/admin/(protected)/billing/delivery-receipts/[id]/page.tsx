@@ -141,7 +141,7 @@ export default function ViewDeliveryReceiptPage() {
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Receipt Not Found</h2>
             <p className="text-muted-foreground mb-4">
-              The delivery receipt you're looking for doesn't exist.
+              The delivery receipt you&apos;re looking for doesn&apos;t exist.
             </p>
             <Button asChild>
               <Link href="/admin/billing/delivery-receipts">

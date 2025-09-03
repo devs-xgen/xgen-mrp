@@ -14,7 +14,7 @@ export default function OfflinePage() {
           <div className="mx-auto w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
             <WifiOff className="h-8 w-8 text-gray-500" />
           </div>
-          <CardTitle className="text-xl text-gray-900">You're Offline</CardTitle>
+          <CardTitle className="text-xl text-gray-900">You&apos;re Offline</CardTitle>
         </CardHeader>
         <CardContent className="text-center space-y-4">
           <p className="text-gray-600">
@@ -39,7 +39,7 @@ export default function OfflinePage() {
           </div>
           
           <p className="text-xs text-gray-500 mt-4">
-            Some features may still be available offline if you've used them before.
+            Some features may still be available offline if you&apos;ve used them before.
           </p>
         </CardContent>
       </Card>

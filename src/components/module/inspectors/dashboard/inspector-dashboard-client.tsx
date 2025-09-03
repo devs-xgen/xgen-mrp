@@ -224,7 +224,7 @@ export function InspectorDashboardClient({ initialTodaysTasks, initialStats }: I
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="tasks">Today's Tasks</TabsTrigger>
+          <TabsTrigger value="tasks">Today&apos;s Tasks</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
@@ -331,10 +331,10 @@ export function InspectorDashboardClient({ initialTodaysTasks, initialStats }: I
             </CardContent>
           </Card>
 
-          {/* Today's Tasks Preview */}
+          {/* Today&apos;s Tasks Preview */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Today's Tasks Preview</CardTitle>
+              <CardTitle>Today&apos;s Tasks Preview</CardTitle>
               <Button variant="ghost" size="sm" className="gap-1" onClick={() => setActiveTab("tasks")}>
                 <span>View All</span>
                 <ClipboardList className="h-4 w-4" />
@@ -385,7 +385,7 @@ export function InspectorDashboardClient({ initialTodaysTasks, initialStats }: I
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder="Search today's tasks..."
+                placeholder="Search today&apos;s tasks..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -393,10 +393,10 @@ export function InspectorDashboardClient({ initialTodaysTasks, initialStats }: I
             </div>
           </div>
 
-          {/* Today's Tasks Section - Enhanced version of your original */}
+          {/* Today&apos;s Tasks Section - Enhanced version of your original */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Today's Tasks</CardTitle>
+              <CardTitle>Today&apos;s Tasks</CardTitle>
               <Button asChild variant="ghost" size="sm" className="gap-1">
                 <Link href="/inspector/tasks">
                   <span>View All Tasks</span>
@@ -552,7 +552,7 @@ export function InspectorDashboardClient({ initialTodaysTasks, initialStats }: I
                     <span className="font-semibold text-red-600">{stats.urgentTasks}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Today's Tasks</span>
+                    <span>Today&apos;s Tasks</span>
                     <span className="font-semibold">{todaysTasks.length}</span>
                   </div>
                 </div>

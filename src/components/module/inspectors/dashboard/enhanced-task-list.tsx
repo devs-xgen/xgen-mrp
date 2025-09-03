@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,7 +56,7 @@ export function EnhancedTaskList() {
   const [processingTaskId, setProcessingTaskId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -74,11 +74,11 @@ export function EnhancedTaskList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchTasks();
-  }, []);
+  }, [fetchTasks]);
 
   const handleTaskAction = async (taskId: string, newStatus: Status) => {
     setProcessingTaskId(taskId);

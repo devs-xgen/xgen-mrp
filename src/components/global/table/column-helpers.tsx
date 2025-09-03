@@ -12,7 +12,7 @@ import { RowAction } from "./types";
 
 // Helper to create a sortable header
 export function createSortableHeader(title: string) {
-  return ({ column }: any) => {
+  const SortableHeader = ({ column }: any) => {
     return (
       <Button
         variant="ghost"
@@ -24,6 +24,8 @@ export function createSortableHeader(title: string) {
       </Button>
     );
   };
+  SortableHeader.displayName = `SortableHeader_${title}`;
+  return SortableHeader;
 }
 
 // Helper to create a selection column

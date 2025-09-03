@@ -82,6 +82,19 @@ const nextConfig = {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     // Expose the app version to the client for diagnostics/UI
     NEXT_PUBLIC_APP_VERSION: require('./package.json').version,
+    // Enable error reporting in production if set
+    NEXT_PUBLIC_ENABLE_ERROR_REPORTING: process.env.NEXT_PUBLIC_ENABLE_ERROR_REPORTING,
+  },
+
+  // Enhanced error handling configuration
+  productionBrowserSourceMaps: process.env.ENABLE_SOURCE_MAPS === 'true',
+  
+  // Error handling improvements
+  onDemandEntries: {
+    // Period (in ms) where the server will keep pages in the buffer
+    maxInactiveAge: 25 * 1000,
+    // Number of pages that should be kept simultaneously without being disposed
+    pagesBufferLength: 2,
   },
   
   // Netlify-specific configurations

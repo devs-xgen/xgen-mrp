@@ -61,15 +61,6 @@ export function DataTable<TData extends Inspector, TValue>({
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
 
-  // Check if we have valid data and columns before rendering
-  if (!data || !columns || columns.length === 0) {
-    return (
-      <div className="w-full rounded-md border p-8 text-center">
-        <p className="text-muted-foreground">No data available.</p>
-      </div>
-    );
-  }
-
   const table = useReactTable({
     data,
     columns,
@@ -93,6 +84,15 @@ export function DataTable<TData extends Inspector, TValue>({
       rowSelection,
     },
   });
+
+  // Check if we have valid data and columns before rendering
+  if (!data || !columns || columns.length === 0) {
+    return (
+      <div className="w-full rounded-md border p-8 text-center">
+        <p className="text-muted-foreground">No data available.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">

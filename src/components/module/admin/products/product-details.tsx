@@ -1,7 +1,7 @@
 // src/components/module/admin/products/product-details.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Status } from "@prisma/client";
 import {
   Card,
@@ -29,7 +29,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
   const { toast } = useToast();
 
   // Function to fetch updated BOM data
-  const fetchBOMData = async () => {
+  const fetchBOMData = useCallback(async () => {
     try {
       setIsLoadingBom(true);
       const data = await getBOMForProduct(product.id);
@@ -44,12 +44,12 @@ export function ProductDetails({ product }: ProductDetailsProps) {
     } finally {
       setIsLoadingBom(false);
     }
-  };
+  }, [product.id, toast]);
 
   // Initial load of BOM data
   useEffect(() => {
     fetchBOMData();
-  }, [product.id]);
+  }, [fetchBOMData]);
 
   // Calculate profit margin
   const profitMargin =

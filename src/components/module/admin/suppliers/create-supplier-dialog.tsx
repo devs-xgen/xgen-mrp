@@ -136,7 +136,7 @@ export function CreateSupplierDialog({ onSuccess }: CreateSupplierDialogProps) {
         });
         
         return () => subscription.unsubscribe();
-    }, [barangay]); // ✅ FIXED: Using form.watch subscription instead of form.watch() in dependency array
+    }, [form, barangay]); // Include form to satisfy hooks lint and resubscribe if form instance changes
 
     const onSubmit = async (data: FormData) => {
         try {

@@ -417,7 +417,7 @@ export function CustomerOrderEditClient({
             <CardContent>
               {orderLines.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  No order items. Click "Add Item" to get started.
+                  No order items. Click &quot;Add Item&quot; to get started.
                 </div>
               ) : (
                 <div className="space-y-4">

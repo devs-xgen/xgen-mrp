@@ -136,7 +136,7 @@ function MaterialActionsCell({
           <AlertDialogHeader>
             <AlertDialogTitle className="text-destructive">Delete Material</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{material.name}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{material.name}&quot;? This action cannot be undone.
               <div className="mt-4">
                 <Label htmlFor="confirmation">
                   Type <code className="bg-muted px-1 rounded">{confirmationRequired}</code> to confirm:

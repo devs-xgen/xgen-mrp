@@ -175,7 +175,7 @@ export function OptionsStep({ form }: OptionsStepProps) {
               <div className="text-sm text-amber-800">
                 <p className="font-medium">Note</p>
                 <p>
-                  These options can be changed later, but it's recommended to
+                  These options can be changed later, but it&apos;s recommended to
                   enable them now for better production planning and inventory
                   management.
                 </p>

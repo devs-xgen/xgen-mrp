@@ -306,7 +306,7 @@ export function FulfillmentTracker({
             <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">No order lines found</h3>
             <p className="text-muted-foreground">
-              This order doesn't have any items to track.
+              This order doesn&apos;t have any items to track.
             </p>
           </div>
         )}

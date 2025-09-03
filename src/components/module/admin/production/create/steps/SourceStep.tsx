@@ -48,7 +48,7 @@ export function SourceStep({ form }: SourceStepProps) {
       </Card>
 
       <div className="text-center text-sm text-muted-foreground">
-        You'll select products and quantities in the next step.
+        You&apos;ll select products and quantities in the next step.
       </div>
     </div>
   );

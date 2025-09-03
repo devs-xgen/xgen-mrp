@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,7 @@ export function WorkflowStatusCard({
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const fetchDependencyStatus = async () => {
+  const fetchDependencyStatus = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -67,11 +67,11 @@ export function WorkflowStatusCard({
     } finally {
       setLoading(false);
     }
-  };
+  }, [productionOrderId, toast]);
 
   useEffect(() => {
     fetchDependencyStatus();
-  }, [productionOrderId, refreshTrigger]);
+  }, [fetchDependencyStatus, refreshTrigger]);
 
   const getPhaseIcon = (phase: string, isActive: boolean, isCompleted: boolean) => {
     const baseClasses = "w-5 h-5";

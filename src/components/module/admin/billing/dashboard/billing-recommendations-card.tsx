@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, Users, ShoppingCart, Edit, Star, TrendingUp, Database } from "lucide-react";
+import { Lightbulb, Users, ShoppingCart, Edit, Star, TrendingUp, Database, Plus } from "lucide-react";
 import Link from "next/link";
 import { BillingTypeRecommendation } from "@/types/admin/billing";
 

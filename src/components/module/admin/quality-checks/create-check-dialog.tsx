@@ -1,7 +1,7 @@
 "use client";
 
 import * as z from "zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarIcon, Loader2, Plus } from "lucide-react";
@@ -39,28 +39,17 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { createQualityCheck } from "@/lib/actions/quality-checks";
+import { getActiveInspectors } from "@/lib/actions/inspector";
+import type { CreateQualityCheckInput } from "@/types/admin/quality-checks";
 
 // Define the form schema
 const formSchema = z.object({
-  productionOrderId: z.string(),
-  inspectorId: z.string(), // Add this line
+  productionOrderId: z.string().min(1, "Production order is required"),
+  inspectorId: z.string().min(1, "Inspector is required"),
   checkDate: z.date(),
   notes: z.string().optional(),
   defectsFound: z.string().optional(),
   actionTaken: z.string().optional(),
-});
-
-// Update your form default values to include inspectorId
-const form = useForm<z.infer<typeof formSchema>>({
-  resolver: zodResolver(formSchema),
-  defaultValues: {
-    productionOrderId: "",
-    inspectorId: "", // Add a default value, or get it from current user
-    checkDate: new Date(),
-    notes: "",
-    defectsFound: "",
-    actionTaken: "",
-  },
 });
 
 interface ProductionOrder {
@@ -87,18 +76,53 @@ export function CreateCheckDialog({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const [inspectors, setInspectors] = useState<
+    Array<{ inspectorId: string; firstName: string; lastName: string; email: string }>
+  >([]);
+  const [fetchingInspectors, setFetchingInspectors] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      productionOrderId: "",
+      inspectorId: "",
       checkDate: new Date(),
     },
   });
 
+  useEffect(() => {
+    if (!open) return;
+    const loadInspectors = async () => {
+      setFetchingInspectors(true);
+      try {
+        const list = await getActiveInspectors();
+        setInspectors(list);
+      } catch (err) {
+        console.error("Error fetching inspectors:", err);
+        toast({
+          title: "Error",
+          description: "Failed to load inspectors",
+          variant: "destructive",
+        });
+      } finally {
+        setFetchingInspectors(false);
+      }
+    };
+    loadInspectors();
+  }, [open, toast]);
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setLoading(true);
-      await createQualityCheck(values);
+      const payload: CreateQualityCheckInput = {
+        productionOrderId: values.productionOrderId,
+        inspectorId: values.inspectorId,
+        checkDate: values.checkDate,
+        defectsFound: values.defectsFound,
+        actionTaken: values.actionTaken,
+        notes: values.notes,
+      };
+      await createQualityCheck(payload);
 
       setOpen(false);
       form.reset();
@@ -160,6 +184,31 @@ export function CreateCheckDialog({
                               SKU: {order.product.sku} | Qty: {order.quantity}
                             </span>
                           </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="inspectorId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Inspector</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={fetchingInspectors}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={fetchingInspectors ? "Loading inspectors..." : "Select inspector"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {inspectors.map((inspector) => (
+                        <SelectItem key={inspector.inspectorId} value={inspector.inspectorId}>
+                          {inspector.firstName} {inspector.lastName} ({inspector.email})
                         </SelectItem>
                       ))}
                     </SelectContent>

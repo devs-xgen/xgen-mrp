@@ -157,8 +157,12 @@ export function InspectorDashboard() {
     fetchTasks(filters)
   }, [fetchTasks, filters, showInfo])
 
-  const getStatusColor = (status: Status) => {
-    switch (status) {
+  const getStatusColor = (status: Status | string) => {
+    // Normalize incoming status to Prisma enum when provided as string
+    const normalized: Status =
+      typeof status === "string" ? (status.toUpperCase() as Status) : status
+
+    switch (normalized) {
       case Status.COMPLETED:
         return "bg-green-100 text-green-800"
       case Status.IN_PROGRESS:
@@ -337,17 +341,17 @@ export function InspectorDashboard() {
             </Card>
           )}
 
-          {/* Today's Tasks */}
+          {/* Today&apos;s Tasks */}
           <Card>
             <CardHeader>
-              <CardTitle>Today's Tasks</CardTitle>
+              <CardTitle>Today&apos;s Tasks</CardTitle>
               <CardDescription>Tasks scheduled for today</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <div className="text-center py-8">
                   <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-gray-400" />
-                  <p className="text-gray-600">Loading today's tasks...</p>
+                  <p className="text-gray-600">Loading today&apos;s tasks...</p>
                 </div>
               ) : todaysTasks.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">No tasks scheduled for today</div>

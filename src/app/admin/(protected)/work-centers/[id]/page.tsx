@@ -195,7 +195,7 @@ export default async function WorkCenterDetailsPage({ params }: PageProps) {
                   <Users className="h-10 w-10 text-muted-foreground/60 mx-auto mb-3" />
                   <h3 className="font-medium mb-1">No Users Assigned</h3>
                   <p className="text-sm text-muted-foreground mb-3">
-                    This work center doesn't have any users assigned to it yet.
+                    This work center doesn&apos;t have any users assigned to it yet.
                   </p>
                   <Link href={`/admin/work-centers/${workCenterId}/users`}>
                     <Button variant="secondary" size="sm">

@@ -1062,9 +1062,8 @@ export function InspectorDashboardClient({
                             {task.status === Status.COMPLETED && "Completed"}
                           </Badge>
                           <Badge
-                            className={getStatusColor(task.productionStatus)}
+                            className={`${getStatusColor(task.productionStatus)} text-xs`}
                             variant="outline"
-                            className="text-xs"
                           >
                             Prod: {task.productionStatus}
                           </Badge>

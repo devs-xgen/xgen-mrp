@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getBOMForProduct } from "@/lib/actions/bom";
 import { getVariantBOM, copyBaseBOMToVariant } from "@/lib/actions/variant-bom";
 import { ProductBOM } from "@/types/admin/bom";
@@ -60,7 +60,7 @@ export function EnhancedVariantBOMSection({
   const [copyingBOM, setCopyingBOM] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const fetchBOMData = async () => {
+  const fetchBOMData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -104,11 +104,11 @@ export function EnhancedVariantBOMSection({
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId, hasVariants, variants, toast]);
 
   useEffect(() => {
     fetchBOMData();
-  }, [productId, hasVariants, variants]);
+  }, [fetchBOMData]);
 
   const handleCopyBaseBOMToVariant = async (variantId: string) => {
     try {
