@@ -1,6 +1,22 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: inventory-db
+    restart: always
+    environment:
+      POSTGRES_USER: inventory_user
+      POSTGRES_PASSWORD: inventory_password
+      POSTGRES_DB: inventory_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./prisma/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - inventory_network
+
   nextjs:
     container_name: inventory-frontend
     build:
@@ -8,13 +24,34 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - '3001:3000'
+      - '3000:3000'
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - DATABASE_URL=postgresql://inventory_user:inventory_password@postgres:5432/inventory_db
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=your-secret-key-here
+      - NODE_ENV=development
+    depends_on:
+      - postgres
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
     networks:
       - inventory_network
+
+  # Optional: Adminer for database management
+  adminer:
+    image: adminer:latest
+    container_name: inventory-adminer
+    restart: always
+    ports:
+      - '8080:8080'
+    depends_on:
+      - postgres
+    networks:
+      - inventory_network
+
+volumes:
+  postgres_data:
 
 networks:
   inventory_network:

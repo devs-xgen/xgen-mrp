@@ -1,0 +1,25 @@
+# Development override for docker-compose
+# This file extends the base docker-compose.yml for development
+
+version: '3.8'
+
+services:
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base  # Use base stage for development
+    command: npm run dev
+    volumes:
+      - ./:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    stdin_open: true
+    tty: true
+    
+  postgres:
+    ports:
+      - "5432:5432"
