@@ -12,8 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { CustomerOrderColumn } from "@/types/admin/customer-order"
-import { deleteCustomerOrder } from "@/lib/actions/customer-order"
-import { archiveCustomerOrder } from "@/lib/actions/order-archiving"
+// Server actions will be passed as props instead of direct imports
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import {
@@ -44,9 +43,11 @@ import { ViewBillingDocumentsDialog } from "./view-billing-documents-dialog"
 
 interface DataTableRowActionsProps {
   row: Row<CustomerOrderColumn>
+  onDelete?: (id: string) => Promise<void>
+  onArchive?: (id: string, reason: string) => Promise<{ success: boolean; message: string }>
 }
 
-export function DataTableRowActions({ row }: DataTableRowActionsProps) {
+export function DataTableRowActions({ row, onDelete: onDeleteProp, onArchive: onArchiveProp }: DataTableRowActionsProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showArchiveDialog, setShowArchiveDialog] = useState(false)
   const [showProductionDialog, setShowProductionDialog] = useState(false)
@@ -59,8 +60,17 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const customerOrder = row.original
 
   const onDelete = async () => {
+    if (!onDeleteProp) {
+      toast({
+        title: "Error",
+        description: "Delete function not available",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
-      await deleteCustomerOrder(customerOrder.id)
+      await onDeleteProp(customerOrder.id)
       toast({
         title: "Success",
         description: "Customer order deleted successfully",
@@ -87,8 +97,17 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
       return
     }
 
+    if (!onArchiveProp) {
+      toast({
+        title: "Error",
+        description: "Archive function not available",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
-      const result = await archiveCustomerOrder(customerOrder.id, archiveReason)
+      const result = await onArchiveProp(customerOrder.id, archiveReason)
       
       if (result.success) {
         toast({
