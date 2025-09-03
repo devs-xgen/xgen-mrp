@@ -1,9 +1,7 @@
 import { Metadata } from "next";
 import { getCustomerOrdersWithFulfillment } from "@/lib/actions/customer-order";
 import { getOrdersRequiringAnalysis } from "@/lib/actions/order-analysis";
-import { createColumns } from "@/components/module/admin/customer-orders/columns";
-import { deleteCustomerOrder } from "@/lib/actions/customer-order";
-import { archiveCustomerOrder } from "@/lib/actions/order-archiving";
+import { CustomerOrdersTable } from "@/components/module/admin/customer-orders/customer-orders-table";
 import { DataTable } from "@/components/global/table";
 import { Button } from "@/components/ui/button";
 import { Plus, BarChart, Archive, Menu, ChevronDown } from "lucide-react";
@@ -89,7 +87,7 @@ export default async function CustomerOrdersPage() {
           orderDate: order.orderDate || new Date().toISOString(),
           requiredDate: order.requiredDate || new Date().toISOString(),
           status: order.status || 'PENDING',
-          totalAmount: order.totalAmount ? Number(order.totalAmount) : 0,
+          totalAmount: order.totalAmount ? Number(order.totalAmount.toString()) : 0,
           itemCount: orderLines.length,
           totalQuantity: totalQuantity,
           productionOrderCount: order._count?.productionOrders || 0,
@@ -186,16 +184,7 @@ export default async function CustomerOrdersPage() {
       </PageHeader>
 
       <SectionCard heading="All Customer Orders">
-        <DataTable
-          columns={createColumns({
-            onDelete: deleteCustomerOrder,
-            onArchive: archiveCustomerOrder,
-          })}
-          data={tableData}
-          searchKey="customerName"
-          searchPlaceholder="Filter orders..."
-          enableSelection={true}
-        />
+        <CustomerOrdersTable data={tableData} />
       </SectionCard>
     </PageContainer>
   );
