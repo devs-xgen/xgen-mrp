@@ -32,6 +32,56 @@ interface CreateUserInput {
   notes?: string;
 }
 
+/**
+ * Get details about records that block deleting a user
+ */
+export async function getUserDeletionBlockers(userId: string): Promise<{
+  hasLinkedInspector: boolean
+  counts: {
+    deliveryAssignments: number
+    activityLogs: number
+    productionHistoryLogs: number
+    supportTickets: number
+    supportMessages: number
+  }
+  canDelete: boolean
+}> {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) throw new Error("Unauthorized")
+
+    const inspector = await prisma.inspector.findUnique({
+      where: { userId: userId },
+      select: { inspectorId: true },
+    })
+
+    const [deliveryAssignments, activityLogs, productionHistoryLogs, supportTickets, supportMessages] = await Promise.all([
+      prisma.deliveryAssignment.count({ where: { userId } }),
+      prisma.activityLog.count({ where: { userId } }),
+      prisma.productionOrderHistoryLog.count({ where: { userId } }),
+      prisma.supportTicket.count({ where: { userId } }),
+      prisma.supportMessage.count({ where: { userId } }),
+    ])
+
+    const total = deliveryAssignments + activityLogs + productionHistoryLogs + supportTickets + supportMessages
+
+    return {
+      hasLinkedInspector: !!inspector,
+      counts: {
+        deliveryAssignments,
+        activityLogs,
+        productionHistoryLogs,
+        supportTickets,
+        supportMessages,
+      },
+      canDelete: total === 0,
+    }
+  } catch (error) {
+    console.error("Error checking user deletion blockers:", error)
+    throw error instanceof Error ? error : new Error("Failed to check deletion blockers")
+  }
+}
+
 interface UpdateUserInput {
   id: string;
   role?: Role;
@@ -305,25 +355,61 @@ export async function updateUser(data: UpdateUserInput): Promise<UserData> {
 
     // Handle profile updates
     if (data.profile) {
-      updateData.profile = {
-        update: {
-          ...(data.profile.firstName !== undefined && {
+      if (existingUser.profile) {
+        // Update existing profile
+        updateData.profile = {
+          update: {
+            ...(data.profile.firstName !== undefined && {
+              firstName: data.profile.firstName,
+            }),
+            ...(data.profile.lastName !== undefined && {
+              lastName: data.profile.lastName,
+            }),
+            ...(data.profile.employeeId !== undefined && {
+              employeeId: data.profile.employeeId,
+            }),
+            ...(data.profile.department !== undefined && {
+              department: data.profile.department,
+            }),
+            ...(data.profile.position !== undefined && {
+              position: data.profile.position,
+            }),
+          },
+        };
+      } else if (
+        data.profile.firstName !== undefined &&
+        data.profile.lastName !== undefined
+      ) {
+        // Create a new profile if it does not exist and we have required fields
+        updateData.profile = {
+          create: {
             firstName: data.profile.firstName,
-          }),
-          ...(data.profile.lastName !== undefined && {
             lastName: data.profile.lastName,
-          }),
-          ...(data.profile.employeeId !== undefined && {
-            employeeId: data.profile.employeeId,
-          }),
-          ...(data.profile.department !== undefined && {
-            department: data.profile.department,
-          }),
-          ...(data.profile.position !== undefined && {
-            position: data.profile.position,
-          }),
-        },
-      };
+            employeeId:
+              data.profile.employeeId !== undefined
+                ? data.profile.employeeId
+                : null,
+            department:
+              data.profile.department !== undefined
+                ? data.profile.department
+                : null,
+            position:
+              data.profile.position !== undefined
+                ? data.profile.position
+                : null,
+            phoneNumber: null,
+            address: null,
+            city: null,
+            state: null,
+            country: null,
+            postalCode: null,
+            dateOfBirth: null,
+            gender: null,
+            avatar: null,
+            bio: null,
+          },
+        };
+      }
     }
 
     // Update user
@@ -364,15 +450,74 @@ export async function deleteUser(id: string): Promise<void> {
       throw new Error("User not found");
     }
 
-    // Delete user (cascade will handle profile deletion)
-    await prisma.user.delete({
-      where: { id },
+    // Pre-check for dependent records that reference this user and would block deletion
+    const [
+      deliveryAssignments,
+      activityLogs,
+      productionHistoryLogs,
+      supportTickets,
+      supportMessages,
+    ] = await Promise.all([
+      prisma.deliveryAssignment.count({ where: { userId: id } }),
+      prisma.activityLog.count({ where: { userId: id } }),
+      prisma.productionOrderHistoryLog.count({ where: { userId: id } }),
+      prisma.supportTicket.count({ where: { userId: id } }),
+      prisma.supportMessage.count({ where: { userId: id } }),
+    ]);
+
+    const totalBlockers =
+      deliveryAssignments +
+      activityLogs +
+      productionHistoryLogs +
+      supportTickets +
+      supportMessages;
+
+    if (totalBlockers > 0) {
+      const parts: string[] = [];
+      if (deliveryAssignments) parts.push(`Delivery Assignments: ${deliveryAssignments}`);
+      if (activityLogs) parts.push(`Activity Logs: ${activityLogs}`);
+      if (productionHistoryLogs) parts.push(`Production History Logs: ${productionHistoryLogs}`);
+      if (supportTickets) parts.push(`Support Tickets: ${supportTickets}`);
+      if (supportMessages) parts.push(`Support Messages: ${supportMessages}`);
+
+      throw new Error(
+        `This user cannot be deleted because there are related records tied to their account.\n\n` +
+          parts.map((p) => `- ${p}`).join("\n") +
+          `\n\nPlease reassign or remove these records first, or deactivate the user instead.\n`
+      );
+    }
+
+    // Perform deletion in a transaction. If a linked inspector exists, delete it first,
+    // then delete the user to avoid FK constraint issues.
+    await prisma.$transaction(async (tx) => {
+      const linkedInspector = await tx.inspector.findUnique({
+        where: { userId: id },
+        select: { inspectorId: true },
+      });
+
+      if (linkedInspector) {
+        await tx.inspector.delete({
+          where: { inspectorId: linkedInspector.inspectorId },
+        });
+      }
+
+      // Delete user (cascade will handle profile deletion)
+      await tx.user.delete({
+        where: { id },
+      });
     });
 
-    // Revalidate the users page
+    // Revalidate affected pages
     revalidatePath("/admin/users");
+    revalidatePath("/admin/inspectors");
   } catch (error) {
     console.error("Error deleting user:", error);
+    // Prisma FK constraint error
+    if (error && typeof error === "object" && "code" in error && (error as any).code === "P2003") {
+      throw new Error(
+        "Cannot delete user because there are related records tied to this user or their inspector profile (e.g., activity logs, assignments). Consider deactivating the user or reassigning related records first."
+      );
+    }
     throw error instanceof Error ? error : new Error("Failed to delete user");
   }
 }

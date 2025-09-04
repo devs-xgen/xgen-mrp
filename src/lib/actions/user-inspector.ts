@@ -279,3 +279,59 @@ export async function getInspectorWithUser(inspectorId: string) {
     throw error
   }
 }
+
+/**
+ * Get inspector details by linked userId
+ */
+export async function getInspectorByUserId(userId: string) {
+  try {
+    const inspector = await prisma.inspector.findUnique({
+      where: { userId },
+    })
+    return inspector
+  } catch (error) {
+    console.error('Error fetching inspector by userId:', error)
+    throw error
+  }
+}
+
+/**
+ * Update inspector fields by inspectorId
+ */
+export async function updateInspector(
+  inspectorId: string,
+  updates: {
+    firstName?: string
+    lastName?: string
+    email?: string
+    phoneNumber?: string | null
+    department?: string | null
+    specialization?: string | null
+    certificationLevel?: string | null
+    yearsOfExperience?: number | null
+    isActive?: boolean
+    notes?: string | null
+  }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) throw new Error('Unauthorized')
+
+    const updated = await prisma.inspector.update({
+      where: { inspectorId },
+      data: {
+        ...updates,
+        modifiedBy: session.user.id,
+        updatedAt: new Date(),
+      },
+    })
+
+    revalidatePath('/admin/users')
+    revalidatePath('/admin/inspectors')
+
+    return updated
+  } catch (error) {
+    console.error('Error updating inspector:', error)
+    throw error
+  }
+}

@@ -577,7 +577,7 @@ model Customer {
   state             String?
   country           String?
   postalCode        String?
-  tinNumber         String?            @unique
+  tinNumber         String?
   creditLimit       Decimal?           @db.Decimal(10, 2)
   paymentTerms      String?
   status            Status             @default(ACTIVE)

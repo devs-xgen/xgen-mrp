@@ -1,9 +1,10 @@
-'use server'
+"use server";
 
-import { prisma } from "@/lib/db"
-import { revalidatePath } from "next/cache"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { prisma } from "@/lib/db";
+import { revalidatePath } from "next/cache";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import type { InspectorFormValues } from "@/components/module/admin/inspectors/schema";
 
 export type Inspector = {
   inspectorId: string;
@@ -22,23 +23,23 @@ export type Inspector = {
   createdBy?: string | null;
   modifiedBy?: string | null;
   userId?: string | null;
-}
+};
 
-export type InspectorFormData = Omit<Inspector, 'inspectorId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'modifiedBy'>;
+export type InspectorFormData = Omit<
+  Inspector,
+  "inspectorId" | "createdAt" | "updatedAt" | "createdBy" | "modifiedBy"
+>;
 
 export async function getInspectors() {
   try {
     const inspectors = await prisma.inspector.findMany({
-      orderBy: [
-        { lastName: 'asc' },
-        { firstName: 'asc' }
-      ]
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     });
-    
+
     return inspectors;
   } catch (error) {
-    console.error('Error fetching inspectors:', error);
-    throw new Error('Failed to fetch inspectors');
+    console.error("Error fetching inspectors:", error);
+    throw new Error("Failed to fetch inspectors");
   }
 }
 
@@ -47,10 +48,7 @@ export async function getActiveInspectors() {
     const inspectors = await prisma.inspector.findMany({
       where: { isActive: true },
       include: { user: true },
-      orderBy: [
-        { lastName: 'asc' },
-        { firstName: 'asc' }
-      ]
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     });
     return inspectors
       .filter((inspector) => inspector.user !== null)
@@ -62,25 +60,23 @@ export async function getActiveInspectors() {
         department: inspector.department,
       }));
   } catch (error) {
-    console.error('Error fetching active inspectors:', error);
+    console.error("Error fetching active inspectors:", error);
     return [];
   }
 }
 
-
-
 // export async function getActiveInspectors() {
 //   try {
 //     const inspectors = await prisma.inspector.findMany({
-//       where: { 
-//         isActive: true 
+//       where: {
+//         isActive: true
 //       },
 //       orderBy: [
 //         { lastName: 'asc' },
 //         { firstName: 'asc' }
 //       ]
 //     });
-    
+
 //     return inspectors;
 //   } catch (error) {
 //     console.error('Error fetching active inspectors:', error);
@@ -103,7 +99,7 @@ export async function getInspectorById(inspectorId: string) {
       department: inspector.department,
     };
   } catch (error) {
-    console.error('Error fetching inspector by ID:', error);
+    console.error("Error fetching inspector by ID:", error);
     return null;
   }
 }
@@ -113,14 +109,14 @@ export async function getInspector(id: string) {
     const inspector = await prisma.inspector.findUnique({
       where: { inspectorId: id },
     });
-    
+
     if (!inspector) {
-      throw new Error('Inspector not found');
+      throw new Error("Inspector not found");
     }
-    
+
     return inspector;
   } catch (error) {
-    console.error('Error fetching inspector:', error);
+    console.error("Error fetching inspector:", error);
     throw error;
   }
 }
@@ -137,17 +133,17 @@ export async function getDepartments() {
           not: null,
         },
       },
-      distinct: ['department'],
+      distinct: ["department"],
     });
-    
+
     // Transform the result to a simple array of departments
     const departments = departmentsResult
-      .filter(item => item.department !== null)
-      .map(item => item.department as string);
-    
+      .filter((item) => item.department !== null)
+      .map((item) => item.department as string);
+
     return departments.sort();
   } catch (error) {
-    console.error('Error fetching departments:', error);
+    console.error("Error fetching departments:", error);
     return [];
   }
 }
@@ -164,58 +160,61 @@ export async function getSpecializations() {
           not: null,
         },
       },
-      distinct: ['specialization'],
+      distinct: ["specialization"],
     });
-    
+
     // Transform the result to a simple array
     const specializations = specializationsResult
-      .filter(item => item.specialization !== null)
-      .map(item => item.specialization as string);
-    
+      .filter((item) => item.specialization !== null)
+      .map((item) => item.specialization as string);
+
     return specializations.sort();
   } catch (error) {
-    console.error('Error fetching specializations:', error);
+    console.error("Error fetching specializations:", error);
     return [];
   }
 }
 
-export async function createInspector(data: InspectorFormData) {
+export async function createInspector(data: InspectorFormValues) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error('Unauthorized');
-    
+    if (!session?.user) throw new Error("Unauthorized");
+
     const inspector = await prisma.inspector.create({
       data: {
         ...data,
         createdBy: session.user.id,
-      }
+      },
     });
-    
-    revalidatePath('/admin/inspectors');
+
+    revalidatePath("/admin/inspectors");
     return inspector;
   } catch (error) {
-    console.error('Error creating inspector:', error);
+    console.error("Error creating inspector:", error);
     throw error;
   }
 }
 
-export async function updateInspector(inspectorId: string, data: Partial<InspectorFormData>) {
+export async function updateInspector(
+  inspectorId: string,
+  data: Partial<InspectorFormData>
+) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error('Unauthorized');
-    
+    if (!session?.user) throw new Error("Unauthorized");
+
     const inspector = await prisma.inspector.update({
       where: { inspectorId },
       data: {
         ...data,
         modifiedBy: session.user.id,
-      }
+      },
     });
-    
-    revalidatePath('/admin/inspectors');
+
+    revalidatePath("/admin/inspectors");
     return inspector;
   } catch (error) {
-    console.error('Error updating inspector:', error);
+    console.error("Error updating inspector:", error);
     throw error;
   }
 }
@@ -223,16 +222,45 @@ export async function updateInspector(inspectorId: string, data: Partial<Inspect
 export async function deleteInspector(id: string) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error('Unauthorized');
-    
-    await prisma.inspector.delete({
-      where: { inspectorId: id }
+    if (!session?.user) throw new Error("Unauthorized");
+
+    // First, get the inspector to check if they have a linked user
+    const inspector = await prisma.inspector.findUnique({
+      where: { inspectorId: id },
+      include: { user: true },
     });
-    
-    revalidatePath('/admin/inspectors');
-    return true;
+
+    if (!inspector) {
+      throw new Error("Inspector not found");
+    }
+
+    // Use a transaction to ensure data consistency
+    await prisma.$transaction(async (tx) => {
+      // If the inspector is linked to a user, change the user's role to WORKER
+      if (inspector.userId && inspector.user) {
+        await tx.user.update({
+          where: { id: inspector.userId },
+          data: {
+            role: "WORKER",
+            modifiedBy: session.user.id,
+          },
+        });
+      }
+
+      // Delete the inspector record
+      await tx.inspector.delete({
+        where: { inspectorId: id },
+      });
+    });
+
+    revalidatePath("/admin/inspectors");
+    return {
+      success: true,
+      wasLinkedToUser: !!inspector.userId,
+      userEmail: inspector.user?.email,
+    };
   } catch (error) {
-    console.error('Error deleting inspector:', error);
+    console.error("Error deleting inspector:", error);
     throw error;
   }
 }
@@ -240,81 +268,95 @@ export async function deleteInspector(id: string) {
 export async function toggleInspectorStatus(id: string, isActive: boolean) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error('Unauthorized');
-    
+    if (!session?.user) throw new Error("Unauthorized");
+
     const inspector = await prisma.inspector.update({
       where: { inspectorId: id },
-      data: { 
+      data: {
         isActive,
         modifiedBy: session.user.id,
-      }
+      },
     });
-    
-    revalidatePath('/admin/inspectors');
+
+    revalidatePath("/admin/inspectors");
     return inspector;
   } catch (error) {
-    console.error(`Error ${isActive ? 'activating' : 'deactivating'} inspector:`, error);
+    console.error(
+      `Error ${isActive ? "activating" : "deactivating"} inspector:`,
+      error
+    );
     throw error;
   }
 }
 
-export async function createDepartment({ name, description }: { name: string; description?: string }) {
+export async function createDepartment({
+  name,
+  description,
+}: {
+  name: string;
+  description?: string;
+}) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error('Unauthorized');
-    
+    if (!session?.user) throw new Error("Unauthorized");
+
     // Get existing departments
     const existingDepartments = await getDepartments();
-    
+
     // Check if department already exists
     if (existingDepartments.includes(name)) {
       throw new Error("Department already exists");
     }
-    
+
     // Since you don't have a departments table, we'll create a "system" inspector
     // that represents this department for tracking purposes
     await prisma.inspector.create({
       data: {
         firstName: "DEPT",
         lastName: name,
-        email: `dept.${name.toLowerCase().replace(/\s+/g, '.')}@system.internal`,
+        email: `dept.${name.toLowerCase().replace(/\s+/g, ".")}@system.internal`,
         department: name,
         notes: description || null,
         isActive: false, // So it doesn't show up in normal inspector lists
         createdBy: session.user.id,
-      }
+      },
     });
-    
-    revalidatePath('/admin/inspectors');
+
+    revalidatePath("/admin/inspectors");
     return { name, description };
   } catch (error) {
-    console.error('Error creating department:', error);
+    console.error("Error creating department:", error);
     throw error;
   }
 }
 
-export async function createInspectorType({ name, description }: { name: string; description?: string }) {
+export async function createInspectorType({
+  name,
+  description,
+}: {
+  name: string;
+  description?: string;
+}) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error('Unauthorized');
-    
+    if (!session?.user) throw new Error("Unauthorized");
+
     await prisma.inspector.create({
       data: {
         firstName: "TYPE",
         lastName: name,
-        email: `type.${name.toLowerCase().replace(/\s+/g, '.')}@system.internal`,
+        email: `type.${name.toLowerCase().replace(/\s+/g, ".")}@system.internal`,
         specialization: name,
         notes: description || null,
         isActive: false,
         createdBy: session.user.id,
-      }
+      },
     });
-    
-    
-    revalidatePath('/admin/inspector-types');
+
+    revalidatePath("/admin/inspector-types");
     return { name, description };
   } catch (error) {
-    console.error('Error creating inspector type:', error);
+    console.error("Error creating inspector type:", error);
     throw error;
   }
 }

@@ -51,12 +51,6 @@ export async function PATCH(
           { status: 400 }
         );
       }
-      if (field === "tinNumber") {
-        return new NextResponse(
-          "TIN number already exists. Please use a different TIN number.",
-          { status: 400 }
-        );
-      }
       return new NextResponse("A customer with these details already exists.", {
         status: 400,
       });
