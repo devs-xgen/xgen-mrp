@@ -390,3 +390,19 @@ npx prisma migrate dev --name add_chuchubbells
 npx prisma db pull
 npx prisma db push
 ```
+
+
+
+# 1. Push current schema to create tables
+npx prisma db push
+
+# 2. Generate Prisma client
+npx prisma generate
+
+# 3. Run seed files to populate data
+npm run seed
+# OR run individual seed files:
+npx tsx prisma/seed.ts
+npx tsx prisma/customers-suppliers-seed.ts
+npx tsx prisma/materials-products-seed.ts
+npx tsx prisma/developer-seed.ts
