@@ -11,7 +11,8 @@ import {
   Users,
   Settings,
   LogOut,
-  Code
+  Code,
+  Database
 } from "lucide-react";
 
 interface NavItem {
@@ -33,6 +34,12 @@ const developerNavItems: NavItem[] = [
     label: "Support Management",
     href: "/developer/support",
     description: "Manage all customer support tickets",
+  },
+  {
+    icon: Database,
+    label: "Database Studio",
+    href: "/developer/database-studio",
+    description: "Backup and manage database",
   },
   {
     icon: Users,

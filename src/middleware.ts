@@ -8,6 +8,7 @@ const PORTAL_ROLES = {
   WORKER_PORTAL: ["WORKER"],
   INSPECTOR_PORTAL: ["INSPECTOR"],
   DELIVERY_PORTAL: ["DELIVERY"],
+  DEVELOPER_PORTAL: ["DEVELOPER"],
 };
 
 // Portal path mappings
@@ -16,6 +17,7 @@ const PORTAL_PATHS = {
   WORKER_PORTAL: "/worker",
   INSPECTOR_PORTAL: "/inspector",
   DELIVERY_PORTAL: "/delivery",
+  DEVELOPER_PORTAL: "/developer",
 };
 
 // Rate limiting configuration (more reasonable limits)
@@ -111,7 +113,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 // Validate role access to specific paths
 function hasRoleAccess(userRole: string, pathname: string): boolean {
   // Extract portal from pathname
-  const portalMatch = pathname.match(/^\/(admin|worker|inspector|delivery)/);
+  const portalMatch = pathname.match(/^\/(admin|worker|inspector|delivery|developer)/);
   if (!portalMatch) return true; // Allow access to non-portal routes
 
   const portal = portalMatch[1].toUpperCase() + "_PORTAL";
