@@ -2,6 +2,16 @@
   "project": "XGen MRP",
   "entries": [
     {
+      "version": "1.5.7",
+      "date": "2025-09-08",
+      "changes": [
+        "FIX: Resolved horizontal scroll issue in minimized AppSidebar state",
+        "ENHANCEMENT: Improved responsive behavior for nav items in collapsed/expanded sidebar",
+        "ENHANCEMENT: Enhanced text alignment and spacing consistency in AppSidebar",
+        "UI/UX: Added proper overflow handling and truncation for long navigation labels"
+      ]
+    },
+    {
       "version": "1.5.6",
       "date": "2025-09-07",
       "changes": [
@@ -16,8 +26,8 @@
       ]
     },
     {
-      "version": "1.6.0",
-      "date": "2025-01-28",
+      "version": "1.5.5 alpha",
+      "date": "2025-09-03",
       "changes": [
         "NEW: Complete Customer Orders V2 system with enhanced functionality and modern UI",
         "NEW: Comprehensive billing section with statement creation and management",

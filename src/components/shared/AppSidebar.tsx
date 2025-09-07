@@ -83,6 +83,7 @@ function NavItem({
         <CollapsibleTrigger
           className={cn(
             "flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group",
+            "min-w-0", // Prevent overflow in collapsed state
             isOpen
               ? "text-slate-100"
               : "text-slate-300 hover:bg-slate-700 hover:text-slate-100"
@@ -91,8 +92,8 @@ function NavItem({
           {item.icon && <item.icon className="h-5 w-5 shrink-0" />}
           <span
             className={cn(
-              "transition-all duration-300",
-              isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto",
+              "transition-all duration-300 truncate text-left",
+              isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto flex-1",
               item.icon ? "ml-3" : "ml-0"
             )}
           >
@@ -127,7 +128,10 @@ function NavItem({
             "group/cc"
           )}
         >
-          <div className="relative ml-4 pl-3 space-y-0.5 before:absolute before:left-0 before:top-1 before:bottom-1 before:w-px before:bg-slate-700/60 before:transition-opacity group-data-[state=closed]/cc:before:opacity-0 group-data-[state=open]/cc:before:opacity-100">
+          <div className={cn(
+          "relative space-y-0.5 before:absolute before:left-0 before:top-1 before:bottom-1 before:w-px before:bg-slate-700/60 before:transition-opacity group-data-[state=closed]/cc:before:opacity-0 group-data-[state=open]/cc:before:opacity-100 min-w-0",
+          isCollapsed ? "ml-0 pl-0" : "ml-4 pl-3"
+        )}>
             {item.items.map((subItem, idx) => (
               <div
                 key={`wrap-${subItem.href || subItem.label}`}
@@ -142,7 +146,7 @@ function NavItem({
                   item={subItem}
                   isCollapsed={isCollapsed}
                   isActive={pathname === subItem.href}
-                  isChild
+                  isChild={!isCollapsed}
                   itemId={`${itemId}-${subItem.label}`}
                   openItemId={openItemId}
                 />
@@ -158,11 +162,11 @@ function NavItem({
     <Link
       href={item.href || "#"}
       className={cn(
-        "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group",
+        "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group min-w-0",
         isActive
           ? "bg-slate-700 text-slate-100"
           : "text-slate-300 hover:bg-slate-700 hover:text-slate-100",
-        isChild && "pl-9"
+        isChild && !isCollapsed && "pl-9"
       )}
     >
       {item.icon && <item.icon className="h-5 w-5 shrink-0" />}
@@ -170,8 +174,8 @@ function NavItem({
       {!isCollapsed || item.items ? (
         <span
           className={cn(
-            "transition-all duration-300",
-            isCollapsed ? "opacity-50 w-0" : "opacity-100 w-auto",
+            "transition-all duration-300 truncate text-left",
+            isCollapsed ? "opacity-50 w-0" : "opacity-100 w-auto flex-1",
             item.icon ? "ml-3" : "ml-0"
           )}
         >
@@ -285,7 +289,7 @@ export default function AppSidebar() {
       </div>
 
       {/* Navigation section - Scrollable */}
-      <nav className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800 space-y-2 p-4 min-h-0">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800 space-y-2 p-4 min-h-0">
         {isLoading ? (
           // Show skeleton UI while loading
           <>
