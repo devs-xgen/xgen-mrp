@@ -74,7 +74,7 @@ export function ProductionPlanningClient({
 
   // Calculate selected orders stats
   const selectedOrdersStats = useMemo(() => {
-    const selected = filteredOrders.filter(order => selectedOrders.includes(order.id));
+    const selected = filteredOrders.filter(order => selectedOrders.includes(order.orderId));
     return {
       count: selected.length,
       totalValue: selected.reduce((sum, order) => sum + order.totalOrderValue, 0),
@@ -84,7 +84,7 @@ export function ProductionPlanningClient({
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedOrders(filteredOrders.map(order => order.id));
+      setSelectedOrders(filteredOrders.map(order => order.orderId));
     } else {
       setSelectedOrders([]);
     }
@@ -103,7 +103,7 @@ export function ProductionPlanningClient({
     
     // Navigate to bulk production creation
     const selectedOrderData = filteredOrders.filter(order => 
-      selectedOrders.includes(order.id)
+      selectedOrders.includes(order.orderId)
     );
     
     // Prepare batch items from all selected orders
@@ -342,7 +342,7 @@ export function ProductionPlanningClient({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => router.push(`/admin/customer-orders/${order.orderId}/analyze`)}
+                          onClick={() => router.push(`/admin/customer-orders-v2/${order.orderId}/analyze`)}
                         >
                           <Search className="h-4 w-4" />
                         </Button>

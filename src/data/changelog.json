@@ -11,7 +11,8 @@
         "SECURITY: DEVELOPER-only access enforced by middleware and per-route checks",
         "SECURITY: Rate-limited backup endpoint with audit logs",
         "CONFIG: Added support for PG_BACKUP_URL (direct Postgres URI) and PG_DUMP_PATH (pg_dump location)",
-        "NOTE: Requires pg_dump on the server/VM/container; serverless environments need a compatible runtime"
+        "NOTE: Requires pg_dump on the server/VM/container; serverless environments need a compatible runtime",
+        "Customer Orders V2: Added Production Planning dashboard and per-order planning; standardized V2 routing; fixed stock allocation types; corrected dynamic params handling."
       ]
     },
     {

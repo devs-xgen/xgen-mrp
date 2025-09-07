@@ -69,8 +69,11 @@ export function ProductionPlanningActions({
       try {
         const allocations = stockLines.map(line => ({
           orderLineId: line.id,
-          allocatedQuantity: line.stockToUse,
-          fulfillmentType: "STOCK" as const,
+          productId: line.productId,
+          productVariantId: line.productVariantId,
+          quantityToAllocate: line.stockToUse,
+          reservationDate: new Date(),
+          notes: `Allocation for order ${orderAnalysis.orderNumber}`,
         }));
 
         const result = await allocateStockForOrder(orderId, allocations);
@@ -89,7 +92,7 @@ export function ProductionPlanningActions({
   };
 
   const handleNavigateToPlanning = () => {
-    router.push("/admin/production/planning");
+    router.push(`/admin/customer-orders-v2/${orderId}/production-planning`);
   };
 
   return (
@@ -157,10 +160,10 @@ export function ProductionPlanningActions({
               </Button>
             )}
 
-            <Link href="/admin/production/planning">
+            <Link href={`/admin/customer-orders-v2/${orderId}/production-planning`}>
               <Button variant="outline" className="w-full sm:w-auto">
                 <BarChart className="mr-2 h-4 w-4" />
-                Production Planning Dashboard
+                Production Planning
               </Button>
             </Link>
           </div>

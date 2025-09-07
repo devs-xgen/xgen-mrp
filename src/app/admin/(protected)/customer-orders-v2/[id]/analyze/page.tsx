@@ -12,15 +12,15 @@ export const metadata: Metadata = {
 };
 
 interface CustomerOrderV2AnalysisPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function CustomerOrderV2AnalysisPage({
   params,
 }: CustomerOrderV2AnalysisPageProps) {
-  const { id } = params;
+  const { id } = await params;
 
   if (!id) {
     notFound();
