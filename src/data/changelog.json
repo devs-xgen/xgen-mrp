@@ -2,6 +2,19 @@
   "project": "XGen MRP",
   "entries": [
     {
+      "version": "1.5.6",
+      "date": "2025-09-07",
+      "changes": [
+        "NEW: Developer Portal – Database Studio with one-click PostgreSQL backups",
+        "NEW: Selective table backup with searchable table picker",
+        "TECHNICAL: Streamed pg_dump output to browser as .sql (reduced memory footprint)",
+        "SECURITY: DEVELOPER-only access enforced by middleware and per-route checks",
+        "SECURITY: Rate-limited backup endpoint with audit logs",
+        "CONFIG: Added support for PG_BACKUP_URL (direct Postgres URI) and PG_DUMP_PATH (pg_dump location)",
+        "NOTE: Requires pg_dump on the server/VM/container; serverless environments need a compatible runtime"
+      ]
+    },
+    {
       "version": "1.6.0",
       "date": "2025-01-28",
       "changes": [
