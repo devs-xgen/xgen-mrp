@@ -8,7 +8,23 @@
         "FIX: Resolved horizontal scroll issue in minimized AppSidebar state",
         "ENHANCEMENT: Improved responsive behavior for nav items in collapsed/expanded sidebar",
         "ENHANCEMENT: Enhanced text alignment and spacing consistency in AppSidebar",
-        "UI/UX: Added proper overflow handling and truncation for long navigation labels"
+        "UI/UX: Added proper overflow handling and truncation for long navigation labels",
+        "FIX: Customer Order V2 - Fixed controlled input error for unit price display",
+        "FIX: Customer Order V2 - Resolved product pricing display issues in order creation",
+        "ENHANCEMENT: Customer Order V2 - Added selling price display to product/variant selection",
+        "UI/UX: Customer Order V2 - Redesigned order item layout with card-based design",
+        "UI/UX: Customer Order V2 - Improved visual hierarchy with better spacing and organization",
+        "UI/UX: Customer Order V2 - Made unit price display-only for better user experience",
+        "UI/UX: Customer Order V2 - Enhanced responsive layout for product and variant selection",
+        "UI/UX: Customer Order V2 - Replaced standard date input with shadcn date picker",
+        "FIX: Customer Order Detail - Fixed Next.js params async/await pattern error",
+        "ENHANCEMENT: Customer Order Detail - Enhanced Transaction section with proper formatting",
+        "UI/UX: Customer Order Detail - Replaced all dashes with attractive empty state banners",
+        "UI/UX: Customer Order Detail - Improved visual presentation across all sections",
+        "UI/UX: Customer Order Detail - Added status badges with color coding",
+        "ENHANCEMENT: Customer Order Detail - Enhanced empty state handling in Fulfillment tab",
+        "UI/UX: Customer Order Detail - Added professional icons and visual indicators",
+        "ENHANCEMENT: Customer Order Detail - Improved table styling and responsive design"
       ]
     },
     {

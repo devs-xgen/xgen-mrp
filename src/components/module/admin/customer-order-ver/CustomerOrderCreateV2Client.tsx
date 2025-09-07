@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, ArrowRight, Check, Plus, X, Package, ShoppingCart } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Plus, X, Package, ShoppingCart, Calendar as CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -21,6 +21,9 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -77,6 +80,7 @@ export function CustomerOrderCreateV2Client({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
+  const [date, setDate] = useState<Date>();
 
   const form = useForm<CustomerOrderForm>({
     resolver: zodResolver(customerOrderCreateSchema),
@@ -106,6 +110,14 @@ export function CustomerOrderCreateV2Client({
       setSelectedCustomer(null);
     }
   }, [customerId, customers]);
+
+  useEffect(() => {
+    // Initialize date from form
+    const requiredDate = form.getValues("requiredDate");
+    if (requiredDate) {
+      setDate(new Date(requiredDate));
+    }
+  }, [form]);
 
   useEffect(() => {
     setValue("orderLines", orderLines, { shouldValidate: true, shouldDirty: true });
@@ -288,113 +300,136 @@ export function CustomerOrderCreateV2Client({
       ) : (
         <Card>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Variant</TableHead>
-                  <TableHead className="w-24">Quantity</TableHead>
-                  <TableHead className="w-32">Unit Price</TableHead>
-                  <TableHead className="w-32">Total</TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orderLines.map((line, index) => {
-                  const product = products.find(p => p.id === line.productId);
-                  return (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <Select
-                          value={line.productId}
-                          onValueChange={(value) => {
-                            const selectedProduct = products.find(p => p.id === value);
-                            updateOrderLine(index, {
-                              productId: value,
-                              productVariantId: "",
-                              unitPrice: selectedProduct?.sellingPrice || 0,
-                              product: selectedProduct,
-                            });
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select product" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {products.map((product) => (
-                              <SelectItem key={product.id} value={product.id}>
-                                {product.name} ({product.sku})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        {product?.hasVariants && product.variants?.length > 0 ? (
-                          <Select
-                            value={line.productVariantId || ""}
-                            onValueChange={(value) => {
-                              const selectedVariant = product.variants.find(v => v.id === value);
-                              updateOrderLine(index, {
-                                productVariantId: value,
-                                unitPrice: selectedVariant?.sellingPrice || product.sellingPrice,
-                                productVariant: selectedVariant,
-                              });
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select variant" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {product.variants.map((variant) => (
-                                <SelectItem key={variant.id} value={variant.id}>
-                                  {variant.displayName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">No variants</span>
+            <div className="space-y-4">
+              {orderLines.map((line, index) => {
+                const product = products.find(p => p.id === line.productId);
+                const selectedVariant = product?.variants?.find(v => v.id === line.productVariantId);
+                
+                return (
+                  <Card key={index} className="p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Product Selection */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Product</Label>
+                            <Select
+                              value={line.productId}
+                              onValueChange={(value) => {
+                                const selectedProduct = products.find(p => p.id === value);
+                                updateOrderLine(index, {
+                                  productId: value,
+                                  productVariantId: "",
+                                  unitPrice: selectedProduct?.unitPrice || 0,
+                                  product: selectedProduct,
+                                });
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select product" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {products.map((product) => (
+                                  <SelectItem key={product.id} value={product.id}>
+                                    {product.name} ({product.sku}) - {formatCurrencyPHP(product.unitPrice || 0)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Variant Selection */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Variant</Label>
+                            {product?.hasVariants && product.variants?.length > 0 ? (
+                              <Select
+                                value={line.productVariantId || ""}
+                                onValueChange={(value) => {
+                                  const selectedVariant = product.variants.find(v => v.id === value);
+                                  updateOrderLine(index, {
+                                    productVariantId: value,
+                                    unitPrice: selectedVariant?.unitPrice || product.unitPrice || 0,
+                                    productVariant: selectedVariant,
+                                  });
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select variant" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {product.variants.map((variant) => (
+                                    <SelectItem key={variant.id} value={variant.id}>
+                                      {variant.displayName} - {formatCurrencyPHP(variant.unitPrice || 0)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div className="text-sm text-muted-foreground pt-2">
+                                {product ? 'No variants available' : 'Select a product first'}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Product/Variant Info Display */}
+                        {product && (
+                          <div className="mt-3 p-3 bg-muted/30 rounded-md">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium text-sm">{product.name}</p>
+                                {selectedVariant && (
+                                  <p className="text-sm text-muted-foreground">{selectedVariant.displayName}</p>
+                                )}
+                                <p className="text-xs text-muted-foreground">SKU: {selectedVariant?.sku || product.sku}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-medium">Unit Price</p>
+                                <p className="text-lg font-semibold text-primary">
+                                  {formatCurrencyPHP(line.unitPrice || 0)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={line.quantity}
-                          onChange={(e) =>
-                            updateOrderLine(index, { quantity: parseInt(e.target.value) || 1 })
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={line.unitPrice}
-                          onChange={(e) =>
-                            updateOrderLine(index, { unitPrice: parseFloat(e.target.value) || 0 })
-                          }
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {formatCurrencyPHP(line.quantity * line.unitPrice)}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeOrderLine(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+
+                        {/* Quantity and Total */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Quantity</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={line.quantity}
+                              onChange={(e) =>
+                                updateOrderLine(index, { quantity: parseInt(e.target.value) || 1 })
+                              }
+                              className="w-32"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Total</Label>
+                            <div className="text-xl font-bold text-primary">
+                              {formatCurrencyPHP(line.quantity * line.unitPrice)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeOrderLine(index)}
+                        className="ml-4"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -416,10 +451,42 @@ export function CustomerOrderCreateV2Client({
       <div className="grid gap-4">
         <div className="space-y-2">
           <Label htmlFor="requiredDate">Required Date *</Label>
-          <Input
-            type="date"
-            {...form.register("requiredDate")}
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !date && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date ? (
+                  date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })
+                ) : (
+                  <span>Pick a date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={(selectedDate) => {
+                  setDate(selectedDate);
+                  if (selectedDate) {
+                    setValue("requiredDate", selectedDate.toISOString().split('T')[0]);
+                  }
+                }}
+                initialFocus
+                disabled={(date) => date < new Date()}
+              />
+            </PopoverContent>
+          </Popover>
           {errors.requiredDate && (
             <p className="text-sm text-destructive">{errors.requiredDate.message}</p>
           )}

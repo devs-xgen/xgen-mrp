@@ -20,7 +20,7 @@ import { PaymentSection } from "@/components/module/admin/customer-order-ver/vie
 import { Prisma } from "@prisma/client";
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 function OrderDetails({ order }: { order: any }) {
@@ -62,7 +62,7 @@ function OrderDetails({ order }: { order: any }) {
 }
 
 export default async function CustomerOrderV2DetailPage({ params }: PageProps) {
-  const { id } = params;
+  const { id } = await params;
 
   // Fetch order data to display order number in title
   const dbOrder: any = await getCustomerOrderById(id);
