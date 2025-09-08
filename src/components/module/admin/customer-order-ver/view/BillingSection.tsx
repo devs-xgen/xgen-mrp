@@ -20,6 +20,14 @@ export function BillingSection({ order }: BillingSectionProps) {
 
   const billingStatements = order.billingStatements || [];
   const hasBillingStatements = billingStatements.length > 0;
+  
+  // Calculate payment status for validation
+  const transactions = order.transaction || [];
+  const totalPaid = transactions
+    .filter((transaction: any) => transaction.status === "COMPLETED")
+    .reduce((sum: number, transaction: any) => sum + (transaction.amount || 0), 0);
+  const remainingBalance = (order.totalAmount || 0) - totalPaid;
+  const isFullyPaid = remainingBalance <= 0;
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -58,6 +66,20 @@ export function BillingSection({ order }: BillingSectionProps) {
         }
         contentClassName="space-y-4"
       >
+        {/* Billing vs Payment Documentation */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <div className="flex items-start gap-3">
+            <FileText className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div className="space-y-2">
+              <h4 className="font-medium text-blue-900">Billing vs Payment Difference</h4>
+              <div className="text-sm text-blue-800 space-y-1">
+                <p><strong>Billing Statements:</strong> Document what the customer owes (before payment)</p>
+                <p><strong>Payment Records:</strong> Track actual money received (after payment)</p>
+                <p className="font-medium text-orange-700">⚠️ Billing status should NOT be &quot;Paid&quot; until payments fully cover the amount in the Payment section</p>
+              </div>
+            </div>
+          </div>
+        </div>
         {hasBillingStatements ? (
           <div className="space-y-4">
             {billingStatements.map((billing: any) => (
@@ -72,6 +94,11 @@ export function BillingSection({ order }: BillingSectionProps) {
                       <Badge variant={getStatusBadgeVariant(billing.status)}>
                         {formatStatus(billing.status)}
                       </Badge>
+                      {billing.status === "PAID" && !isFullyPaid && (
+                        <Badge variant="destructive" className="text-xs">
+                          ⚠️ Payment Mismatch
+                        </Badge>
+                      )}
                       {billing.salesInvoice && (
                         <Badge variant="outline" className="text-xs">
                           Invoice: {billing.salesInvoice.invoiceNumber}
@@ -121,6 +148,16 @@ export function BillingSection({ order }: BillingSectionProps) {
                       </div>
                     </div>
                   </div>
+                  
+                  {billing.status === "PAID" && !isFullyPaid && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                      <p className="text-sm text-red-800 font-medium">⚠️ Status Error</p>
+                      <p className="text-xs text-red-700 mt-1">
+                        This billing is marked as PAID but only {formatCurrencyPHP(totalPaid)} of {formatCurrencyPHP(order.totalAmount || 0)} has been received. 
+                        Update status to match actual payment records.
+                      </p>
+                    </div>
+                  )}
                   
                   {billing.deliveryReceipts && billing.deliveryReceipts.length > 0 && (
                     <div className="mt-4 pt-4 border-t">

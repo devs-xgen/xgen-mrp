@@ -552,6 +552,40 @@ export async function updateBillingStatementStatus(
       throw new Error("Unauthorized");
     }
 
+    // Validate payment completion before allowing PAID status
+    if (status === "PAID") {
+      const billingStatement = await prisma.billingStatement.findUnique({
+        where: { id },
+        include: {
+          customerOrder: {
+            include: {
+              transaction: {
+                where: { status: "COMPLETED" }
+              }
+            }
+          }
+        }
+      });
+
+      if (!billingStatement) {
+        throw new Error("Billing statement not found");
+      }
+
+      // Calculate total paid amount
+      const totalPaid = billingStatement.customerOrder?.transaction?.reduce(
+        (sum, transaction) => sum + Number(transaction.amount), 0
+      ) || 0;
+
+      const totalAmount = Number(billingStatement.totalAmount);
+      const remainingBalance = totalAmount - totalPaid;
+
+      if (remainingBalance > 0) {
+        throw new Error(
+          `Cannot mark as PAID. Only ₱${totalPaid.toLocaleString()} of ₱${totalAmount.toLocaleString()} has been paid. Remaining balance: ₱${remainingBalance.toLocaleString()}`
+        );
+      }
+    }
+
     const billingStatement = await prisma.billingStatement.update({
       where: { id },
       data: {
@@ -566,7 +600,7 @@ export async function updateBillingStatementStatus(
     return serializeDecimals(billingStatement);
   } catch (error) {
     console.error("Error updating billing statement status:", error);
-    throw new Error("Failed to update billing statement status");
+    throw error instanceof Error ? error : new Error("Failed to update billing statement status");
   }
 }
 

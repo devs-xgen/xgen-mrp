@@ -304,7 +304,6 @@ export function CreateBillingStatementDialog({
                     <SelectContent>
                       <SelectItem value="DRAFT">Draft</SelectItem>
                       <SelectItem value="SENT">Sent</SelectItem>
-                      <SelectItem value="PAID">Paid</SelectItem>
                       <SelectItem value="OVERDUE">Overdue</SelectItem>
                       <SelectItem value="CANCELLED">Cancelled</SelectItem>
                     </SelectContent>

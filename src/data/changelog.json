@@ -2,6 +2,19 @@
   "project": "XGen MRP",
   "entries": [
     {
+      "version": "1.5.8",
+      "date": "2025-09-09",
+      "changes": [
+        "UI/UX: Customer Order Detail - Modernized Payment section to match page visuals (blue guidance banner, refined cards, consistent spacing)",
+        "UI/UX: Payment section - Added payment progress bar and clearer totals (amount, paid, remaining)",
+        "FIX: Payment section JSX syntax errors causing build failures (malformed dialog markup)",
+        "ENHANCEMENT: Clear toasts when marking billing as PAID with exact remaining balance when incomplete",
+        "ENHANCEMENT: Prevent marking billing as PAID unless fully paid (backend validation + UI safeguards)",
+        "NEW: One-click 'Mark Billing as Paid' when fully paid via syncBillingStatusWithPayment()",
+        "DOCS: Added Customer Order feature documentation – notes/customer-order-page-and-system-integration.md"
+      ]
+    },
+    {
       "version": "1.5.7",
       "date": "2025-09-08",
       "changes": [
