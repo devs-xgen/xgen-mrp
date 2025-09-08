@@ -70,6 +70,98 @@ export function ProductionCreateClient({
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Helper: record rich error details for ErrorDebugPanel
+  const recordManualError = (payload: {
+    message: string;
+    stack?: string;
+    errorType?: string;
+    context?: Record<string, any>;
+  }) => {
+    try {
+      const existing = JSON.parse(
+        typeof window !== "undefined"
+          ? localStorage.getItem("manual_errors") || "[]"
+          : "[]"
+      );
+      const entry = {
+        message: payload.message,
+        stack: payload.stack,
+        errorType: payload.errorType || "javascript",
+        timestamp: new Date().toISOString(),
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+        url: typeof location !== "undefined" ? location.href : "",
+        errorId: crypto?.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2),
+        buildInfo: {
+          version: process.env.NEXT_PUBLIC_APP_VERSION || "unknown",
+          nodeEnv: process.env.NODE_ENV || "unknown",
+        },
+        ...("context" in payload && payload.context ? { context: payload.context } : {}),
+      };
+      const next = [entry, ...existing].slice(0, 50);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("manual_errors", JSON.stringify(next));
+      }
+    } catch {}
+  };
+
+  // Helper: map raw error to friendly title/description and a copyable details string
+  const normalizeError = (raw: unknown) => {
+    const rawMessage =
+      typeof raw === "string"
+        ? raw
+        : raw && typeof raw === "object" && "message" in raw
+        ? String((raw as any).message)
+        : JSON.stringify(raw);
+
+    const lower = rawMessage.toLowerCase();
+    const title = "Production order creation failed";
+    let description = rawMessage;
+    let errorType = "javascript";
+
+    if (lower.includes("unauthorized") || lower.includes("auth")) {
+      description = "Your session may have expired. Please refresh and log in, then try again.";
+      errorType = "network";
+    } else if (lower.includes("due date") && lower.includes("after start")) {
+      description = "The due date must be after the start date. Please adjust your dates.";
+      errorType = "validation";
+    } else if (lower.includes("product not found")) {
+      description = "The selected product could not be found. It might have been removed.";
+      errorType = "validation";
+    } else if (lower.includes("invalid product variant")) {
+      description = "The selected variant does not belong to the chosen product. Please reselect.";
+      errorType = "validation";
+    } else if (lower.includes("p2002")) {
+      description = "A unique constraint was violated. Please check for duplicates and try again.";
+      errorType = "database";
+    } else if (lower.includes("p2003")) {
+      description = "A related record is missing (foreign key). Please verify selections and try again.";
+      errorType = "database";
+    } else if (lower.includes("timeout") || lower.includes("econnrefused") || lower.includes("connection")) {
+      description = "A temporary connection issue occurred. Please try again in a moment.";
+      errorType = "network";
+    }
+
+    const details = rawMessage;
+    return { title, description, details, errorType };
+  };
+
+  const showDetailedErrorToast = (rawError: unknown, context?: Record<string, any>) => {
+    const { title, description, details, errorType } = normalizeError(rawError);
+    toast.error(title, {
+      description,
+      action: {
+        label: "Copy details",
+        onClick: () => {
+          const payload = JSON.stringify({ title, description, details, context }, null, 2);
+          navigator?.clipboard?.writeText(payload).catch(() => {});
+        },
+      },
+    });
+
+    // Persist details for ErrorDebugPanel
+    recordManualError({ message: `${title}: ${description}`, stack: undefined, errorType, context: { details, ...context } });
+  };
+
   const form = useForm<ProductionCreateForm>({
     resolver: zodResolver(productionCreateSchema),
     defaultValues: {
@@ -227,7 +319,13 @@ export function ProductionCreateClient({
               warnings.push(...result.warnings);
             }
           } else {
-            errors.push(`Failed to create production order: ${'error' in result ? result.error : 'Unknown error'}`);
+            const msg = 'error' in result ? result.error : 'Unknown error';
+            errors.push(`Failed to create production order: ${msg}`);
+            // Show richer error toast per item with context
+            showDetailedErrorToast(msg, {
+              mode: "batch",
+              item,
+            });
           }
         }
 
@@ -236,10 +334,15 @@ export function ProductionCreateClient({
           toast.success(`Successfully created ${results.length} production orders!`);
         }
         if (warnings.length > 0) {
-          warnings.forEach((warning) => toast.warning(warning));
+          warnings.forEach((warning) =>
+            toast.warning("Created with warning", { description: warning })
+          );
         }
         if (errors.length > 0) {
-          errors.forEach((error) => toast.error(error));
+          // Already displayed individual detailed toasts; also summarize
+          toast.error("Some orders failed", {
+            description: `${errors.length} of ${batchItems.length} failed. Check the detailed toasts for specifics.`,
+          });
         }
 
         if (results.length > 0) {
@@ -278,12 +381,25 @@ export function ProductionCreateClient({
 
           router.push(`/admin/production/${result.orderId}`);
         } else {
-          toast.error('error' in result ? result.error : 'Unknown error');
+          const msg = 'error' in result ? result.error : 'Unknown error';
+          showDetailedErrorToast(msg, {
+            mode: "single",
+            formData: {
+              productId: data.productId,
+              productVariantId: data.productVariantId,
+              quantity: data.quantity,
+              startDate: data.startDate,
+              dueDate: data.dueDate,
+              priority: data.priority,
+            },
+          });
         }
       }
     } catch (error) {
       console.error("Error creating production order:", error);
-      toast.error("Failed to create production order");
+      showDetailedErrorToast(error, {
+        mode: "exception",
+      });
     } finally {
       setIsSubmitting(false);
     }
