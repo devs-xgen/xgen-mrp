@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { notFound, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Package, TrendingUp, AlertTriangle, Factory, Plus, Minus, History, Edit, Eye, PieChart, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -87,9 +87,8 @@ export default function ProductDetailClientPage({
     }
   }, [searchParams]);
 
-  if (!product) {
-    notFound();
-  }
+  // Note: notFound() must not be used in client components.
+  // The server page guards against missing product and calls notFound().
 
   // Calculate analytics
   const totalVariants = product.variants?.length || 0;
@@ -145,7 +144,7 @@ export default function ProductDetailClientPage({
               </Button>
             </Link> */}
              <EditProductDialog
-                product={product}
+                product={product as any}
                 categories={categories}
                 onSuccess={async () => router.refresh()}
                 trigger={
@@ -321,7 +320,6 @@ export default function ProductDetailClientPage({
         <TabsContent value="overview" className="space-y-6">
           <ProductDetailsCard 
             product={product} 
-            totalStock={totalStock} // <--- Pass the correct value here
             onStockAdjust={() => openStockDialog()}
             onCreateProduction={() => setShowProductionDialog(true)}
           />

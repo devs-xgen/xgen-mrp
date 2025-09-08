@@ -42,8 +42,6 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
-import { Priority } from "@prisma/client";
-import { createProductionOrder } from "@/lib/actions/production-order";
 import { ProductWithNumberValues } from "@/types/admin/product";
 
 // Define the form schema
@@ -100,7 +98,7 @@ export function CreateProductionDialog({
     resolver: zodResolver(formSchema),
     defaultValues: {
       quantity: 1,
-      priority: "MEDIUM" as Priority,
+      priority: "MEDIUM",
       startDate: new Date(),
       dueDate: new Date(new Date().setDate(new Date().getDate() + 7)), // Default to 7 days from now
       notes: "",
@@ -140,7 +138,8 @@ export function CreateProductionDialog({
         operations,
       };
 
-      // Create the production order
+      // Create the production order (dynamic import to keep server code out of client bundle)
+      const { createProductionOrder } = await import("@/lib/actions/production-order");
       await createProductionOrder(productionOrderData);
 
       toast({

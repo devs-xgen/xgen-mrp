@@ -11,7 +11,10 @@
         "ENHANCEMENT: Clear toasts when marking billing as PAID with exact remaining balance when incomplete",
         "ENHANCEMENT: Prevent marking billing as PAID unless fully paid (backend validation + UI safeguards)",
         "NEW: One-click 'Mark Billing as Paid' when fully paid via syncBillingStatusWithPayment()",
-        "DOCS: Added Customer Order feature documentation – notes/customer-order-page-and-system-integration.md"
+        "DOCS: Added Customer Order feature documentation – notes/customer-order-page-and-system-integration.md",
+        "FIX: Product page – resolved Server Components boundary error when creating a Production Order by removing server-only notFound() from client component and switching server action import to dynamic",
+        "ENHANCEMENT: Production create – richer error toasts with detailed descriptions, 'Copy details' action, and persistence to ErrorDebugPanel (includes per-item toasts in batch mode)",
+        "TECHNICAL: Prevented Prisma/server code from being bundled on the client by avoiding static server action and Prisma enum imports in client components"
       ]
     },
     {
