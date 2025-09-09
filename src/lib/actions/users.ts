@@ -282,9 +282,10 @@ export async function createUser(data: CreateUserInput): Promise<UserData> {
       console.log("ℹ️ SERVER: No inspector relationship requested");
     }
 
-    // Revalidate the users page
-    console.log("🔄 SERVER: Revalidating users page...");
+    // Revalidate the users pages (admin and developer views)
+    console.log("🔄 SERVER: Revalidating users pages...");
     revalidatePath("/admin/users");
+    revalidatePath("/developer/users");
 
     // Remove password from response
     console.log("🔒 SERVER: Removing password from response...");
@@ -421,8 +422,9 @@ export async function updateUser(data: UpdateUserInput): Promise<UserData> {
       },
     });
 
-    // Revalidate the users page
+    // Revalidate the users pages (admin and developer views)
     revalidatePath("/admin/users");
+    revalidatePath("/developer/users");
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = updatedUser;
@@ -509,6 +511,7 @@ export async function deleteUser(id: string): Promise<void> {
 
     // Revalidate affected pages
     revalidatePath("/admin/users");
+    revalidatePath("/developer/users");
     revalidatePath("/admin/inspectors");
   } catch (error) {
     console.error("Error deleting user:", error);
@@ -573,8 +576,9 @@ export async function changeUserStatus(
       },
     });
 
-    // Revalidate the users page
+    // Revalidate the users pages (admin and developer views)
     revalidatePath("/admin/users");
+    revalidatePath("/developer/users");
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = updatedUser;

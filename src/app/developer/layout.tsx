@@ -44,7 +44,7 @@ const developerNavItems: NavItem[] = [
   {
     icon: Users,
     label: "User Management",
-    href: "/admin/users",
+    href: "/developer/users",
     description: "Manage system users",
   },
   {
