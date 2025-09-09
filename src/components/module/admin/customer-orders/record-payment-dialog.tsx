@@ -43,6 +43,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import { createTransactionForOrder } from "@/lib/actions/transactions"
+import { formatCurrencyPHP } from "@/lib/constant"
 
 const paymentSchema = z.object({
   orderId: z.string(),
@@ -52,7 +53,9 @@ const paymentSchema = z.object({
   paymentMethod: z.enum(["CASH", "CREDIT_CARD", "DEBIT_CARD", "ONLINE", "OTHER"], {
     required_error: "Payment method is required",
   }),
-  paymentDate: z.date({ required_error: "Payment date is required" }),
+  paymentDate: z.coerce
+    .date({ required_error: "Payment date is required", invalid_type_error: "Payment date is required" })
+    .refine((d) => !isNaN(d.getTime()), { message: "Payment date is required" }),
   notes: z.string().optional(),
 })
 
@@ -62,9 +65,12 @@ interface RecordPaymentDialogProps {
   order: { id: string; orderNumber: string }
   open: boolean
   onOpenChange: (open: boolean) => void
+  remainingBalance?: number
+  totalOrderAmount?: number
+  totalPaid?: number
 }
 
-export function RecordPaymentDialog({ order, open, onOpenChange }: RecordPaymentDialogProps) {
+export function RecordPaymentDialog({ order, open, onOpenChange, remainingBalance, totalOrderAmount, totalPaid }: RecordPaymentDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
@@ -83,6 +89,17 @@ export function RecordPaymentDialog({ order, open, onOpenChange }: RecordPayment
   const onSubmit = async (data: RecordPaymentFormData) => {
     setIsSubmitting(true)
     try {
+      // Prevent overpayment if remaining balance is provided
+      if (typeof remainingBalance === "number" && data.amount > remainingBalance + 0.0001) {
+        toast({
+          title: "Amount exceeds remaining balance",
+          description: `You can record up to ${formatCurrencyPHP(remainingBalance)} for this order.`,
+          variant: "destructive",
+        })
+        setIsSubmitting(false)
+        return
+      }
+
       await createTransactionForOrder({
         orderId: data.orderId,
         amount: data.amount,
@@ -125,6 +142,26 @@ export function RecordPaymentDialog({ order, open, onOpenChange }: RecordPayment
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {(typeof remainingBalance === "number") && (
+              <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Remaining balance</span>
+                  <span className="font-medium">{formatCurrencyPHP(remainingBalance)}</span>
+                </div>
+                {(typeof totalOrderAmount === "number") && (
+                  <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Total</span>
+                    <span>{formatCurrencyPHP(totalOrderAmount)}</span>
+                  </div>
+                )}
+                {(typeof totalPaid === "number") && (
+                  <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Paid so far</span>
+                    <span>{formatCurrencyPHP(totalPaid)}</span>
+                  </div>
+                )}
+              </div>
+            )}
             <FormField
               control={form.control}
               name="amount"
@@ -136,10 +173,25 @@ export function RecordPaymentDialog({ order, open, onOpenChange }: RecordPayment
                       type="number"
                       step="0.01"
                       min="0.01"
+                      max={typeof remainingBalance === "number" ? remainingBalance : undefined}
                       {...field}
                       onChange={(e) => field.onChange(parseFloat(e.target.value))}
                     />
                   </FormControl>
+                  {typeof remainingBalance === "number" && (
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Up to {formatCurrencyPHP(remainingBalance)}</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2"
+                        onClick={() => field.onChange(remainingBalance)}
+                      >
+                        Pay full remaining
+                      </Button>
+                    </div>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
@@ -187,7 +239,7 @@ export function RecordPaymentDialog({ order, open, onOpenChange }: RecordPayment
                           )}
                         >
                           {field.value ? (
-                            format(field.value, "PPP")
+                            format(field.value instanceof Date ? field.value : new Date(field.value), "PPP")
                           ) : (
                             <span>Pick a date</span>
                           )}
@@ -198,8 +250,8 @@ export function RecordPaymentDialog({ order, open, onOpenChange }: RecordPayment
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
+                        selected={field.value instanceof Date ? field.value : (field.value ? new Date(field.value) : undefined)}
+                        onSelect={(day) => field.onChange(day ?? new Date())}
                         disabled={(date) => date > new Date("2100-01-01") || date < new Date("1900-01-01")}
                         initialFocus
                       />

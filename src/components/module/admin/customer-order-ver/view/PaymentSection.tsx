@@ -12,6 +12,7 @@ import { formatCurrencyPHP } from "@/lib/constant"
 import { syncBillingStatusWithPayment } from "@/lib/actions/billing-payment-sync"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
+import { RecordPaymentDialog } from "@/components/module/admin/customer-orders/record-payment-dialog"
 
 interface PaymentSectionProps {
   order: any
@@ -306,34 +307,15 @@ export function PaymentSection({ order }: PaymentSectionProps) {
         )}
       </SectionCard>
 
-      {/* Payment Dialog Placeholder - This would be implemented separately */}
-      {isPaymentDialogOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Record Payment</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Payment recording dialog would be implemented here.
-            </p>
-            <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
-              <p className="text-sm text-orange-700">Remaining Balance</p>
-              <p className="text-2xl font-bold text-orange-700">
-                {formatCurrencyPHP(remainingBalance)}
-              </p>
-            </div>
-            <div className="mt-6 flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setIsPaymentDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button onClick={() => setIsPaymentDialogOpen(false)}>
-                Save Payment
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Shadcn Payment Dialog */}
+      <RecordPaymentDialog
+        order={{ id: order.id, orderNumber: order.orderNumber }}
+        open={isPaymentDialogOpen}
+        onOpenChange={setIsPaymentDialogOpen}
+        remainingBalance={remainingBalance}
+        totalOrderAmount={totalOrderAmount}
+        totalPaid={totalPaid}
+      />
     </div>
   );
 }

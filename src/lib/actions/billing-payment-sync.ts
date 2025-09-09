@@ -67,7 +67,7 @@ export async function syncBillingStatusWithPayment(customerOrderId: string) {
               status: "PAID",
               paidDate: new Date(),
               modifiedBy: session.user.id,
-              modifiedAt: new Date(),
+              // updatedAt is managed by Prisma @updatedAt
             },
           })
         )

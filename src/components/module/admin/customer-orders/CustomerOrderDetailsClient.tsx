@@ -140,7 +140,7 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
           </Button>
         </Link>
         {order.billingStatements?.length > 0 && (
-          <Link href={`/admin/billing-statement/${order.billingStatements[0].id}`}>
+          <Link href={`/admin/billing/billing-statements/${order.billingStatements[0].id}`}>
             <Button variant="outline">
               <Receipt className="h-4 w-4 mr-2" />
               View Billing
@@ -488,7 +488,7 @@ export function CustomerOrderDetailsClient({ order }: CustomerOrderDetailsClient
                         <Badge className={getStatusColor(bs?.status || 'PENDING')}>
                           {(bs?.status || 'pending').toLowerCase()}
                         </Badge>
-                        <Link href={`/admin/billing-statement/${bs?.id || '#'}`}>
+                        <Link href={`/admin/billing/billing-statements/${bs?.id || '#'}`}>
                           <Button size="sm" variant="outline">
                             <ExternalLink className="h-4 w-4 mr-1" />
                             View

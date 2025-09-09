@@ -132,13 +132,13 @@ export function BillingSection({ order }: BillingSectionProps) {
                       <div>
                         <p className="font-medium">Actions</p>
                         <div className="flex gap-2 mt-1">
-                          <Link href={`/billing-statement/${billing.id}`}>
+                          <Link href={`/admin/billing/billing-statements/${billing.id}`}>
                             <Button variant="outline" size="sm" className="h-7 text-xs">
                               View Statement
                             </Button>
                           </Link>
                           {billing.salesInvoice && (
-                            <Link href={`/sales-invoice/${billing.salesInvoice.id}`}>
+                            <Link href={`/admin/billing/sales-invoices/${billing.salesInvoice.id}`}>
                               <Button variant="outline" size="sm" className="h-7 text-xs">
                                 View Invoice
                               </Button>

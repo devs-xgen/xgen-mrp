@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import { Decimal } from "@prisma/client/runtime/library";
 import { serializeDecimals } from "@/lib/utils/decimal-serializer";
 import { Status, PaymentMethod } from "@prisma/client";
+import { checkPaymentCompletion, syncBillingStatusWithPayment } from "@/lib/actions/billing-payment-sync";
 
 export type CreateTransactionInput = {
   orderId: string;
@@ -35,13 +36,31 @@ export async function createTransactionForOrder(input: CreateTransactionInput) {
         notes: input.notes,
       },
       include: {
-        handledByUser: { select: { id: true, email: true, name: true } },
+        handledByUser: {
+          select: {
+            id: true,
+            email: true,
+            profile: { select: { firstName: true, lastName: true } },
+          },
+        },
         customerOrder: { select: { id: true, orderNumber: true } },
       },
     });
 
+    // After recording the payment, auto-sync billing status if the order is fully paid
+    try {
+      const completion = await checkPaymentCompletion(input.orderId);
+      if (completion.isFullyPaid) {
+        await syncBillingStatusWithPayment(input.orderId);
+      }
+    } catch (autoSyncErr) {
+      console.error("Auto-sync billing status failed:", autoSyncErr);
+      // Do not fail the payment creation if auto-sync fails; user can trigger manually from UI
+    }
+
     // Revalidate key pages that show customer orders and payments
     revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
 
     return serializeDecimals(tx);
   } catch (error) {
