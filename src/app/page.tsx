@@ -42,7 +42,7 @@ const XgenLogo = ({
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex bg-white">
+    <main className="min-h-screen flex bg-background">
       {/* Left side - Background Image */}
       <div className="w-1/2 relative overflow-hidden my-10 rounded-tr-xl rounded-br-xl">
         <Image
@@ -59,7 +59,7 @@ export default function Home() {
       </div>
 
       {/* Right side */}
-      <div className="w-1/2 p-12 flex flex-col justify-center bg-white">
+      <div className="w-1/2 p-12 flex flex-col justify-center bg-background">
         <div className="max-w-md mx-auto">
           <div className="text-center mb-10">
             <div className="flex justify-between items-center mb-6">

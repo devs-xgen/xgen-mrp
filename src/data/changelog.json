@@ -2,6 +2,16 @@
   "project": "XGen MRP",
   "entries": [
     {
+      "version": "1.5.10",
+      "date": "2025-09-11",
+      "changes": [
+        "UI/UX: Adopted a lighter, neutral-based dark theme palette (less stark; neutral surfaces, brighter foreground, softer borders).",
+        "TECHNICAL: Standardized theme system — ThemeContext now applies 'dark'/'light' on <html> and persists choice to localStorage; Tailwind CSS variables centralized in src/styles/globals.css.",
+        "UI: Added Dark/Light mode toggle to App Sidebar footer (icon-only when collapsed, labeled when expanded).",
+        "FIX: Landing page now respects theme by using bg-background instead of hard-coded bg-white."
+      ]
+    },
+    {
       "version": "1.5.9",
       "date": "2025-09-10",
       "changes": [

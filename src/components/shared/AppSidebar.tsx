@@ -22,6 +22,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 // No props needed for AppSidebar
 
@@ -366,6 +367,18 @@ export default function AppSidebar() {
             <div className="h-3 w-32 bg-slate-700 rounded animate-pulse"></div>
           </div>
         )}
+
+        {/* Theme Toggle */}
+        <div className={cn("mb-3", isCollapsed ? "flex justify-center" : "")}> 
+          <ThemeToggle
+            compact={isCollapsed}
+            variant="ghost"
+            className={cn(
+              "text-slate-300 hover:bg-slate-700 hover:text-slate-100 border border-slate-700",
+              isCollapsed ? "w-10 p-0" : "w-full justify-start"
+            )}
+          />
+        </div>
 
         <Button
           variant="ghost"
