@@ -18,11 +18,23 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setTheme] = useState("dark");
 
   useEffect(() => {
-    // Initialize theme from localStorage or default to "dark"
-    const storedTheme = (typeof window !== "undefined" && localStorage.getItem("theme")) || "dark";
-    setTheme(storedTheme);
-    document.body.classList.toggle("dark", storedTheme === "dark");
-    document.body.classList.toggle("light", storedTheme === "light");
+    // Initialize theme from localStorage or system preference (fallback to dark)
+    let initial: string = "dark";
+    if (typeof window !== "undefined") {
+      const storedTheme = localStorage.getItem("theme");
+      if (storedTheme === "light" || storedTheme === "dark") {
+        initial = storedTheme;
+      } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        initial = "dark";
+      } else {
+        initial = "light";
+      }
+    }
+    setTheme(initial);
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.toggle("dark", initial === "dark");
+      document.documentElement.classList.toggle("light", initial === "light");
+    }
   }, []);
 
   useEffect(() => {
@@ -31,8 +43,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       localStorage.setItem("theme", theme);
     }
     // Toggle both dark and light classes for Tailwind and custom CSS
-    document.body.classList.toggle("dark", theme === "dark");
-    document.body.classList.toggle("light", theme === "light");
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.toggle("dark", theme === "dark");
+      document.documentElement.classList.toggle("light", theme === "light");
+    }
   }, [theme]);
 
   const toggleTheme = () => {
