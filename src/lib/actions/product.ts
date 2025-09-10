@@ -2,6 +2,8 @@
 "use server";
 
 import { prisma } from "@/lib/db";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { ProductForOrder } from "@/types/admin/product";
 import { Status, Prisma } from "@prisma/client";
 import { convertDecimals } from "../convertDecimals";
@@ -20,6 +22,26 @@ async function createVariantBOMsFromParent(
 ): Promise<number> {
     console.log(`Skipping BOM creation for variant ${variantId}. Implementation needed.`);
     return 0;
+}
+
+// Get archived products for admin listing
+export async function getArchivedProducts() {
+  try {
+    const products = await prisma.product.findMany({
+      where: { status: "ARCHIVED" as Status },
+      include: {
+        category: {
+          select: { id: true, name: true },
+        },
+      },
+      orderBy: { name: "asc" },
+    });
+
+    return convertDecimals(products);
+  } catch (error) {
+    console.error("❌ Error fetching archived products:", error);
+    throw new Error("Failed to fetch archived products");
+  }
 }
 
 async function createAndLinkVariants(
@@ -73,6 +95,7 @@ async function createAndLinkVariants(
 export async function getAllProducts() {
   try {
     const products = await prisma.product.findMany({
+      where: { status: { not: "ARCHIVED" as Status } },
       include: {
         category: {
           select: {
@@ -134,6 +157,47 @@ export async function getAllProducts() {
   } catch (error) {
     console.error("❌ Error fetching products:", error);
     throw new Error("Failed to fetch products");
+  }
+}
+
+// Unarchive Product Server Action
+export async function unarchiveProduct(productId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id || "system";
+
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Reactivate all product variants
+      await tx.productVariant.updateMany({
+        where: { productId },
+        data: { isActive: true, updatedAt: new Date() },
+      });
+
+      // Unarchive product
+      await tx.product.update({
+        where: { id: productId },
+        data: {
+          status: "ACTIVE" as Status,
+          archivedAt: null,
+          archivedBy: null,
+          archivedReason: null,
+          modifiedBy: userId,
+          updatedAt: new Date(),
+        },
+      });
+    });
+
+    revalidatePath("/admin/products");
+    revalidatePath("/admin/products/archived");
+    revalidatePath(`/admin/products/${productId}`);
+
+    return { success: true, message: "Product unarchived successfully" };
+  } catch (error: any) {
+    console.error("Product unarchive error:", error);
+    if (error.code === "P2025") {
+      return { success: false, error: "Product not found" };
+    }
+    return { success: false, error: "Error unarchiving product" };
   }
 }
 
@@ -698,26 +762,41 @@ export async function updateProduct(
 }
 
 // Delete Product Server Action
-export async function deleteProduct(productId: string) {
+export async function deleteProduct(productId: string, reason?: string) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id || "system";
+
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // Delete all product variants first
-      await tx.productVariant.deleteMany({
+      // Deactivate all product variants (soft)
+      await tx.productVariant.updateMany({
         where: { productId },
+        data: { isActive: false, updatedAt: new Date() },
       });
 
-      // Delete the product
-      await tx.product.delete({
+      // Archive the product (soft-delete)
+      await tx.product.update({
         where: { id: productId },
+        data: ({
+          status: "ARCHIVED" as Status,
+          archivedAt: new Date(),
+          archivedBy: userId,
+          archivedReason: reason ?? "Archived via admin UI",
+          updatedAt: new Date(),
+        } as any),
       });
     });
 
+    // Revalidate listings and specific product page
+    revalidatePath("/admin/products");
+    revalidatePath(`/admin/products/${productId}`);
+
     return {
       success: true,
-      message: "Product deleted successfully",
+      message: "Product archived successfully",
     };
   } catch (error: any) {
-    console.error("Product deletion error:", error);
+    console.error("Product archive error:", error);
 
     if (error.code === "P2025") {
       return {
@@ -728,7 +807,7 @@ export async function deleteProduct(productId: string) {
 
     return {
       success: false,
-      error: "Error deleting product",
+      error: "Error archiving product",
     };
   }
 }

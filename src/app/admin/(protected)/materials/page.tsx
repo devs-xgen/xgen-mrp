@@ -67,6 +67,9 @@ export default async function MaterialsPage() {
             </PageDescription>
           </PageHeaderMain>
           <PageHeaderActions>
+            <Button variant="outline" size="sm" asChild>
+              <a href="/admin/materials/archived">View Archived</a>
+            </Button>
             <MaterialTypeDialog
               materialTypes={materialTypes}
               onSuccess={revalidateData}

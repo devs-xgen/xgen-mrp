@@ -48,6 +48,9 @@ async function createLowStockAlert({
 export async function getAllMaterials(): Promise<Material[]> {
   try {
     const materials = await prisma.material.findMany({
+      where: {
+        status: { not: Status.ARCHIVED },
+      },
       include: {
         type: {
           select: {
@@ -91,6 +94,63 @@ export async function getAllMaterials(): Promise<Material[]> {
   } catch (error) {
     console.error('Error fetching materials:', error);
     throw new Error('Failed to fetch materials');
+  }
+}
+
+// Get archived materials for admin listing
+export async function getArchivedMaterials(): Promise<Material[]> {
+  try {
+    const materials = await prisma.material.findMany({
+      where: { status: Status.ARCHIVED },
+      include: {
+        type: { select: { id: true, name: true } },
+        unitOfMeasure: { select: { id: true, name: true, symbol: true } },
+        supplier: { select: { id: true, name: true } },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    // Convert Decimal to number to align with Material type usage in UI
+    const converted = materials.map((m: any) => ({
+      ...m,
+      costPerUnit:
+        typeof m.costPerUnit === 'object' && 'toNumber' in m.costPerUnit
+          ? m.costPerUnit.toNumber()
+          : Number(m.costPerUnit),
+      boms: m.boms ?? [],
+    })) as Material[];
+
+    return converted;
+  } catch (error) {
+    console.error('Error fetching archived materials:', error);
+    throw new Error('Failed to fetch archived materials');
+  }
+}
+
+// Unarchive a material
+export async function unarchiveMaterial(id: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id || 'system';
+
+    await prisma.material.update({
+      where: { id },
+      data: {
+        status: Status.ACTIVE,
+        archivedAt: null,
+        archivedBy: null,
+        archivedReason: null,
+        modifiedBy: userId,
+        updatedAt: new Date(),
+      },
+    });
+
+    revalidatePath('/admin/materials');
+    revalidatePath('/admin/materials/archived');
+    return { success: true, message: 'Material unarchived successfully' };
+  } catch (error) {
+    console.error('Error unarchiving material:', error);
+    return { success: false, error: 'Failed to unarchive material' };
   }
 }
 
@@ -360,38 +420,30 @@ export async function getMaterialById(id: string): Promise<Material | null> {
   }
 }
 
-export async function deleteMaterial(id: string) {
+export async function deleteMaterial(id: string, reason?: string) {
   try {
-    // Check if the material is used in any BOMs
-    const bomCount = await prisma.bOM.count({
-      where: { materialId: id }
+    // Soft-delete (archive) the material instead of hard delete
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id || "system";
+
+    await prisma.material.update({
+      where: { id },
+      data: {
+        status: Status.ARCHIVED,
+        archivedAt: new Date(),
+        archivedBy: userId,
+        archivedReason: reason || "Archived via admin UI",
+        updatedAt: new Date(),
+      },
     });
-    
-    if (bomCount > 0) {
-      throw new Error(`Cannot delete this material as it's used in ${bomCount} bill of materials`);
-    }
-    
-    // Check if the material is used in any purchase order lines
-    const poLineCount = await prisma.purchaseOrderLine.count({
-      where: { materialId: id }
-    });
-    
-    if (poLineCount > 0) {
-      throw new Error(`Cannot delete this material as it's used in ${poLineCount} purchase order lines`);
-    }
-    
-    // If the material is not referenced, delete it
-    await prisma.material.delete({
-      where: { id }
-    });
-    
+
     // Revalidate paths
     revalidatePath('/admin/materials');
     revalidatePath('/materials');
-    
-    return { success: true, message: "Material deleted successfully" };
+
+    return { success: true, message: "Material archived successfully" };
   } catch (error) {
-    console.error("Error deleting material:", error);
-    throw new Error(`Failed to delete material: ${error instanceof Error ? error.message : "Unknown error"}`);
+    console.error("Error archiving material:", error);
+    throw new Error(`Failed to archive material: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }

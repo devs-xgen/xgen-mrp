@@ -11,7 +11,7 @@ import { getTableConfig } from "@/components/global/table/table-utils";
 import { EditMaterialDialog } from "@/components/module/admin/materials/edit-material-dialog";
 import { deleteMaterial } from "@/lib/actions/materials";
 import { Material, MaterialType, UnitOfMeasure, Supplier } from "@/types/admin/materials";
-import { AlertTriangle, MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react";
+import { AlertTriangle, MoreHorizontal, Pencil, Archive, Eye } from "lucide-react";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
 interface MaterialsDataTableProps {
@@ -64,27 +65,29 @@ function MaterialActionsCell({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmationText, setConfirmationText] = useState("");
+  const [reason, setReason] = useState("");
 
-  const confirmationRequired = "DELETE";
+  const confirmationRequired = "ARCHIVE";
   const isConfirmationValid = confirmationText.toUpperCase() === confirmationRequired;
 
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
-      await deleteMaterial(material.id);
+      await deleteMaterial(material.id, reason || undefined);
 
       toast({
         title: "✅ Success",
-        description: `Material "${material.name}" has been deleted successfully`,
+        description: `Material "${material.name}" has been archived successfully`,
       });
 
       setDeleteOpen(false);
       setConfirmationText("");
+      setReason("");
       onRefresh();
     } catch (error) {
       toast({
-        title: "❌ Delete Failed",
-        description: error instanceof Error ? error.message : "Failed to delete material",
+        title: "❌ Archive Failed",
+        description: error instanceof Error ? error.message : "Failed to archive material",
         variant: "destructive",
       });
     } finally {
@@ -115,8 +118,8 @@ function MaterialActionsCell({
             onClick={() => setDeleteOpen(true)}
             className="text-destructive focus:text-destructive"
           >
-            <Trash2 className="mr-2 h-3.5 w-3.5" />
-            Delete
+            <Archive className="mr-2 h-3.5 w-3.5" />
+            Archive
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -134,20 +137,33 @@ function MaterialActionsCell({
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-destructive">Delete Material</AlertDialogTitle>
+            <AlertDialogTitle className="text-destructive">Archive Material</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{material.name}&quot;? This action cannot be undone.
-              <div className="mt-4">
-                <Label htmlFor="confirmation">
-                  Type <code className="bg-muted px-1 rounded">{confirmationRequired}</code> to confirm:
-                </Label>
-                <Input
-                  id="confirmation"
-                  value={confirmationText}
-                  onChange={(e) => setConfirmationText(e.target.value)}
-                  placeholder="Type DELETE to confirm"
-                  className="mt-2"
-                />
+              Archiving will hide &quot;{material.name}&quot; from listings and prevent future use in orders, BOMs, or purchases. Existing records that reference it will be preserved.
+              <div className="mt-4 space-y-4">
+                <div>
+                  <Label htmlFor="archive-reason">Archive Reason (optional)</Label>
+                  <Textarea
+                    id="archive-reason"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="Add a brief reason for archiving..."
+                    rows={3}
+                    className="mt-2"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="confirmation">
+                    Type <code className="bg-muted px-1 rounded">{confirmationRequired}</code> to confirm:
+                  </Label>
+                  <Input
+                    id="confirmation"
+                    value={confirmationText}
+                    onChange={(e) => setConfirmationText(e.target.value)}
+                    placeholder="Type ARCHIVE to confirm"
+                    className="mt-2"
+                  />
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -158,7 +174,7 @@ function MaterialActionsCell({
               disabled={!isConfirmationValid || isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? "Archiving..." : "Archive"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

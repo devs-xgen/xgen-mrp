@@ -1,6 +1,7 @@
 'use server'
 
 import { prisma } from "@/lib/db";
+import { Status } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
@@ -30,6 +31,7 @@ import { convertDecimals } from "@/lib/convertDecimals";
 export async function getAllMaterials() {
   try {
     const materials = await prisma.material.findMany({
+      where: { status: Status.ACTIVE },
       select: {
         id: true,
         sku: true,
@@ -58,6 +60,7 @@ export async function getAllMaterials() {
 export async function getAllProducts() {
   try {
     const products = await prisma.product.findMany({
+      where: { status: Status.ACTIVE },
       include: {
         category: {
           select: {

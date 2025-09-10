@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
 import { deleteProduct } from "@/lib/actions/product"
 import { ProductWithRelations } from "./columns"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 
 interface DeleteProductDialogProps {
     product: ProductWithRelations
@@ -27,28 +29,30 @@ export function DeleteProductDialog({
 }: DeleteProductDialogProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [reason, setReason] = useState("")
 
     const handleDelete = async () => {
         try {
             setLoading(true)
             
-            const result = await deleteProduct(product.id)
+            const result = await deleteProduct(product.id, reason || undefined)
             
             if (result.success) {
                 toast({
                     title: "Success",
-                    description: `Product "${product.name}" deleted successfully`,
+                    description: `Product "${product.name}" archived successfully`,
                 })
                 setOpen(false)
+                setReason("")
                 await onSuccess?.()
             } else {
-                throw new Error(result.error || "Failed to delete product")
+                throw new Error(result.error || "Failed to archive product")
             }
         } catch (error) {
             console.error("Delete product error:", error)
             toast({
                 title: "Error",
-                description: error instanceof Error ? error.message : "Failed to delete product",
+                description: error instanceof Error ? error.message : "Failed to archive product",
                 variant: "destructive",
             })
         } finally {
@@ -65,9 +69,9 @@ export function DeleteProductDialog({
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Delete Product</DialogTitle>
+                    <DialogTitle>Archive Product</DialogTitle>
                     <DialogDescription>
-                        Are you sure you want to delete this product? This action cannot be undone.
+                        Archiving will hide this product from listings and prevent it from being used in new orders or production. Existing records that reference it will be preserved.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -78,7 +82,7 @@ export function DeleteProductDialog({
                         <p className="text-sm text-muted-foreground">Category: {product.category?.name}</p>
                         {variantCount > 0 && (
                             <p className="text-sm text-muted-foreground">
-                                This product has {variantCount} variant{variantCount > 1 ? 's' : ''} that will also be deleted.
+                                This product has {variantCount} variant{variantCount > 1 ? 's' : ''} that will also be archived.
                             </p>
                         )}
                     </div>
@@ -86,11 +90,22 @@ export function DeleteProductDialog({
                     {product.currentStock > 0 && (
                         <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
                             <p className="text-sm text-yellow-800">
-                                <strong>Warning:</strong> This product has {product.currentStock} units in stock. 
-                                Deleting this product will permanently remove all inventory records.
+                                <strong>Note:</strong> This product has {product.currentStock} units in stock.
+                                Archiving will not remove stock records, but the product will be inactive for future transactions.
                             </p>
                         </div>
                     )}
+
+                    <div className="space-y-2">
+                        <Label htmlFor="archive-reason">Archive Reason (optional)</Label>
+                        <Textarea
+                            id="archive-reason"
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            placeholder="Add a brief reason for archiving..."
+                            rows={3}
+                        />
+                    </div>
                 </div>
 
                 <div className="flex justify-end gap-2">
@@ -106,7 +121,7 @@ export function DeleteProductDialog({
                         onClick={handleDelete}
                         disabled={loading}
                     >
-                        {loading ? "Deleting..." : "Delete Product"}
+                        {loading ? "Archiving..." : "Archive Product"}
                     </Button>
                 </div>
             </DialogContent>

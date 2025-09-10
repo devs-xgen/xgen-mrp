@@ -8,6 +8,11 @@ export const metadata: Metadata = {
   description: "Full user management for developers: edit user data, roles, and status",
 };
 
+// This page requires session (uses getServerSession via getUsers),
+// so mark as dynamic to avoid static prerendering errors during build.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function DeveloperUsersPage() {
   const users = await getUsers();
 

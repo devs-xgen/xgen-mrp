@@ -177,6 +177,9 @@ model Product {
   updatedAt                DateTime                @updatedAt
   createdBy                String?
   modifiedBy               String?
+  archivedAt               DateTime?
+  archivedBy               String?
+  archivedReason           String?
   isVariantTemplate        Boolean                 @default(false)
   parentProductId          String?
   variantAttributes        Json?
@@ -352,6 +355,9 @@ model Material {
   modifiedBy            String?
   notes                 String?
   sku                   String                          @unique
+  archivedAt            DateTime?
+  archivedBy            String?
+  archivedReason        String?
   boms                  BOM[]
   costVariances         CostVariance[]
   inventoryMovements    InventoryMovement[]

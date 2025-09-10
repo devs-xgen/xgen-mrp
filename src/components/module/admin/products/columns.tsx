@@ -1,7 +1,7 @@
 // src/components/module/admin/products/columns.tsx
 "use client";
 import { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, Factory, Edit, Trash2, Eye, MoreHorizontal } from "lucide-react";
+import { AlertTriangle, Factory, Edit, Archive, Eye, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -93,8 +93,8 @@ function ProductRowActions({ product, onSuccess }: ProductRowActionsProps) {
                 onSelect={(e) => e.preventDefault()}
                 className="text-red-600"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                <Archive className="mr-2 h-4 w-4" />
+                Archive
               </DropdownMenuItem>
             }
             onSuccess={onSuccess}

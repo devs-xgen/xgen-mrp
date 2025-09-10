@@ -13,6 +13,7 @@ import {
 import { CreateProductButton } from "@/components/module/admin/products/create-product-button";
 import { ProductCategoryDialog } from "@/components/module/admin/products/product-category-dialog";
 import { revalidatePath } from "next/cache";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Products",
@@ -41,6 +42,9 @@ export default async function ProductsPage() {
           </PageDescription>
         </PageHeaderMain>
         <PageHeaderActions>
+          <Button variant="outline" size="sm" asChild>
+            <a href="/admin/products/archived">View Archived</a>
+          </Button>
           <CreateProductButton categories={categories as any} onSuccess={refreshData} />
           <ProductCategoryDialog categories={categories as any} onSuccess={refreshData} />
         </PageHeaderActions>
