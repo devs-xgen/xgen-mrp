@@ -5256,7 +5256,7 @@ export async function updateOperationStatus(operationId: string, status: Status,
         status: true,
         productionOrderId: true,
         workCenter: { select: { name: true } },
-        productionOrder: { select: { product: { name: true } } },
+        productionOrder: { select: { product: { select: { name: true } } } }, //added select property to be able to accept the changes in the status 
       },
     })
 

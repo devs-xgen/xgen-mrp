@@ -1,5 +1,6 @@
 // import { Metadata } from "next";
 // import { getProductionTasks, getProductionTaskStatistics } from "@/lib/actions/inspector/tasks";
+// import { getQualityChecks } from "@/lib/actions/quality-checks"; // <-- Import the new server action
 // import { TasksList } from "@/components/module/inspectors/tasks";
 // import { Suspense } from "react";
 // import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,11 @@
 // };
 
 // export default async function ProductionTasksPage() {
-//   const [tasks, stats] = await Promise.all([getProductionTasks(), getProductionTaskStatistics()]);
+//   const [tasks, stats, qualityChecks] = await Promise.all([
+//     getProductionTasks(),
+//     getProductionTaskStatistics(),
+//     getQualityChecks(), // <-- Call the new function to fetch quality checks
+//   ]);
 
 //   // Group tasks by status
 //   const notStarted = tasks.filter((task) => task.status === Status.PENDING);
@@ -27,105 +32,115 @@
 //   const inactiveTasks = tasks.filter(task => task.isActive === false);
 
 //   return (
-//     <div className="space-y-6">
-//       <div>
-//         <h2 className="text-3xl font-bold tracking-tight">Production Tasks</h2>
-//         <p className="text-muted-foreground">
-//           View and manage all production tasks
-//         </p>
-//       </div>
+//     <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8 font-sans">
+//       <div className="space-y-6">
+//         <div>
+//           <h2 className="text-3xl font-bold tracking-tight">Production Tasks</h2>
+//           <p className="text-muted-foreground">
+//             View and manage all production tasks
+//           </p>
+//         </div>
 
-//       {inactiveTasks.length > 0 && (
-//         <Card className="border-amber-200 bg-amber-50">
-//           <CardContent className="pt-6 flex items-start gap-3">
-//             <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
-//             <div>
-//               <p className="font-medium text-amber-800">Inactive Production Tasks</p>
-//               <p className="text-sm text-amber-700 mt-1">
-//                 {stats.inactiveTasks || inactiveTasks.length} task(s) are paused or awaiting materials.
+//         {inactiveTasks.length > 0 && (
+//           <Card className="border-amber-200 bg-amber-50">
+//             <CardContent className="pt-6 flex items-start gap-3">
+//               <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
+//               <div>
+//                 <p className="font-medium text-amber-800">Inactive Production Tasks</p>
+//                 <p className="text-sm text-amber-700 mt-1">
+//                   {stats.inactiveTasks || inactiveTasks.length} task(s) are paused or awaiting materials.
+//                 </p>
+//               </div>
+//             </CardContent>
+//           </Card>
+//         )}
+
+//         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+//           <Card>
+//             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+//               <CardTitle className="text-sm font-medium">Not Started</CardTitle>
+//               <ClipboardList className="h-4 w-4 text-muted-foreground" />
+//             </CardHeader>
+//             <CardContent>
+//               <div className="text-2xl font-bold">{stats.pending}</div>
+//               <p className="text-xs text-muted-foreground">
+//                 {notStarted.length} tasks to start
 //               </p>
-//             </div>
-//           </CardContent>
-//         </Card>
-//       )}
+//             </CardContent>
+//           </Card>
 
-//       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-//         <Card>
-//           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-//             <CardTitle className="text-sm font-medium">Not Started</CardTitle>
-//             <ClipboardList className="h-4 w-4 text-muted-foreground" />
-//           </CardHeader>
-//           <CardContent>
-//             <div className="text-2xl font-bold">{stats.pending}</div>
-//             <p className="text-xs text-muted-foreground">
-//               {notStarted.length} tasks to start
-//             </p>
-//           </CardContent>
-//         </Card>
+//           <Card>
+//             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+//               <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+//               <Clock className="h-4 w-4 text-amber-500" />
+//             </CardHeader>
+//             <CardContent>
+//               <div className="text-2xl font-bold">{stats.inProgress}</div>
+//               <p className="text-xs text-muted-foreground">
+//                 {inProgress.length} active tasks
+//               </p>
+//             </CardContent>
+//           </Card>
 
-//         <Card>
-//           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-//             <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-//             <Clock className="h-4 w-4 text-amber-500" />
-//           </CardHeader>
-//           <CardContent>
-//             <div className="text-2xl font-bold">{stats.inProgress}</div>
-//             <p className="text-xs text-muted-foreground">
-//               {inProgress.length} active tasks
-//             </p>
-//           </CardContent>
-//         </Card>
+//           <Card>
+//             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+//               <CardTitle className="text-sm font-medium">
+//                 Completed Today
+//               </CardTitle>
+//               <CheckCircle className="h-4 w-4 text-green-500" />
+//             </CardHeader>
+//             <CardContent>
+//               <div className="text-2xl font-bold">{stats.completed}</div>
+//               <p className="text-xs text-muted-foreground">
+//                 {completed.length} tasks finished
+//               </p>
+//             </CardContent>
+//           </Card>
 
-//         <Card>
-//           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-//             <CardTitle className="text-sm font-medium">
-//               Completed Today
-//             </CardTitle>
-//             <CheckCircle className="h-4 w-4 text-green-500" />
-//           </CardHeader>
-//           <CardContent>
-//             <div className="text-2xl font-bold">{stats.completed}</div>
-//             <p className="text-xs text-muted-foreground">
-//               {completed.length} tasks finished
-//             </p>
-//           </CardContent>
-//         </Card>
+//           <Card>
+//             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+//               <CardTitle className="text-sm font-medium">Urgent</CardTitle>
+//               <AlertTriangle className="h-4 w-4 text-red-500" />
+//             </CardHeader>
+//             <CardContent>
+//               <div className="text-2xl font-bold">{stats.urgentTasks}</div>
+//               <p className="text-xs text-muted-foreground">
+//                 {urgentTasks.length} high priority tasks
+//               </p>
+//             </CardContent>
+//           </Card>
+//         </div>
 
-//         <Card>
-//           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-//             <CardTitle className="text-sm font-medium">Urgent</CardTitle>
-//             <AlertTriangle className="h-4 w-4 text-red-500" />
-//           </CardHeader>
-//           <CardContent>
-//             <div className="text-2xl font-bold">{stats.urgentTasks}</div>
-//             <p className="text-xs text-muted-foreground">
-//               {urgentTasks.length} high priority tasks
-//             </p>
-//           </CardContent>
-//         </Card>
+//         <Suspense fallback={<div>Loading tasks...</div>}>
+//           <TasksList tasks={tasks} qualityChecks={qualityChecks} /> {/* <-- Pass qualityChecks here */}
+//         </Suspense>
 //       </div>
-
-//       <Suspense fallback={<div>Loading tasks...</div>}>
-//         <TasksList tasks={tasks} />
-//       </Suspense>
 //     </div>
 //   );
 // }
+
+
 import { Metadata } from "next";
 import { getProductionTasks, getProductionTaskStatistics } from "@/lib/actions/inspector/tasks";
-import { TasksList } from "@/components/module/inspectors/tasks";
 import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, CheckCircle, AlertTriangle, ClipboardList, AlertCircle } from "lucide-react";
 import { Status } from "@prisma/client";
+import { QualityChecksTable } from "@/components/module/inspectors/tasks/TaskQualityCheck";
+import { getMyQualityChecks } from "@/lib/actions/inspector/production-order";
+
 
 export const metadata: Metadata = {
-  title: "Production Tasks",
-  description: "View and manage production tasks",
+  title: "My Quality Checks", // <-- Changed the title
+  description: "View and manage your completed quality checks", // <-- Changed the description
 };
 
 export default async function ProductionTasksPage() {
-  const [tasks, stats] = await Promise.all([getProductionTasks(), getProductionTaskStatistics()]);
+  const [tasks, stats, qualityChecks] = await Promise.all([
+    getProductionTasks(),
+    getProductionTaskStatistics(),
+    getMyQualityChecks(), // <-- Call the correct function
+  ]);
 
   // Group tasks by status
   const notStarted = tasks.filter((task) => task.status === Status.PENDING);
@@ -143,9 +158,9 @@ export default async function ProductionTasksPage() {
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8 font-sans">
       <div className="space-y-6">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Production Tasks</h2>
+          <h2 className="text-3xl font-bold tracking-tight">My Quality Checks</h2>
           <p className="text-muted-foreground">
-            View and manage all production tasks
+            View all quality checks you have performed.
           </p>
         </div>
 
@@ -219,8 +234,8 @@ export default async function ProductionTasksPage() {
           </Card>
         </div>
 
-        <Suspense fallback={<div>Loading tasks...</div>}>
-          <TasksList tasks={tasks} />
+        <Suspense fallback={<div>Loading quality checks...</div>}>
+          <QualityChecksTable />
         </Suspense>
       </div>
     </div>

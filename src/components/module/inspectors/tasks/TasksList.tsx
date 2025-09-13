@@ -1,6 +1,7 @@
 "use client";
 
 import { InspectorsTask } from "@/types/inspector/task";
+import { QualityCheck } from "@prisma/client"; 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Status } from "@prisma/client";
@@ -8,24 +9,45 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnhancedTaskCard } from "./EnhancedTaskCard";
 import { TaskCard } from "./TaskCard";
 
+interface QualityCheckData {
+  id: string;
+  status: Status;
+  productionOrderId: string;
+}
 
 interface TasksListProps {
   tasks: InspectorsTask[];
+  qualityChecks: QualityCheckData[];
 }
 
-export function TasksList({ tasks }: TasksListProps) {
+export function TasksList({ tasks, qualityChecks }: TasksListProps) {
   const [activeTab, setActiveTab] = useState<string>("all");
 
-  // Group tasks by status
-  const notStarted = tasks.filter((task) => task.status === Status.PENDING);
-  const inProgress = tasks.filter((task) => task.status === Status.IN_PROGRESS);
-  const completed = tasks.filter((task) => task.status === Status.COMPLETED);
-  
-  // Group tasks by active status
-  const activeTasks = tasks.filter((task) => task.isActive === true);
-  const inactiveTasks = tasks.filter((task) => task.isActive === false);
+  const normalizedTasks = tasks.map((task) => {
+    // Check if this task corresponds to a quality check
+    const qualityCheck = qualityChecks.find(
+      (check) => check.productionOrderId === task.productionOrderId
+    );
 
-  // Get tasks for current tab
+    if (qualityCheck) {
+      // If a corresponding quality check is found, use its status
+      return {
+        ...task,
+        status: qualityCheck.status,
+      };
+    }
+    // Otherwise, use the original task status
+    return task;
+  });
+
+  // Now, use the normalizedTasks array for all filtering logic
+  const notStarted = normalizedTasks.filter((task) => task.status === Status.PENDING);
+  const inProgress = normalizedTasks.filter((task) => task.status === Status.IN_PROGRESS);
+  const completed = normalizedTasks.filter((task) => task.status === Status.COMPLETED);
+
+  const activeTasks = normalizedTasks.filter((task) => task.isActive === true);
+  const inactiveTasks = normalizedTasks.filter((task) => task.isActive === false);
+
   const getFilteredTasks = () => {
     switch (activeTab) {
       case "not-started":
@@ -39,7 +61,7 @@ export function TasksList({ tasks }: TasksListProps) {
       case "inactive":
         return inactiveTasks;
       default:
-        return tasks;
+        return normalizedTasks;
     }
   };
 
@@ -58,7 +80,7 @@ export function TasksList({ tasks }: TasksListProps) {
           className="w-full"
         >
           <TabsList className="mb-4 flex flex-wrap">
-            <TabsTrigger value="all">All Tasks ({tasks.length})</TabsTrigger>
+            <TabsTrigger value="all">All Tasks ({normalizedTasks.length})</TabsTrigger>
             <TabsTrigger value="not-started">
               Not Started ({notStarted.length})
             </TabsTrigger>
@@ -161,8 +183,7 @@ export function TasksList({ tasks }: TasksListProps) {
                     </p>
                   </div>
                   {filteredTasks.map((task) => (
-                    // <TaskCard key={task.id} task={task} />
-                    <EnhancedTaskCard key={task.id} task={task} />
+                    <TaskCard key={task.id} task={task} /> 
                   ))}
                 </>
               )}
