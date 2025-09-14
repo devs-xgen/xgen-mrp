@@ -966,7 +966,20 @@ export async function createCustomerOrder(data: CreateCustomerOrderInput) {
     return customerOrder;
   } catch (error) {
     console.error("Error creating customer order:", error);
-    throw new Error("Failed to create customer order");
+    
+    // Provide detailed error messages
+    if (error instanceof Error) {
+      if (error.message.includes('foreign key constraint')) {
+        throw new Error("Invalid customer or product selected. Please check your selections.");
+      } else if (error.message.includes('unique constraint')) {
+        throw new Error("This order number already exists. Please try again.");
+      } else if (error.message.includes('required')) {
+        throw new Error(error.message);
+      } else {
+        throw new Error(`Failed to create customer order: ${error.message}`);
+      }
+    }
+    throw new Error("Failed to create customer order: Unknown error occurred");
   }
 }
 
@@ -1932,26 +1945,55 @@ export async function updateCustomerOrderWithLines(
     if (!id) {
       throw new Error("Customer order ID is required");
     }
+    
+    // Validate required fields
+    if (!data.customerId) {
+      throw new Error("Customer ID is required");
+    }
+    if (!data.requiredDate) {
+      throw new Error("Required date is required");
+    }
+    if (!data.totalAmount || data.totalAmount <= 0) {
+      throw new Error("Total amount must be greater than zero");
+    }
+    if (!data.orderLines || data.orderLines.length === 0) {
+      throw new Error("Order must have at least one item");
+    }
+
     const session = await getServerSession(authOptions);
     const userId = (session as any)?.user?.id || data.modifiedBy || undefined;
 
     const normalizeDate = (d?: Date | string) => {
       if (!d) return undefined;
-      return typeof d === "string" ? new Date(d) : d;
+      const date = typeof d === "string" ? new Date(d) : d;
+      if (isNaN(date.getTime())) {
+        throw new Error("Invalid date format");
+      }
+      return date;
     };
+
+    // Get existing order to preserve required fields
+    const existingOrder = await prisma.customerOrder.findUnique({
+      where: { id },
+      select: { orderDate: true }
+    });
+
+    if (!existingOrder) {
+      throw new Error("Customer order not found");
+    }
 
     const updatedCustomerOrder = await prisma.customerOrder.update({
       where: { id },
       data: {
         orderNumber: data.orderNumber,
         customerId: data.customerId,
-        orderDate: normalizeDate(data.orderDate),
+        orderDate: existingOrder.orderDate, // Preserve existing order date
         requiredDate: normalizeDate(data.requiredDate),
-        status: data.status,
+        status: data.status || Status.PENDING,
         totalAmount:
           typeof data.totalAmount === "number"
             ? new Decimal(data.totalAmount)
-            : (data.totalAmount as any),
+            : new Decimal(0),
         shippingAddress: data.shippingAddress,
         billingAddress: data.billingAddress,
         notes: data.notes,
@@ -1959,34 +2001,16 @@ export async function updateCustomerOrderWithLines(
         updatedAt: new Date(),
         orderLines: data.orderLines
           ? {
-              upsert: data.orderLines.map((orderLineData) => ({
-                where: { id: orderLineData.id || "" },
-                update: {
-                  productId: orderLineData.productId,
-                  productVariantId: orderLineData.productVariantId ?? null,
-                  quantity: orderLineData.quantity,
-                  unitPrice:
-                    typeof orderLineData.unitPrice === "number"
-                      ? new Decimal(orderLineData.unitPrice)
-                      : (orderLineData.unitPrice as any),
-                  status: orderLineData.status as any,
-                  notes: orderLineData.notes,
-                  modifiedBy: userId || orderLineData.modifiedBy,
-                  updatedAt: new Date(),
-                },
-                create: {
-                  productId: orderLineData.productId,
-                  productVariantId: orderLineData.productVariantId ?? null,
-                  quantity: orderLineData.quantity,
-                  unitPrice:
-                    typeof orderLineData.unitPrice === "number"
-                      ? new Decimal(orderLineData.unitPrice)
-                      : (orderLineData.unitPrice as any),
-                  status: orderLineData.status as any,
-                  notes: orderLineData.notes,
-                  createdBy: orderLineData.createdBy || userId,
-                  modifiedBy: userId || orderLineData.modifiedBy,
-                },
+              deleteMany: {}, // Clear existing lines and recreate
+              create: data.orderLines.map((orderLineData) => ({
+                productId: orderLineData.productId,
+                productVariantId: orderLineData.productVariantId ?? null,
+                quantity: orderLineData.quantity,
+                unitPrice: new Decimal(orderLineData.unitPrice),
+                status: orderLineData.status || Status.PENDING,
+                notes: orderLineData.notes,
+                createdBy: orderLineData.createdBy || userId,
+                modifiedBy: userId || orderLineData.modifiedBy,
               })),
             }
           : undefined,
@@ -2050,6 +2074,9 @@ export async function updateCustomerOrderWithLines(
     // Revalidate related pages
     revalidatePath("/admin/customer-orders");
     revalidatePath(`/admin/customer-orders/${id}`);
+    // Also revalidate the new v2 routes
+    revalidatePath("/admin/customer-orders-v2");
+    revalidatePath(`/admin/customer-orders-v2/${id}`);
 
     return updatedCustomerOrder;
   } catch (error) {

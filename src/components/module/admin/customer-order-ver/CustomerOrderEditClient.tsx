@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Save, Package, ShoppingCart, AlertCircle } from "lucide-react";
+import { ArrowLeft, Save, Package, ShoppingCart, AlertCircle, Trash2, Calendar as CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -20,6 +20,9 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -71,16 +74,17 @@ export function CustomerOrderEditClient({
 }: CustomerOrderEditClientProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  // Derive selected customer from form state; no separate state to avoid drift
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
   const [hasProductionOrders, setHasProductionOrders] = useState(false);
 
   const form = useForm<CustomerOrderCreateForm>({
     resolver: zodResolver(customerOrderCreateSchema),
+    mode: "onChange",
     defaultValues: {
-      customerId: "",
-      requiredDate: "",
-      notes: "",
+      customerId: order?.customerId || "",
+      requiredDate: order?.requiredDate ? new Date(order.requiredDate).toISOString().split('T')[0] : "",
+      notes: order?.notes || "",
       orderLines: [],
     },
   });
@@ -89,24 +93,16 @@ export function CustomerOrderEditClient({
     watch,
     setValue,
     handleSubmit,
+    reset,
+    clearErrors,
     formState: { errors }
   } = form;
 
   // Initialize form with existing order data
   useEffect(() => {
-    if (order && customers.length > 0 && products.length > 0) {
+    if (order) {
       console.log("Initializing form with order:", order);
       console.log("Customer ID from order:", order.customerId);
-      
-      // Find and set customer
-      const customer = customers.find(c => c.id === order.customerId);
-      console.log("Found customer:", customer);
-      setSelectedCustomer(customer || null);
-      
-      // Set form values
-      setValue("customerId", order.customerId);
-      setValue("requiredDate", order.requiredDate ? new Date(order.requiredDate).toISOString().split('T')[0] : "");
-      setValue("notes", order.notes || "");
 
       // Convert existing order lines
       const existingLines: OrderLine[] = order.orderLines?.map((line: any) => {
@@ -127,9 +123,36 @@ export function CustomerOrderEditClient({
 
       console.log("Setting order lines:", existingLines);
       setOrderLines(existingLines);
+
+      // Reset the entire form with fetched values to ensure proper registration
+      reset({
+        customerId: order.customerId || "",
+        requiredDate: order.requiredDate ? new Date(order.requiredDate).toISOString().split('T')[0] : "",
+        notes: order.notes || "",
+        orderLines: existingLines as any,
+      });
+      // Explicitly ensure customerId is set in RHF state after reset
+      if (order.customerId) {
+        setValue("customerId", order.customerId, { shouldValidate: true, shouldDirty: false });
+        // Clear any lingering validation error shown before initialization
+        clearErrors("customerId");
+      }
       setHasProductionOrders(order.productionOrders?.length > 0);
     }
-  }, [order, customers, products, setValue]);
+  }, [order, products, reset, setValue, clearErrors]);
+
+  // Keep form's orderLines in sync with local state for validation and submission
+  useEffect(() => {
+    setValue("orderLines", orderLines as any, { shouldValidate: true });
+  }, [orderLines, setValue]);
+
+  // Ensure customerId is populated from the existing order if form state is empty
+  const watchedCustomerId = watch("customerId");
+  useEffect(() => {
+    if ((!watchedCustomerId || watchedCustomerId.length === 0) && order?.customerId) {
+      setValue("customerId", order.customerId, { shouldValidate: true });
+    }
+  }, [watchedCustomerId, order?.customerId, setValue]);
 
   // Calculate totals
   const subtotal = orderLines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
@@ -142,13 +165,17 @@ export function CustomerOrderEditClient({
     }
 
     setIsSubmitting(true);
+    
+    // Show loading toast
+    const loadingToast = toast.loading("Updating customer order...");
+    
     try {
       await updateCustomerOrderWithLines(order.id, {
         customerId: data.customerId,
         requiredDate: new Date(data.requiredDate),
         notes: data.notes,
         totalAmount,
-        status: Status.PENDING, // Keep existing status or update as needed
+        status: order.status || Status.PENDING, // Preserve existing status
         orderLines: orderLines.map(line => ({
           id: line.id,
           productId: line.productId,
@@ -159,11 +186,52 @@ export function CustomerOrderEditClient({
         })),
       });
 
-      toast.success("Customer order updated successfully!");
-      router.push(`/admin/customer-orders-v2/${order.id}`);
+      // Dismiss loading toast and show success
+      toast.dismiss(loadingToast);
+      toast.success("Customer order updated successfully!", {
+        description: `Order ${order.orderNumber} has been updated.`,
+        duration: 3000,
+      });
+      
+      // Add a small delay before navigation for user to see the success message
+      setTimeout(() => {
+        router.push(`/admin/customer-orders-v2/${order.id}`);
+      }, 1000);
     } catch (error) {
       console.error("Error updating customer order:", error);
-      toast.error("Failed to update customer order. Please try again.");
+      
+      // Extract meaningful error message
+      let errorMessage = "Failed to update customer order. Please try again.";
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage = String(error.message);
+      }
+      
+      // Check for specific database errors
+      if (errorMessage.includes('foreign key constraint')) {
+        errorMessage = "Invalid customer or product selected. Please check your selections.";
+      } else if (errorMessage.includes('unique constraint')) {
+        errorMessage = "This order number already exists. Please use a different order number.";
+      } else if (errorMessage.includes('required')) {
+        errorMessage = errorMessage; // Keep the specific required field message
+      } else if (errorMessage.includes('decimal')) {
+        errorMessage = "Invalid price format. Please check all prices and quantities.";
+      }
+      
+      // Dismiss loading toast and show error
+      toast.dismiss(loadingToast);
+      toast.error("Update Failed", {
+        description: errorMessage,
+        duration: 5000,
+        action: {
+          label: "Try Again",
+          onClick: () => handleSubmit(onSubmit)(),
+        },
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -265,28 +333,37 @@ export function CustomerOrderEditClient({
         </Alert>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex items-center justify-end gap-4 p-4 bg-muted/30 rounded-lg">
-        <Button
-          type="button"
-          variant="outline"
-          asChild
-        >
-          <Link href={`/admin/customer-orders-v2/${order.id}`}>
-            Cancel
-          </Link>
-        </Button>
-        <Button
-          type="submit"
-          disabled={isSubmitting || orderLines.length === 0}
-          onClick={handleSubmit(onSubmit)}
-        >
-          <Save className="w-4 h-4 mr-2" />
-          {isSubmitting ? "Updating..." : "Update Order"}
-        </Button>
-      </div>
-
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Action Buttons */}
+        <div className="flex items-center justify-end gap-4 p-4 bg-muted/30 rounded-lg">
+          <Button
+            type="button"
+            variant="outline"
+            asChild
+            disabled={isSubmitting}
+          >
+            <Link href={`/admin/customer-orders-v2/${order.id}`}>
+              Cancel
+            </Link>
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSubmitting || orderLines.length === 0}
+            className="min-w-[120px]"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Updating...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Update Order
+              </>
+            )}
+          </Button>
+        </div>
         {/* Customer Details Section */}
         <Card>
           <CardHeader>
@@ -299,25 +376,50 @@ export function CustomerOrderEditClient({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="customerId">Customer *</Label>
-                <Select
-                  value={watch("customerId") || ""}
-                  onValueChange={(value) => {
-                    setValue("customerId", value);
-                    const customer = customers.find(c => c.id === value);
-                    setSelectedCustomer(customer || null);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a customer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name} - {customer.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  key={`customer-controller-${order.id}`}
+                  name="customerId"
+                  control={form.control}
+                  defaultValue={order?.customerId || ""}
+                  render={({ field }) => (
+                    <Select
+                      key={`customer-select-${order.id}-${order.customerId}`}
+                      value={field.value || order.customerId || ""}
+                      onValueChange={(v) => { field.onChange(v); clearErrors("customerId"); }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a customer">
+                          {(() => {
+                            const id = (field.value || order.customerId) as string | undefined;
+                            if (!id) return "Select a customer";
+                            const found = customers.find(c => c.id === id);
+                            const display = found || (order.customer && order.customer.id === id ? order.customer : undefined);
+                            return display ? `${display.name} - ${display.email}` : "Select a customer";
+                          })()}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(() => {
+                          const id = field.value || order.customerId;
+                          const exists = customers.some(c => c.id === id);
+                          if (!exists && order.customer) {
+                            return (
+                              <SelectItem key={order.customer.id} value={order.customer.id}>
+                                {order.customer.name} - {order.customer.email} (current)
+                              </SelectItem>
+                            );
+                          }
+                          return null;
+                        })()}
+                        {customers.map((customer) => (
+                          <SelectItem key={customer.id} value={customer.id}>
+                            {customer.name} - {customer.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
                 {errors.customerId && (
                   <p className="text-sm text-destructive">{errors.customerId.message}</p>
                 )}
@@ -325,36 +427,68 @@ export function CustomerOrderEditClient({
 
               <div className="space-y-2">
                 <Label htmlFor="requiredDate">Required Date *</Label>
-                <Input
-                  type="date"
-                  {...form.register("requiredDate")}
-                  className="w-full"
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !watch("requiredDate") && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {watch("requiredDate") ? (
+                        new Date(watch("requiredDate")).toLocaleDateString()
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={watch("requiredDate") ? new Date(watch("requiredDate")) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          setValue("requiredDate", date.toISOString().split('T')[0], { shouldValidate: true });
+                        } else {
+                          setValue("requiredDate", "", { shouldValidate: true });
+                        }
+                      }}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
                 {errors.requiredDate && (
                   <p className="text-sm text-destructive">{errors.requiredDate.message}</p>
                 )}
               </div>
             </div>
 
-            {selectedCustomer && (
+            {(() => {
+              const selectedId = watch("customerId") || order.customerId;
+              const currentCustomer = customers.find(c => c.id === selectedId) || (order.customer && order.customer.id === selectedId ? order.customer : undefined);
+              return currentCustomer ? (
               <div className="p-4 bg-muted rounded-lg text-sm space-y-2">
                 <h4 className="font-medium">Customer Information</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <p className="text-muted-foreground">Contact</p>
-                    <p>{selectedCustomer.phone || "—"}</p>
+                    <p>{currentCustomer.phone || "—"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Address</p>
-                    <p>{selectedCustomer.address || "—"}</p>
+                    <p>{currentCustomer.address || "—"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Payment Terms</p>
-                    <p>{selectedCustomer.paymentTerms || "—"}</p>
+                    <p>{currentCustomer.paymentTerms || "—"}</p>
                   </div>
                 </div>
               </div>
-            )}
+              ) : null;
+            })()}
 
             <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>
@@ -381,6 +515,9 @@ export function CustomerOrderEditClient({
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {errors.orderLines && (
+              <p className="text-sm text-destructive mb-2">{String((errors as any).orderLines?.message || "At least one order line is required")}</p>
+            )}
             {orderLines.length > 0 ? (
               <div className="space-y-4">
                 <Table>
@@ -472,11 +609,13 @@ export function CustomerOrderEditClient({
                         <TableCell>
                           <Button
                             type="button"
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => removeOrderLine(index)}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            title="Remove item"
                           >
-                            Remove
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
                       </TableRow>
