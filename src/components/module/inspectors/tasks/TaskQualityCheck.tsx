@@ -1,138 +1,3 @@
-// "use client";
-
-// import { useEffect, useState } from "react";
-// import {
-//   Table,
-//   TableBody,
-//   TableCell,
-//   TableHead,
-//   TableHeader,
-//   TableRow,
-// } from "@/components/ui/table";
-// import { Badge } from "@/components/ui/badge";
-// import { format } from "date-fns";
-// import { AlertCircle } from "lucide-react";
-// import { Button } from "@/components/ui/button";
-// import { getMyQualityChecks } from "@/lib/actions/inspector/production-order";
-
-// // Define the type for the quality check data we'll be fetching
-// interface QualityCheckData {
-//   id: string;
-//   checkDate: Date;
-//   status: "PENDING" | "COMPLETED" | "FAILED" | "ACTIVE"; // Using your schema Status
-//   defectsFound: string | null;
-//   notes: string | null;
-//   productionOrder: {
-//     id: string;
-//     orderNumber: string;
-//     product: {
-//       name: string;
-//     };
-//   };
-// }
-
-// export function QualityChecksTable() {
-//   const [data, setData] = useState<QualityCheckData[] | null>(null);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState<string | null>(null);
-
-//   useEffect(() => {
-//     const fetchQualityChecks = async () => {
-//       try {
-//         setLoading(true);
-//         const checks = await getMyQualityChecks();
-//         setData(checks as QualityCheckData[]);
-//       } catch (err) {
-//         console.error("Failed to fetch quality checks:", err);
-//         setError("Failed to load quality checks. Please try again.");
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-//     fetchQualityChecks();
-//   }, []);
-
-//   const getStatusBadgeVariant = (status: string) => {
-//     switch (status) {
-//       case "PENDING":
-//         return "secondary";
-//       case "COMPLETED":
-//         return "default";
-//       case "FAILED":
-//         return "destructive";
-//       case "ACTIVE":
-//         return "outline";
-//       default:
-//         return "secondary";
-//     }
-//   };
-
-//   if (loading) {
-//     return (
-//       <div className="flex justify-center items-center h-48 text-gray-500 font-medium">
-//         Loading...
-//       </div>
-//     );
-//   }
-
-//   if (error) {
-//     return (
-//       <div className="flex flex-col items-center justify-center h-48 text-red-500">
-//         <AlertCircle className="h-10 w-10 mb-2" />
-//         <p>{error}</p>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="overflow-x-auto">
-//       <Table>
-//         <TableHeader>
-//           <TableRow>
-//             <TableHead className="w-[100px]">Check ID</TableHead>
-//             <TableHead>Production Order</TableHead>
-//             <TableHead>Product</TableHead>
-//             <TableHead>Status</TableHead>
-//             <TableHead>Defects Found</TableHead>
-//             <TableHead>Notes</TableHead>
-//             <TableHead className="text-right">Check Date</TableHead>
-//           </TableRow>
-//         </TableHeader>
-//         <TableBody>
-//           {data && data.length > 0 ? (
-//             data.map((check) => (
-//               <TableRow key={check.id}>
-//                 <TableCell className="font-medium">{check.id.substring(0, 8)}...</TableCell>
-//                 <TableCell>
-//                   <Button variant="link" asChild className="p-0 h-auto">
-//                     <a href={`/inspector/production-orders/${check.productionOrder.id}`}>
-//                       {check.productionOrder.orderNumber}
-//                     </a>
-//                   </Button>
-//                 </TableCell>
-//                 <TableCell>{check.productionOrder.product.name}</TableCell>
-//                 <TableCell>
-//                   <Badge variant={getStatusBadgeVariant(check.status)}>{check.status}</Badge>
-//                 </TableCell>
-//                 <TableCell>{check.defectsFound || "None"}</TableCell>
-//                 <TableCell>{check.notes || "N/A"}</TableCell>
-//                 <TableCell className="text-right">
-//                   {format(new Date(check.checkDate), "MMM d, yyyy h:mm a")}
-//                 </TableCell>
-//               </TableRow>
-//             ))
-//           ) : (
-//             <TableRow>
-//               <TableCell colSpan={7} className="text-center py-8">
-//                 No quality checks found for your account.
-//               </TableCell>
-//             </TableRow>
-//           )}
-//         </TableBody>
-//       </Table>
-//     </div>
-//   );
-// }
 "use client";
 
 import { useEffect, useState } from "react";
@@ -149,6 +14,7 @@ import { format } from "date-fns";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getMyQualityChecks } from "@/lib/actions/inspector/production-order";
+import Link from "next/link"; // Import Link from next/link
 
 // Define the correct type for the quality check data we'll be fetching
 interface QualityCheckData {
@@ -158,8 +24,9 @@ interface QualityCheckData {
   defectsFound: string | null;
   notes: string | null;
   productionOrder: {
-    id: string;
-    orderNumber: string;
+    startDate: string;
+    id: string; // The production order ID
+    // orderNumber: string;
     product: {
       name: string;
     };
@@ -181,8 +48,7 @@ export function QualityChecksTable() {
     const fetchQualityChecks = async () => {
       try {
         setLoading(true);
-        // This function needs to be updated to fetch the correct data
-        const checks = await getMyQualityChecks(); 
+        const checks = await getMyQualityChecks();
         setData(checks as QualityCheckData[]);
       } catch (err) {
         console.error("Failed to fetch quality checks:", err);
@@ -209,7 +75,7 @@ export function QualityChecksTable() {
     }
   };
 
-   if (loading) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-48 text-gray-500 font-medium">
         Loading...
@@ -231,13 +97,14 @@ export function QualityChecksTable() {
       <Table className="dark:bg-gray-800">
         <TableHeader>
           <TableRow className="dark:bg-gray-900">
-            <TableHead className="w-[100px] text-gray-900 dark:text-gray-900">Check ID</TableHead>
+            {/* <TableHead className="w-[100px] text-gray-900 dark:text-gray-900">Check ID</TableHead> */}
             <TableHead className="text-gray-900 dark:text-gray-50">Production Order</TableHead>
             <TableHead className="text-gray-900 dark:text-gray-50">Product</TableHead>
             <TableHead className="text-gray-900 dark:text-gray-50">Status</TableHead>
             <TableHead className="text-gray-900 dark:text-gray-50">Defects Found</TableHead>
             <TableHead className="text-gray-900 dark:text-gray-50">Notes</TableHead>
             <TableHead className="text-right text-gray-900 dark:text-gray-50">Check Date</TableHead>
+            <TableHead className="text-right text-gray-900 dark:text-gray-50">Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -247,13 +114,13 @@ export function QualityChecksTable() {
                 <TableCell className="font-medium text-gray-900 dark:text-gray-50">
                   {check.id.substring(0, 8)}...
                 </TableCell>
-                <TableCell className="text-gray-900 dark:text-gray-50">
+                {/* <TableCell className="text-gray-900 dark:text-gray-50">
                   <Button variant="link" asChild className="p-0 h-auto text-gray-900 dark:text-gray-50">
-                    <a href={`/inspector/production-orders/${check.productionOrder.id}`}>
+                    <Link href={`/inspector/production/${check.productionOrder.id}`}>
                       {check.productionOrder.orderNumber}
-                    </a>
+                    </Link>
                   </Button>
-                </TableCell>
+                </TableCell> */}
                 <TableCell className="text-gray-900 dark:text-gray-50">
                   {check.productionOrder.product.name}
                 </TableCell>
@@ -261,13 +128,32 @@ export function QualityChecksTable() {
                   <Badge variant={getStatusBadgeVariant(check.status)}>{check.status}</Badge>
                 </TableCell>
                 <TableCell className="text-gray-900 dark:text-gray-50">
-                  {check.defectsFound || "None"}
+                  {check.defectsFound ? (
+                    <ul className="list-disc pl-5">
+                      {check.defectsFound.split(',').map((defect, index) => (
+                        <li key={index}>
+                          <div dangerouslySetInnerHTML={{ __html: defect.trim() }} />
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    "None"
+                  )}
                 </TableCell>
                 <TableCell className="text-gray-900 dark:text-gray-50">
                   {check.notes || "N/A"}
                 </TableCell>
-                <TableCell className="text-right text-gray-900 dark:text-gray-50">
+                <TableCell>
+                  {check.productionOrder?.startDate && format(new Date(check.productionOrder.startDate), "MMM d, yyyy")}
+                </TableCell>
+                {/* <TableCell className="text-right text-gray-900 dark:text-gray-50">
                   {format(new Date(check.checkDate), "MMM d, yyyy h:mm a")}
+                </TableCell> */}
+                <TableCell className="text-right">
+                  <Button variant="outline" size="sm" asChild>
+                    {/* Corrected Link here */}
+                    <Link href={`/inspector/production/${check.productionOrder.id}`}>View</Link>
+                  </Button>
                 </TableCell>
               </TableRow>
             ))

@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma"
-import type { ActivityLogType } from "@prisma/client"
+import prisma from "@/lib/db";
+import type { ActivityLog } from "@prisma/client";
 
 /**
  * Logs a production-related activity.
@@ -12,7 +12,7 @@ import type { ActivityLogType } from "@prisma/client"
  */
 export async function logProductionActivity(
   productionOrderId: string,
-  type: ActivityLogType,
+  type: ActivityLog,
   userId: string,
   userName: string,
   details: Record<string, any>,

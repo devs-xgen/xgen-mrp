@@ -15,6 +15,7 @@ import {
 } from "@/lib/actions/material-reservation"
 import { createProductionBOMFromProduct, getProductionBOMForDisplay } from "@/lib/actions/production-bom"
 import { convertDecimals } from "@/lib/convertDecimals" // Added import
+import { redirect } from "next/navigation"
 
 export async function getProductionOrders() {
   try {
@@ -1367,9 +1368,6 @@ export async function createMaterialRequest(
   }
 }
 
-
-// ... (imports remain the same)
-
 export async function getMyQualityChecks() {
   try {
     const session = await getServerSession(authOptions);
@@ -1382,24 +1380,42 @@ export async function getMyQualityChecks() {
         inspectorId: session.user.id,
       },
       include: {
+        // Include the productionOrder with specific fields
         productionOrder: {
-          include: {
-            product: true
-          }
+          select: {
+            id: true,
+            status: true,
+            startDate: true,
+            dueDate: true,
+            product: {
+              select: {
+                name: true,
+                sku: true,
+              },
+            },
+            productVariant: {
+              select: {
+                displayName: true,
+                sku: true,
+                sizeName: true,
+                colorName: true,
+              },
+            },
+          },
         },
         inspector: {
           select: {
             profile: {
-                select: {
-                    firstName: true,
-                    lastName: true,
-                }
-            }
-          }
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
         },
       },
       orderBy: {
-        checkDate: "desc"
+        checkDate: "desc", // Retain the sorting by checkDate
       },
     });
 
@@ -1408,4 +1424,195 @@ export async function getMyQualityChecks() {
     console.error("Error fetching quality checks for inspector:", error);
     throw new Error("Failed to fetch quality checks");
   }
+}
+
+export async function getAllQualityChecks() {
+  try {
+    const checks = await prisma.qualityCheck.findMany({
+      include: {
+        productionOrder: {
+          select: {
+            orderNumber: true,
+          },
+        },
+        inspector: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        checkDate: "desc",
+      },
+    });
+
+    return checks;
+  } catch (error) {
+    console.error("Error fetching all quality checks:", error);
+    return [];
+  }
+}
+
+export interface CreateQualityCheckData {
+  productionOrderId: string;
+  defectsFound?: string;
+  actionTaken?: string;
+  notes?: string;
+  status: Status; // Add the status field here
+}
+
+export interface QualityCheckFormData {
+  taskId: string;
+  defectsFound?: string;
+  actionTaken?: string;
+  notes?: string;
+  status: Status; // Add status to the form data interface
+}
+
+
+export async function createQualityCheck(data: CreateQualityCheckData) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return { success: false, message: "Unauthorized" };
+    }
+
+    const newQualityCheck = await prisma.qualityCheck.create({
+      data: {
+        productionOrderId: data.productionOrderId,
+        inspectorId: session.user.id,
+        checkDate: new Date(),
+        status: data.status, // Use the status from the form data
+        defectsFound: data.defectsFound,
+        actionTaken: data.actionTaken,
+        notes: data.notes,
+      },
+    });
+
+    return { success: true, qualityCheck: newQualityCheck };
+  } catch (error) {
+    console.error("Error creating quality check:", error);
+    return { success: false, message: "Failed to create quality check" };
+  }
+}
+
+export async function getInspectorQualityChecks() {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id) {
+    return [];
+  }
+
+  try {
+    const qualityChecks = await prisma.qualityCheck.findMany({
+      where: {
+        inspectorId: session.user.id,
+      },
+      orderBy: {
+        checkDate: "desc",
+      },
+      include: {
+        productionOrder: { // Include the production order relation
+          include: {
+            product: true, // Include the product data if you need it
+          },
+        },
+      },
+    });
+
+    return qualityChecks;
+  } catch (error) {
+    console.error("Failed to fetch quality checks:", error);
+    return [];
+  }
+}
+
+
+export async function updateQualityCheck(
+    id: string,
+    data: {
+        defectsFound: string | null;
+        actionTaken: string | null;
+        notes: string | null;
+        status: "PENDING" | "COMPLETED" | "FAILED" | "ACTIVE";
+    }
+) {
+    try {
+        const updatedCheck = await prisma.qualityCheck.update({
+            where: { id },
+            data: {
+                defectsFound: data.defectsFound,
+                actionTaken: data.actionTaken,
+                notes: data.notes, // This line must match your Prisma schema field type
+                status: data.status,
+            },
+        });
+
+        // Revalidate the path to refresh the data on the client
+        revalidatePath("/inspector/dashboard");
+
+        return { success: true, qualityCheck: updatedCheck };
+    } catch (error) {
+        console.error("Error updating quality check:", error);
+        return { success: false, message: "Failed to update quality check." };
+    }
+}
+
+export async function handleTaskUpdate(
+  formData: QualityCheckFormData,
+  qualityCheckId?: string
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
+
+  // Get the task's production order ID
+  const task = await prisma.operation.findUnique({
+    where: { id: formData.taskId },
+    select: { productionOrderId: true },
+  });
+
+  if (!task) {
+    throw new Error("Task not found");
+  }
+
+  // Use the qualityCheckId to determine if it's an update or creation
+  if (qualityCheckId) {
+    // Update existing quality check
+    await prisma.qualityCheck.update({
+      where: { id: qualityCheckId },
+      data: {
+        defectsFound: formData.defectsFound,
+        actionTaken: formData.actionTaken,
+        notes: formData.notes,
+        status: formData.status,
+      },
+    });
+  } else {
+    // Create new quality check
+    await prisma.qualityCheck.create({
+      data: {
+        taskId: formData.taskId,
+        productionOrderId: task.productionOrderId,
+        inspectorId: session.user.id,
+        defectsFound: formData.defectsFound,
+        actionTaken: formData.actionTaken,
+        notes: formData.notes,
+        status: formData.status,
+      },
+    });
+  }
+  
+  // Redirect back to the task page after submission
+  redirect(`/inspector/tasks/${formData.taskId}`);
+}
+
+export interface UpdateFormData {
+    id: string; // Add id for editing an existing quality check
+    taskId: string;
+    status: Status;
+    defectsFound: string | null;
+    actionTaken: string | null;
+    notes: string | null;
 }

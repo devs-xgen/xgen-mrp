@@ -1,104 +1,140 @@
-"use client" // This page needs to be a client component to use useState for the modal
+// src/app/inspector/tasks/[id]/page.tsx
 
-import { notFound } from "next/navigation"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { getProductionOrderWithLogs } from "@/lib/actions/history-log/enhanced-production-operations"
-import ProductionOrderDetailsClient from "@/components/module/history-logs/production-order-details-client"
-import { useEffect, useState } from "react" // Import useEffect and useState for client-side data fetching
+import { Metadata } from "next";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
+import { TaskUpdateForm } from "@/components/module/inspectors/task-update-form";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { QualityCheck as TQualityCheck, Status } from "@prisma/client";
 
-interface ProductionOrderDetailPageProps {
+export const metadata: Metadata = {
+  title: "Task Details",
+  description: "View and update task details",
+};
+
+interface TaskDetailsPageProps {
   params: {
-    id: string
+    id: string;
+  };
+}
+
+export default async function TaskDetailsPage({
+  params,
+}: TaskDetailsPageProps) {
+  const { id } = params; 
+  
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    redirect("/inspector/login");
   }
-}
 
-function LoadingSkeleton() {
-  return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <Skeleton className="h-8 w-64 mb-2" />
-          <Skeleton className="h-4 w-96" />
-        </div>
-        <Skeleton className="h-8 w-32" />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {" "}
-        {/* Adjusted to 3 columns for general info */}
-        {[...Array(3)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="space-y-0 pb-2">
-              <Skeleton className="h-4 w-24" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-16 mb-1" />
-              <Skeleton className="h-3 w-32" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-32" />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex gap-4">
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
+  const task = await prisma.operation.findFirst({
+    where: {
+      id: id,
+      assignedToId: session.user.id,
+    },
+    include: {
+      productionOrder: {
+        include: {
+          product: true,
+          qualityChecks: {
+            orderBy: { checkDate: 'desc' },
+          },
+        },
+      },
+    },
+  });
 
-export default function ProductionOrderDetailPage({ params }: ProductionOrderDetailPageProps) {
-  const [productionOrder, setProductionOrder] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  if (!task || !task.productionOrder) {
+    redirect("/inspector/dashboard");
+  }
+  
+  // Get the most recent quality check from the pre-fetched data
+  const mostRecentQualityCheck = task.productionOrder.qualityChecks.length > 0
+    ? task.productionOrder.qualityChecks[0]
+    : null;
 
-  useEffect(() => {
-    const fetchOrder = async () => {
-      try {
-        setLoading(true)
-        const data = await getProductionOrderWithLogs(params.id)
-        if (!data) {
-          notFound() // Use Next.js notFound for 404
-        }
-        setProductionOrder(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load production order details.")
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
+  const getStatusBadge = (status: Status) => {
+    switch (status) {
+      case "PENDING":
+        return <Badge variant="outline">Pending</Badge>;
+      case "IN_PROGRESS":
+        return <Badge variant="secondary">In Progress</Badge>;
+      case "COMPLETED":
+        return <Badge className="bg-green-100 text-green-800">Completed</Badge>;
+      case "CANCELLED":
+        return <Badge variant="destructive">Cancelled</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
-    fetchOrder()
-  }, [params.id])
-
-  if (loading) {
-    return <LoadingSkeleton />
-  }
-
-  if (error) {
-    return <div className="text-center text-red-500 p-6">Error: {error}</div>
-  }
-
-  if (!productionOrder) {
-    return notFound() // Should ideally be caught by loading/error, but as a fallback
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      <ProductionOrderDetailsClient productionOrder={productionOrder} />
+    <div className="container mx-auto py-6">
+      <h1 className="text-3xl font-bold mb-6">Task Details</h1>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Task Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <h3 className="font-medium">Product</h3>
+              <div className="mt-1">
+                {task.productionOrder?.product.name || "N/A"}
+              </div>
+            </div>
+            <div>
+              <h3 className="font-medium">Production Order</h3>
+              <div className="mt-1">{task.productionOrder?.id || "N/A"}</div>
+            </div>
+            <div>
+              <h3 className="font-medium">Status</h3>
+              <div className="mt-1">{getStatusBadge(task.status)}</div>
+            </div>
+            {/* Add more fields as needed */}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Update Task</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TaskUpdateForm
+              task={{
+                id: task.id,
+                description: task.description || "",
+                status: task.status,
+                productionOrderId: task.productionOrder.id,
+              }}
+              initialData={mostRecentQualityCheck}
+              onClose={() => redirect(`/inspector/tasks/${task.id}`)}
+              onSubmit={async (data, qcId) => {
+                "use server";
+                const { updateQualityCheck, createQualityCheck } = await import("@/lib/actions/inspector/production-order");
+                
+                if (qcId) {
+                  await updateQualityCheck(qcId, data);
+                } else {
+                  await createQualityCheck({
+                    ...data,
+                    productionOrderId: task.productionOrder.id,
+                    inspectorId: session.user.id,
+                  });
+                }
+                redirect(`/inspector/tasks/${task.id}`);
+              }}
+            />
+          </CardContent>
+        </Card>
+      </div>
     </div>
-  )
+  );
 }
