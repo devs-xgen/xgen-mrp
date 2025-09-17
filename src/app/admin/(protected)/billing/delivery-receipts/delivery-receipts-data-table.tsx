@@ -1,15 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { DataTable } from "@/components/global/table/data-table";
 import { 
   createSelectionColumn,
-  createTextColumn,
-  createStatusColumn,
   createDateColumn,
 } from "@/components/global/table/column-helpers";
 import { getTableConfig } from "@/components/global/table/table-utils";
 import { DeliveryReceiptWithBilling } from "@/types/admin/billing";
-import { MoreHorizontal, Eye, Edit, Download, Truck, MapPin, Package } from "lucide-react";
+import { MoreHorizontal, Eye, Edit, Download, Truck, MapPin, Trash2 } from "lucide-react";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +20,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { deleteDeliveryReceipt } from "@/lib/actions/delivery-receipts";
 
 interface DeliveryReceiptsDataTableProps {
   data: DeliveryReceiptWithBilling[];
@@ -36,41 +46,100 @@ function DeliveryReceiptActionsCell({
   receipt: DeliveryReceiptWithBilling; 
   onRefresh: () => void;
 }) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const canDelete = receipt.deliveryStatus === 'PENDING' || receipt.deliveryStatus === 'CANCELLED';
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
-          <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[200px]">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem asChild>
-          <Link href={`/admin/billing/delivery-receipts/${receipt.id}`}>
-            <Eye className="mr-2 h-4 w-4" />
-            View Details
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href={`/admin/billing/delivery-receipts/${receipt.id}/edit`}>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit Receipt
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href={`/admin/billing/delivery-receipts/${receipt.id}/track`}>
-            <MapPin className="mr-2 h-4 w-4" />
-            Track Delivery
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem>
-          <Download className="mr-2 h-4 w-4" />
-          Download PDF
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Open menu</span>
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-[220px]">
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuItem asChild>
+            <Link href={`/admin/billing/delivery-receipts/${receipt.id}`}>
+              <Eye className="mr-2 h-4 w-4" />
+              View Details
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={`/admin/billing/delivery-receipts/${receipt.id}/edit`}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Receipt
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link href={`/admin/billing/delivery-receipts/${receipt.id}/track`}>
+              <MapPin className="mr-2 h-4 w-4" />
+              Track Delivery
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <Download className="mr-2 h-4 w-4" />
+            Download PDF
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem 
+            className={`text-destructive ${!canDelete ? 'opacity-60' : ''}`}
+            onClick={() => {
+              if (canDelete) {
+                setDeleteDialogOpen(true);
+              } else {
+                toast.error("Only PENDING or CANCELLED delivery receipts can be deleted");
+              }
+            }}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Delivery Receipt</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. Only receipts with status PENDING or CANCELLED can be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                try {
+                  setIsDeleting(true);
+                  const res = await deleteDeliveryReceipt(receipt.id);
+                  if (res?.success) {
+                    toast.success("Delivery receipt deleted successfully");
+                    setDeleteDialogOpen(false);
+                    onRefresh();
+                  } else {
+                    toast.error(res?.error || "Failed to delete delivery receipt");
+                  }
+                } catch (err) {
+                  console.error(err);
+                  toast.error("Failed to delete delivery receipt");
+                } finally {
+                  setIsDeleting(false);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

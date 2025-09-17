@@ -183,7 +183,7 @@ export default function ViewDeliveryReceiptPage() {
              <Download className="mr-2 h-4 w-4" />
              {isLoading ? "Exporting..." : "Export"}
           </Button>
-          {receipt.deliveryStatus === 'PENDING' && (
+          {(receipt.deliveryStatus === 'PENDING' || receipt.deliveryStatus === 'CANCELLED') && (
             <>
               <Button variant="outline" size="sm" asChild>
                 <Link href={`/admin/billing/delivery-receipts/${receiptId}/edit`}>
@@ -203,6 +203,7 @@ export default function ViewDeliveryReceiptPage() {
                     <AlertDialogTitle>Delete Delivery Receipt</AlertDialogTitle>
                     <AlertDialogDescription>
                       Are you sure you want to delete this delivery receipt? This action cannot be undone.
+                      Only receipts with status PENDING or CANCELLED can be deleted. If deletion is not allowed, we will show you why.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

@@ -25,8 +25,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { formatDate } from "@/components/global/table/table-utils";
 import { ShareLinkDialog } from "@/components/shared/ShareLinkDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { deleteBillingStatement } from "@/lib/actions/billing-statements";
 
 // Type alias for serialized billing statement data
 type SerializedBillingStatement = SerializableData<BillingStatementWithRelations>;
@@ -63,7 +74,9 @@ function BillingStatementActionsCell({
   statement: SerializedBillingStatement; 
   onRefresh: () => void;
 }) {
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  // Share dialog is self-managed via trigger prop
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   return (
     <>
@@ -83,16 +96,26 @@ function BillingStatementActionsCell({
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href={`/admin/billing/billing-statements/${statement.id}/edit`}>
+            <Link href={`/admin/billing/billing-statements/${statement.id}?edit=1`}>
               <Edit className="mr-2 h-4 w-4" />
               Edit Statement
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setShareDialogOpen(true)}>
-            <Share2 className="mr-2 h-4 w-4" />
-            Share Link
-          </DropdownMenuItem>
+          <ShareLinkDialog
+            documentType="billing-statement"
+            documentId={statement.id as string}
+            documentTitle={`Billing Statement ${statement.statementNumber}`}
+            onOpenChange={(open) => {
+              if (!open) onRefresh();
+            }}
+            trigger={
+              <DropdownMenuItem>
+                <Share2 className="mr-2 h-4 w-4" />
+                Share Link
+              </DropdownMenuItem>
+            }
+          />
           <DropdownMenuItem asChild>
             <Link href={`/admin/billing/billing-statements/${statement.id}/pdf`}>
               <Download className="mr-2 h-4 w-4" />
@@ -100,27 +123,53 @@ function BillingStatementActionsCell({
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-destructive">
+          <DropdownMenuItem className="text-destructive" onClick={() => setDeleteDialogOpen(true)}>
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <ShareLinkDialog
-        open={shareDialogOpen}
-        onOpenChange={setShareDialogOpen}
-        document={{
-          id: statement.id,
-          type: 'billing-statement',
-          title: `Billing Statement ${statement.statementNumber}`,
-          description: `Statement for ${statement.customerName || 'Customer'}`
-        }}
-        onSuccess={() => {
-          setShareDialogOpen(false);
-          onRefresh();
-        }}
-      />
+      {/* ShareLinkDialog handled above via trigger */}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Billing Statement</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the billing statement
+              {statement.status !== 'DRAFT' ? ' (only DRAFT statements can be deleted).' : '.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                try {
+                  setIsDeleting(true);
+                  const res = await deleteBillingStatement(statement.id as string);
+                  if (res?.success) {
+                    toast.success("Billing statement deleted successfully");
+                    setDeleteDialogOpen(false);
+                    onRefresh();
+                  } else {
+                    toast.error(res?.error || "Failed to delete billing statement");
+                  }
+                } catch (err) {
+                  console.error(err);
+                  toast.error("Failed to delete billing statement");
+                } finally {
+                  setIsDeleting(false);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
@@ -221,14 +270,19 @@ export function BillingStatementsDataTable({
         );
       },
     },
-    createStatusColumn<SerializedBillingStatement>("status", "Status", {
-      DRAFT: { variant: "outline", label: "Draft" },
-      SENT: { variant: "secondary", label: "Sent" },
-      PAID: { variant: "default", label: "Paid" },
-      OVERDUE: { variant: "destructive", label: "Overdue" },
-      PARTIALLY_PAID: { variant: "secondary", label: "Partially Paid" },
-      CANCELLED: { variant: "destructive", label: "Cancelled" },
-    }),
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const status = row.getValue("status") as BillingStatus;
+        const { variant, label } = getStatusBadge(status);
+        return (
+          <Badge variant={variant} className="capitalize">
+            {label}
+          </Badge>
+        );
+      },
+    },
     createCurrencyColumn<SerializedBillingStatement>("totalAmount", "Total Amount", "PHP"),
     {
       accessorKey: "paidAmount",

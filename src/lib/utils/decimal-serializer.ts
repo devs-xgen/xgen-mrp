@@ -36,21 +36,40 @@ export function serializeDecimal(decimal: Decimal | string | number | null | und
   if (decimal === null || decimal === undefined) {
     return null;
   }
-  
-  if (decimal instanceof Decimal) {
-    return decimal.toString();
+
+  // Robust Decimal detection to avoid instanceof issues across module boundaries
+  const isPrismaDecimal = (val: any) => {
+    return (
+      val &&
+      typeof val === 'object' &&
+      (val instanceof Decimal ||
+        val?.constructor?.name === 'Decimal' ||
+        (typeof val.toString === 'function' &&
+          typeof val.toNumber === 'function' &&
+          typeof val.toFixed === 'function'))
+    );
+  };
+
+  if (isPrismaDecimal(decimal)) {
+    // Use toString for stable serialization
+    return (decimal as any).toString();
   }
-  
+
   // Handle case where decimal might already be a string
   if (typeof decimal === 'string') {
     return decimal;
   }
-  
+
   // Handle case where decimal might be a number
   if (typeof decimal === 'number') {
     return decimal.toString();
   }
-  
+
+  // Gracefully fallback: attempt toString if present
+  if (typeof (decimal as any)?.toString === 'function') {
+    return (decimal as any).toString();
+  }
+
   throw new Error(`Invalid decimal value: ${decimal}`);
 }
 
@@ -63,7 +82,7 @@ export function deserializeDecimal(value: string | null | undefined): Decimal | 
   if (value === null || value === undefined || value === '') {
     return null;
   }
-  
+
   try {
     return new Decimal(value);
   } catch (error) {
@@ -80,23 +99,42 @@ export function serializeDecimals<T>(data: T): SerializableData<T> {
   if (data === null || data === undefined) {
     return data as SerializableData<T>;
   }
-  
-  if (data instanceof Decimal) {
-    return serializeDecimal(data) as SerializableData<T>;
+
+  // Handle Decimal at the root level robustly
+  const isPrismaDecimal = (val: any) => {
+    return (
+      val &&
+      typeof val === 'object' &&
+      (val instanceof Decimal ||
+        val?.constructor?.name === 'Decimal' ||
+        (typeof val.toString === 'function' &&
+          typeof val.toNumber === 'function' &&
+          typeof val.toFixed === 'function'))
+    );
+  };
+
+  if (isPrismaDecimal(data)) {
+    return serializeDecimal(data as any) as SerializableData<T>;
   }
-  
+
   if (Array.isArray(data)) {
     return data.map(item => serializeDecimals(item)) as SerializableData<T>;
   }
-  
-  if (typeof data === 'object' && data.constructor === Object) {
+
+  if (typeof data === 'object') {
+    // Exclude Date objects
+    if (data instanceof Date) {
+      return data as unknown as SerializableData<T>;
+    }
+
+    // For plain objects (and Prisma payloads), iterate keys safely
     const result: any = {};
     for (const [key, value] of Object.entries(data)) {
       result[key] = serializeDecimals(value);
     }
     return result as SerializableData<T>;
   }
-  
+
   return data as SerializableData<T>;
 }
 

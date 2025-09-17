@@ -17,21 +17,21 @@ import {
   isParamsResolutionError,
   type BillingRouteParams 
 } from "@/lib/utils/params-handler";
-import { SerializableData } from "@/lib/utils/decimal-serializer";
+import { SerializableData, serializeDecimals } from "@/lib/utils/decimal-serializer";
 
 // Client component for interactive functionality
 import { BillingStatementClient } from "./client";
 
 interface BillingStatementPageProps {
-  params: Promise<BillingRouteParams>;
+  params: BillingRouteParams;
+  searchParams?: Record<string, string | string[]>;
 }
 
-export default async function BillingStatementPage({ params }: BillingStatementPageProps) {
+export default async function BillingStatementPage({ params, searchParams }: BillingStatementPageProps) {
   let billingStatementId: string;
   
   try {
-    const resolvedParams = await params;
-    billingStatementId = getBillingStatementId(resolvedParams);
+    billingStatementId = getBillingStatementId(params);
   } catch (error) {
     console.error('Error resolving params:', error);
     
@@ -62,10 +62,15 @@ export default async function BillingStatementPage({ params }: BillingStatementP
 
   // Fetch billing statement data
   let billingStatement: SerializableData<BillingStatementWithRelations> | null = null;
+  // Resolve initial edit mode from query
+  const sp = searchParams || {};
+  const editParam = (typeof sp.edit === 'string' ? sp.edit : Array.isArray(sp.edit) ? sp.edit[0] : undefined);
+  const initialIsEditing = editParam === '1' || editParam === 'true';
   
   try {
     const result = await getBillingStatementById(billingStatementId);
-    billingStatement = result;
+    // Extra safety: ensure deep serialization before passing to client
+    billingStatement = result ? (serializeDecimals(result) as SerializableData<BillingStatementWithRelations>) : null;
   } catch (error) {
     console.error('Error loading billing statement:', error);
     // Let the component handle the null case
@@ -98,6 +103,7 @@ export default async function BillingStatementPage({ params }: BillingStatementP
         <BillingStatementClient 
           billingStatement={billingStatement} 
           billingStatementId={billingStatementId}
+          initialIsEditing={initialIsEditing}
         />
       </Suspense>
     </PageContainer>

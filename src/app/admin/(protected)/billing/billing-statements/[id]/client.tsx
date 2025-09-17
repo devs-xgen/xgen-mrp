@@ -68,17 +68,19 @@ type SerializedBillingStatement = SerializableData<BillingStatementWithRelations
 interface BillingStatementClientProps {
   billingStatement: SerializedBillingStatement;
   billingStatementId: string;
+  initialIsEditing?: boolean;
 }
 
 export function BillingStatementClient({ 
   billingStatement: initialBillingStatement, 
-  billingStatementId 
+  billingStatementId,
+  initialIsEditing = false,
 }: BillingStatementClientProps) {
   const router = useRouter();
   
   // States
   const [billingStatement, setBillingStatement] = useState<SerializedBillingStatement>(initialBillingStatement);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(initialIsEditing);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCopyingLink, setIsCopyingLink] = useState(false);
@@ -626,7 +628,7 @@ export function BillingStatementClient({
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Payment Terms:</span>
-                <span className="text-sm">{billingStatement.salesInvoice.paymentTerms || "Not specified"}</span>
+                <span className="text-sm">{billingStatement.salesInvoice?.paymentTerms || "Not specified"}</span>
               </div>
               {billingStatement.paidDate && (
                 <div className="flex items-center justify-between">
