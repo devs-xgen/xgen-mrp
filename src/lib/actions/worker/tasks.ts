@@ -31,10 +31,11 @@ export async function getMyTasks() {
 
     const workCenterIds = userWorkCenters.map((uwc) => uwc.workCenterId);
 
-    // Get operations for these work centers
+    // Get operations for these work centers that are assigned to the current worker
     const operations = await prisma.operation.findMany({
       where: {
         workCenterId: { in: workCenterIds },
+        assignedToId: session.user.id,
         status: { in: [Status.PENDING, Status.IN_PROGRESS, Status.COMPLETED] },
         // Only include operations from production orders that are IN_PROGRESS or COMPLETED
         productionOrder: {
@@ -65,8 +66,9 @@ export async function getMyTasks() {
     const pausedOperations = await prisma.operation.findMany({
       where: {
         workCenterId: { in: workCenterIds },
+        assignedToId: session.user.id,
         status: { in: [Status.PENDING, Status.IN_PROGRESS] },
-        // Only include operations from production orders that are PENDING (not started yet) or PAUSED
+        // Only include operations from production orders that are PENDING (not started yet)
         productionOrder: {
           status: { in: [Status.PENDING] },
         },
@@ -152,10 +154,11 @@ export async function getTodaysTasks() {
 
     const workCenterIds = userWorkCenters.map((uwc) => uwc.workCenterId);
 
-    // Get operations for these work centers that are due today
+    // Get operations for these work centers that are due today and assigned to the current worker
     const operations = await prisma.operation.findMany({
       where: {
         workCenterId: { in: workCenterIds },
+        assignedToId: session.user.id,
         OR: [
           { startTime: { gte: today, lt: tomorrow } },
           { endTime: { gte: today, lt: tomorrow } },
@@ -226,6 +229,11 @@ export async function updateTaskStatus(
 
     const previousStatus = operation.status;
     const productionOrderId = operation.productionOrderId;
+
+    // Enforce permission: only the assigned worker can update this task
+    if (operation.assignedToId && operation.assignedToId !== session.user.id) {
+      throw new Error("Access denied: You are not assigned to this task");
+    }
 
     // Update the operation
     await prisma.operation.update({
@@ -455,6 +463,7 @@ export async function getTaskStatistics(): Promise<TaskStatistics> {
     const pending = await prisma.operation.count({
       where: {
         workCenterId: { in: workCenterIds },
+        assignedToId: session.user.id,
         status: Status.PENDING,
       },
     });
@@ -462,6 +471,7 @@ export async function getTaskStatistics(): Promise<TaskStatistics> {
     const inProgress = await prisma.operation.count({
       where: {
         workCenterId: { in: workCenterIds },
+        assignedToId: session.user.id,
         status: Status.IN_PROGRESS,
       },
     });
@@ -470,6 +480,7 @@ export async function getTaskStatistics(): Promise<TaskStatistics> {
     const completed = await prisma.operation.count({
       where: {
         workCenterId: { in: workCenterIds },
+        assignedToId: session.user.id,
         status: Status.COMPLETED,
         updatedAt: {
           gte: new Date(new Date().setHours(0, 0, 0, 0)),
@@ -481,6 +492,7 @@ export async function getTaskStatistics(): Promise<TaskStatistics> {
     const urgentTasks = await prisma.operation.count({
       where: {
         workCenterId: { in: workCenterIds },
+        assignedToId: session.user.id,
         status: { in: [Status.PENDING, Status.IN_PROGRESS] },
         productionOrder: {
           priority: "URGENT",
@@ -492,6 +504,7 @@ export async function getTaskStatistics(): Promise<TaskStatistics> {
     const activeTasks = await prisma.operation.count({
       where: {
         workCenterId: { in: workCenterIds },
+        assignedToId: session.user.id,
         status: { in: [Status.PENDING, Status.IN_PROGRESS] },
         productionOrder: {
           status: Status.IN_PROGRESS,
@@ -503,6 +516,7 @@ export async function getTaskStatistics(): Promise<TaskStatistics> {
     const inactiveTasks = await prisma.operation.count({
       where: {
         workCenterId: { in: workCenterIds },
+        assignedToId: session.user.id,
         status: { in: [Status.PENDING, Status.IN_PROGRESS] },
         productionOrder: {
           status: Status.PENDING,

@@ -89,12 +89,12 @@ export default async function TasksPage() {
       <PageBody className="space-y-6">
         {/* Inactive Tasks Warning - Only show if there are inactive tasks */}
         {inactiveTasks.length > 0 && (
-          <Card className="border-amber-200 bg-amber-50">
+          <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
             <CardContent className="pt-6 flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
+              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
               <div>
-                <p className="font-medium text-amber-800">Some tasks are not active</p>
-                <p className="text-sm text-amber-700 mt-1">
+                <p className="font-medium text-amber-800 dark:text-amber-200">Some tasks are not active</p>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
                   {stats.inactiveTasks || inactiveTasks.length} task(s) are from production orders that have not been started by admin.
                   These tasks will be available once the admin starts the production process.
                 </p>

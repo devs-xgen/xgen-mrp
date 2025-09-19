@@ -13,7 +13,7 @@ interface TasksListProps {
 }
 
 export function TasksList({ tasks, workflowDataMap }: TasksListProps) {
-  const [activeTab, setActiveTab] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>("active");
 
   // Group tasks by status
   const notStarted = tasks.filter((task) => task.status === Status.PENDING);
@@ -59,7 +59,7 @@ export function TasksList({ tasks, workflowDataMap }: TasksListProps) {
       </CardHeader>
       <CardContent>
         <Tabs
-          defaultValue="all"
+          defaultValue="active"
           value={activeTab}
           onValueChange={setActiveTab}
           className="w-full"
@@ -181,8 +181,8 @@ export function TasksList({ tasks, workflowDataMap }: TasksListProps) {
                 </div>
               ) : (
                 <>
-                  <div className="bg-amber-50 p-3 rounded border border-amber-200 mb-4">
-                    <p className="text-sm text-amber-800">
+                  <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded border border-amber-200 dark:border-amber-900 mb-4">
+                    <p className="text-sm text-amber-800 dark:text-amber-200">
                       These tasks are from production orders that have not been started by admin.
                       They will become available once the production is started.
                     </p>

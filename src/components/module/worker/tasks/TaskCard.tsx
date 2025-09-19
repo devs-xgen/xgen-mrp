@@ -246,11 +246,12 @@ export function TaskCard({ task, workflowData }: TaskCardProps) {
   return (
     <Card
       className={`
-      ${task.priority === "URGENT" ? "border-red-500" : ""}
-      ${task.priority === "HIGH" ? "border-orange-400" : ""}
-      ${isOverdue ? "bg-red-50" : ""}
+      ${task.priority === "URGENT" ? "border-red-500 dark:border-red-400" : ""}
+      ${task.priority === "HIGH" ? "border-orange-400 dark:border-orange-300" : ""}
+      ${isOverdue ? "bg-red-50 dark:bg-red-950/20" : ""}
       ${isTaskInactive ? "opacity-70 border-dashed" : ""}
-      ${isWorkflowCritical ? "border-blue-500 bg-blue-50/30" : ""}
+      ${isWorkflowCritical ? "border-blue-500 dark:border-blue-400 bg-blue-50/30 dark:bg-blue-950/20" : ""}
+      transition-colors
     `}
     >
       <CardHeader className="pb-2">
@@ -282,9 +283,9 @@ export function TaskCard({ task, workflowData }: TaskCardProps) {
               <span
                 className={`text-xs ${
                   isOverdue
-                    ? "text-red-600"
+                    ? "text-red-700 dark:text-red-400"
                     : isDueSoon
-                    ? "text-amber-600"
+                    ? "text-amber-700 dark:text-amber-300"
                     : "text-muted-foreground"
                 }`}
               >
@@ -311,9 +312,9 @@ export function TaskCard({ task, workflowData }: TaskCardProps) {
       {expanded && (
         <CardContent className="pb-2">
           {isTaskInactive && (
-            <div className="flex items-center gap-2 p-2 mb-4 bg-amber-50 border border-amber-200 rounded-md">
-              <AlertCircle className="h-5 w-5 text-amber-500" />
-              <div className="text-sm text-amber-700">
+            <div className="flex items-center gap-2 p-2 mb-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-md">
+              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <div className="text-sm text-amber-700 dark:text-amber-200">
                 <p>This task is not active because the production order has not been started by admin.</p>
                 <p className="text-xs mt-1">You will be able to work on this task once the production order is started.</p>
               </div>
@@ -424,7 +425,7 @@ export function TaskCard({ task, workflowData }: TaskCardProps) {
               size="sm"
               onClick={() => handleStatusChange(Status.COMPLETED)}
               disabled={loading || isTaskInactive}
-              className={isWorkflowCritical ? "bg-blue-600 hover:bg-blue-700" : ""}
+              className={isWorkflowCritical ? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600" : ""}
             >
               <CheckCircle className="h-4 w-4 mr-1" /> 
               {isWorkflowCritical ? "Complete & Enable Team" : "Complete"}
