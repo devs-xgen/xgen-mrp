@@ -10,7 +10,6 @@ import {
   PageHeaderActions,
   SectionCard 
 } from "@/components/shared/page-layout";
-import { CreateProductButton } from "@/components/module/admin/products/create-product-button";
 import { ProductCategoryDialog } from "@/components/module/admin/products/product-category-dialog";
 import { revalidatePath } from "next/cache";
 import { Button } from "@/components/ui/button";
@@ -45,7 +44,9 @@ export default async function ProductsPage() {
           <Button variant="outline" size="sm" asChild>
             <a href="/admin/products/archived">View Archived</a>
           </Button>
-          <CreateProductButton categories={categories as any} onSuccess={refreshData} />
+          <Button asChild>
+            <a href="/admin/products/create">Create Product</a>
+          </Button>
           <ProductCategoryDialog categories={categories as any} onSuccess={refreshData} />
         </PageHeaderActions>
       </PageHeader>

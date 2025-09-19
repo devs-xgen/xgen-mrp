@@ -9,6 +9,22 @@ import { Material, MaterialCreateInput, MaterialUpdateInput } from "@/types/admi
 import { Status } from "@prisma/client"
 import { convertDecimalsToNumbers } from "@/types/admin/product";
 
+// Check if a material SKU is available. Optional excludeId to ignore an existing material.
+export async function isMaterialSkuAvailable(sku: string, excludeId?: string) {
+  try {
+    const existing = await prisma.material.findFirst({
+      where: {
+        sku,
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
+      select: { id: true },
+    });
+    return { available: !existing };
+  } catch (error) {
+    console.error("Error checking material SKU availability:", error);
+    return { available: false, error: "Unable to check SKU" };
+  }
+}
 
 async function createLowStockAlert({
   materialId,
@@ -33,7 +49,6 @@ async function createLowStockAlert({
     if (!material) {
       throw new Error("Material not found")
     }
-
     const suggestedOrderQuantity = Math.max(minimumLevel * 2 - currentLevel, 0)
 
     console.warn(`LOW STOCK ALERT: Material "${material.name}" (SKU: ${material.sku}) has fallen below minimum stock level. Current: ${currentLevel} ${material.unitOfMeasure?.symbol || 'units'}, Minimum: ${minimumLevel} ${material.unitOfMeasure?.symbol || 'units'}.`);
@@ -291,6 +306,53 @@ export async function createMaterial(data: MaterialCreateInput) {
   } catch (error) {
     console.error('Error creating material:', error);
     throw new Error(`Failed to create material: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+// Bulk create materials in one request
+export async function createMaterialsBulk(items: MaterialCreateInput[]) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    if (!Array.isArray(items) || items.length === 0) {
+      throw new Error("No materials to create");
+    }
+
+    // Map to Prisma data payloads. Use direct foreign keys for createMany.
+    const data = items.map((m) => {
+      const costPerUnit = typeof m.costPerUnit === "string" ? parseFloat(m.costPerUnit as any) : m.costPerUnit;
+      if (isNaN(Number(costPerUnit))) {
+        throw new Error(`Invalid costPerUnit for SKU ${m.sku}`);
+      }
+      return {
+        name: m.name,
+        sku: m.sku,
+        typeId: m.typeId,
+        unitOfMeasureId: m.unitOfMeasureId,
+        costPerUnit: costPerUnit as number,
+        currentStock: m.currentStock,
+        minimumStockLevel: m.minimumStockLevel,
+        leadTime: m.leadTime,
+        supplierId: m.supplierId,
+        notes: m.notes ?? null,
+        status: Status.ACTIVE,
+        createdBy: session.user.id,
+        // Optional fields available in schema
+        committedStock: m.committedStock ?? undefined,
+      } as any;
+    });
+
+    const result = await prisma.material.createMany({
+      data,
+      skipDuplicates: true, // respects unique constraints like sku
+    });
+
+    revalidatePath('/admin/materials');
+    return { success: true, insertedCount: result.count, attempted: items.length };
+  } catch (error) {
+    console.error('Error bulk-creating materials:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 

@@ -24,6 +24,77 @@ async function createVariantBOMsFromParent(
     return 0;
 }
 
+// Check if a product SKU is available. Optional excludeId to ignore an existing product.
+export async function isProductSkuAvailable(sku: string, excludeId?: string) {
+  try {
+    const existing = await prisma.product.findFirst({
+      where: {
+        sku,
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
+      select: { id: true },
+    });
+    return { available: !existing };
+  } catch (error) {
+    console.error("Error checking product SKU availability:", error);
+    return { available: false, error: "Unable to check SKU" };
+  }
+}
+
+// Bulk create products (no variants). Skips duplicates by unique sku.
+export async function createProductsBulk(items: Array<{
+  name: string;
+  sku: string;
+  description?: string;
+  categoryId: string;
+  unitCost: number;
+  sellingPrice: number;
+  minimumStockLevel: number;
+  currentStock: number;
+  leadTime: number;
+  status?: Status;
+}>) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return { success: false, error: "No products to create" };
+    }
+
+    const data = items.map((p) => ({
+      name: p.name,
+      sku: p.sku,
+      description: p.description ?? null,
+      categoryId: p.categoryId,
+      unitCost: p.unitCost,
+      sellingPrice: p.sellingPrice,
+      minimumStockLevel: p.minimumStockLevel,
+      currentStock: p.currentStock,
+      expectedStock: 0, // optional fields not in schema will be ignored if not present
+      leadTime: p.leadTime,
+      hasVariants: false,
+      status: p.status ?? ("ACTIVE" as Status),
+      sizeRange: [],
+      colorOptions: [],
+      createdBy: session.user.id,
+    } as any));
+
+    const result = await prisma.product.createMany({
+      data,
+      skipDuplicates: true,
+    });
+
+    revalidatePath("/admin/products");
+    return { success: true, insertedCount: result.count, attempted: items.length };
+  } catch (error: any) {
+    console.error("Bulk product creation error:", error);
+    return { success: false, error: error?.message || "Error creating products" };
+  }
+}
+
 // Get archived products for admin listing
 export async function getArchivedProducts() {
   try {

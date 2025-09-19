@@ -6,7 +6,6 @@ import {
   getUnitOfMeasures,
   getSuppliers,
 } from "@/lib/actions/materials";
-import { CreateMaterialDialog } from "@/components/module/admin/materials/create-material-dialog";
 import { MaterialTypeDialog } from "@/components/module/admin/materials/material-type-dialog";
 import { UnitOfMeasureDialog } from "@/components/module/admin/materials/unit-of-measure-dialog";
 import { revalidatePath } from "next/cache";
@@ -78,12 +77,9 @@ export default async function MaterialsPage() {
               unitOfMeasures={unitOfMeasures}
               onSuccess={revalidateData}
             />
-            <CreateMaterialDialog
-              materialTypes={materialTypes}
-              unitOfMeasures={unitOfMeasures}
-              suppliers={suppliers}
-              onSuccess={refreshData}
-            />
+            <Button size="sm" asChild>
+              <a href="/admin/materials/create">Add Material</a>
+            </Button>
           </PageHeaderActions>
         </PageHeader>
 
