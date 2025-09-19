@@ -1,11 +1,19 @@
 import { Metadata } from "next";
 import { getMyTasks, getProductionOrderDetailsWithPhases } from "@/lib/actions/worker/tasks";
 import { OperationTaskManager } from "@/components/module/worker/tasks/OperationTaskManager";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Settings, Package, Clock, CheckCircle, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import {
+  PageContainer,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+  PageDescription,
+  PageHeaderActions,
+  PageBody,
+} from "@/components/shared/page-layout";
 
 // Force dynamic rendering since this page uses authentication
 export const dynamic = 'force-dynamic';
@@ -57,27 +65,27 @@ export default async function TaskOperationsPage() {
     };
 
     return (
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Link href="/worker/tasks">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-1" />
-                  Back to Tasks
-                </Button>
-              </Link>
-            </div>
-            <h2 className="text-3xl font-bold tracking-tight">Task Operations</h2>
-            <p className="text-muted-foreground">
+      <PageContainer id="worker-task-operations">
+        <PageHeader>
+          <PageHeaderMain>
+            <PageTitle>Task Operations</PageTitle>
+            <PageDescription>
               Manage your production order operations and update task status
-            </p>
-          </div>
-        </div>
+            </PageDescription>
+          </PageHeaderMain>
+          <PageHeaderActions>
+            <Link href="/worker/tasks">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back to Tasks
+              </Button>
+            </Link>
+          </PageHeaderActions>
+        </PageHeader>
 
-                 {/* Statistics Cards */}
-         <div className="stats-grid">
+        <PageBody className="space-y-6">
+          {/* Statistics Cards */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Production Orders</CardTitle>
@@ -129,58 +137,59 @@ export default async function TaskOperationsPage() {
               </p>
             </CardContent>
           </Card>
-        </div>
+          </div>
 
-        {/* Production Orders */}
-        {productionOrders.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12">
-              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">No Active Production Orders</h3>
-                             <p className="text-muted-foreground">
-                 You don&apos;t have any active production orders assigned to you at the moment.
-               </p>
-              <div className="mt-4">
-                <Link href="/worker/tasks">
-                  <Button variant="outline">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Tasks
-                  </Button>
-                </Link>
-              </div>
+          {/* Production Orders */}
+          {productionOrders.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-medium mb-2">No Active Production Orders</h3>
+                <p className="text-muted-foreground">
+                  You don&apos;t have any active production orders assigned to you at the moment.
+                </p>
+                <div className="mt-4">
+                  <Link href="/worker/tasks">
+                    <Button variant="outline">
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Back to Tasks
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-8">
+              {productionOrders.map((productionOrder, index) => (
+                <div key={productionOrder.id} className="fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
+                  <OperationTaskManager
+                    productionOrder={productionOrder}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Help Section */}
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader>
+              <CardTitle className="text-blue-800 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                How to Use Task Operations
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-blue-700">
+              <ul className="space-y-2 text-sm">
+                <li>• <strong>Click on any operation card</strong> to open the task management dialog</li>
+                <li>• <strong>Update status</strong> by selecting a new status from the dropdown</li>
+                <li>• <strong>Add notes</strong> to document your progress or any issues</li>
+                <li>• <strong>Tablet-friendly design</strong> - optimized for touch interactions</li>
+                <li>• <strong>Real-time updates</strong> - changes are immediately reflected in the system</li>
+              </ul>
             </CardContent>
           </Card>
-                 ) : (
-           <div className="space-y-8">
-             {productionOrders.map((productionOrder, index) => (
-               <div key={productionOrder.id} className="fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
-                 <OperationTaskManager
-                   productionOrder={productionOrder}
-                 />
-               </div>
-             ))}
-           </div>
-         )}
-
-        {/* Help Section */}
-        <Card className="bg-blue-50 border-blue-200">
-          <CardHeader>
-            <CardTitle className="text-blue-800 flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5" />
-              How to Use Task Operations
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-blue-700">
-            <ul className="space-y-2 text-sm">
-              <li>• <strong>Click on any operation card</strong> to open the task management dialog</li>
-              <li>• <strong>Update status</strong> by selecting a new status from the dropdown</li>
-              <li>• <strong>Add notes</strong> to document your progress or any issues</li>
-              <li>• <strong>Tablet-friendly design</strong> - optimized for touch interactions</li>
-              <li>• <strong>Real-time updates</strong> - changes are immediately reflected in the system</li>
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
+        </PageBody>
+      </PageContainer>
     );
   } catch (error) {
     console.error('Error loading task operations:', error);

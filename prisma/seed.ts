@@ -8,7 +8,9 @@ async function main() {
 
   try {
     // 1) Admin user (idempotent)
-    const existingAdmin = await prisma.user.findFirst({ where: { role: Role.ADMIN } });
+    const existingAdmin = await prisma.user.findFirst({
+      where: { role: Role.ADMIN },
+    });
     if (existingAdmin) {
       console.log("✅ Admin user already exists:", existingAdmin.email);
     } else {
@@ -42,7 +44,9 @@ async function main() {
 
     // 2) Worker user (idempotent)
     const workerEmail = "worker@xgen-mrp.com";
-    const existingWorker = await prisma.user.findUnique({ where: { email: workerEmail } });
+    const existingWorker = await prisma.user.findUnique({
+      where: { email: workerEmail },
+    });
     if (existingWorker) {
       console.log("✅ Worker user already exists:", existingWorker.email);
     } else {
@@ -67,12 +71,16 @@ async function main() {
           },
         },
       });
-      console.log("✅ Worker user created (📧 worker@xgen-mrp.com / 🔑 worker123)");
+      console.log(
+        "✅ Worker user created (📧 worker@xgen-mrp.com / 🔑 worker123)"
+      );
     }
 
     // 3) Inspector user + Inspector record (idempotent)
     const inspectorEmail = "inspector@xgen-mrp.com";
-    let inspectorUser = await prisma.user.findUnique({ where: { email: inspectorEmail } });
+    let inspectorUser = await prisma.user.findUnique({
+      where: { email: inspectorEmail },
+    });
     if (!inspectorUser) {
       const inspectorPassword = await bcrypt.hash("inspector123", 12);
       inspectorUser = await prisma.user.create({
@@ -95,15 +103,22 @@ async function main() {
           },
         },
       });
-      console.log("✅ Inspector user created (📧 inspector@xgen-mrp.com / 🔑 inspector123)");
+      console.log(
+        "✅ Inspector user created (📧 inspector@xgen-mrp.com / 🔑 inspector123)"
+      );
     } else {
       console.log("✅ Inspector user already exists:", inspectorUser.email);
     }
 
     // Link/create Inspector entity by email
-    const existingInspector = await prisma.inspector.findUnique({ where: { email: inspectorEmail } });
+    const existingInspector = await prisma.inspector.findUnique({
+      where: { email: inspectorEmail },
+    });
     if (existingInspector) {
-      console.log("✅ Inspector record already exists:", existingInspector.email);
+      console.log(
+        "✅ Inspector record already exists:",
+        existingInspector.email
+      );
     } else {
       await prisma.inspector.create({
         data: {
@@ -120,7 +135,9 @@ async function main() {
 
     // 4) Delivery user (role uses WORKER) (idempotent)
     const deliveryEmail = "delivery@xgen-mrp.com";
-    const existingDelivery = await prisma.user.findUnique({ where: { email: deliveryEmail } });
+    const existingDelivery = await prisma.user.findUnique({
+      where: { email: deliveryEmail },
+    });
     if (existingDelivery) {
       console.log("✅ Delivery user already exists:", existingDelivery.email);
     } else {
@@ -145,14 +162,55 @@ async function main() {
           },
         },
       });
-      console.log("✅ Delivery user created (📧 delivery@xgen-mrp.com / 🔑 delivery123)");
+      console.log(
+        "✅ Delivery user created (📧 delivery@xgen-mrp.com / 🔑 delivery123)"
+      );
+    }
+
+    // 5) Super Admin user (idempotent)
+    const superAdminEmail = "superadmin@xgen-mrp.com";
+    const existingSuperAdmin = await prisma.user.findUnique({
+      where: { email: superAdminEmail },
+    });
+    if (existingSuperAdmin) {
+      console.log(
+        "✅ Super Admin user already exists:",
+        existingSuperAdmin.email
+      );
+    } else {
+      const superAdminPassword = await bcrypt.hash("superadmin123", 12);
+      await prisma.user.create({
+        data: {
+          email: superAdminEmail,
+          password: superAdminPassword,
+          role: Role.SUPER_ADMIN,
+          status: UserStatus.ACTIVE,
+          lastLoginAt: new Date(),
+          createdBy: "system",
+          profile: {
+            create: {
+              firstName: "Supreme",
+              lastName: "Administrator",
+              phoneNumber: "+63 9XX XXX XXXX",
+              department: "Executive",
+              position: "Super Administrator",
+              employeeId: "SUPER001",
+              country: "Philippines",
+            },
+          },
+        },
+      });
+      console.log(
+        "✅ Super Admin user created (📧 superadmin@xgen-mrp.com / 🔑 superadmin123)"
+      );
     }
 
     console.log("\n🚀 Seed complete. Default credentials:");
-    console.log("- Admin:     admin@xgen-mrp.com / admin123");
-    console.log("- Worker:    worker@xgen-mrp.com / worker123");
-    console.log("- Inspector: inspector@xgen-mrp.com / inspector123");
-    console.log("- Delivery:  delivery@xgen-mrp.com / delivery123");
+    console.log("- Admin:      admin@xgen-mrp.com / admin123");
+    console.log("- Super Admin: superadmin@xgen-mrp.com / superadmin123");
+    console.log("- Worker:     worker@xgen-mrp.com / worker123");
+    console.log("- Inspector:  inspector@xgen-mrp.com / inspector123");
+    console.log("- Delivery:   delivery@xgen-mrp.com / delivery123");
     console.log("\n⚠️  Please change passwords after first login!");
   } catch (error) {
     console.error("❌ Error creating admin user:", error);

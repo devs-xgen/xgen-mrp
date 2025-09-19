@@ -44,7 +44,7 @@ import {
 } from "@/lib/actions/user-inspector";
 
 const formSchema = z.object({
-  role: z.enum(["ADMIN", "WORKER", "INSPECTOR", "DELIVERY", "DEVELOPER"]),
+  role: z.enum(["ADMIN", "WORKER", "INSPECTOR", "DELIVERY", "DEVELOPER", "SUPER_ADMIN"]),
   status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]),
   firstName: z.string().min(2, {
     message: "First name must be at least 2 characters.",
@@ -324,6 +324,7 @@ export function EditUserDialog({
                             <SelectItem value="DELIVERY">Delivery</SelectItem>
                             <SelectItem value="ADMIN">Admin</SelectItem>
                             <SelectItem value="DEVELOPER">Developer</SelectItem>
+                            <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />

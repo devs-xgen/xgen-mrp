@@ -1133,6 +1133,7 @@ enum Role {
   INSPECTOR
   DELIVERY
   DEVELOPER
+  SUPER_ADMIN
 }
 
 enum UserStatus {
@@ -1301,16 +1302,16 @@ model CustomerOrderArchive {
 
 // Customer Support System Models
 model SupportTicket {
-  id          String             @id @default(cuid())
+  id          String           @id @default(cuid())
   userId      String
   title       String
   description String
-  status      SupportStatus      @default(OPEN)
-  priority    SupportPriority    @default(MEDIUM)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  status      SupportStatus    @default(OPEN)
+  priority    SupportPriority  @default(MEDIUM)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   resolvedAt  DateTime?
-  user        User               @relation("UserSupportTickets", fields: [userId], references: [id])
+  user        User             @relation("UserSupportTickets", fields: [userId], references: [id])
   messages    SupportMessage[]
 
   @@index([userId])

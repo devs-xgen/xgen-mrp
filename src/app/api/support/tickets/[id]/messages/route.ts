@@ -9,7 +9,7 @@ export async function POST(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -33,10 +33,7 @@ export async function POST(
     });
 
     if (!ticket) {
-      return NextResponse.json(
-        { error: "Ticket not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
     }
 
     // Check permissions - users can only add messages to their own tickets, admins/developers can add to any
@@ -53,7 +50,10 @@ export async function POST(
         ticketId: id,
         userId: session.user.id,
         message,
-        isAdmin: session.user.role === "ADMIN" || session.user.role === "DEVELOPER",
+        isAdmin:
+          session.user.role === "ADMIN" ||
+          session.user.role === "DEVELOPER" ||
+          session.user.role === "SUPER_ADMIN",
       },
       include: {
         user: {

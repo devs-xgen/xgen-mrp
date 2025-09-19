@@ -85,7 +85,7 @@ export default function SupportPage() {
     priority: "MEDIUM" as const,
   });
 
-  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "DEVELOPER";
+  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "DEVELOPER" || session?.user?.role === "SUPER_ADMIN";
 
   useEffect(() => {
     fetchTickets();

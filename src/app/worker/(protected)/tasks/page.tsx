@@ -5,8 +5,16 @@ import { Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Settings } from "lucide-react";
-import { Status } from "@prisma/client";
 import Link from "next/link";
+import {
+  PageContainer,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+  PageDescription,
+  PageHeaderActions,
+  PageBody,
+} from "@/components/shared/page-layout";
 
 // Force dynamic rendering since this page uses authentication
 export const dynamic = 'force-dynamic'
@@ -59,46 +67,47 @@ export default async function TasksPage() {
   const inactiveTasks = tasks.filter(task => task.isActive === false);
 
   return (
-    <div className="space-y-6">
-      {/* Header with Analytics Button */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">My Tasks</h2>
-          <p className="text-muted-foreground">
-            View and manage your assigned production tasks
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/worker/tasks/operations">
-            <Button variant="outline" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Task Operations
-            </Button>
-          </Link>
-          <TaskAnalyticsModal tasks={tasks} stats={stats} />
-        </div>
-      </div>
+    <PageContainer id="worker-tasks">
+      <PageHeader>
+        <PageHeaderMain>
+          <PageTitle>My Tasks</PageTitle>
+          <PageDescription>View and manage your assigned production tasks</PageDescription>
+        </PageHeaderMain>
+        <PageHeaderActions>
+          <div className="flex gap-2">
+            <Link href="/worker/tasks/operations">
+              <Button variant="outline" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Task Operations
+              </Button>
+            </Link>
+            <TaskAnalyticsModal tasks={tasks} stats={stats} />
+          </div>
+        </PageHeaderActions>
+      </PageHeader>
 
-      {/* Inactive Tasks Warning - Only show if there are inactive tasks */}
-      {inactiveTasks.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardContent className="pt-6 flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
-            <div>
-              <p className="font-medium text-amber-800">Some tasks are not active</p>
-              <p className="text-sm text-amber-700 mt-1">
-                {stats.inactiveTasks || inactiveTasks.length} task(s) are from production orders that have not been started by admin.
-                These tasks will be available once the admin starts the production process.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <PageBody className="space-y-6">
+        {/* Inactive Tasks Warning - Only show if there are inactive tasks */}
+        {inactiveTasks.length > 0 && (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="pt-6 flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
+              <div>
+                <p className="font-medium text-amber-800">Some tasks are not active</p>
+                <p className="text-sm text-amber-700 mt-1">
+                  {stats.inactiveTasks || inactiveTasks.length} task(s) are from production orders that have not been started by admin.
+                  These tasks will be available once the admin starts the production process.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Task List - Show immediately */}
-      <Suspense fallback={<div>Loading tasks...</div>}>
-        <TasksList tasks={tasks} workflowDataMap={workflowDataMap} />
-      </Suspense>
-    </div>
+        {/* Task List - Show immediately */}
+        <Suspense fallback={<div>Loading tasks...</div>}>
+          <TasksList tasks={tasks} workflowDataMap={workflowDataMap} />
+        </Suspense>
+      </PageBody>
+    </PageContainer>
   );
 }

@@ -4,7 +4,7 @@ import { getToken } from "next-auth/jwt";
 
 // Define which roles belong to each portal
 const PORTAL_ROLES = {
-  ADMIN_PORTAL: ["ADMIN", "DEVELOPER"],
+  ADMIN_PORTAL: ["ADMIN", "DEVELOPER", "SUPER_ADMIN"],
   WORKER_PORTAL: ["WORKER"],
   INSPECTOR_PORTAL: ["INSPECTOR"],
   DELIVERY_PORTAL: ["DELIVERY"],
@@ -113,7 +113,9 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 // Validate role access to specific paths
 function hasRoleAccess(userRole: string, pathname: string): boolean {
   // Extract portal from pathname
-  const portalMatch = pathname.match(/^\/(admin|worker|inspector|delivery|developer)/);
+  const portalMatch = pathname.match(
+    /^\/(admin|worker|inspector|delivery|developer)/
+  );
   if (!portalMatch) return true; // Allow access to non-portal routes
 
   const portal = portalMatch[1].toUpperCase() + "_PORTAL";
@@ -142,10 +144,10 @@ export default async function middleware(req: NextRequest) {
   }
 
   // Check maintenance mode first - this will work immediately when env changes
-  if (process.env.MAINTENANCE_MODE === 'true') {
+  if (process.env.MAINTENANCE_MODE === "true") {
     // Allow access to maintenance page itself to avoid infinite redirects
-    if (pathname !== '/maintenance') {
-      return NextResponse.redirect(new URL('/maintenance', req.url));
+    if (pathname !== "/maintenance") {
+      return NextResponse.redirect(new URL("/maintenance", req.url));
     }
     return NextResponse.next();
   }
@@ -174,8 +176,12 @@ export default async function middleware(req: NextRequest) {
       // Do NOT rate-limit login page views (GET). Only guard heavy navigation/general traffic.
       if (!isLoginPage) {
         if (!checkRateLimit(ip, maxRequests)) {
-          console.warn(`Rate limit exceeded for IP: ${ip} on path: ${pathname}`);
-          const retryAfter = Math.ceil(RATE_LIMIT_CONFIG.windowMs / 1000).toString();
+          console.warn(
+            `Rate limit exceeded for IP: ${ip} on path: ${pathname}`
+          );
+          const retryAfter = Math.ceil(
+            RATE_LIMIT_CONFIG.windowMs / 1000
+          ).toString();
           const res = new NextResponse("Too Many Requests", { status: 429 });
           res.headers.set("Retry-After", retryAfter);
           return res;
@@ -235,10 +241,13 @@ export default async function middleware(req: NextRequest) {
         } else {
           // If user doesn't have access to this portal, redirect to their appropriate portal
           const userRole = token.role as string;
-          const dashboardPath = userRole === "DEVELOPER" ? "/developer/dashboard" : `/${userRole.toLowerCase()}/dashboard`;
-          return NextResponse.redirect(
-            new URL(dashboardPath, req.url)
-          );
+          const dashboardPath =
+            userRole === "DEVELOPER"
+              ? "/developer/dashboard"
+              : userRole === "SUPER_ADMIN"
+                ? "/admin/dashboard"
+                : `/${userRole.toLowerCase()}/dashboard`;
+          return NextResponse.redirect(new URL(dashboardPath, req.url));
         }
       }
     } catch (error) {
@@ -277,7 +286,12 @@ export default async function middleware(req: NextRequest) {
 
       // Redirect to appropriate dashboard based on user's actual role
       const userRole = token.role as string;
-      const dashboardPath = userRole === "DEVELOPER" ? "/developer/dashboard" : `/${userRole.toLowerCase()}/dashboard`;
+      const dashboardPath =
+        userRole === "DEVELOPER"
+          ? "/developer/dashboard"
+          : userRole === "SUPER_ADMIN"
+            ? "/admin/dashboard"
+            : `/${userRole.toLowerCase()}/dashboard`;
       return NextResponse.redirect(new URL(dashboardPath, req.url));
     }
 

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -17,9 +17,13 @@ export async function GET(request: NextRequest) {
 
     // Build where clause based on user role
     const whereClause: any = {};
-    
+
     // Non-admin users can only see their own tickets
-    if (session.user.role !== "ADMIN" && session.user.role !== "DEVELOPER") {
+    if (
+      session.user.role !== "ADMIN" &&
+      session.user.role !== "DEVELOPER" &&
+      session.user.role !== "SUPER_ADMIN"
+    ) {
       whereClause.userId = session.user.id;
     }
 
@@ -58,12 +62,18 @@ export async function GET(request: NextRequest) {
     });
 
     // Serialize the response to handle any potential Decimal fields
-    const serializedTickets = JSON.parse(JSON.stringify(tickets, (key, value) => {
-      if (typeof value === 'object' && value !== null && value.constructor?.name === 'Decimal') {
-        return value.toString();
-      }
-      return value;
-    }));
+    const serializedTickets = JSON.parse(
+      JSON.stringify(tickets, (key, value) => {
+        if (
+          typeof value === "object" &&
+          value !== null &&
+          value.constructor?.name === "Decimal"
+        ) {
+          return value.toString();
+        }
+        return value;
+      })
+    );
 
     return NextResponse.json(serializedTickets);
   } catch (error) {
@@ -78,7 +88,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

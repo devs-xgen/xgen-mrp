@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -40,10 +40,7 @@ export async function GET(
     });
 
     if (!ticket) {
-      return NextResponse.json(
-        { error: "Ticket not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
     }
 
     // Check permissions - users can only view their own tickets, admins/developers can view any
@@ -71,13 +68,17 @@ export async function PATCH(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Only admins and developers can update ticket status
-    if (session.user.role !== "ADMIN" && session.user.role !== "DEVELOPER") {
+    if (
+      session.user.role !== "ADMIN" &&
+      session.user.role !== "DEVELOPER" &&
+      session.user.role !== "SUPER_ADMIN"
+    ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

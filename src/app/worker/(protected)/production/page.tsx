@@ -1,19 +1,23 @@
 // src/app/worker/(protected)/production/page.tsx
 import { Metadata } from "next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   CheckCircle,
   Clock,
   AlertTriangle,
-  Play,
-  Pause,
-  Check,
   Package,
 } from "lucide-react";
 import { getMyTasks, getTaskStatistics } from "@/lib/actions/worker/tasks";
 import { WorkerProductionTasks } from "@/components/module/worker/production-tasks";
+import {
+  PageContainer,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+  PageDescription,
+  PageHeaderActions,
+  PageBody,
+} from "@/components/shared/page-layout";
 
 // Force dynamic rendering since this page uses authentication
 export const dynamic = 'force-dynamic'
@@ -31,15 +35,17 @@ export default async function ProductionTasksPage() {
   ]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Production Tasks</h2>
-        <p className="text-muted-foreground">
-          View and manage your assigned production tasks
-        </p>
-      </div>
+    <PageContainer id="worker-production">
+      <PageHeader>
+        <PageHeaderMain>
+          <PageTitle>Production Tasks</PageTitle>
+          <PageDescription>View and manage your assigned production tasks</PageDescription>
+        </PageHeaderMain>
+        <PageHeaderActions />
+      </PageHeader>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <PageBody className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending</CardTitle>
@@ -91,10 +97,11 @@ export default async function ProductionTasksPage() {
             </p>
           </CardContent>
         </Card>
-      </div>
+        </div>
 
-      {/* Real-time production tasks component */}
-      <WorkerProductionTasks initialTasks={tasks} />
-    </div>
+        {/* Real-time production tasks component */}
+        <WorkerProductionTasks initialTasks={tasks} />
+      </PageBody>
+    </PageContainer>
   );
 }

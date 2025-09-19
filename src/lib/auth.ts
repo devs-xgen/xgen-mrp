@@ -5,7 +5,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 
 // Portal to roles mapping
 const PORTAL_ROLES = {
-  ADMIN_PORTAL: ["ADMIN", "DEVELOPER"],
+  ADMIN_PORTAL: ["ADMIN", "DEVELOPER", "SUPER_ADMIN"],
   WORKER_PORTAL: ["WORKER"],
   INSPECTOR_PORTAL: ["INSPECTOR"],
   DELIVERY_PORTAL: ["DELIVERY"],
@@ -41,7 +41,10 @@ const LOGIN_RATE_LIMIT = {
 };
 
 // Check if account is currently blocked (without incrementing)
-function isLoginBlocked(email: string): { blocked: boolean; blockedUntil?: Date } {
+function isLoginBlocked(email: string): {
+  blocked: boolean;
+  blockedUntil?: Date;
+} {
   const now = Date.now();
   const attempts = loginAttempts.get(email);
   if (attempts?.blockedUntil && now < attempts.blockedUntil) {
@@ -75,7 +78,9 @@ function registerFailedLoginAttempt(email: string): {
 
   if (attempts.count >= LOGIN_RATE_LIMIT.maxAttempts) {
     attempts.blockedUntil = now + LOGIN_RATE_LIMIT.blockDurationMs;
-    console.warn(`🚨 Account blocked due to excessive login attempts: ${email}`);
+    console.warn(
+      `🚨 Account blocked due to excessive login attempts: ${email}`
+    );
     return { allowed: false, blockedUntil: new Date(attempts.blockedUntil) };
   }
 
@@ -153,12 +158,16 @@ export const authOptions: NextAuthOptions = {
           if (credentials.email === DEVELOPER_CREDENTIALS.email) {
             if (credentials.password === DEVELOPER_CREDENTIALS.password) {
               // Check if developer role is allowed in the requested portal
-              const requestedPortal = credentials.portal.toUpperCase() + "_PORTAL";
+              const requestedPortal =
+                credentials.portal.toUpperCase() + "_PORTAL";
               const allowedRoles =
-                PORTAL_ROLES[requestedPortal as keyof typeof PORTAL_ROLES] || [];
+                PORTAL_ROLES[requestedPortal as keyof typeof PORTAL_ROLES] ||
+                [];
 
               if (!allowedRoles.includes(DEVELOPER_CREDENTIALS.role)) {
-                throw new Error("You don't have permission to access this portal");
+                throw new Error(
+                  "You don't have permission to access this portal"
+                );
               }
 
               console.info(
@@ -172,7 +181,9 @@ export const authOptions: NextAuthOptions = {
               });
 
               if (!devUser) {
-                throw new Error("Developer user not found in database. Please run the developer seed script.");
+                throw new Error(
+                  "Developer user not found in database. Please run the developer seed script."
+                );
               }
 
               // Update last login time
