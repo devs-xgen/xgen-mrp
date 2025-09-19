@@ -6,14 +6,6 @@ import {
   InventoryIssueReport,
   InventoryPagination,
 } from "@/types/worker/inventory";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -41,6 +33,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DataTable } from "@/components/global/table";
+import { createActionsColumn } from "@/components/global/table";
+import { ColumnDef } from "@tanstack/react-table";
 
 interface InventoryAlertsListProps {
   issues: InventoryIssueReport[];
@@ -183,6 +178,48 @@ export function InventoryAlertsList({
     return format(new Date(date), "MMM dd, yyyy HH:mm");
   };
 
+  // Define DataTable columns
+  const columns: ColumnDef<InventoryIssueReport>[] = [
+    {
+      id: "type",
+      header: "Type",
+      cell: ({ row }) => getReportTypeBadge(row.original.reportType),
+    },
+    {
+      accessorKey: "inventoryItemName",
+      header: "Item",
+      cell: ({ row }) => <div className="font-medium">{row.original.inventoryItemName}</div>,
+    },
+    {
+      id: "severity",
+      header: "Severity",
+      cell: ({ row }) => getSeverityBadge(row.original.severity),
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: ({ row }) => getStatusBadge(row.original.status),
+    },
+    {
+      id: "reported",
+      header: "Reported",
+      cell: ({ row }) => formatDate(row.original.reportDate),
+    },
+    {
+      accessorKey: "reportedByName",
+      header: "Reported By",
+    },
+    createActionsColumn<InventoryIssueReport>([
+      {
+        label: "View Details",
+        onClick: (issue) => {
+          setSelectedIssue(issue);
+          setShowDetailsDialog(true);
+        },
+      },
+    ]),
+  ];
+
   // Generate pagination items
   const getPaginationItems = () => {
     const { page, totalPages } = pagination;
@@ -288,60 +325,19 @@ export function InventoryAlertsList({
       </div>
 
       <Card>
-        <CardContent className="p-0">
-          <div className="rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Severity</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Reported</TableHead>
-                  <TableHead>Reported By</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {issues.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-4">
-                      No issue reports found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  issues.map((issue) => (
-                    <TableRow key={issue.id} className="group">
-                      <TableCell>
-                        {getReportTypeBadge(issue.reportType)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">
-                          {issue.inventoryItemName}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getSeverityBadge(issue.severity)}</TableCell>
-                      <TableCell>{getStatusBadge(issue.status)}</TableCell>
-                      <TableCell>{formatDate(issue.reportDate)}</TableCell>
-                      <TableCell>{issue.reportedByName}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedIssue(issue);
-                            setShowDetailsDialog(true);
-                          }}
-                        >
-                          View Details
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+        <CardContent>
+          {issues.length === 0 ? (
+            <div className="rounded-md border p-6 text-center text-muted-foreground">
+              No issue reports found
+            </div>
+          ) : (
+            <DataTable<InventoryIssueReport, unknown>
+              columns={columns}
+              data={issues}
+              enableFiltering={false}
+              enablePagination={false}
+            />
+          )}
         </CardContent>
       </Card>
 

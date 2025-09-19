@@ -2,14 +2,6 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -26,24 +18,16 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  Package,
-  Search,
-  Filter,
-} from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChevronLeft, ChevronRight, Eye, Package, Search } from "lucide-react";
 import { formatCurrencyPHP } from "@/lib/constant";
+import { DataTable } from "@/components/global/table";
+import { createActionsColumn } from "@/components/global/table";
+import { ColumnDef } from "@tanstack/react-table";
 
 // Import types from the new inventory actions
 import type { 
   MaterialInventoryItem,
-  MaterialWithProducts,
   ProductUsage 
 } from "@/lib/actions/worker/inventory";
 
@@ -77,7 +61,7 @@ export function MaterialInventoryView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialInventoryItem | null>(null);
-  const [showProducts, setShowProducts] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [materialProducts, setMaterialProducts] = useState<ProductUsage[]>([]);
 
   // Get stock level badge color
@@ -130,10 +114,87 @@ export function MaterialInventoryView({
   // View material details
   const handleViewMaterial = async (material: MaterialInventoryItem) => {
     setSelectedMaterial(material);
-    // In a real implementation, you would fetch the products that use this material
-    // For now, we'll show a placeholder
     setMaterialProducts([]);
+    setIsDetailsOpen(true);
   };
+
+  // Define columns for the global DataTable
+  const columns: ColumnDef<MaterialInventoryItem>[] = [
+    {
+      id: "material",
+      header: "Material",
+      cell: ({ row }) => (
+        <div>
+          <div className="font-medium">{row.original.name}</div>
+          <div className="text-sm text-muted-foreground">{row.original.sku}</div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "materialTypeName",
+      header: "Type",
+      cell: ({ row }) => row.original.materialTypeName,
+    },
+    {
+      id: "stockLevel",
+      header: "Stock Level",
+      cell: ({ row }) => getStockLevelBadge(row.original.stockLevel),
+    },
+    {
+      id: "currentStock",
+      header: "Current Stock",
+      cell: ({ row }) => (
+        <span>
+          {row.original.currentStock} {row.original.unitOfMeasureSymbol}
+        </span>
+      ),
+    },
+    {
+      id: "availableStock",
+      header: "Available",
+      cell: ({ row }) => (
+        <span>
+          {row.original.availableStock} {row.original.unitOfMeasureSymbol}
+        </span>
+      ),
+    },
+    {
+      id: "minimumStockLevel",
+      header: "Min Level",
+      cell: ({ row }) => (
+        <span>
+          {row.original.minimumStockLevel} {row.original.unitOfMeasureSymbol}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "costPerUnit",
+      header: "Unit Cost",
+      cell: ({ row }) => formatCurrencyPHP(row.original.costPerUnit as unknown as number),
+    },
+    {
+      accessorKey: "totalValue",
+      header: "Total Value",
+      cell: ({ row }) => formatCurrencyPHP(row.original.totalValue as unknown as number),
+    },
+    {
+      id: "supplier",
+      header: "Supplier",
+      cell: ({ row }) => (
+        <div>
+          <div className="font-medium">{row.original.supplier.name}</div>
+          <div className="text-sm text-muted-foreground">{row.original.supplier.code}</div>
+        </div>
+      ),
+    },
+    createActionsColumn<MaterialInventoryItem>([
+      {
+        label: "View",
+        icon: Eye,
+        onClick: (mat) => handleViewMaterial(mat),
+      },
+    ]),
+  ];
 
   return (
     <div className="space-y-4">
@@ -206,149 +267,98 @@ export function MaterialInventoryView({
         </Select>
       </div>
 
-      {/* Materials Table */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Material</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Stock Level</TableHead>
-              <TableHead>Current Stock</TableHead>
-              <TableHead>Available</TableHead>
-              <TableHead>Min Level</TableHead>
-              <TableHead>Unit Cost</TableHead>
-              <TableHead>Total Value</TableHead>
-              <TableHead>Supplier</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {materials.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={10} className="text-center py-8">
-                  <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No materials found matching your criteria</p>
-                </TableCell>
-              </TableRow>
-            ) : (
-              materials.map((material) => (
-                <TableRow key={material.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{material.name}</div>
-                      <div className="text-sm text-muted-foreground">{material.sku}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{material.materialTypeName}</TableCell>
-                  <TableCell>{getStockLevelBadge(material.stockLevel)}</TableCell>
-                  <TableCell>
-                    {material.currentStock} {material.unitOfMeasureSymbol}
-                  </TableCell>
-                  <TableCell>
-                    {material.availableStock} {material.unitOfMeasureSymbol}
-                  </TableCell>
-                  <TableCell>
-                    {material.minimumStockLevel} {material.unitOfMeasureSymbol}
-                  </TableCell>
-                  <TableCell>{formatCurrencyPHP(material.costPerUnit)}</TableCell>
-                  <TableCell>{formatCurrencyPHP(material.totalValue)}</TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{material.supplier.name}</div>
-                      <div className="text-sm text-muted-foreground">{material.supplier.code}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewMaterial(material)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Material Details</DialogTitle>
-                          <DialogDescription>
-                            View detailed information about {material.name}
-                          </DialogDescription>
-                        </DialogHeader>
-                        {selectedMaterial && (
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">SKU</label>
-                                <p>{selectedMaterial.sku}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Type</label>
-                                <p>{selectedMaterial.materialTypeName}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Current Stock</label>
-                                <p>{selectedMaterial.currentStock} {selectedMaterial.unitOfMeasureSymbol}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Available Stock</label>
-                                <p>{selectedMaterial.availableStock} {selectedMaterial.unitOfMeasureSymbol}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Committed Stock</label>
-                                <p>{selectedMaterial.committedStock} {selectedMaterial.unitOfMeasureSymbol}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Minimum Level</label>
-                                <p>{selectedMaterial.minimumStockLevel} {selectedMaterial.unitOfMeasureSymbol}</p>
-                              </div>
-                                                             <div>
-                                 <label className="text-sm font-medium text-muted-foreground">Unit Cost</label>
-                                 <p>{formatCurrencyPHP(selectedMaterial.costPerUnit)}</p>
-                               </div>
-                               <div>
-                                 <label className="text-sm font-medium text-muted-foreground">Total Value</label>
-                                 <p>{formatCurrencyPHP(selectedMaterial.totalValue)}</p>
-                               </div>
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Lead Time</label>
-                                <p>{selectedMaterial.leadTime} days</p>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Stock Status</label>
-                                <p>{getStockLevelBadge(selectedMaterial.stockLevel)}</p>
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <label className="text-sm font-medium text-muted-foreground">Supplier</label>
-                              <p>{selectedMaterial.supplier.name} ({selectedMaterial.supplier.code})</p>
-                            </div>
+      {/* Materials Table (Global DataTable) */}
+      {materials.length === 0 ? (
+        <div className="rounded-md border p-8 text-center text-muted-foreground">
+          <Package className="h-12 w-12 mx-auto mb-4" />
+          No materials found matching your criteria
+        </div>
+      ) : (
+        <DataTable<MaterialInventoryItem, unknown>
+          columns={columns}
+          data={materials}
+          searchKey="name"
+          searchPlaceholder="Filter materials..."
+          enableFiltering={false}
+          enablePagination={false}
+          className=""
+        />
+      )}
 
-                            {selectedMaterial.notes && (
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Notes</label>
-                                <p className="text-sm">{selectedMaterial.notes}</p>
-                              </div>
-                            )}
+      {/* Material Details Dialog */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Material Details</DialogTitle>
+            <DialogDescription>
+              {selectedMaterial ? `View detailed information about ${selectedMaterial.name}` : "View material details"}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedMaterial && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">SKU</label>
+                  <p>{selectedMaterial.sku}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Type</label>
+                  <p>{selectedMaterial.materialTypeName}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Current Stock</label>
+                  <p>{selectedMaterial.currentStock} {selectedMaterial.unitOfMeasureSymbol}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Available Stock</label>
+                  <p>{selectedMaterial.availableStock} {selectedMaterial.unitOfMeasureSymbol}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Committed Stock</label>
+                  <p>{selectedMaterial.committedStock} {selectedMaterial.unitOfMeasureSymbol}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Minimum Level</label>
+                  <p>{selectedMaterial.minimumStockLevel} {selectedMaterial.unitOfMeasureSymbol}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Unit Cost</label>
+                  <p>{formatCurrencyPHP(selectedMaterial.costPerUnit)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Total Value</label>
+                  <p>{formatCurrencyPHP(selectedMaterial.totalValue)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Lead Time</label>
+                  <p>{selectedMaterial.leadTime} days</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Stock Status</label>
+                  <p>{getStockLevelBadge(selectedMaterial.stockLevel)}</p>
+                </div>
+              </div>
 
-                            <div>
-                              <label className="text-sm font-medium text-muted-foreground">Last Updated</label>
-                              <p className="text-sm">{new Date(selectedMaterial.lastUpdated).toLocaleString()}</p>
-                            </div>
-                          </div>
-                        )}
-                      </DialogContent>
-                    </Dialog>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Supplier</label>
+                <p>{selectedMaterial.supplier.name} ({selectedMaterial.supplier.code})</p>
+              </div>
+
+              {selectedMaterial.notes && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Notes</label>
+                  <p className="text-sm">{selectedMaterial.notes}</p>
+                </div>
+              )}
+
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Last Updated</label>
+                <p className="text-sm">{new Date(selectedMaterial.lastUpdated).toLocaleString()}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
@@ -398,4 +408,5 @@ export function MaterialInventoryView({
       )}
     </div>
   );
-} 
+}
+ 
