@@ -60,9 +60,10 @@ export function DeliveryManagement({ assignments }: DeliveryManagementProps) {
         assignment.productionOrder.product.name
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
-        assignment.productionOrder.customerOrder?.customer?.name
+        (assignment.productionOrder.customerOrder?.customer?.name &&
+        assignment.productionOrder.customerOrder.customer.name
           .toLowerCase()
-          .includes(searchTerm.toLowerCase());
+          .includes(searchTerm.toLowerCase()));
 
       const matchesStatus =
         statusFilter === "all" || assignment.status === statusFilter;
@@ -341,14 +342,16 @@ export function DeliveryManagement({ assignments }: DeliveryManagementProps) {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <Calendar className="h-4 w-4 text-mutedfilteredAssignments -foreground" />
                           <div className="flex flex-col">
                             <span>
-                              {assignment.scheduledDate
+                              {/* This first check is correct and works */}
+                              {assignment.scheduledDate && !isNaN(new Date(assignment.scheduledDate).getTime())
                                 ? format(new Date(assignment.scheduledDate), "PPP")
                                 : "Not scheduled"}
                             </span>
-                            {assignment.scheduledDate && (
+                            {/* This second check is missing the validation */}
+                            {assignment.scheduledDate && !isNaN(new Date(assignment.scheduledDate).getTime()) && (
                               <span className="text-sm text-muted-foreground">
                                 {format(new Date(assignment.scheduledDate), "p")}
                               </span>

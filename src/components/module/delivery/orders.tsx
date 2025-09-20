@@ -280,9 +280,9 @@ export function DeliveryOrders({ assignments }: DeliveryOrdersProps) {
                         <div className="flex items-center space-x-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <span>
-                            {assignment.scheduledDate
-                              ? format(new Date(assignment.scheduledDate), "PPP")
-                              : "Not scheduled"}
+                            {assignment.scheduledDate && !isNaN(new Date(assignment.scheduledDate).getTime())
+  ? format(new Date(assignment.scheduledDate), "PPP")
+  : "Not scheduled"}
                           </span>
                         </div>
                       </TableCell>
