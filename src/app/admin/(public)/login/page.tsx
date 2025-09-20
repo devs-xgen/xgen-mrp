@@ -23,6 +23,12 @@ export default function AdminLoginPage() {
                     </CardHeader>
                     <CardContent>
                         <LoginForm />
+                        <div className="mt-3 text-center text-sm text-muted-foreground">
+                            want to login as a super admin?{' '}
+                            <Link href="/superadmin/login" className="text-primary hover:underline">
+                                click here
+                            </Link>
+                        </div>
                         <div className="mt-6 text-center">
                             <Link href="/">
                                 <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">

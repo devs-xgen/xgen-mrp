@@ -9,6 +9,8 @@ const PORTAL_ROLES = {
   INSPECTOR_PORTAL: ["INSPECTOR"],
   DELIVERY_PORTAL: ["DELIVERY"],
   DEVELOPER_PORTAL: ["DEVELOPER"],
+  // superadmin portal is separate from admin
+  SUPERADMIN_PORTAL: ["SUPER_ADMIN"],
 };
 
 // Portal path mappings
@@ -18,6 +20,7 @@ const PORTAL_PATHS = {
   INSPECTOR_PORTAL: "/inspector",
   DELIVERY_PORTAL: "/delivery",
   DEVELOPER_PORTAL: "/developer",
+  SUPERADMIN_PORTAL: "/superadmin",
 };
 
 // Rate limiting configuration (more reasonable limits)
@@ -114,7 +117,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 function hasRoleAccess(userRole: string, pathname: string): boolean {
   // Extract portal from pathname
   const portalMatch = pathname.match(
-    /^\/(admin|worker|inspector|delivery|developer)/
+    /^\/(admin|worker|inspector|delivery|developer|superadmin)/
   );
   if (!portalMatch) return true; // Allow access to non-portal routes
 
@@ -229,7 +232,7 @@ export default async function middleware(req: NextRequest) {
       // If authenticated and trying to access login, redirect to appropriate dashboard
       if (token && isLoginPage) {
         const portalMatch = pathname.match(
-          /^\/(admin|worker|inspector|delivery)/
+          /^\/(admin|worker|inspector|delivery|superadmin)/
         );
         const portal = portalMatch ? portalMatch[1] : "admin";
 
@@ -245,7 +248,7 @@ export default async function middleware(req: NextRequest) {
             userRole === "DEVELOPER"
               ? "/developer/dashboard"
               : userRole === "SUPER_ADMIN"
-                ? "/admin/dashboard"
+                ? "/superadmin/dashboard"
                 : `/${userRole.toLowerCase()}/dashboard`;
           return NextResponse.redirect(new URL(dashboardPath, req.url));
         }
@@ -268,7 +271,7 @@ export default async function middleware(req: NextRequest) {
     // No valid session - redirect to appropriate login
     if (!token) {
       const portalMatch = pathname.match(
-        /^\/(admin|worker|inspector|delivery)/
+        /^\/(admin|worker|inspector|delivery|superadmin)/
       );
       const portal = portalMatch ? portalMatch[1] : "admin";
 
@@ -290,7 +293,7 @@ export default async function middleware(req: NextRequest) {
         userRole === "DEVELOPER"
           ? "/developer/dashboard"
           : userRole === "SUPER_ADMIN"
-            ? "/admin/dashboard"
+            ? "/superadmin/dashboard"
             : `/${userRole.toLowerCase()}/dashboard`;
       return NextResponse.redirect(new URL(dashboardPath, req.url));
     }

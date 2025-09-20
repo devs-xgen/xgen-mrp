@@ -39,6 +39,8 @@ export function LoginForm() {
 
   // Determine portal type based on the pathname
   const getPortalFromPathname = () => {
+    // Order matters: check /superadmin first to avoid matching /admin substring
+    if (pathname.includes("/superadmin")) return "SUPERADMIN";
     if (pathname.includes("/admin")) return "ADMIN";
     if (pathname.includes("/worker")) return "WORKER";
     if (pathname.includes("/inspector")) return "INSPECTOR";

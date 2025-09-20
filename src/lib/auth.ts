@@ -9,6 +9,7 @@ const PORTAL_ROLES = {
   WORKER_PORTAL: ["WORKER"],
   INSPECTOR_PORTAL: ["INSPECTOR"],
   DELIVERY_PORTAL: ["DELIVERY"],
+  SUPERADMIN_PORTAL: ["SUPER_ADMIN"],
 };
 
 // Hardcoded developer credentials
@@ -25,6 +26,7 @@ const PORTAL_LOGIN_PAGES = {
   WORKER_PORTAL: "/worker/login",
   INSPECTOR_PORTAL: "/inspector/login",
   DELIVERY_PORTAL: "/delivery/login",
+  SUPERADMIN_PORTAL: "/superadmin/login",
 };
 
 // Simple in-memory store for login attempts (use Redis in production)

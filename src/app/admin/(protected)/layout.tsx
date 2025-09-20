@@ -9,7 +9,7 @@ export default async function AdminProtectedLayout({
 }) {
   return (
     <UnifiedLayout
-      allowedRoles={["ADMIN", "MANAGER"]}
+      allowedRoles={["ADMIN", "DEVELOPER", "SUPER_ADMIN"]}
       fallbackRoute="/worker/dashboard"
       loginRoute="/admin/login"
     >
