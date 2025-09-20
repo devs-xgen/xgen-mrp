@@ -4,6 +4,15 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { DeliveryDashboard } from "@/components/module/delivery/dashboard";
 import { getDeliveryAssignments } from "@/lib/actions/delivery/delivery-assignment";
+import {
+  PageContainer,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+  PageDescription,
+  PageHeaderActions,
+  PageBody,
+} from "@/components/shared/page-layout";
 
 export const metadata: Metadata = {
   title: "Delivery Dashboard",
@@ -22,10 +31,19 @@ export default async function DeliveryDashboardPage() {
     const deliveryAssignments = await getDeliveryAssignments(session.user.id);
 
     return (
-      <div className="container mx-auto py-6">
-        <h1 className="text-3xl font-bold mb-6">Delivery Dashboard</h1>
-        <DeliveryDashboard assignments={deliveryAssignments} />
-      </div>
+      <PageContainer>
+        <PageHeader>
+          <PageHeaderMain>
+            <PageTitle>Delivery Dashboard</PageTitle>
+            <PageDescription>Dashboard details and analytics for user </PageDescription>
+          </PageHeaderMain>
+        </PageHeader>
+
+        <PageHeaderActions></PageHeaderActions>
+        <PageBody>
+          <DeliveryDashboard assignments={deliveryAssignments} />
+        </PageBody>
+      </PageContainer>
     );
   } catch (error) {
     console.error("Error fetching delivery assignments:", error);
