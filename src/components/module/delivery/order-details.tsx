@@ -217,17 +217,23 @@ export function DeliveryOrderDetails({
                 <h3 className="text-sm font-medium">Schedule</h3>
                 <p className="text-sm text-muted-foreground">
                   <span className="font-medium">Scheduled Date:</span>{" "}
-                  {assignment.scheduledDate
-                    ? format(new Date(assignment.scheduledDate), "PPP")
-                    : "Not scheduled"}
+                  {assignment.scheduledDate && !isNaN(new Date(assignment.scheduledDate).getTime())
+  ? format(new Date(assignment.scheduledDate), "PPP")
+  : "Not scheduled"}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   <span className="font-medium">Created:</span>{" "}
-                  {format(new Date(assignment.createdAt), "PPP")}
+                  {/* {format(new Date(assignment.createdAt), "PPP")} */}
+                  {assignment.createdAt && !isNaN(new Date(assignment.createdAt).getTime())
+                    ? format(new Date(assignment.createdAt), "PPP")
+                    : "Not scheduled"}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   <span className="font-medium">Last Updated:</span>{" "}
-                  {format(new Date(assignment.updatedAt), "PPP")}
+                  {/* {format(new Date(assignment.updatedAt), "PPP")} */}
+                  {assignment.updatedAt && !isNaN(new Date(assignment.updatedAt).getTime())
+  ? format(new Date(assignment.updatedAt), "PPP")
+  : "Not scheduled"}
                 </p>
               </div>
             </div>
