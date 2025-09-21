@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { deleteDeliveryReceipt } from "@/lib/actions/delivery-receipts";
+import { DeliveryReceiptsExportButton } from "@/components/module/admin/billing/delivery-receipts-export-button";
 
 interface DeliveryReceiptsDataTableProps {
   data: DeliveryReceiptWithBilling[];
@@ -260,6 +261,7 @@ export function DeliveryReceiptsDataTable({
       columns={columns}
       data={data}
       {...tableConfig}
+      customToolbarActions={<DeliveryReceiptsExportButton />}
     />
   );
 }

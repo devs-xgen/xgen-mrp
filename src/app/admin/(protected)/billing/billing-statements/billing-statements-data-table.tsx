@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { deleteBillingStatement } from "@/lib/actions/billing-statements";
+import { BillingStatementsExportButton } from "@/components/module/admin/billing/billing-statements-export-button";
 
 // Type alias for serialized billing statement data
 type SerializedBillingStatement = SerializableData<BillingStatementWithRelations>;
@@ -358,6 +359,7 @@ export function BillingStatementsDataTable({
       columns={columns}
       data={data}
       {...tableConfig}
+      customToolbarActions={<BillingStatementsExportButton />}
     />
   );
 }

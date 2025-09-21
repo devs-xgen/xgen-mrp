@@ -35,6 +35,7 @@ export async function getAllDeliveryReceipts(
       throw new Error("Unauthorized");
     }
 
+
     // Parse and validate filters
     const validatedFilters = filters
       ? deliveryReceiptFiltersSchema.parse(filters)
@@ -191,6 +192,125 @@ export async function getAllDeliveryReceipts(
   } catch (error) {
     console.error("Error fetching delivery receipts:", error);
     throw new Error("Failed to fetch delivery receipts");
+  }
+}
+
+export async function exportDeliveryReceiptsExcel(): Promise<{ base64: string; filename: string }> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new Error("Unauthorized: Please log in to export data");
+    }
+
+    const receipts = await prisma.deliveryReceipt.findMany({
+      orderBy: { deliveryDate: "desc" },
+      include: {
+        billingStatement: {
+          include: {
+            customer: { select: { name: true, email: true, phone: true } },
+            customerOrder: { select: { orderNumber: true, orderDate: true } },
+            productionOrder: {
+              select: {
+                quantity: true,
+                product: { select: { name: true, sku: true } },
+              },
+            },
+          },
+        },
+        createdByUser: {
+          select: { email: true, profile: { select: { firstName: true, lastName: true } } },
+        },
+      },
+    });
+
+    const { default: ExcelJS } = await import("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Delivery Receipts");
+
+    const headers = [
+      "Receipt Number",
+      "Delivery Date",
+      "Status",
+      "Customer Name",
+      "Customer Email",
+      "Customer Phone",
+      "Product Name",
+      "Product SKU",
+      "Quantity",
+      "Received By",
+      "Received By Title",
+      "Delivery Address",
+      "Tracking Number",
+      "Courier Service",
+      "Delivery Notes",
+      "Has Signature",
+      "Has Photo Evidence",
+      "Order Number",
+      "Order Date",
+      "Created By",
+      "Created Date",
+    ];
+
+    sheet.addRow(headers);
+    sheet.getRow(1).font = { bold: true };
+
+    receipts.forEach((receipt) => {
+      const customer = receipt.billingStatement?.customer;
+      const product = receipt.billingStatement?.productionOrder?.product;
+      const order = receipt.billingStatement?.customerOrder;
+      const createdBy = receipt.createdByUser?.profile
+        ? `${receipt.createdByUser.profile.firstName} ${receipt.createdByUser.profile.lastName}`
+        : receipt.createdByUser?.email || "";
+
+      sheet.addRow([
+        receipt.receiptNumber,
+        receipt.deliveryDate ? new Date(receipt.deliveryDate) : null,
+        receipt.deliveryStatus,
+        customer?.name || receipt.billingStatement?.customerName || "",
+        customer?.email || "",
+        customer?.phone || "",
+        product?.name || "",
+        product?.sku || "",
+        receipt.billingStatement?.productionOrder?.quantity || null,
+        receipt.receivedBy || "",
+        receipt.receivedByTitle || "",
+        receipt.deliveryAddress || "",
+        receipt.trackingNumber || "",
+        receipt.courierService || "",
+        receipt.deliveryNotes || "",
+        receipt.signatureImage ? "Yes" : "No",
+        receipt.photoEvidence ? "Yes" : "No",
+        order?.orderNumber || "",
+        order?.orderDate ? new Date(order.orderDate) : null,
+        createdBy,
+        receipt.createdAt ? new Date(receipt.createdAt) : null,
+      ]);
+    });
+
+    // Format date columns (2 = Delivery Date, 19 = Order Date, 21 = Created Date)
+    [2, 19, 21].forEach((col) => {
+      sheet.getColumn(col).numFmt = "yyyy-mm-dd";
+    });
+
+    sheet.columns.forEach((col) => {
+      let max = 10;
+      col.eachCell({ includeEmpty: true }, (cell) => {
+        const v = cell.value as any;
+        const len = v ? String(v).length : 0;
+        if (len > max) max = len;
+      });
+      col.width = Math.min(40, max + 2);
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    const today = new Date();
+    const filename = `delivery-receipts-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}.xlsx`;
+
+    return { base64, filename };
+  } catch (error) {
+    console.error("Error exporting delivery receipts Excel:", error);
+    throw new Error("Failed to export delivery receipts Excel");
   }
 }
 

@@ -163,6 +163,192 @@ async function createAndLinkVariants(
   return createdVariants;
 }
 
+// ---------------- Exports (CSV / Excel) ----------------
+
+// Export Products as CSV
+export async function exportProductsData(filters?: {
+  search?: string;
+  statusIn?: ("ACTIVE" | "ARCHIVED")[];
+  categoryIds?: string[];
+}): Promise<{ csvContent: string; filename: string }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) throw new Error("Unauthorized: Please log in to export data");
+
+  // Build where clause
+  const where: any = {};
+  if (filters?.statusIn?.length) {
+    where.status = { in: filters.statusIn as any };
+  } else {
+    // default: exclude archived
+    where.status = { not: "ARCHIVED" as Status };
+  }
+  if (filters?.search) {
+    where.OR = [
+      { name: { contains: filters.search, mode: "insensitive" } },
+      { sku: { contains: filters.search, mode: "insensitive" } },
+      { description: { contains: filters.search, mode: "insensitive" } },
+    ];
+  }
+  if (filters?.categoryIds?.length) {
+    where.categoryId = { in: filters.categoryIds };
+  }
+
+  const products = await prisma.product.findMany({
+    where,
+    orderBy: { name: "asc" },
+    include: {
+      category: { select: { name: true } },
+      variants: {
+        where: { isActive: true },
+        select: { currentStock: true, sellingPrice: true },
+      },
+    },
+  });
+
+  const headers = [
+    "Product Name",
+    "SKU",
+    "Category",
+    "Has Variants",
+    "Unit Cost",
+    "Selling Price",
+    "Current Stock (Base)",
+    "Variant Stock (Total)",
+    "Min Stock Level",
+    "Lead Time (days)",
+    "Status",
+  ];
+
+  const toNum = (v: any) => (typeof v === "number" ? v : v?.toNumber ? v.toNumber() : Number(v ?? 0));
+  const esc = (val: any) => {
+    const s = val == null ? "" : String(val);
+    return s.includes('"') || s.includes(',') || s.includes('\n') ? '"' + s.replaceAll('"', '""') + '"' : s;
+  };
+
+  const rows = products.map((p) => {
+    const hasVariants = !!p.hasVariants && (p as any).variants && (p as any).variants.length > 0;
+    const variantStock = hasVariants ? (p as any).variants.reduce((sum: number, v: any) => sum + Number(v.currentStock || 0), 0) : 0;
+    return [
+      p.name,
+      p.sku,
+      p.category?.name || "",
+      hasVariants ? "Yes" : "No",
+      toNum((p as any).unitCost),
+      toNum((p as any).sellingPrice),
+      Number((p as any).currentStock ?? 0),
+      variantStock,
+      Number((p as any).minimumStockLevel ?? 0),
+      Number((p as any).leadTime ?? 0),
+      (p as any).status,
+    ]
+      .map(esc)
+      .join(",");
+  });
+
+  const csvContent = [headers.join(","), ...rows].join("\n");
+  const today = new Date();
+  const filename = `products-export-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}.csv`;
+
+  return { csvContent, filename };
+}
+
+// Export Products as Excel
+export async function exportProductsExcel(filters?: {
+  search?: string;
+  statusIn?: ("ACTIVE" | "ARCHIVED")[];
+  categoryIds?: string[];
+}): Promise<{ base64: string; filename: string }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) throw new Error("Authentication required.");
+
+  const { default: ExcelJS } = await import("exceljs");
+
+  // Build where clause similar to CSV
+  const where: any = {};
+  if (filters?.statusIn?.length) {
+    where.status = { in: filters.statusIn as any };
+  } else {
+    where.status = { not: "ARCHIVED" as Status };
+  }
+  if (filters?.search) {
+    where.OR = [
+      { name: { contains: filters.search, mode: "insensitive" } },
+      { sku: { contains: filters.search, mode: "insensitive" } },
+      { description: { contains: filters.search, mode: "insensitive" } },
+    ];
+  }
+  if (filters?.categoryIds?.length) where.categoryId = { in: filters.categoryIds };
+
+  const products = await prisma.product.findMany({
+    where,
+    orderBy: { name: "asc" },
+    include: {
+      category: { select: { name: true } },
+      variants: { where: { isActive: true }, select: { currentStock: true, sellingPrice: true } },
+    },
+  });
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Products");
+  const headers = [
+    "Product Name",
+    "SKU",
+    "Category",
+    "Has Variants",
+    "Unit Cost",
+    "Selling Price",
+    "Current Stock (Base)",
+    "Variant Stock (Total)",
+    "Min Stock Level",
+    "Lead Time (days)",
+    "Status",
+  ];
+  ws.addRow(headers);
+  ws.getRow(1).font = { bold: true };
+
+  products.forEach((p) => {
+    const hasVariants = !!p.hasVariants && (p as any).variants && (p as any).variants.length > 0;
+    const variantStock = hasVariants ? (p as any).variants.reduce((sum: number, v: any) => sum + Number(v.currentStock || 0), 0) : 0;
+    ws.addRow([
+      p.name,
+      p.sku,
+      p.category?.name || "",
+      hasVariants ? "Yes" : "No",
+      Number((p as any).unitCost ?? 0),
+      Number((p as any).sellingPrice ?? 0),
+      Number((p as any).currentStock ?? 0),
+      variantStock,
+      Number((p as any).minimumStockLevel ?? 0),
+      Number((p as any).leadTime ?? 0),
+      (p as any).status,
+    ]);
+  });
+
+  // Formats
+  ws.getColumn(5).numFmt = '#,##0.00'; // Unit Cost
+  ws.getColumn(6).numFmt = '#,##0.00'; // Selling Price
+  ws.getColumn(7).numFmt = '#,##0'; // Current Stock
+  ws.getColumn(8).numFmt = '#,##0'; // Variant Stock
+  ws.getColumn(9).numFmt = '#,##0'; // Min Stock Level
+  ws.getColumn(10).numFmt = '#,##0'; // Lead Time
+
+  // Auto width
+  ws.columns.forEach((c: any) => {
+    let max = 10;
+    c.eachCell({ includeEmpty: true }, (cell: any) => {
+      const v = cell.value as any;
+      const len = v ? String(v).length : 0;
+      if (len > max) max = len;
+    });
+    c.width = Math.min(42, max + 2);
+  });
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const base64 = Buffer.from(buffer).toString("base64");
+  const ts = new Date().toISOString().split("T")[0];
+  return { base64, filename: `products-export-${ts}.xlsx` };
+}
+
 export async function getAllProducts() {
   try {
     const products = await prisma.product.findMany({

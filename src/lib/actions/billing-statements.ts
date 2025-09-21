@@ -14,6 +14,7 @@ import {
   BillingAnalytics,
   BillingStatus,
   InvoiceStatus,
+  CSVExportResponse,
   billingStatementSchema,
   billingStatementFiltersSchema,
 } from "@/types/admin/billing";
@@ -886,6 +887,278 @@ async function getRecentBillingActivity() {
       ? `${statement.modifiedByUser.profile.firstName} ${statement.modifiedByUser.profile.lastName}`
       : statement.modifiedByUser?.email || "System",
   }));
+}
+
+// ==============================================
+// EXPORT FUNCTIONS
+// ==============================================
+
+export async function exportBillingStatementsData(
+  filters?: BillingStatementFilters
+): Promise<CSVExportResponse> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new Error("Unauthorized: Please log in to export data");
+    }
+
+    // Parse and validate filters (optional)
+    const validatedFilters = filters
+      ? billingStatementFiltersSchema.parse(filters)
+      : {};
+
+    // Build where clause similar to getAllBillingStatements
+    const whereClause: any = {};
+
+    if (validatedFilters.status && validatedFilters.status.length > 0) {
+      whereClause.status = {
+        in: validatedFilters.status as any,
+      };
+    }
+
+    if (validatedFilters.customerId) {
+      whereClause.customerId = validatedFilters.customerId;
+    }
+
+    if (validatedFilters.dateRange) {
+      whereClause.billingDate = {
+        gte: validatedFilters.dateRange.start,
+        lte: validatedFilters.dateRange.end,
+      };
+    }
+
+    if (validatedFilters.amountRange) {
+      whereClause.totalAmount = {
+        gte: new Decimal(validatedFilters.amountRange.min),
+        lte: new Decimal(validatedFilters.amountRange.max),
+      };
+    }
+
+    if (validatedFilters.search) {
+      whereClause.OR = [
+        { statementNumber: { contains: validatedFilters.search, mode: "insensitive" } },
+        { customerName: { contains: validatedFilters.search, mode: "insensitive" } },
+        { customer: { name: { contains: validatedFilters.search, mode: "insensitive" } } },
+        { notes: { contains: validatedFilters.search, mode: "insensitive" } },
+      ];
+    }
+
+    // Fetch all matching billing statements with related data required for export
+    const statements = await prisma.billingStatement.findMany({
+      where: whereClause,
+      orderBy: { billingDate: "desc" },
+      include: {
+        customer: { select: { id: true, name: true, email: true } },
+        salesInvoice: true,
+        createdByUser: {
+          select: {
+            email: true,
+            profile: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+    });
+
+    // CSV headers
+    const headers = [
+      "Statement Number",
+      "Billing Date",
+      "Due Date",
+      "Status",
+      "Customer Name",
+      "Customer Email",
+      "Total Amount",
+      "Tax Amount",
+      "Discount Amount",
+      "Net Amount",
+      "Invoice Number",
+      "Invoice Status",
+      "Invoice Total",
+      "Paid Date",
+      "Created By",
+      "Created Date",
+    ];
+
+    const toNum = (v: any) => (typeof v === "number" ? v : v?.toNumber ? v.toNumber() : Number(v ?? 0));
+    const fmtDate = (d: Date | null) => (d ? new Date(d).toISOString().split("T")[0] : "");
+    const esc = (val: any) => {
+      const s = val === null || val === undefined ? "" : String(val);
+      // Escape quotes and wrap if needed
+      if (s.includes("\"") || s.includes(",") || s.includes("\n")) {
+        return '"' + s.replaceAll('"', '""') + '"';
+      }
+      return s;
+    };
+
+    const rows = statements.map((s) => {
+      const createdBy = s.createdByUser?.profile
+        ? `${s.createdByUser.profile.firstName} ${s.createdByUser.profile.lastName}`
+        : s.createdByUser?.email || "";
+
+      return [
+        s.statementNumber,
+        fmtDate(s.billingDate),
+        fmtDate(s.dueDate as any),
+        s.status,
+        s.customer?.name || s.customerName || "",
+        s.customer?.email || "",
+        toNum(s.totalAmount),
+        toNum(s.taxAmount),
+        toNum(s.discountAmount),
+        toNum(s.netAmount),
+        s.salesInvoice?.invoiceNumber || "",
+        s.salesInvoice?.status || "",
+        s.salesInvoice ? toNum(s.salesInvoice.totalAmount) : "",
+        fmtDate((s as any).paidDate || null),
+        createdBy,
+        fmtDate((s as any).createdAt || null),
+      ].map(esc).join(",");
+    });
+
+    const csvContent = [headers.join(","), ...rows].join("\n");
+
+    const today = new Date();
+    const filename = `billing-statements-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}.csv`;
+
+    return { csvContent, filename };
+  } catch (error) {
+    console.error("Error exporting billing statements:", error);
+    throw new Error("Failed to export billing statements");
+  }
+}
+
+export async function exportBillingStatementsExcel(
+  filters?: BillingStatementFilters
+): Promise<{ base64: string; filename: string }> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new Error("Unauthorized: Please log in to export data");
+    }
+
+    const validatedFilters = filters
+      ? billingStatementFiltersSchema.parse(filters)
+      : {};
+
+    const whereClause: any = {};
+    if (validatedFilters.status && validatedFilters.status.length > 0) {
+      whereClause.status = { in: validatedFilters.status as any };
+    }
+    if (validatedFilters.customerId) whereClause.customerId = validatedFilters.customerId;
+    if (validatedFilters.dateRange) {
+      whereClause.billingDate = {
+        gte: validatedFilters.dateRange.start,
+        lte: validatedFilters.dateRange.end,
+      };
+    }
+    if (validatedFilters.amountRange) {
+      whereClause.totalAmount = {
+        gte: new Decimal(validatedFilters.amountRange.min),
+        lte: new Decimal(validatedFilters.amountRange.max),
+      };
+    }
+    if (validatedFilters.search) {
+      whereClause.OR = [
+        { statementNumber: { contains: validatedFilters.search, mode: "insensitive" } },
+        { customerName: { contains: validatedFilters.search, mode: "insensitive" } },
+        { customer: { name: { contains: validatedFilters.search, mode: "insensitive" } } },
+        { notes: { contains: validatedFilters.search, mode: "insensitive" } },
+      ];
+    }
+
+    const statements = await prisma.billingStatement.findMany({
+      where: whereClause,
+      orderBy: { billingDate: "desc" },
+      include: {
+        customer: { select: { id: true, name: true, email: true } },
+        salesInvoice: true,
+        createdByUser: {
+          select: { email: true, profile: { select: { firstName: true, lastName: true } } },
+        },
+      },
+    });
+
+    const { default: ExcelJS } = await import("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Billing Statements");
+
+    const headers = [
+      "Statement Number",
+      "Billing Date",
+      "Due Date",
+      "Status",
+      "Customer Name",
+      "Customer Email",
+      "Total Amount",
+      "Tax Amount",
+      "Discount Amount",
+      "Net Amount",
+      "Invoice Number",
+      "Invoice Status",
+      "Invoice Total",
+      "Paid Date",
+      "Created By",
+      "Created Date",
+    ];
+
+    sheet.addRow(headers);
+    sheet.getRow(1).font = { bold: true };
+
+    const toNum = (v: any) => (typeof v === "number" ? v : v?.toNumber ? v.toNumber() : Number(v ?? 0));
+    statements.forEach((s) => {
+      const createdBy = s.createdByUser?.profile
+        ? `${s.createdByUser.profile.firstName} ${s.createdByUser.profile.lastName}`
+        : s.createdByUser?.email || "";
+      sheet.addRow([
+        s.statementNumber,
+        s.billingDate ? new Date(s.billingDate) : null,
+        s.dueDate ? new Date(s.dueDate as any) : null,
+        s.status,
+        s.customer?.name || s.customerName || "",
+        s.customer?.email || "",
+        toNum(s.totalAmount),
+        toNum(s.taxAmount),
+        toNum(s.discountAmount),
+        toNum(s.netAmount),
+        s.salesInvoice?.invoiceNumber || "",
+        s.salesInvoice?.status || "",
+        s.salesInvoice ? toNum(s.salesInvoice.totalAmount) : null,
+        (s as any).paidDate ? new Date((s as any).paidDate) : null,
+        createdBy,
+        (s as any).createdAt ? new Date((s as any).createdAt) : null,
+      ]);
+    });
+
+    // Date formatting columns: 2=billing date, 3=due date, 14=paid date, 16=created date
+    [2, 3, 14, 16].forEach((col) => {
+      sheet.getColumn(col).numFmt = "yyyy-mm-dd";
+    });
+
+    // Currency formatting columns: 7=total, 8=tax, 9=discount, 10=net, 13=invoice total
+    [7, 8, 9, 10, 13].forEach((col) => {
+      sheet.getColumn(col).numFmt = "#,##0.00";
+    });
+
+    sheet.columns.forEach((col) => {
+      let max = 10;
+      col.eachCell({ includeEmpty: true }, (cell) => {
+        const v = cell.value as any;
+        const len = v ? String(v).length : 0;
+        if (len > max) max = len;
+      });
+      col.width = Math.min(40, max + 2);
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    const today = new Date();
+    const filename = `billing-statements-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}.xlsx`;
+
+    return { base64, filename };
+  } catch (error) {
+    console.error("Error exporting billing statements Excel:", error);
+    throw new Error("Failed to export billing statements Excel");
+  }
 }
 
 // ==============================================

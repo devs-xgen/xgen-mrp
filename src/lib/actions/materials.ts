@@ -26,6 +26,166 @@ export async function isMaterialSkuAvailable(sku: string, excludeId?: string) {
   }
 }
 
+// ---------------- Exports (CSV / Excel) ----------------
+
+export async function exportMaterialsData(filters?: {
+  search?: string;
+  statusIn?: ("ACTIVE" | "ARCHIVED")[];
+  typeIds?: string[];
+  supplierIds?: string[];
+  uomIds?: string[]; // unit of measure ids
+}): Promise<{ csvContent: string; filename: string }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) throw new Error("Unauthorized: Please log in to export data");
+
+  const where: any = {};
+  if (filters?.statusIn?.length) {
+    where.status = { in: filters.statusIn as any };
+  } else {
+    where.status = { not: Status.ARCHIVED };
+  }
+  if (filters?.search) {
+    where.OR = [
+      { name: { contains: filters.search, mode: "insensitive" } },
+      { sku: { contains: filters.search, mode: "insensitive" } },
+      { notes: { contains: filters.search, mode: "insensitive" } },
+    ];
+  }
+  if (filters?.typeIds?.length) where.typeId = { in: filters.typeIds };
+  if (filters?.supplierIds?.length) where.supplierId = { in: filters.supplierIds };
+  if (filters?.uomIds?.length) where.unitOfMeasureId = { in: filters.uomIds };
+
+  const materials = await prisma.material.findMany({
+    where,
+    orderBy: { name: 'asc' },
+    include: {
+      type: { select: { name: true } },
+      unitOfMeasure: { select: { name: true, symbol: true } },
+      supplier: { select: { name: true } },
+    },
+  });
+
+  const headers = [
+    'Material Name',
+    'SKU',
+    'Type',
+    'Unit',
+    'Supplier',
+    'Cost / Unit',
+    'Current Stock',
+    'Min Stock Level',
+    'Lead Time (days)',
+    'Status',
+  ];
+
+  const toNum = (v: any) => (typeof v === 'number' ? v : v?.toNumber ? v.toNumber() : Number(v ?? 0));
+  const esc = (val: any) => {
+    const s = val == null ? '' : String(val);
+    return s.includes('"') || s.includes(',') || s.includes('\n') ? '"' + s.replaceAll('"', '""') + '"' : s;
+  };
+
+  const rows = materials.map((m: any) => [
+    m.name,
+    m.sku,
+    m.type?.name || '',
+    m.unitOfMeasure ? `${m.unitOfMeasure.name} (${m.unitOfMeasure.symbol})` : '',
+    m.supplier?.name || '',
+    toNum(m.costPerUnit),
+    Number(m.currentStock ?? 0),
+    Number(m.minimumStockLevel ?? 0),
+    Number(m.leadTime ?? 0),
+    m.status,
+  ].map(esc).join(','));
+
+  const csvContent = [headers.join(','), ...rows].join('\n');
+  const today = new Date();
+  const filename = `materials-export-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}.csv`;
+
+  return { csvContent, filename };
+}
+
+export async function exportMaterialsExcel(filters?: {
+  search?: string;
+  statusIn?: ("ACTIVE" | "ARCHIVED")[];
+  typeIds?: string[];
+  supplierIds?: string[];
+  uomIds?: string[];
+}): Promise<{ base64: string; filename: string }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) throw new Error('Authentication required.');
+
+  const { default: ExcelJS } = await import('exceljs');
+
+  const where: any = {};
+  if (filters?.statusIn?.length) where.status = { in: filters.statusIn as any };
+  else where.status = { not: Status.ARCHIVED };
+  if (filters?.search) {
+    where.OR = [
+      { name: { contains: filters.search, mode: 'insensitive' } },
+      { sku: { contains: filters.search, mode: 'insensitive' } },
+      { notes: { contains: filters.search, mode: 'insensitive' } },
+    ];
+  }
+  if (filters?.typeIds?.length) where.typeId = { in: filters.typeIds };
+  if (filters?.supplierIds?.length) where.supplierId = { in: filters.supplierIds };
+  if (filters?.uomIds?.length) where.unitOfMeasureId = { in: filters.uomIds };
+
+  const materials = await prisma.material.findMany({
+    where,
+    orderBy: { name: 'asc' },
+    include: {
+      type: { select: { name: true } },
+      unitOfMeasure: { select: { name: true, symbol: true } },
+      supplier: { select: { name: true } },
+    },
+  });
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Materials');
+  const headers = [
+    'Material Name', 'SKU', 'Type', 'Unit', 'Supplier', 'Cost / Unit', 'Current Stock', 'Min Stock Level', 'Lead Time (days)', 'Status'
+  ];
+  ws.addRow(headers);
+  ws.getRow(1).font = { bold: true };
+
+  materials.forEach((m: any) => {
+    ws.addRow([
+      m.name,
+      m.sku,
+      m.type?.name || '',
+      m.unitOfMeasure ? `${m.unitOfMeasure.name} (${m.unitOfMeasure.symbol})` : '',
+      m.supplier?.name || '',
+      Number(m.costPerUnit ?? 0),
+      Number(m.currentStock ?? 0),
+      Number(m.minimumStockLevel ?? 0),
+      Number(m.leadTime ?? 0),
+      m.status,
+    ]);
+  });
+
+  // Number formats
+  ws.getColumn(6).numFmt = '#,##0.00'; // Cost / Unit
+  ws.getColumn(7).numFmt = '#,##0'; // Current Stock
+  ws.getColumn(8).numFmt = '#,##0'; // Min Stock Level
+  ws.getColumn(9).numFmt = '#,##0'; // Lead Time
+
+  // Auto width
+  ws.columns.forEach((c: any) => {
+    let max = 10;
+    c.eachCell({ includeEmpty: true }, (cell: any) => {
+      const v = cell.value as any;
+      const len = v ? String(v).length : 0;
+      if (len > max) max = len;
+    });
+    c.width = Math.min(42, max + 2);
+  });
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const base64 = Buffer.from(buffer).toString('base64');
+  const ts = new Date().toISOString().split('T')[0];
+  return { base64, filename: `materials-export-${ts}.xlsx` };
+}
+
 async function createLowStockAlert({
   materialId,
   currentLevel,

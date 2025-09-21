@@ -29,7 +29,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { exportSalesInvoicesData } from "@/lib/actions/sales-invoices";
+import { exportSalesInvoicesData, exportSalesInvoicesExcel } from "@/lib/actions/sales-invoices";
 import { InvoiceStatus, SalesInvoiceFilters } from "@/types/admin/billing";
 
 interface CSVExportButtonProps {
@@ -50,8 +50,10 @@ export function CSVExportButton({ className }: CSVExportButtonProps) {
       // Export with or without filters
       const result = await exportSalesInvoicesData(filters);
       
-      // Create blob from CSV content
-      const blob = new Blob([result.csvContent], { type: 'text/csv' });
+      // Create Excel-friendly CSV (prepend UTF-8 BOM and use CRLF)
+      const bom = "\uFEFF";
+      const crlfContent = result.csvContent.replace(/\n/g, "\r\n");
+      const blob = new Blob([bom + crlfContent], { type: 'text/csv' });
       
       // Create download link
       const url = window.URL.createObjectURL(blob);
@@ -205,6 +207,46 @@ export function CSVExportButton({ className }: CSVExportButtonProps) {
       >
         <Download className="mr-2 h-4 w-4" />
         {isExporting ? "Exporting..." : "Export CSV"}
+      </Button>
+
+      {/* Quick Excel Export Button */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={async () => {
+          if (isExporting) return;
+          setIsExporting(true);
+          try {
+            toast({ title: "Export started", description: "Your sales invoices Excel is being generated..." });
+            const res = await exportSalesInvoicesExcel();
+            if (!res?.base64) throw new Error("No Excel data returned");
+            const byteChars = atob(res.base64);
+            const byteNums = new Array(byteChars.length);
+            for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+            const byteArray = new Uint8Array(byteNums);
+            const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = res.filename || 'sales-invoices.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(a);
+            }, 100);
+            toast({ title: "Export complete", description: "Sales invoices Excel has been downloaded successfully." });
+          } catch (error) {
+            console.error('Excel export failed:', error);
+            toast({ title: "Export failed", description: "Failed to export sales invoices Excel.", variant: "destructive" });
+          } finally {
+            setIsExporting(false);
+          }
+        }}
+      >
+        <Download className="mr-2 h-4 w-4" />
+        {isExporting ? "Exporting..." : "Export Excel (.xlsx)"}
       </Button>
 
       {/* Filtered Export Dialog */}

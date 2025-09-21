@@ -36,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { MaterialsExportButton } from "@/components/module/admin/materials/materials-export-button";
 
 interface MaterialsDataTableProps {
   materials: Material[];
@@ -267,6 +268,7 @@ export function MaterialsDataTable({
       columns={columns}
       data={materials}
       {...tableConfig}
+      customToolbarActions={<MaterialsExportButton />}
     />
   );
 }

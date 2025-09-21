@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type { ProductWithRelations } from "./columns";
 import { createColumns } from "./columns";
 import { DataTable, getTableConfig } from "@/components/global/table";
+import { ProductsExportButton } from "@/components/module/admin/products/products-export-button";
 
 interface ProductsPageClientProps {
   data: ProductWithRelations[];
@@ -26,6 +27,7 @@ export default function ProductsPageClient({
       data={data}
       {...tableConfig}
       searchPlaceholder="Filter by name or SKU..."
+      customToolbarActions={<ProductsExportButton />}
     />
   );
 }

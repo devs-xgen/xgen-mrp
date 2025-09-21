@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { deleteSalesInvoice } from "@/lib/actions/sales-invoices";
+import { SalesInvoicesExportButton } from "@/components/module/admin/billing/sales-invoices/sales-invoices-export-button";
 
 interface SalesInvoicesDataTableProps {
   data: SalesInvoiceWithItems[];
@@ -251,6 +252,7 @@ export function SalesInvoicesDataTable({
       columns={columns}
       data={data}
       {...tableConfig}
+      customToolbarActions={<SalesInvoicesExportButton />}
     />
   );
 }

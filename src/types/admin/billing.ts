@@ -788,6 +788,11 @@ export interface CSVExportResponse {
   filename: string;
 }
 
+export interface ExcelExportResponse {
+  base64: string; // base64-encoded XLSX binary
+  filename: string;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: {

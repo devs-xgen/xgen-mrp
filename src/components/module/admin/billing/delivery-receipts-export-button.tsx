@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { exportDeliveryReceiptsData } from "@/lib/actions/delivery-receipts";
+import { exportDeliveryReceiptsData, exportDeliveryReceiptsExcel } from "@/lib/actions/delivery-receipts";
 
 export function DeliveryReceiptsExportButton() {
   const [isExporting, setIsExporting] = useState(false);
@@ -29,8 +29,10 @@ export function DeliveryReceiptsExportButton() {
 
       const { csvContent, filename } = result;
       
-      // Create and download the CSV file
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      // Excel-friendly CSV: prepend BOM and normalize to CRLF
+      const bom = "\uFEFF";
+      const crlfContent = csvContent.replace(/\n/g, "\r\n");
+      const blob = new Blob([bom + crlfContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.style.display = 'none';
@@ -65,26 +67,21 @@ export function DeliveryReceiptsExportButton() {
   const handleExportExcel = async () => {
     setIsExporting(true);
     try {
-      const result = await exportDeliveryReceiptsData();
-      
-      if (!result || !result.csvContent) {
-        throw new Error("No data received from export function");
-      }
+      const res = await exportDeliveryReceiptsExcel();
+      if (!res?.base64) throw new Error("No Excel data returned");
 
-      const { csvContent, filename } = result;
-      
-      // Create and download the CSV file (can be opened in Excel)
-      const excelFilename = filename.replace('.csv', '.csv'); // Keep as CSV for Excel compatibility
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const byteChars = atob(res.base64);
+      const byteNums = new Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+      const byteArray = new Uint8Array(byteNums);
+      const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = excelFilename;
+      a.download = res.filename || 'delivery-receipts.xlsx';
       document.body.appendChild(a);
       a.click();
-      
-      // Clean up
       setTimeout(() => {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
@@ -92,7 +89,7 @@ export function DeliveryReceiptsExportButton() {
 
       toast({
         title: "Export Successful",
-        description: `Delivery receipts exported to ${excelFilename} successfully. The CSV file can be opened in Excel.`,
+        description: `Delivery receipts Excel exported successfully.`,
       });
     } catch (error) {
       console.error('Export error:', error);
@@ -128,7 +125,7 @@ export function DeliveryReceiptsExportButton() {
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleExportExcel} disabled={isExporting}>
           <FileSpreadsheet className="mr-2 h-4 w-4" />
-          Export as CSV (Excel Compatible)
+          Export Excel (.xlsx)
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

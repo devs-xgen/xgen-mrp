@@ -236,8 +236,166 @@ export async function getAllSalesInvoices(
       },
     };
   } catch (error) {
-    console.error("Error fetching sales invoices:", error);
-    throw new Error("Failed to fetch sales invoices");
+    console.error("Error getting all sales invoices:", error);
+    throw new Error("Failed to get all sales invoices");
+  }
+}
+
+export async function exportSalesInvoicesExcel(
+  filters?: SalesInvoiceFilters
+): Promise<{ base64: string; filename: string }> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new Error("Authentication required. Please log in to continue.");
+    }
+    if (session.user.role !== "ADMIN") {
+      throw new Error("Admin access required to export invoices.");
+    }
+
+    const validatedFilters = filters ? salesInvoiceFiltersSchema.parse(filters) : {};
+
+    const whereClause: any = {};
+    if (validatedFilters.status && validatedFilters.status.length > 0) {
+      whereClause.status = { in: validatedFilters.status as PrismaInvoiceStatus[] };
+    }
+    if (validatedFilters.dateRange) {
+      whereClause.invoiceDate = {
+        gte: validatedFilters.dateRange.start,
+        lte: validatedFilters.dateRange.end,
+      };
+    }
+    if (validatedFilters.amountRange) {
+      whereClause.totalAmount = {
+        gte: new Decimal(validatedFilters.amountRange.min),
+        lte: new Decimal(validatedFilters.amountRange.max),
+      };
+    }
+    if (validatedFilters.search) {
+      whereClause.OR = [
+        { invoiceNumber: { contains: validatedFilters.search, mode: "insensitive" } },
+        { poNumber: { contains: validatedFilters.search, mode: "insensitive" } },
+        { billingStatement: { customerName: { contains: validatedFilters.search, mode: "insensitive" } } },
+        { billingStatement: { statementNumber: { contains: validatedFilters.search, mode: "insensitive" } } },
+      ];
+    }
+
+    const orderBy: any = {};
+    if (validatedFilters.sortBy) {
+      orderBy[validatedFilters.sortBy] = validatedFilters.sortOrder || "desc";
+    } else {
+      orderBy.invoiceDate = "desc";
+    }
+
+    const invoices = await prisma.salesInvoice.findMany({
+      where: whereClause,
+      orderBy,
+      include: {
+        billingStatement: {
+          select: {
+            statementNumber: true,
+            customerName: true,
+            customer: { select: { name: true, email: true, code: true } },
+          },
+        },
+        createdByUser: {
+          select: { email: true, profile: { select: { firstName: true, lastName: true } } },
+        },
+        modifiedByUser: {
+          select: { email: true, profile: { select: { firstName: true, lastName: true } } },
+        },
+      },
+    });
+
+    const { default: ExcelJS } = await import("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Sales Invoices");
+
+    const headers = [
+      "Invoice Number",
+      "Invoice Date",
+      "Due Date",
+      "Status",
+      "Customer Name",
+      "Customer Email",
+      "Customer Code",
+      "Billing Statement Number",
+      "PO Number",
+      "Subtotal",
+      "Tax Rate",
+      "Tax Amount",
+      "Discount Amount",
+      "Total Amount",
+      "Payment Terms",
+      "Created By",
+      "Created Date",
+      "Modified By",
+      "Modified Date",
+    ];
+
+    sheet.addRow(headers);
+    sheet.getRow(1).font = { bold: true };
+
+    invoices.forEach((invoice) => {
+      const customer = invoice.billingStatement?.customer;
+      const createdBy = invoice.createdByUser;
+      const modifiedBy = invoice.modifiedByUser;
+      const createdByName = createdBy?.profile
+        ? `${createdBy.profile.firstName} ${createdBy.profile.lastName}`
+        : createdBy?.email || "Unknown";
+      const modifiedByName = modifiedBy?.profile
+        ? `${modifiedBy.profile.firstName} ${modifiedBy.profile.lastName}`
+        : modifiedBy?.email || "";
+
+      sheet.addRow([
+        invoice.invoiceNumber,
+        invoice.invoiceDate ? new Date(invoice.invoiceDate) : null,
+        invoice.dueDate ? new Date(invoice.dueDate) : null,
+        invoice.status,
+        customer?.name || invoice.billingStatement?.customerName || "Unknown",
+        customer?.email || "",
+        customer?.code || "",
+        invoice.billingStatement?.statementNumber || "",
+        invoice.poNumber || "",
+        Number(invoice.subtotal),
+        Number(invoice.taxRate),
+        Number(invoice.taxAmount),
+        Number(invoice.discountAmount),
+        Number(invoice.totalAmount),
+        invoice.paymentTerms || "",
+        createdByName,
+        invoice.createdAt ? new Date(invoice.createdAt) : null,
+        modifiedByName,
+        invoice.updatedAt ? new Date(invoice.updatedAt) : null,
+      ]);
+    });
+
+    [2, 3, 16, 19].forEach((col) => {
+      sheet.getColumn(col).numFmt = "yyyy-mm-dd";
+    });
+    [10, 11, 12, 13, 14].forEach((col) => {
+      sheet.getColumn(col).numFmt = "#,##0.00";
+    });
+
+    sheet.columns.forEach((col) => {
+      let max = 10;
+      col.eachCell({ includeEmpty: true }, (cell) => {
+        const v = cell.value as any;
+        const len = v ? String(v).length : 0;
+        if (len > max) max = len;
+      });
+      col.width = Math.min(42, max + 2);
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    const timestamp = new Date().toISOString().split("T")[0];
+    const filename = `sales-invoices-export-${timestamp}.xlsx`;
+
+    return { base64, filename };
+  } catch (error) {
+    console.error("Error exporting sales invoices Excel:", error);
+    throw new Error("Failed to export sales invoices Excel");
   }
 }
 
