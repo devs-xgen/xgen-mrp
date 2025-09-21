@@ -9,3 +9,7 @@ export { RecentOrders } from "./recent-orders";
 export { OperationalAlerts } from "./operational-alerts";
 export { MaterialUtilization } from "./material-utilization";
 export { WorkflowConnections } from "./workflow-connections";
+export { OrderStatusComparison } from "./order-status-comparison";
+export { WorkflowQuickActions } from "./workflow-quick-actions";
+export { TopProductsByOrdersChart } from "./top-products-by-orders-chart";
+export { TopMaterialsConsumptionChart } from "./top-materials-consumption-chart";

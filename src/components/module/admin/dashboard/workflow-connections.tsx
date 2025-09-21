@@ -31,12 +31,22 @@ import {
 import { AnalyticsCard, analyticsCardVariants } from "@/components/ui/analytics-card";
 import { SimpleMermaid } from "@/components/ui/simple-mermaid";
 import { loadGraphFile, getGraphMetadata } from "@/lib/utils/graph-loader";
+import { getStats, getInventoryAlerts, getProductionStatus } from "@/lib/actions/dashboard";
+import { getQualityMetrics } from "@/lib/actions/quality-checks";
 
 export function WorkflowConnections() {
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const [processDialogOpen, setProcessDialogOpen] = useState(false);
   const [graphContent, setGraphContent] = useState<string>("");
   const [isLoadingGraph, setIsLoadingGraph] = useState(false);
+  const [loadingCounts, setLoadingCounts] = useState(true);
+  const [metrics, setMetrics] = useState({
+    activeOrders: 0,
+    inventoryAlerts: 0,
+    productionPending: 0,
+    productionInProgress: 0,
+    qualityPending: 0,
+  });
 
   const handleStepHover = (step: number | null) => {
     setActiveStep(step);
@@ -60,6 +70,40 @@ export function WorkflowConnections() {
     }
   }, [processDialogOpen, graphContent]);
 
+  // Load live counts for the workflow cards
+  useEffect(() => {
+    let mounted = true;
+    async function loadCounts() {
+      setLoadingCounts(true);
+      try {
+        const [stats, alerts, prod, quality] = await Promise.all([
+          getStats(),
+          getInventoryAlerts(),
+          getProductionStatus(),
+          getQualityMetrics(),
+        ]);
+
+        if (!mounted) return;
+        setMetrics({
+          activeOrders: stats.activeOrders,
+          inventoryAlerts: alerts.length,
+          productionPending: prod.pendingOrders,
+          productionInProgress: prod.inProgressOrders,
+          qualityPending: quality?.pendingChecks ?? 0,
+        });
+
+      } catch (err) {
+        console.error("Failed to load workflow counts", err);
+      } finally {
+        if (mounted) setLoadingCounts(false);
+      }
+    }
+    loadCounts();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const workflowSteps = [
     {
       id: 1,
@@ -67,7 +111,7 @@ export function WorkflowConnections() {
       description: "Customer places an order for products",
       icon: "ShoppingCart" as const,
       path: "/admin/customer-orders",
-      count: "156",
+      count: loadingCounts ? "…" : String(metrics.activeOrders),
       variant: analyticsCardVariants.blue,
     },
     {
@@ -76,7 +120,7 @@ export function WorkflowConnections() {
       description: "System checks if products are in stock",
       icon: "Package" as const,
       path: "/admin/products",
-      count: "89",
+      count: loadingCounts ? "…" : String(metrics.inventoryAlerts),
       variant: analyticsCardVariants.green,
     },
     {
@@ -85,7 +129,9 @@ export function WorkflowConnections() {
       description: "Create production orders for out-of-stock items",
       icon: "Factory" as const,
       path: "/admin/production",
-      count: "42",
+      count: loadingCounts
+        ? "…"
+        : String(metrics.productionPending + metrics.productionInProgress),
       variant: analyticsCardVariants.amber,
     },
     {
@@ -94,7 +140,7 @@ export function WorkflowConnections() {
       description: "Perform quality checks on manufactured products",
       icon: "ClipboardList" as const,
       path: "/admin/quality-checks",
-      count: "38",
+      count: loadingCounts ? "…" : String(metrics.qualityPending),
       variant: analyticsCardVariants.purple,
     },
   ];
@@ -258,38 +304,6 @@ export function WorkflowConnections() {
                 )}
               </div>
             ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Quick Actions Card */}
-      <Card className="bg-card border rounded-lg">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Quick Actions</CardTitle>
-          <CardDescription>
-            Manage your manufacturing workflow configuration
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-3">
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/admin/work-centers">
-                <Settings className="mr-2 h-4 w-4" />
-                Configure Work Centers
-              </Link>
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/admin/materials">
-                <Package className="mr-2 h-4 w-4" />
-                Manage Materials
-              </Link>
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/admin/products">
-                <Factory className="mr-2 h-4 w-4" />
-                Manage Products
-              </Link>
-            </Button>
           </div>
         </CardContent>
       </Card>

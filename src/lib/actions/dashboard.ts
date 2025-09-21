@@ -31,7 +31,146 @@ import {
   startOfWeek,
   endOfWeek,
   subWeeks,
+  subDays,
 } from "date-fns";
+
+/**
+ * Admin KPI pack (Inventory, Marketing, Profit)
+ * - MTD Revenue (SalesInvoice.totalAmount where status not in DRAFT/CANCELLED)
+ * - AR Outstanding (status in SENT/OVERDUE/PARTIAL)
+ * - Inventory Valuation (materials + products)
+ * - MTD Gross Profit (SalesInvoiceItem totalPrice - sum(quantity * Product.unitCost) for product lines)
+ * - Top Customer MTD (by SalesInvoice totalAmount)
+ */
+export async function getAdminKpis(): Promise<{
+  mtdRevenue: string;
+  arOutstanding: string;
+  inventoryValuationTotal: string;
+  inventoryValuationMaterials: string;
+  inventoryValuationProducts: string;
+  mtdGrossProfit: string;
+  topCustomerMTD: { name: string; amount: string } | null;
+}> {
+  try {
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+
+    // MTD Revenue
+    const mtdRevenueAgg = await prisma.salesInvoice.aggregate({
+      _sum: { totalAmount: true },
+      where: {
+        invoiceDate: { gte: monthStart, lte: monthEnd },
+        status: { notIn: ["DRAFT", "CANCELLED"] as any },
+      },
+    });
+    const mtdRevenue = (mtdRevenueAgg._sum.totalAmount ?? new Decimal(0)).toFixed(2);
+
+    // AR Outstanding (SENT, OVERDUE, PARTIAL)
+    const arAgg = await prisma.salesInvoice.aggregate({
+      _sum: { totalAmount: true },
+      where: {
+        status: { in: ["SENT", "OVERDUE", "PARTIAL"] as any },
+      },
+    });
+    const arOutstanding = (arAgg._sum.totalAmount ?? new Decimal(0)).toFixed(2);
+
+    // Inventory valuation - materials
+    const materials = await prisma.material.findMany({
+      select: { currentStock: true, costPerUnit: true },
+    });
+    const materialsVal = materials.reduce((sum, m) => {
+      const cost = new Decimal(m.currentStock).mul(m.costPerUnit);
+      return sum.plus(cost);
+    }, new Decimal(0));
+
+    // Inventory valuation - products (finished goods)
+    const products = await prisma.product.findMany({
+      select: { currentStock: true, unitCost: true },
+    });
+    const productsVal = products.reduce((sum, p) => {
+      const cost = new Decimal(p.currentStock).mul(p.unitCost);
+      return sum.plus(cost);
+    }, new Decimal(0));
+
+    const inventoryValTotal = materialsVal.plus(productsVal);
+
+    // MTD Gross Profit (approx): revenue from items minus estimated COGS from Product.unitCost
+    const invoiceItems = await prisma.salesInvoiceItem.findMany({
+      where: {
+        salesInvoice: {
+          invoiceDate: { gte: monthStart, lte: monthEnd },
+          status: { notIn: ["DRAFT", "CANCELLED"] as any },
+        },
+      },
+      select: {
+        totalPrice: true,
+        quantity: true,
+        product: { select: { unitCost: true } },
+      },
+    });
+    const mtdRevenueFromItems = invoiceItems.reduce(
+      (sum, it) => sum.plus(it.totalPrice),
+      new Decimal(0)
+    );
+    const mtdCogs = invoiceItems.reduce((sum, it) => {
+      if (!it.product) return sum; // non-product line (e.g., service)
+      const cogs = it.quantity.mul(it.product.unitCost);
+      return sum.plus(cogs);
+    }, new Decimal(0));
+    const mtdGrossProfit = mtdRevenueFromItems.minus(mtdCogs).toFixed(2);
+
+    // Top customer MTD by invoice amount
+    const invoicesMTD = await prisma.salesInvoice.findMany({
+      where: {
+        invoiceDate: { gte: monthStart, lte: monthEnd },
+        status: { notIn: ["DRAFT", "CANCELLED"] as any },
+      },
+      select: {
+        totalAmount: true,
+        billingStatement: {
+          select: { customerId: true, customerName: true, customer: { select: { name: true } } },
+        },
+      },
+    });
+    const customerMap = new Map<string, Decimal>();
+    for (const inv of invoicesMTD) {
+      const customerName = inv.billingStatement?.customer?.name || inv.billingStatement?.customerName || "Unknown";
+      const prev = customerMap.get(customerName) ?? new Decimal(0);
+      customerMap.set(customerName, prev.plus(inv.totalAmount));
+    }
+    let topCustomer: { name: string; amount: Decimal } | null = null;
+    for (const [name, amt] of customerMap.entries()) {
+      if (!topCustomer || amt.greaterThan(topCustomer.amount)) {
+        topCustomer = { name, amount: amt };
+      }
+    }
+
+    return {
+      mtdRevenue,
+      arOutstanding,
+      inventoryValuationTotal: inventoryValTotal.toFixed(2),
+      inventoryValuationMaterials: materialsVal.toFixed(2),
+      inventoryValuationProducts: productsVal.toFixed(2),
+      mtdGrossProfit,
+      topCustomerMTD: topCustomer
+        ? { name: topCustomer.name, amount: topCustomer.amount.toFixed(2) }
+        : null,
+    };
+  } catch (error) {
+    console.error("Failed to fetch admin KPIs:", error);
+    // Return zeros to avoid breaking the UI
+    return {
+      mtdRevenue: "0.00",
+      arOutstanding: "0.00",
+      inventoryValuationTotal: "0.00",
+      inventoryValuationMaterials: "0.00",
+      inventoryValuationProducts: "0.00",
+      mtdGrossProfit: "0.00",
+      topCustomerMTD: null,
+    };
+  }
+}
 
 /**
  * Get all dashboard data in a single call to minimize loading time
@@ -613,6 +752,33 @@ export async function getProductionStatus(): Promise<ProductionStatus> {
   } catch (error) {
     console.error("Failed to fetch production status:", error);
     throw new Error("Failed to fetch production status");
+  }
+}
+
+// Customer orders status breakdown (pending, in progress, completed)
+export async function getCustomerOrderStatus(): Promise<ProductionStatus> {
+  try {
+    const totalOrders = await prisma.customerOrder.count();
+    const pendingOrders = await prisma.customerOrder.count({ where: { status: "PENDING" as any } });
+    const inProgressOrders = await prisma.customerOrder.count({ where: { status: "IN_PROGRESS" as any } });
+    const completedOrders = await prisma.customerOrder.count({ where: { status: "COMPLETED" as any } });
+
+    const pendingPercentage = totalOrders === 0 ? 0 : (pendingOrders / totalOrders) * 100;
+    const inProgressPercentage = totalOrders === 0 ? 0 : (inProgressOrders / totalOrders) * 100;
+    const completedPercentage = totalOrders === 0 ? 0 : (completedOrders / totalOrders) * 100;
+
+    return {
+      totalOrders,
+      pendingOrders,
+      inProgressOrders,
+      completedOrders,
+      pendingPercentage,
+      inProgressPercentage,
+      completedPercentage,
+    };
+  } catch (error) {
+    console.error("Failed to fetch customer order status:", error);
+    throw new Error("Failed to fetch customer order status");
   }
 }
 
@@ -1270,5 +1436,74 @@ export async function getQualityMetrics(): Promise<QualityMetrics> {
   } catch (error) {
     console.error("Failed to fetch quality metrics:", error);
     throw new Error("Failed to fetch quality metrics");
+  }
+}
+
+// Top products by customer order quantity within a lookback window
+export async function getTopProductsByCustomerOrders(
+  limit: number = 10,
+  lookbackDays: number = 60
+) {
+  try {
+    const since = subDays(new Date(), lookbackDays);
+    const lines = await prisma.orderLine.findMany({
+      where: {
+        createdAt: { gte: since },
+      } as any,
+      select: {
+        quantity: true,
+        product: { select: { id: true, name: true, sku: true } },
+      },
+    });
+
+    const map = new Map<string, { id: string; name: string; sku: string | null; total: number }>();
+    for (const l of lines) {
+      if (!l.product) continue;
+      const key = l.product.id;
+      const prev = map.get(key) ?? { id: key, name: l.product.name, sku: l.product.sku ?? null, total: 0 };
+      map.set(key, { ...prev, total: prev.total + l.quantity });
+    }
+
+    const arr = Array.from(map.values()).sort((a, b) => b.total - a.total).slice(0, limit);
+    return arr;
+  } catch (error) {
+    console.error("Failed to fetch top products by customer orders:", error);
+    return [];
+  }
+}
+
+// Top materials by consumption movements within a lookback window
+export async function getTopMaterialsByConsumption(
+  limit: number = 10,
+  lookbackDays: number = 60
+) {
+  try {
+    const since = subDays(new Date(), lookbackDays);
+    const moves = await prisma.inventoryMovement.findMany({
+      where: {
+        movementType: "MATERIAL_CONSUMPTION" as any,
+        transactionDate: { gte: since },
+        materialId: { not: null },
+      },
+      select: {
+        quantity: true,
+        material: { select: { id: true, name: true, sku: true } },
+      },
+    });
+
+    const map = new Map<string, { id: string; name: string; sku: string | null; total: number }>();
+    for (const m of moves) {
+      if (!m.material) continue;
+      const key = m.material.id;
+      const prev = map.get(key) ?? { id: key, name: m.material.name, sku: m.material.sku ?? null, total: 0 };
+      const qty = Number(m.quantity);
+      map.set(key, { ...prev, total: prev.total + qty });
+    }
+
+    const arr = Array.from(map.values()).sort((a, b) => b.total - a.total).slice(0, limit);
+    return arr;
+  } catch (error) {
+    console.error("Failed to fetch top materials by consumption:", error);
+    return [];
   }
 }

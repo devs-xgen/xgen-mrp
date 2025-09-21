@@ -1,23 +1,13 @@
 // src/app/admin/(protected)/dashboard/page.tsx
 "use client";
 
-import { Suspense } from "react";
 import {
-  StatsCards,
-  InventoryAlerts,
-  ProductionStatusChart,
-  MonthlySalesChart,
-  TopProducts,
-  SalesByCategoryChart,
-  RecentOrders,
-  OperationalAlerts,
-  MaterialUtilization,
   WorkflowConnections,
+  OrderStatusComparison,
+  WorkflowQuickActions,
+  TopProductsByOrdersChart,
+  TopMaterialsConsumptionChart,
 } from "@/components/module/admin/dashboard";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
-import { ErrorBoundary } from "@/components/shared/error-boundary";
 
 // Import page layout components
 import {
@@ -28,43 +18,6 @@ import {
   PageDescription,
   PageBody,
 } from "@/components/shared/page-layout";
-
-// Loading fallback components
-const StatsCardsSkeleton = () => (
-  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-    {[...Array(4)].map((_, i) => (
-      <Skeleton key={i} className="h-32 w-full" />
-    ))}
-  </div>
-);
-
-const CardSkeleton = () => <Skeleton className="h-[400px] w-full" />;
-
-// Error fallback component
-const ErrorCard = ({ componentName }: { componentName: string }) => (
-  <Card>
-    <CardContent className="flex flex-col items-center justify-center py-10">
-      <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
-      <h3 className="text-lg font-medium">Failed to load {componentName}</h3>
-      <p className="text-sm text-muted-foreground mt-2">
-        There was an error loading this component.
-      </p>
-    </CardContent>
-  </Card>
-);
-
-// Wrap components with error boundary
-const ErrorBoundaryWrapper = ({
-  children,
-  componentName,
-}: {
-  children: React.ReactNode;
-  componentName: string;
-}) => (
-  <ErrorBoundary fallback={<ErrorCard componentName={componentName} />}>
-    <Suspense fallback={<CardSkeleton />}>{children}</Suspense>
-  </ErrorBoundary>
-);
 
 export default function AdminDashboard() {
   return (
@@ -82,58 +35,20 @@ export default function AdminDashboard() {
       {/* Page Body */}
       <PageBody>
         <div className="space-y-6">
-          {/* Workflow Connections */}
-          <div className="mb-6">
-            <WorkflowConnections />
-          </div>
+          {/* Manufacturing Workflow Connections */}
+          <WorkflowConnections />
 
-          {/* Stats Cards */}
-          <ErrorBoundaryWrapper componentName="Stats Cards">
-            <StatsCards />
-          </ErrorBoundaryWrapper>
+          {/* Order Status Comparison (Customer vs Production) */}
+          <OrderStatusComparison />
 
-          {/* Alerts and Production Status */}
+          {/* Product and Material Insights */}
           <div className="grid gap-6 md:grid-cols-2">
-            <ErrorBoundaryWrapper componentName="Inventory Alerts">
-              <InventoryAlerts />
-            </ErrorBoundaryWrapper>
-
-            <ErrorBoundaryWrapper componentName="Production Status">
-              <ProductionStatusChart />
-            </ErrorBoundaryWrapper>
+            <TopProductsByOrdersChart />
+            <TopMaterialsConsumptionChart />
           </div>
 
-          {/* Monthly Sales Chart */}
-          <ErrorBoundaryWrapper componentName="Monthly Sales Chart">
-            <MonthlySalesChart />
-          </ErrorBoundaryWrapper>
-
-          {/* Top Products and Sales by Category */}
-          <div className="grid gap-6 md:grid-cols-2">
-            <ErrorBoundaryWrapper componentName="Top Products">
-              <TopProducts />
-            </ErrorBoundaryWrapper>
-
-            <ErrorBoundaryWrapper componentName="Sales by Category">
-              <SalesByCategoryChart />
-            </ErrorBoundaryWrapper>
-          </div>
-
-          {/* Recent Orders and Material Utilization */}
-          <div className="grid gap-6 md:grid-cols-2">
-            <ErrorBoundaryWrapper componentName="Recent Orders">
-              <RecentOrders />
-            </ErrorBoundaryWrapper>
-
-            <ErrorBoundaryWrapper componentName="Material Utilization">
-              <MaterialUtilization />
-            </ErrorBoundaryWrapper>
-          </div>
-
-          {/* Operational Alerts */}
-          <ErrorBoundaryWrapper componentName="Operational Alerts">
-            <OperationalAlerts />
-          </ErrorBoundaryWrapper>
+          {/* Quick Actions */}
+          <WorkflowQuickActions />
         </div>
       </PageBody>
     </PageContainer>
