@@ -5087,16 +5087,31 @@ export async function deleteProductionOrder(productionOrderId: string, notes?: s
       }
     }
 
-    // Delete dependent child records, e.g. Operations linked to this production order
-    await prisma.operation.deleteMany({
-      where: { productionOrderId: productionOrderId },
-    });
+    // Delete or unlink dependent records in a single transaction to avoid FK violations
+    await prisma.$transaction(async (tx) => {
+      // Unassign delivery tasks linked to this production order
+      await tx.deliveryAssignment.deleteMany({ where: { productionOrderId } });
 
-    // Add other dependent deletes here if needed, e.g. quality checks, BOM, etc.
+      // Delete operations (not cascaded in schema)
+      await tx.operation.deleteMany({ where: { productionOrderId } });
 
-    // Now delete the production order
-    await prisma.productionOrder.delete({
-      where: { id: productionOrderId },
+      // Delete quality checks (not cascaded in schema)
+      await tx.qualityCheck.deleteMany({ where: { productionOrderId } });
+
+      // Delete other dependents (some may already cascade, but explicit is safe)
+      await tx.productionMaterialConsumption.deleteMany({ where: { productionOrderId } });
+      await tx.productionBatch.deleteMany({ where: { productionOrderId } });
+      await tx.costVariance.deleteMany({ where: { productionOrderId } });
+      await tx.productionBOM.deleteMany({ where: { productionOrderId } });
+
+      // Unlink any billing statements that reference this production order (keep billing records)
+      await tx.billingStatement.updateMany({
+        where: { productionOrderId },
+        data: { productionOrderId: null },
+      });
+
+      // Finally, delete the production order
+      await tx.productionOrder.delete({ where: { id: productionOrderId } });
     });
 
     // Log the deletion using the ActivityLog model
