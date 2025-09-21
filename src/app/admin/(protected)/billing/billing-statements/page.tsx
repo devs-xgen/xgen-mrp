@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { revalidatePath } from "next/cache";
 
 // Import server actions and types
-import { getAllBillingStatements, getBillingAnalytics } from "@/lib/actions/billing-statements";
+import { getAllBillingStatements } from "@/lib/actions/billing-statements";
 import { BillingStatus } from "@/types/admin/billing";
 
 // Import page layout components
@@ -21,7 +21,6 @@ import {
   SectionCard,
 } from "@/components/shared/page-layout";
 import { BillingStatementsDataTable } from "./billing-statements-data-table";
-import { BillingStatementsDashboard } from "@/components/module/admin/billing/billing-statements/billing-statements-dashboard";
 
 export const metadata: Metadata = {
   title: "Billing Statements",
@@ -93,7 +92,6 @@ export default async function BillingStatementsPage({ searchParams }: BillingSta
   };
 
   const data = await getAllBillingStatements(filters, page, perPage);
-  const analytics = await getBillingAnalytics();
 
   return (
     <PageContainer>
@@ -120,11 +118,6 @@ export default async function BillingStatementsPage({ searchParams }: BillingSta
           </Button>
         </PageHeaderActions>
       </PageHeader>
-
-      {/* Dashboard Analytics */}
-      <Suspense fallback={<div>Loading dashboard...</div>}>
-        <BillingStatementsDashboard analytics={analytics} />
-      </Suspense>
 
       {/* Data Table */}
       <SectionCard heading="All Billing Statements">

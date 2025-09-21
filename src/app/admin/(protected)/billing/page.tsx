@@ -151,12 +151,6 @@ async function BillingDashboardContent() {
         <SectionCard heading="Other Actions">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-              <Link href="/admin/billing/simple-billing-statements">
-                <FileText className="h-6 w-6" />
-                <span>Simple Billing</span>
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
               <Link href="/admin/billing/sales-invoices/create">
                 <Receipt className="h-6 w-6" />
                 <span>Create Sales Invoice</span>
@@ -212,7 +206,7 @@ async function BillingDashboardContent() {
                     <div>
                       <p className="font-medium">{invoice.invoiceNumber}</p>
                       <p className="text-sm text-muted-foreground">
-                        {invoice.billingStatements?.[0]?.customer?.name || 'Unknown Customer'}
+                        {invoice.billingStatement?.customer?.name || 'Unknown Customer'}
                       </p>
                     </div>
                   </div>

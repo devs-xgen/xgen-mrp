@@ -1,8 +1,6 @@
 import { Metadata } from "next";
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getAllSalesInvoices, getSalesReportData } from "@/lib/actions/sales-invoices";
-import { SalesInvoicesDashboard } from "@/components/module/admin/billing/sales-invoices/sales-invoices-dashboard";
+import { getAllSalesInvoices } from "@/lib/actions/sales-invoices";
 import { InvoiceStatus } from "@/types/admin/billing";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -34,12 +32,6 @@ interface PageProps {
   };
 }
 
-// Server actions for data revalidation and refresh
-async function revalidateData() {
-  "use server";
-  revalidatePath("/admin/billing/sales-invoices");
-}
-
 async function refreshData() {
   "use server";
   redirect("/admin/billing/sales-invoices");
@@ -55,18 +47,15 @@ export default async function SalesInvoicesPage({ searchParams }: PageProps) {
     : undefined;
 
   // Fetch data
-  const [invoicesResult, reportData] = await Promise.all([
-    getAllSalesInvoices(
-      {
-        search,
-        status: statusFilter,
-        dateRange,
-      },
-      page,
-      perPage
-    ),
-    getSalesReportData(),
-  ]);
+  const invoicesResult = await getAllSalesInvoices(
+    {
+      search,
+      status: statusFilter,
+      dateRange,
+    },
+    page,
+    perPage
+  );
 
   return (
     <PageContainer>
@@ -94,9 +83,6 @@ export default async function SalesInvoicesPage({ searchParams }: PageProps) {
         </PageHeaderActions>
       </PageHeader>
 
-      {/* Dashboard Analytics */}
-      <SalesInvoicesDashboard reportData={reportData} />
-      
       {/* Data Table */}
       <SectionCard heading="All Sales Invoices">
         <SalesInvoicesDataTable 

@@ -9,8 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 // Import the new delivery receipts components
 import { getAllDeliveryReceipts } from "@/lib/actions/delivery-receipts";
-import { DeliveryReceiptsDashboard } from "@/components/module/admin/billing/delivery-receipts/delivery-receipts-dashboard";
-import { DeliveryReceiptWithBilling, DeliveryAnalytics, DeliveryStatus } from "@/types/admin/billing";
+import { DeliveryStatus } from "@/types/admin/billing";
 
 // Import page layout components
 import {
@@ -30,12 +29,6 @@ export const metadata: Metadata = {
   title: "Delivery Receipts",
   description: "Manage delivery receipts and tracking information",
 };
-
-// Server actions for data revalidation
-async function revalidateDeliveryReceipts() {
-  "use server";
-  revalidatePath("/admin/billing/delivery-receipts");
-}
 
 async function refreshData() {
   "use server";
@@ -112,26 +105,6 @@ export default async function DeliveryReceiptsPage({
 
   const deliveryReceipts = deliveryReceiptsData?.data || [];
 
-  // Create analytics for dashboard
-  const analytics: DeliveryAnalytics = {
-    totalDeliveries: deliveryReceipts.length,
-    successfulDeliveries: deliveryReceipts.filter(r => r.deliveryStatus === 'DELIVERED').length,
-    failedDeliveries: deliveryReceipts.filter(r => r.deliveryStatus === 'FAILED').length,
-    successRate: deliveryReceipts.length > 0 
-      ? (deliveryReceipts.filter(r => r.deliveryStatus === 'DELIVERED').length / deliveryReceipts.length) * 100 
-      : 0,
-    deliveryMethodBreakdown: [],
-    courierPerformance: [],
-    recentDeliveries: deliveryReceipts.slice(0, 5).map(receipt => ({
-      id: receipt.id,
-      receiptNumber: receipt.receiptNumber,
-      deliveryDate: receipt.deliveryDate,
-      status: receipt.deliveryStatus,
-      customerName: receipt.billingStatement?.customerName || 'Unknown',
-      deliveryMethod: receipt.courierService || 'Standard',
-    })),
-  };
-
   return (
     <PageContainer>
       {/* Page Header */}
@@ -157,14 +130,6 @@ export default async function DeliveryReceiptsPage({
           </Button>
         </PageHeaderActions>
       </PageHeader>
-
-      {/* Dashboard Analytics */}
-      <Suspense fallback={<div>Loading dashboard...</div>}>
-        <DeliveryReceiptsDashboard 
-          receipts={deliveryReceipts} 
-          analytics={analytics}
-        />
-      </Suspense>
 
       {/* Data Table */}
       <SectionCard heading="All Delivery Receipts">
