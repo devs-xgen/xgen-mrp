@@ -1,10 +1,40 @@
+import { Metadata } from "next";
+
+import {
+  PageContainer,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+  PageDescription,
+  SectionCard,
+} from "@/components/shared/page-layout";
+import { getGlobalUsers } from "@/lib/actions/superadmin";
+import { SuperAdminUsersClient } from "@/components/module/superadmin/users/superadmin-users-client";
+
 export const dynamic = "force-dynamic";
 
-export default function SuperAdminUsersPage() {
+export const metadata: Metadata = {
+  title: "Global Users",
+  description: "Manage users across all organizations",
+};
+
+export default async function SuperAdminUsersPage() {
+  const users = await getGlobalUsers();
+
   return (
-    <div className="p-6 space-y-2">
-      <h1 className="text-2xl font-semibold">Global Users</h1>
-      <p className="text-sm text-muted-foreground">Manage users across all organizations. (Coming soon)</p>
-    </div>
+    <PageContainer>
+      <PageHeader>
+        <PageHeaderMain>
+          <PageTitle>Global Users</PageTitle>
+          <PageDescription>
+            Audit, manage, and reset credentials for every user in the platform.
+          </PageDescription>
+        </PageHeaderMain>
+      </PageHeader>
+
+      {/* <SectionCard> */}
+        <SuperAdminUsersClient data={users} />
+      {/* </SectionCard> */}
+    </PageContainer>
   );
 }

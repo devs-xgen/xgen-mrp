@@ -440,40 +440,22 @@ export const superAdminNavItems: NavItem[] = [
     description: "System-wide overview and controls",
   },
   {
-    icon: Factory,
-    label: "Organizations",
-    href: "/superadmin/organizations",
-    description: "Manage tenant organizations",
+    icon: Package,
+    label: "Products",
+    href: "/superadmin/products",
+    description: "Manage product catalogs across tenants",
+  },
+  {
+    icon: Warehouse,
+    label: "Materials",
+    href: "/superadmin/materials",
+    description: "Oversee global material inventory",
   },
   {
     icon: Users,
     label: "Global Users",
     href: "/superadmin/users",
     description: "Manage users across all tenants",
-  },
-  {
-    icon: Settings,
-    label: "System Settings",
-    href: "/superadmin/settings",
-    description: "Global configuration and policies",
-  },
-  {
-    icon: LineChart,
-    label: "Analytics",
-    href: "/superadmin/analytics",
-    description: "System-wide analytics and KPIs",
-  },
-  {
-    icon: Clipboard,
-    label: "Audit Logs",
-    href: "/superadmin/audit-logs",
-    description: "Comprehensive audit trail",
-  },
-  {
-    icon: AlertTriangle,
-    label: "System Health",
-    href: "/superadmin/system-health",
-    description: "Monitoring and alerts",
   },
 ];
 

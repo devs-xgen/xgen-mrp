@@ -3,6 +3,9 @@
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
+import { hash } from "bcryptjs";
+import type { UserData } from "@/types/admin/user";
 
 async function ensureSuperAdmin() {
   const session = await getServerSession(authOptions);
@@ -56,5 +59,50 @@ export async function getSystemMetrics(): Promise<SuperAdminMetrics> {
     totalProducts,
     openSupportTickets,
   };
+}
+
+export async function getGlobalUsers(): Promise<UserData[]> {
+  await ensureSuperAdmin();
+
+  const users = await prisma.user.findMany({
+    include: {
+      profile: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return users.map(({ password, ...rest }) => rest as UserData);
+}
+
+export async function updateUserPassword(
+  userId: string,
+  newPassword: string
+): Promise<void> {
+  const session = await ensureSuperAdmin();
+
+  if (!userId) {
+    throw new Error("User ID is required");
+  }
+
+  if (!newPassword || newPassword.length < 8) {
+    throw new Error("Password must be at least 8 characters long");
+  }
+
+  const hashedPassword = await hash(newPassword, 12);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      password: hashedPassword,
+      modifiedBy: session.user.id,
+      updatedAt: new Date(),
+    },
+  });
+
+  revalidatePath("/superadmin/users");
+  revalidatePath("/admin/users");
+  revalidatePath("/developer/users");
 }
 
