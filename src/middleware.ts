@@ -232,7 +232,7 @@ export default async function middleware(req: NextRequest) {
       // If authenticated and trying to access login, redirect to appropriate dashboard
       if (token && isLoginPage) {
         const portalMatch = pathname.match(
-          /^\/(admin|worker|inspector|delivery|superadmin)/
+          /^\/(admin|worker|inspector|delivery|developer|superadmin)/
         );
         const portal = portalMatch ? portalMatch[1] : "admin";
 
@@ -271,7 +271,7 @@ export default async function middleware(req: NextRequest) {
     // No valid session - redirect to appropriate login
     if (!token) {
       const portalMatch = pathname.match(
-        /^\/(admin|worker|inspector|delivery|superadmin)/
+        /^\/(admin|worker|inspector|delivery|developer|superadmin)/
       );
       const portal = portalMatch ? portalMatch[1] : "admin";
 
@@ -313,7 +313,9 @@ export default async function middleware(req: NextRequest) {
     console.error("Middleware authentication error:", error);
 
     // On token validation error, redirect to login
-    const portalMatch = pathname.match(/^\/(admin|worker|inspector|delivery)/);
+    const portalMatch = pathname.match(
+      /^\/(admin|worker|inspector|delivery|developer)/
+    );
     const portal = portalMatch ? portalMatch[1] : "admin";
     return NextResponse.redirect(new URL(`/${portal}/login`, req.url));
   }

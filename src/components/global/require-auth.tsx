@@ -26,6 +26,8 @@ export default function RequireAuth({
       // Determine which portal login page to use based on current URL
       if (pathname.startsWith('/admin')) {
         loginPage = '/admin/login'
+      } else if (pathname.startsWith('/developer')) {
+        loginPage = '/developer/login'
       } else if (pathname.startsWith('/worker')) {
         loginPage = '/worker/login'
       } else if (pathname.startsWith('/inspector')) {
@@ -47,6 +49,8 @@ export default function RequireAuth({
         const role = session.user.role.toLowerCase()
         if (role === 'admin') {
           router.replace('/admin/dashboard')
+        } else if (role === 'developer') {
+          router.replace('/developer/dashboard')
         } else if (role === 'worker') {
           router.replace('/worker/dashboard')
         } else if (role === 'inspector') {

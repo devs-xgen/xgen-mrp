@@ -41,6 +41,7 @@ export function LoginForm() {
   const getPortalFromPathname = () => {
     // Order matters: check /superadmin first to avoid matching /admin substring
     if (pathname.includes("/superadmin")) return "SUPERADMIN";
+    if (pathname.includes("/developer")) return "DEVELOPER";
     if (pathname.includes("/admin")) return "ADMIN";
     if (pathname.includes("/worker")) return "WORKER";
     if (pathname.includes("/inspector")) return "INSPECTOR";
@@ -79,7 +80,10 @@ export function LoginForm() {
 
       // Redirect based on portal type
       const portalPrefix = portal.toLowerCase();
-      const redirectPath = `/${portalPrefix}/dashboard`;
+      const redirectPath =
+        portal === "SUPERADMIN"
+          ? "/superadmin/dashboard"
+          : `/${portalPrefix}/dashboard`;
 
       toast({
         title: "Success",

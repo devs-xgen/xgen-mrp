@@ -5,10 +5,11 @@ import CredentialsProvider from "next-auth/providers/credentials";
 
 // Portal to roles mapping
 const PORTAL_ROLES = {
-  ADMIN_PORTAL: ["ADMIN", "DEVELOPER", "SUPER_ADMIN"],
+  ADMIN_PORTAL: ["ADMIN", "SUPER_ADMIN"],
   WORKER_PORTAL: ["WORKER"],
   INSPECTOR_PORTAL: ["INSPECTOR"],
   DELIVERY_PORTAL: ["DELIVERY"],
+  DEVELOPER_PORTAL: ["DEVELOPER"],
   SUPERADMIN_PORTAL: ["SUPER_ADMIN"],
 };
 
@@ -26,6 +27,7 @@ const PORTAL_LOGIN_PAGES = {
   WORKER_PORTAL: "/worker/login",
   INSPECTOR_PORTAL: "/inspector/login",
   DELIVERY_PORTAL: "/delivery/login",
+  DEVELOPER_PORTAL: "/developer/login",
   SUPERADMIN_PORTAL: "/superadmin/login",
 };
 
@@ -158,6 +160,19 @@ export const authOptions: NextAuthOptions = {
 
           // Check for hardcoded developer credentials first
           if (credentials.email === DEVELOPER_CREDENTIALS.email) {
+            const requestedPortalKey =
+              credentials.portal.toUpperCase() + "_PORTAL";
+            const allowedDeveloperRoles =
+              PORTAL_ROLES[
+                requestedPortalKey as keyof typeof PORTAL_ROLES
+              ] || [];
+
+            if (!allowedDeveloperRoles.includes(DEVELOPER_CREDENTIALS.role)) {
+              throw new Error(
+                "You don't have permission to access this portal"
+              );
+            }
+
             if (credentials.password === DEVELOPER_CREDENTIALS.password) {
               // Check if developer role is allowed in the requested portal
               const requestedPortal =
@@ -269,6 +284,14 @@ export const authOptions: NextAuthOptions = {
 
           if (!allowedRoles.includes(user.role)) {
             throw new Error("You don't have permission to access this portal");
+          }
+
+          const portalExists =
+            PORTAL_LOGIN_PAGES[
+              requestedPortal as keyof typeof PORTAL_LOGIN_PAGES
+            ];
+          if (!portalExists) {
+            throw new Error("Invalid portal specified");
           }
 
           // Update last login time
