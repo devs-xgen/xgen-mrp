@@ -173,6 +173,39 @@ export const tableConfigs = {
     ],
   },
 
+  "superadmin-users": {
+    searchKey: "email",
+    searchPlaceholder: "Search users by name or email...",
+    emptyMessage: "No users found.",
+    enableSelection: true,
+    enableFiltering: true,
+    enablePagination: true,
+    pageSize: 10,
+    filterOptions: [
+      {
+        column: "role",
+        title: "Role",
+        options: [
+          { value: "SUPER_ADMIN", label: "Super Admin" },
+          { value: "ADMIN", label: "Admin" },
+          { value: "DEVELOPER", label: "Developer" },
+          { value: "WORKER", label: "Worker" },
+          { value: "INSPECTOR", label: "Inspector" },
+          { value: "DELIVERY", label: "Delivery" },
+        ],
+      },
+      {
+        column: "status",
+        title: "Status",
+        options: [
+          { value: "ACTIVE", label: "Active" },
+          { value: "INACTIVE", label: "Inactive" },
+          { value: "SUSPENDED", label: "Suspended" },
+        ],
+      },
+    ],
+  },
+
   users: {
     searchKey: "email",
     searchPlaceholder: "Filter users...",

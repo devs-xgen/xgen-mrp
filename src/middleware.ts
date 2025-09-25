@@ -4,7 +4,7 @@ import { getToken } from "next-auth/jwt";
 
 // Define which roles belong to each portal
 const PORTAL_ROLES = {
-  ADMIN_PORTAL: ["ADMIN", "DEVELOPER", "SUPER_ADMIN"],
+  ADMIN_PORTAL: ["ADMIN"],
   WORKER_PORTAL: ["WORKER"],
   INSPECTOR_PORTAL: ["INSPECTOR"],
   DELIVERY_PORTAL: ["DELIVERY"],
@@ -127,6 +127,25 @@ function hasRoleAccess(userRole: string, pathname: string): boolean {
   return allowedRoles.includes(userRole);
 }
 
+function getDashboardPathForRole(userRole: string): string {
+  switch (userRole) {
+    case "DEVELOPER":
+      return `${PORTAL_PATHS.DEVELOPER_PORTAL}/dashboard`;
+    case "SUPER_ADMIN":
+      return `${PORTAL_PATHS.SUPERADMIN_PORTAL}/dashboard`;
+    case "ADMIN":
+      return `${PORTAL_PATHS.ADMIN_PORTAL}/dashboard`;
+    case "WORKER":
+      return `${PORTAL_PATHS.WORKER_PORTAL}/dashboard`;
+    case "INSPECTOR":
+      return `${PORTAL_PATHS.INSPECTOR_PORTAL}/dashboard`;
+    case "DELIVERY":
+      return `${PORTAL_PATHS.DELIVERY_PORTAL}/dashboard`;
+    default:
+      return "/admin/dashboard";
+  }
+}
+
 export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const ip = getClientIp(req);
@@ -229,30 +248,33 @@ export default async function middleware(req: NextRequest) {
         secret: process.env.NEXTAUTH_SECRET,
       });
 
-      // If authenticated and trying to access login, redirect to appropriate dashboard
-      if (token && isLoginPage) {
-        const portalMatch = pathname.match(
-          /^\/(admin|worker|inspector|delivery|developer|superadmin)/
-        );
-        const portal = portalMatch ? portalMatch[1] : "admin";
+      if (token) {
+        const userRole = token.role as string;
 
-        // Validate role access before redirecting
-        if (hasRoleAccess(token.role as string, `/${portal}/dashboard`)) {
-          return NextResponse.redirect(
-            new URL(`/${portal}/dashboard`, req.url)
+        if (pathname === "/") {
+          const dashboardPath = getDashboardPathForRole(userRole);
+          return NextResponse.redirect(new URL(dashboardPath, req.url));
+        }
+
+        if (isLoginPage) {
+          const portalMatch = pathname.match(
+            /^\/(admin|worker|inspector|delivery|developer|superadmin)/
           );
-        } else {
-          // If user doesn't have access to this portal, redirect to their appropriate portal
-          const userRole = token.role as string;
-          const dashboardPath =
-            userRole === "DEVELOPER"
-              ? "/developer/dashboard"
-              : userRole === "SUPER_ADMIN"
-                ? "/superadmin/dashboard"
-                : `/${userRole.toLowerCase()}/dashboard`;
+          const portal = portalMatch ? portalMatch[1] : "admin";
+          const requestedDashboard = `/${portal}/dashboard`;
+
+          if (hasRoleAccess(userRole, requestedDashboard)) {
+            return NextResponse.redirect(
+              new URL(requestedDashboard, req.url)
+            );
+          }
+
+          const dashboardPath = getDashboardPathForRole(userRole);
           return NextResponse.redirect(new URL(dashboardPath, req.url));
         }
       }
+
+      return response;
     } catch (error) {
       console.error("Error checking authentication token:", error);
       // Continue to allow access to public routes even if token check fails
@@ -287,14 +309,8 @@ export default async function middleware(req: NextRequest) {
         `Unauthorized access attempt by ${token.email} (${token.role}) to ${pathname}`
       );
 
-      // Redirect to appropriate dashboard based on user's actual role
       const userRole = token.role as string;
-      const dashboardPath =
-        userRole === "DEVELOPER"
-          ? "/developer/dashboard"
-          : userRole === "SUPER_ADMIN"
-            ? "/superadmin/dashboard"
-            : `/${userRole.toLowerCase()}/dashboard`;
+      const dashboardPath = getDashboardPathForRole(userRole);
       return NextResponse.redirect(new URL(dashboardPath, req.url));
     }
 
@@ -303,7 +319,6 @@ export default async function middleware(req: NextRequest) {
     response.headers.set("x-user-role", token.role as string);
     response.headers.set("x-user-email", (token.email as string) || "");
 
-    // Log successful access for audit purposes
     if (process.env.NODE_ENV === "development") {
       console.info(
         `✅ Authorized access: ${token.email} (${token.role}) → ${pathname}`
@@ -312,9 +327,8 @@ export default async function middleware(req: NextRequest) {
   } catch (error) {
     console.error("Middleware authentication error:", error);
 
-    // On token validation error, redirect to login
     const portalMatch = pathname.match(
-      /^\/(admin|worker|inspector|delivery|developer)/
+      /^\/(admin|worker|inspector|delivery|developer|superadmin)/
     );
     const portal = portalMatch ? portalMatch[1] : "admin";
     return NextResponse.redirect(new URL(`/${portal}/login`, req.url));

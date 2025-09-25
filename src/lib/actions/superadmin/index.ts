@@ -67,13 +67,31 @@ export async function getGlobalUsers(): Promise<UserData[]> {
   const users = await prisma.user.findMany({
     include: {
       profile: true,
+      inspector: true,
     },
     orderBy: {
       createdAt: "desc",
     },
   });
 
-  return users.map(({ password, ...rest }) => rest as UserData);
+  return users.map(({ password, inspector, ...rest }) => {
+    return {
+      ...rest,
+      inspector: inspector
+        ? {
+            inspectorId: inspector.inspectorId,
+            phoneNumber: inspector.phoneNumber,
+            department: inspector.department,
+            specialization: inspector.specialization,
+            certificationLevel: inspector.certificationLevel,
+            yearsOfExperience: inspector.yearsOfExperience,
+            isActive: inspector.isActive,
+            notes: inspector.notes,
+          }
+        : null,
+      profile: rest.profile,
+    } as UserData;
+  });
 }
 
 export async function updateUserPassword(

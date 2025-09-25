@@ -35,6 +35,16 @@ export interface UserData {
   updatedAt: Date;
   lastLoginAt: Date | null;
   profile: UserProfile | null;
+  inspector?: {
+    inspectorId: string;
+    phoneNumber: string | null;
+    department: string | null;
+    specialization: string | null;
+    certificationLevel: string | null;
+    yearsOfExperience: number | null;
+    isActive: boolean;
+    notes: string | null;
+  } | null;
 }
 
 export interface EmergencyContact {

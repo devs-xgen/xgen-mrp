@@ -44,14 +44,32 @@ interface ResetPasswordDialogProps {
   userId: string;
   userEmail: string;
   onSuccess?: () => Promise<void> | void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function ResetPasswordDialog({ userId, userEmail, onSuccess }: ResetPasswordDialogProps) {
-  const [open, setOpen] = useState(false);
+export function ResetPasswordDialog({
+  userId,
+  userEmail,
+  onSuccess,
+  open: controlledOpen,
+  onOpenChange,
+}: ResetPasswordDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+
+  const setOpenState = (next: boolean) => {
+    if (!isControlled) {
+      setInternalOpen(next);
+    }
+    onOpenChange?.(next);
+  };
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -62,7 +80,7 @@ export function ResetPasswordDialog({ userId, userEmail, onSuccess }: ResetPassw
   });
 
   const handleClose = () => {
-    setOpen(false);
+    setOpenState(false);
     form.reset();
     setShowPassword(false);
     setShowConfirm(false);
@@ -92,13 +110,18 @@ export function ResetPasswordDialog({ userId, userEmail, onSuccess }: ResetPassw
   };
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !isPending && setOpen(next)}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Lock className="h-4 w-4" />
-          Reset Password
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={(next) => {
+      if (isPending) return;
+      setOpenState(next);
+    }}>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-2">
+            <Lock className="h-4 w-4" />
+            Reset Password
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Reset Password</DialogTitle>
