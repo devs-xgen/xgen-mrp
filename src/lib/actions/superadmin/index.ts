@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { hash } from "bcryptjs";
 import type { UserData } from "@/types/admin/user";
 
-async function ensureSuperAdmin() {
+export async function ensureSuperAdmin() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || session.user.role !== "SUPER_ADMIN") {
     throw new Error("Unauthorized: Super Admin access required");
