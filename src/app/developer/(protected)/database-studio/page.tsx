@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Database, Download, Filter, RefreshCcw, AlertTriangle } from "lucide-react";
+import { Database, Download, Filter, RefreshCcw, AlertTriangle, FileSpreadsheet, FileArchive } from "lucide-react";
 import { toast } from "sonner";
 
 interface DbTable {
@@ -23,6 +23,7 @@ export default function DatabaseStudioPage() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [downloading, setDownloading] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return tables;
@@ -107,6 +108,78 @@ export default function DatabaseStudioPage() {
     }
   }
 
+  async function downloadExport(tablesArg?: string[]) {
+    setExporting(true);
+    try {
+      const res = await fetch("/api/developer/database/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tables: tablesArg && tablesArg.length ? tablesArg : undefined }),
+      });
+
+      if (!res.ok) {
+        const msg = await safeParseError(res);
+        throw new Error(msg || "Export failed");
+      }
+
+      const filename = parseContentDisposition(res.headers.get("content-disposition")) ||
+        (tablesArg && tablesArg.length ? "db-export-selected.xlsx" : "db-export-full.xlsx");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+
+      toast.success("Export ready", { description: filename });
+    } catch (e: any) {
+      console.error("Export failed", e);
+      toast.error("Export failed", { description: e?.message || "Please check server logs" });
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function downloadExportCsv(tablesArg?: string[]) {
+    setExporting(true);
+    try {
+      const res = await fetch("/api/developer/database/export-csv", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tables: tablesArg && tablesArg.length ? tablesArg : undefined }),
+      });
+
+      if (!res.ok) {
+        const msg = await safeParseError(res);
+        throw new Error(msg || "CSV export failed");
+      }
+
+      const filename = parseContentDisposition(res.headers.get("content-disposition")) ||
+        (tablesArg && tablesArg.length ? "db-export-selected.zip" : "db-export-full.zip");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+
+      toast.success("CSV export ready", { description: filename });
+    } catch (e: any) {
+      console.error("CSV export failed", e);
+      toast.error("CSV export failed", { description: e?.message || "Please check server logs" });
+    } finally {
+      setExporting(false);
+    }
+  }
+
   function handleFullBackup() {
     downloadBackup();
   }
@@ -120,6 +193,36 @@ export default function DatabaseStudioPage() {
       return;
     }
     downloadBackup(selectedTables);
+  }
+
+  function handleFullExport() {
+    downloadExport();
+  }
+
+  function handleSelectedExport() {
+    const selectedTables = Object.entries(selected)
+      .filter(([, v]) => v)
+      .map(([k]) => k);
+    if (selectedTables.length === 0) {
+      toast.message("No tables selected", { description: "Select one or more tables first" });
+      return;
+    }
+    downloadExport(selectedTables);
+  }
+
+  function handleFullExportCsv() {
+    downloadExportCsv();
+  }
+
+  function handleSelectedExportCsv() {
+    const selectedTables = Object.entries(selected)
+      .filter(([, v]) => v)
+      .map(([k]) => k);
+    if (selectedTables.length === 0) {
+      toast.message("No tables selected", { description: "Select one or more tables first" });
+      return;
+    }
+    downloadExportCsv(selectedTables);
   }
 
   return (
@@ -146,6 +249,19 @@ export default function DatabaseStudioPage() {
                 <Download className="w-4 h-4 mr-2" /> Download Selected Tables
               </Button>
               <Separator />
+              <Button variant="secondary" className="w-full" onClick={handleFullExport} disabled={exporting}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" /> Export All Tables (Excel)
+              </Button>
+              <Button variant="outline" className="w-full" onClick={handleSelectedExport} disabled={!anySelected || exporting}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Selected (Excel)
+              </Button>
+              <Button variant="secondary" className="w-full" onClick={handleFullExportCsv} disabled={exporting}>
+                <FileArchive className="w-4 h-4 mr-2" /> Export All Tables (CSV Zip)
+              </Button>
+              <Button variant="outline" className="w-full" onClick={handleSelectedExportCsv} disabled={!anySelected || exporting}>
+                <FileArchive className="w-4 h-4 mr-2" /> Export Selected (CSV Zip)
+              </Button>
+              <Separator />
               <div className="text-xs text-gray-600 space-y-2">
                 <p className="flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5" />
@@ -157,6 +273,12 @@ export default function DatabaseStudioPage() {
                   <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5" />
                   <span>
                     If you use Prisma Accelerate/Data Proxy, set a direct Postgres connection in <code>PG_BACKUP_URL</code>. Backups cannot run against the Prisma proxy URL.
+                  </span>
+                </p>
+                <p className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5" />
+                  <span>
+                    Excel export runs in-app using Prisma and may be slower for very large datasets. Prefer provider snapshots or CI backups for production-scale databases.
                   </span>
                 </p>
               </div>
@@ -232,7 +354,10 @@ function parseContentDisposition(header: string | null): string | null {
 async function safeParseError(res: Response): Promise<string | null> {
   try {
     const data = await res.json();
-    return data?.error || null;
+    const err = data?.error || null;
+    const details = data?.details || data?.message || null;
+    if (err && details) return `${err}: ${details}`;
+    return err || details || null;
   } catch {
     return res.statusText || null;
   }

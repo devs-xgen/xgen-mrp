@@ -33,7 +33,8 @@ function parseDatabaseUrl(databaseUrl?: string) {
   const user = decodeURIComponent(url.username);
   const password = decodeURIComponent(url.password);
   const database = url.pathname.replace(/^\//, "");
-  return { host, port, user, password, database };
+  const sslmode = url.searchParams.get("sslmode") || undefined;
+  return { host, port, user, password, database, sslmode };
 }
 
 export async function POST(req: NextRequest) {
@@ -85,7 +86,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const pgDumpPath = process.env.PG_DUMP_PATH || "pg_dump"; // allow override
+  // Resolve pg_dump path; strip surrounding quotes if present (common on Windows .env)
+  const pgDumpPath = (process.env.PG_DUMP_PATH || "pg_dump").replace(/^\s*"|"\s*$/g, "");
 
   const args: string[] = [
     "-h",
@@ -110,55 +112,108 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Create a web ReadableStream bridged from child stdout
+  // Create a web ReadableStream only after we receive the first stdout chunk from pg_dump.
+  // If pg_dump exits before producing output, return an error response instead of a 200 with an empty file.
   return await new Promise<Response>((resolve) => {
+    let resolved = false;
+    let started = false; // whether stdout produced any data
     let stderr = "";
 
     const child = spawn(pgDumpPath, args, {
       env: {
         ...process.env,
         PGPASSWORD: dbConfig.password,
+        ...(dbConfig.sslmode ? { PGSSLMODE: dbConfig.sslmode } : {}),
       },
       windowsHide: true,
     });
 
-    child.on("error", (error) => {
-      console.error("[DB_BACKUP] spawn error", {
+    const finishWithError = (code: number | null) => {
+      if (resolved) return;
+      resolved = true;
+      console.error("[DB_BACKUP] failed", {
         userId: session.user.id,
         email: session.user.email,
         ip,
-        error: error.message,
+        code,
+        stderr,
+        pgDumpPath,
       });
       resolve(
         new Response(
           JSON.stringify({
-            error:
-              "Failed to execute pg_dump. Ensure PostgreSQL client tools (pg_dump) are installed or configure PG_DUMP_PATH.",
-            details: error.message,
+            error: `pg_dump failed${code !== null ? ` (code ${code})` : ""}`,
+            details: stderr.trim() || undefined,
           }),
           { status: 500, headers: { "Content-Type": "application/json" } }
         )
       );
+    };
+
+    child.on("error", (error) => {
+      stderr += `${error.message}`;
+      finishWithError(null);
     });
 
     child.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
     });
 
-    const stream = new ReadableStream<Uint8Array>({
-      start(controller) {
-        child.stdout.on("data", (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
-        child.stdout.on("end", () => controller.close());
-        child.stdout.on("error", (err: Error) => controller.error(err));
-      },
-      cancel() {
-        try {
-          child.kill("SIGTERM");
-        } catch {}
-      },
+    // When we get the first stdout chunk, start streaming the response.
+    child.stdout.once("data", (first: Buffer) => {
+      if (resolved) return;
+      started = true;
+
+      const now = new Date();
+      const ts = now
+        .toISOString()
+        .replace(/[:.]/g, "-")
+        .replace("T", "_")
+        .replace("Z", "");
+      const scope = tables && tables.length > 0 ? "selected" : "full";
+      const filename = `db-backup-${scope}-${ts}.sql`;
+
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          // write the first chunk immediately, then pipe the rest
+          controller.enqueue(new Uint8Array(first));
+          child.stdout.on("data", (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
+          child.stdout.on("end", () => controller.close());
+          child.stdout.on("error", (err: Error) => controller.error(err));
+        },
+        cancel() {
+          try {
+            child.kill("SIGTERM");
+          } catch {}
+        },
+      });
+
+      resolved = true;
+      console.info("[DB_BACKUP] started streaming", {
+        userId: session.user.id,
+        email: session.user.email,
+        ip,
+        scope,
+      });
+
+      resolve(
+        new Response(stream, {
+          headers: {
+            "Content-Type": "application/sql; charset=utf-8",
+            "Content-Disposition": `attachment; filename="${filename}"`,
+            "X-Accel-Buffering": "no",
+            "Cache-Control": "no-store",
+          },
+        })
+      );
     });
 
     child.on("close", (code) => {
+      if (!started) {
+        // No stdout produced -> likely an error. Return error so client doesn't download a 0-byte file.
+        return finishWithError(code);
+      }
+      // If streaming already started, the response is committed. Just log outcome.
       if (code === 0) {
         console.info("[DB_BACKUP] completed", {
           userId: session.user.id,
@@ -167,7 +222,7 @@ export async function POST(req: NextRequest) {
           scope: tables && tables.length > 0 ? "selected" : "full",
         });
       } else {
-        console.error("[DB_BACKUP] failed", {
+        console.error("[DB_BACKUP] completed with errors after streaming", {
           userId: session.user.id,
           email: session.user.email,
           ip,
@@ -175,36 +230,6 @@ export async function POST(req: NextRequest) {
           stderr,
         });
       }
-      if (code !== 0 && !stderr) {
-        // If failed very early and no stream started, return error
-        resolve(
-          new Response(
-            JSON.stringify({ error: `pg_dump exited with code ${code}` }),
-            { status: 500, headers: { "Content-Type": "application/json" } }
-          )
-        );
-      }
-      // Otherwise, we already resolved with the stream response below
     });
-
-    const now = new Date();
-    const ts = now
-      .toISOString()
-      .replace(/[:.]/g, "-")
-      .replace("T", "_")
-      .replace("Z", "");
-    const scope = tables && tables.length > 0 ? "selected" : "full";
-    const filename = `db-backup-${scope}-${ts}.sql`;
-
-    resolve(
-      new Response(stream, {
-        headers: {
-          "Content-Type": "application/sql; charset=utf-8",
-          "Content-Disposition": `attachment; filename="${filename}"`,
-          "X-Accel-Buffering": "no",
-          "Cache-Control": "no-store",
-        },
-      })
-    );
   });
 }
