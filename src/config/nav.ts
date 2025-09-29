@@ -459,6 +459,18 @@ export const superAdminNavItems: NavItem[] = [
     description: "Manage users across all tenants",
   },
   {
+    icon: CreditCard,
+    label: "Billing",
+    items: [
+      {
+        icon: FileText,
+        label: "Billing Statements",
+        href: "/superadmin/billing/billing-statements",
+        description: "Manage billing statements across organizations",
+      },
+    ],
+  },
+  {
     icon: FileSpreadsheet,
     label: "Export Data",
     href: "/superadmin/export-data",
