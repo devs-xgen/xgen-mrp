@@ -17,6 +17,7 @@ import {
   Clock,
   AlertTriangle,
   Clipboard,
+  FileSpreadsheet,
   Timer,
   Hammer,
   LineChart,
@@ -456,6 +457,12 @@ export const superAdminNavItems: NavItem[] = [
     label: "Global Users",
     href: "/superadmin/users",
     description: "Manage users across all tenants",
+  },
+  {
+    icon: FileSpreadsheet,
+    label: "Export Data",
+    href: "/superadmin/export-data",
+    description: "Generate Excel exports for any table",
   },
 ];
 
