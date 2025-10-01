@@ -461,12 +461,31 @@ export const superAdminNavItems: NavItem[] = [
   {
     icon: CreditCard,
     label: "Billing",
+    href: "/superadmin/billing",
     items: [
       {
         icon: FileText,
         label: "Billing Statements",
         href: "/superadmin/billing/billing-statements",
         description: "Manage billing statements across organizations",
+      },
+      {
+        icon: Receipt,
+        label: "Sales Invoices",
+        href: "/superadmin/billing/sales-invoices",
+        description: "Create and manage sales invoices",
+      },
+      {
+        icon: Truck,
+        label: "Delivery Receipts",
+        href: "/superadmin/billing/delivery-receipts",
+        description: "Track delivery confirmations",
+      },
+      {
+        icon: TrendingUp,
+        label: "Billing Reports",
+        href: "/superadmin/billing/billing-reports",
+        description: "Sales analytics and reports",
       },
     ],
   },
