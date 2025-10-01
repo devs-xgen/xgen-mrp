@@ -5909,21 +5909,123 @@ export async function updateProductionOrderStatus(productionOrderId: string, sta
 
     // If completing production, increase product stock and update completion fields
     if (status === "COMPLETED" && oldStatus !== "COMPLETED") {
-      await prisma.product.update({
-        where: { id: currentOrder.productId },
-        data: {
-          currentStock: currentOrder.product.currentStock + productionQty,
-        },
+      // 🔧 FIX: Use transaction to ensure all stock updates happen atomically
+      await prisma.$transaction(async (tx) => {
+        // 1. Update main product stock
+        await tx.product.update({
+          where: { id: currentOrder.productId },
+          data: {
+            currentStock: currentOrder.product.currentStock + productionQty,
+          },
+        })
+
+        // 2. 🆕 FIX: Update product variant stock if this order is for a specific variant
+        if (currentOrder.productVariantId) {
+          const variant = await tx.productVariant.findUnique({
+            where: { id: currentOrder.productVariantId },
+            select: { id: true, currentStock: true, displayName: true },
+          })
+
+          if (variant) {
+            await tx.productVariant.update({
+              where: { id: currentOrder.productVariantId },
+              data: {
+                currentStock: variant.currentStock + productionQty,
+              },
+            })
+
+            // Log variant stock increment
+            try {
+              await tx.activityLog.create({
+                data: {
+                  type: "PRODUCT_VARIANT_STOCK_INCREMENT",
+                  userId: session.user.id,
+                  details: {
+                    productVariantId: currentOrder.productVariantId,
+                    variantDisplayName: variant.displayName,
+                    productId: currentOrder.productId,
+                    productName: currentOrder.product.name,
+                    change: productionQty,
+                    reason: `Production order ${productionOrderId} completed`,
+                  },
+                },
+              })
+            } catch (logError) {
+              console.error("Failed to create variant stock increment activity log:", logError)
+            }
+          }
+        }
+
+        // 3. 🆕 FIX: Consume materials from stock (reduce currentStock and committedStock)
+        const bomEntries = await tx.productionBOM.findMany({
+          where: { productionOrderId },
+          include: {
+            material: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                currentStock: true,
+                committedStock: true,
+              },
+            },
+          },
+        })
+
+        // Process material consumption
+        for (const bomEntry of bomEntries) {
+          const quantityToConsume = Math.ceil(Number(bomEntry.quantityNeeded))
+          const material = bomEntry.material
+
+          // Calculate new stock levels
+          const newCurrentStock = Math.max(0, material.currentStock - quantityToConsume)
+          const newCommittedStock = Math.max(0, material.committedStock - quantityToConsume)
+          const newAvailableStock = newCurrentStock - newCommittedStock
+
+          await tx.material.update({
+            where: { id: bomEntry.materialId },
+            data: {
+              currentStock: newCurrentStock,
+              committedStock: newCommittedStock,
+              availableStock: newAvailableStock,
+            },
+          })
+
+          // Log material consumption
+          try {
+            await tx.activityLog.create({
+              data: {
+                type: "MATERIAL_CONSUMED",
+                userId: session.user.id,
+                details: {
+                  materialId: bomEntry.materialId,
+                  materialName: material.name,
+                  materialSku: material.sku,
+                  quantityConsumed: quantityToConsume,
+                  previousStock: material.currentStock,
+                  newStock: newCurrentStock,
+                  productionOrderId,
+                  productName: currentOrder.product.name,
+                  reason: `Material consumed for production order ${productionOrderId}`,
+                },
+              },
+            })
+          } catch (logError) {
+            console.error("Failed to create material consumption activity log:", logError)
+          }
+        }
+
+        // 4. Update production order completion fields
+        await tx.productionOrder.update({
+          where: { id: productionOrderId },
+          data: {
+            completedQuantity: productionQty,
+            completedAt: new Date(),
+          },
+        })
       })
-      // Update production order completion fields
-      await prisma.productionOrder.update({
-        where: { id: productionOrderId },
-        data: {
-          completedQuantity: productionQty,
-          completedAt: new Date(),
-        },
-      })
-      // Log product stock increment
+
+      // Log product stock increment (outside transaction for non-critical logging)
       try {
         await prisma.activityLog.create({
           data: {
