@@ -27,6 +27,7 @@ import {
   TrendingUp,
   CreditCard,
   MessageCircle,
+  Shield,
 } from "lucide-react";
 
 interface NavItem {
@@ -451,6 +452,12 @@ export const superAdminNavItems: NavItem[] = [
     label: "Materials",
     href: "/superadmin/materials",
     description: "Oversee global material inventory",
+  },
+  {
+    icon: Shield,
+    label: "Production",
+    href: "/superadmin/production",
+    description: "Override and manage all production orders with full system access",
   },
   {
     icon: Users,
