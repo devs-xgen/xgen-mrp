@@ -3,4 +3,4 @@ import { authOptions } from "@/lib/auth"
 
 // Create and export the route handlers
 const handler = NextAuth(authOptions)
-export { handler as GET, handler as POST }
+export { handler as GET, handler as POST, authOptions }

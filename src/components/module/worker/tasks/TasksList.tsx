@@ -25,8 +25,29 @@ export function TasksList({ tasks, workflowDataMap }: TasksListProps) {
   const inactiveTasks = tasks.filter((task) => task.isActive === false);
 
   // Get tasks for current tab
+  // const getFilteredTasks = () => {
+  //   switch (activeTab) {
+  //     case "not-started":
+  //       return notStarted;
+  //     case "in-progress":
+  //       return inProgress;
+  //     case "completed":
+  //       return completed;
+  //     case "active":
+  //       return activeTasks;
+  //     case "inactive":
+  //       return inactiveTasks;
+  //     default:
+  //       return tasks;
+  //   }
+  // };
+
+  
+  // Get tasks for current tab
   const getFilteredTasks = () => {
     switch (activeTab) {
+      case "all":
+        return tasks;
       case "not-started":
         return notStarted;
       case "in-progress":
