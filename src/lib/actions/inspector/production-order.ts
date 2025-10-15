@@ -849,39 +849,58 @@ export async function updateProductionOrderStatus(
 
     // If completing production, increase product stock and update completion fields
     if (status === "COMPLETED" && oldStatus !== "COMPLETED") {
-      await prisma.product.update({
-        where: { id: currentOrder.productId },
-        data: {
-          currentStock: currentOrder.product.currentStock + productionQty,
-        },
-      })
-      // Update production order completion fields
-      await prisma.productionOrder.update({
-        where: { id: productionOrderId },
-        data: {
-          completedQuantity: productionQty,
-          completedAt: new Date(),
-        },
-      })
-      // Log product stock increment
-      try {
-        await prisma.activityLog.create({
+      // Use transaction to ensure atomicity
+      await prisma.$transaction(async (tx) => {
+        // Update product stock
+        const updatedProduct = await tx.product.update({
+          where: { id: currentOrder.productId },
           data: {
-            type: "PRODUCT_STOCK_INCREMENT",
-            userId: session.user.id,
-            details: {
-              productId: currentOrder.productId,
-              productName: currentOrder.product.name,
-              change: productionQty,
-              reason: `Production order ${productionOrderId} completed`,
-              notes: notes || null,
-              actionTaken: actionTaken || null, // Include actionTaken
-            },
+            currentStock: currentOrder.product.currentStock + productionQty,
           },
         })
-      } catch (logError) {
-        console.error("Failed to create product stock increment activity log:", logError)
-      }
+
+        // Update production order completion fields
+        await tx.productionOrder.update({
+          where: { id: productionOrderId },
+          data: {
+            completedQuantity: productionQty,
+            completedAt: new Date(),
+          },
+        })
+
+        // Create inventory movement for product addition
+        await tx.inventoryMovement.create({
+          data: {
+            productId: currentOrder.productId,
+            movementType: "PRODUCTION_COMPLETE",
+            quantity: productionQty,
+            previousStock: currentOrder.product.currentStock,
+            newStock: updatedProduct.currentStock,
+            referenceId: productionOrderId,
+            notes: `Production completed: ${currentOrder.product.name}`,
+          },
+        })
+
+        // Log product stock increment
+        try {
+          await tx.activityLog.create({
+            data: {
+              type: "PRODUCT_STOCK_INCREMENT",
+              userId: session.user.id,
+              details: {
+                productId: currentOrder.productId,
+                productName: currentOrder.product.name,
+                change: productionQty,
+                reason: `Production order ${productionOrderId} completed`,
+                notes: notes || null,
+                actionTaken: actionTaken || null, // Include actionTaken
+              },
+            },
+          })
+        } catch (logError) {
+          console.error("Failed to create product stock increment activity log:", logError)
+        }
+      })
     }
 
     // Update the production order status

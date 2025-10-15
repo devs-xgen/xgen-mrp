@@ -1,16 +1,17 @@
 import { Metadata } from "next";
 import { getAllProducts, getCategories } from "@/lib/actions/product";
 import ProductsPageClient from "@/components/module/admin/products/products-page-client";
-import { 
+import {
   PageContainer,
-  PageHeader, 
+  PageHeader,
   PageHeaderMain,
   PageTitle,
   PageDescription,
   PageHeaderActions,
-  SectionCard 
+  SectionCard
 } from "@/components/shared/page-layout";
 import { ProductCategoryDialog } from "@/components/module/admin/products/product-category-dialog";
+import { InventoryFlowInfoSheet } from "@/components/module/admin/products/inventory-flow-info-sheet";
 import { revalidatePath } from "next/cache";
 import { Button } from "@/components/ui/button";
 
@@ -41,6 +42,7 @@ export default async function ProductsPage() {
           </PageDescription>
         </PageHeaderMain>
         <PageHeaderActions>
+          <InventoryFlowInfoSheet />
           <Button variant="outline" size="sm" asChild>
             <a href="/admin/products/archived">View Archived</a>
           </Button>
