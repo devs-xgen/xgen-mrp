@@ -14,6 +14,7 @@ import {
   MRPActionResponse
 } from "@/types/admin/mrp"
 import { getBOMForProduct } from "@/lib/actions/bom"
+import { getCombinedVariantBOM } from "@/lib/actions/variant-bom"
 
 // ==============================================
 // MATERIAL AVAILABILITY FUNCTIONS
@@ -65,15 +66,22 @@ export async function checkMaterialAvailability(
 
 /**
  * Check availability of all materials required for a production order
+ * Supports both base products and product variants
  */
 export async function checkProductionOrderMaterialRequirements(
   productId: string,
-  quantity: number
+  quantity: number,
+  productVariantId?: string
 ): Promise<ProductionOrderMaterialRequirements> {
   try {
-    // Get BOM for the product
-    const bom = await getBOMForProduct(productId)
-    
+    // Get BOM - use variant BOM if variant is specified, otherwise use base product BOM
+    let bom: any
+    if (productVariantId) {
+      bom = await getCombinedVariantBOM(productVariantId)
+    } else {
+      bom = await getBOMForProduct(productId)
+    }
+
     if (!bom.entries || bom.entries.length === 0) {
       return {
         productionOrderId: '', // Will be set when creating actual order
@@ -88,26 +96,37 @@ export async function checkProductionOrderMaterialRequirements(
     let allMaterialsAvailable = true
 
     for (const bomEntry of bom.entries) {
-      const quantityNeeded = bomEntry.quantityNeeded * quantity
-      const wasteQuantity = (quantityNeeded * bomEntry.wastePercentage) / 100
+      // Handle both BOM and variant BOM structure
+      const quantityPerUnit = typeof bomEntry.quantityNeeded === 'number'
+        ? bomEntry.quantityNeeded
+        : Number(bomEntry.quantityNeeded)
+      const wastePercentage = typeof bomEntry.wastePercentage === 'number'
+        ? bomEntry.wastePercentage
+        : Number(bomEntry.wastePercentage)
+      const costPerUnit = bomEntry.material?.costPerUnit
+        ? Number(bomEntry.material.costPerUnit)
+        : Number(bomEntry.costPerUnit)
+
+      const quantityNeeded = quantityPerUnit * quantity
+      const wasteQuantity = (quantityNeeded * wastePercentage) / 100
       const totalQuantityNeeded = quantityNeeded + wasteQuantity
 
       const availability = await checkMaterialAvailability(
-        bomEntry.materialId, 
+        bomEntry.materialId,
         totalQuantityNeeded
       )
 
-      const materialCost = totalQuantityNeeded * bomEntry.costPerUnit
+      const materialCost = totalQuantityNeeded * costPerUnit
       totalMaterialCost += materialCost
 
       materialRequirements.push({
         materialId: bomEntry.materialId,
-        materialName: bomEntry.materialName,
-        materialSku: bomEntry.materialSku,
+        materialName: bomEntry.material?.name || bomEntry.materialName,
+        materialSku: bomEntry.material?.sku || bomEntry.materialSku,
         quantityNeeded: totalQuantityNeeded,
         quantityAvailable: availability.availableStock,
         isAvailable: availability.isAvailable,
-        unitCost: bomEntry.costPerUnit,
+        unitCost: costPerUnit,
         totalCost: materialCost
       })
 
@@ -144,11 +163,12 @@ export async function reserveMaterialsForProduction(
       return { success: false, error: 'Unauthorized' }
     }
 
-    // Get production order details
+    // Get production order details including product variant
     const productionOrder = await prisma.productionOrder.findUnique({
       where: { id: productionOrderId },
       include: {
-        product: true
+        product: true,
+        productVariant: true
       }
     })
 
@@ -162,16 +182,17 @@ export async function reserveMaterialsForProduction(
     })
 
     if (existingReservations.length > 0) {
-      return { 
-        success: false, 
-        error: 'Materials are already reserved for this production order' 
+      return {
+        success: false,
+        error: 'Materials are already reserved for this production order'
       }
     }
 
-    // Get material requirements
+    // Get material requirements - use variant BOM if available, otherwise base product BOM
     const requirements = await checkProductionOrderMaterialRequirements(
       productionOrder.productId,
-      productionOrder.quantity
+      productionOrder.quantity,
+      productionOrder.productVariantId || undefined
     )
 
     if (!requirements.allMaterialsAvailable) {
