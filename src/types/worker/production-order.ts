@@ -1,4 +1,4 @@
-// src/types/admin/production-order.ts
+// src/types/worker/production-order.ts
 import { Status, Priority } from "@prisma/client"
 
 export interface MaterialRequestItem {
@@ -130,6 +130,7 @@ export interface UpdateProductionOrderInput extends Partial<CreateProductionOrde
 }
 
 export interface ProductionOrderColumn {
+  [x: string]: any;
   id: string
   productName: string
   productSku: string
