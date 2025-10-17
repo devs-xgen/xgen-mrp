@@ -1,37 +1,46 @@
 // src/lib/actions/worker/task-worker.ts
+"use server"; 
 
 import prisma from "@/lib/db";
-import { revalidatePath } from "next/cache"; // Import for cache invalidation
-// 🚨 IMPORTANT: You MUST import your server-side session utility here.
-// ----------------------------------------------------------------------
-// Option 1: If using NextAuth v4 (with App Router):
+import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // 👈 ADJUST THIS PATH
-
-// Option 2: If using NextAuth v5 (Auth.js), replace the above two lines with:
-// import { auth } from "@/auth"; // 👈 ADJUST THIS PATH
-// ----------------------------------------------------------------------
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 // --- Helper Types ---
 type OperationStatus = "PENDING" | "STARTED" | "COMPLETED" | "FAILED";
 
+// Define the shape of the raw Operation data from Prisma (only fields needed for transformation)
+interface RawOperation {
+    id: string;
+    name: string;
+    status: OperationStatus;
+    startTime: Date | null;
+    endTime: Date | null;
+    // Include the relations for type safety if needed, but omitted here for simplicity
+}
+
+// Define the shape expected by the frontend component
+interface TransformedPhase {
+    id: string;
+    name: string;
+    isCompleted: boolean;
+    startDate: string | null;
+    completionDate: string | null;
+    status: OperationStatus; // Added status for detailed display in component
+}
+
+
 /**
- * 🛠️ FIX #1: Implements the actual authentication logic using NextAuth.
- * This function fetches the current user's session and extracts the userId.
+ * Implements the actual authentication logic using NextAuth.
  */
 async function auth(): Promise<{ userId: string }> {
-    // Example using getServerSession (NextAuth v4):
     const session = await getServerSession(authOptions); 
     
-    // Example using Auth.js (NextAuth v5) if you switched:
-    // const session = await auth(); 
-
     if (!session || !session.user || !session.user.id) {
         console.warn("Authentication failed: No active worker session found.");
         throw new Error("UNAUTHORIZED"); 
     }
     
-    // Assuming your session user object has an 'id' field which matches your Prisma User ID.
     return { userId: session.user.id as string }; 
 }
 
@@ -50,14 +59,12 @@ async function getWorkerWorkCenterIds(userId: string): Promise<string[]> {
  * Get production order IDs that have operations in work centers assigned to the current worker
  */
 async function getWorkerProductionOrderIds(userId: string) {
-    // Find the user's work centers
     const workCenterIds = await getWorkerWorkCenterIds(userId);
 
     if (workCenterIds.length === 0) {
         return [];
     }
 
-    // Get unique production order IDs from operations in these work centers
     const operations = await prisma.operation.findMany({
         where: {
             workCenterId: {
@@ -74,6 +81,155 @@ async function getWorkerProductionOrderIds(userId: string) {
 }
 
 /**
+ * 🎯 CORE TRANSFORMATION: Maps raw Operation data to the expected Phase structure.
+ */
+function transformOperationsToPhases(operations: any[]): TransformedPhase[] {
+    // Assuming 'operations' here is the array returned by Prisma's query
+    return operations
+        .map(op => ({
+            id: op.id,
+            name: op.name,
+            // Operations are considered 'completed' if their status is COMPLETED or FAILED
+            isCompleted: op.status === "COMPLETED" || op.status === "FAILED", 
+            // Convert Dates to ISO strings (or keep as Date, but string is safer for props)
+            startDate: op.startTime ? op.startTime.toISOString() : null,
+            completionDate: op.endTime ? op.endTime.toISOString() : null,
+            status: op.status, // Pass the detailed status
+        }))
+        // Ensure steps are ordered, potentially by a sequence number if not by startTime
+        .sort((a, b) => {
+            if (a.startDate && b.startDate) return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+            if (a.startDate) return -1; // Put started operations first
+            if (b.startDate) return 1;
+            return 0; // Maintain existing order if neither has a start date
+        });
+}
+
+
+/**
+ * Helper function to handle Prisma Decimal type conversion (as provided previously)
+ */
+function sanitizeProductionOrderData(data: any): any {
+    if (!data || typeof data !== 'object') return data;
+
+    if (Array.isArray(data)) {
+        return data.map(item => sanitizeProductionOrderData(item));
+    }
+
+    const cleanData: Record<string, any> = {};
+    for (const key in data) {
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+            const value = data[key];
+
+            // Specific check for Prisma Decimal type { d: [number, number, number, number], e: number, s: number }
+            if (value && typeof value === 'object' && 'd' in value && Array.isArray(value.d)) {
+                cleanData[key] = Number(value.toString());
+            } else if (value instanceof Date) {
+                cleanData[key] = value;
+            } else if (typeof value === 'object' && value !== null && key !== 'operations') {
+                // Recursively clean objects, but handle 'operations' separately later
+                cleanData[key] = sanitizeProductionOrderData(value);
+            } else {
+                cleanData[key] = value;
+            }
+        }
+    }
+    return cleanData;
+}
+
+
+/**
+ * Get a single production order with details if worker has access
+ * ⭐ UPDATED: Now performs the operations-to-phases transformation.
+ */
+export async function getWorkerProductionOrderById(orderId: string) {
+    const { userId } = await auth();
+
+    if (!userId) {
+        throw new Error("Unauthorized");
+    }
+
+    try {
+        const productionOrderIds = await getWorkerProductionOrderIds(userId);
+
+        if (!productionOrderIds.includes(orderId)) {
+            throw new Error("Access denied: Production order not found in your assigned work centers");
+        }
+
+        const workCenterIds = await getWorkerWorkCenterIds(userId);
+
+        const order = await prisma.productionOrder.findUnique({
+            where: {
+                id: orderId,
+            },
+            include: {
+                product: { select: { id: true, name: true, sku: true, description: true } },
+                productVariant: { select: { id: true, sku: true, displayName: true, sizeName: true, colorName: true } },
+                
+                // 🚨 FIX IS HERE: Correcting the selection on CustomerOrder
+                customerOrder: {
+                    select: {
+                        id: true,
+                        orderNumber: true,
+                        // Assuming CustomerOrder has a relation named 'customer'
+                        customer: { 
+                            select: {
+                                name: true, // Assuming the customer's name field is 'name'
+                            }
+                        },
+                        // Removed the invalid 'customerName' field
+                    },
+                },
+                
+                operations: {
+                    // ... (rest of the operations include block remains the same)
+                    include: {
+                        workCenter: { 
+                            include: { userAssignments: { include: { user: { select: { id: true, email: true } } } } },
+                        },
+                        assignedTo: { select: { id: true, email: true } },
+                        performedBy: { select: { id: true, email: true } },
+                    },
+                    orderBy: {
+                        startTime: "asc",
+                    },
+                },
+                
+                qualityChecks: { select: { id: true, checkDate: true, status: true, defectsFound: true, notes: true }, orderBy: { checkDate: "desc" } },
+                productionHistoryLogs: { 
+                    include: { user: { select: { id: true, email: true } } }, 
+                    orderBy: { timestamp: "desc" }, 
+                    take: 10 
+                },
+            },
+        });
+
+        if (!order) {
+            throw new Error("Production order not found");
+        }
+
+        // 1. Sanitize the raw order data
+        const sanitizedOrder: any = sanitizeProductionOrderData(order); 
+
+        // 2. Transform the 'operations' array into 'productionPhases'
+        const productionPhases = transformOperationsToPhases(sanitizedOrder.operations);
+        
+        // 3. Return the final order object with the correctly named array
+        return {
+            ...sanitizedOrder,
+            productionPhases: productionPhases,
+            operations: undefined, 
+        };
+
+    } catch (error) {
+        console.error("Error fetching worker production order:", error);
+        // The original error handling throws a generic message, which is fine
+        throw new Error("Failed to fetch production order");
+    }
+}
+
+
+/**
  * Get production orders that have operations in work centers assigned to the current worker
  */
 export async function getWorkerProductionOrders() {
@@ -84,17 +240,14 @@ export async function getWorkerProductionOrders() {
     }
 
     try {
-        // Step 1: Get production order IDs
         const productionOrderIds = await getWorkerProductionOrderIds(userId);
 
         if (productionOrderIds.length === 0) {
             return [];
         }
 
-        // Step 2: Get user's work center IDs for filtering operations
         const workCenterIds = await getWorkerWorkCenterIds(userId);
 
-        // Step 3: Fetch full production order details
         const orders = await prisma.productionOrder.findMany({
             where: {
                 id: {
@@ -132,21 +285,26 @@ export async function getWorkerProductionOrders() {
                     },
                     include: {
                         workCenter: {
-                            select: {
-                                id: true,
-                                name: true,
-                                description: true,
+                            include: {
+                                userAssignments: {
+                                    include: {
+                                        user: {
+                                            select: {
+                                                id: true,
+                                                email: true,
+                                            },
+                                        },
+                                    },
+                                },
                             },
                         },
                         assignedTo: {
-                            // 🚨 FIX #2: Removed firstName and lastName, added email
                             select: {
                                 id: true,
                                 email: true, 
                             },
                         },
                         performedBy: {
-                            // 🚨 FIX #2: Removed firstName and lastName, added email
                             select: {
                                 id: true,
                                 email: true,
@@ -167,6 +325,20 @@ export async function getWorkerProductionOrders() {
                     orderBy: {
                         checkDate: "desc",
                     },
+                },
+                productionHistoryLogs: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                email: true,
+                            },
+                        },
+                    },
+                    orderBy: {
+                        timestamp: "desc",
+                    },
+                    take: 10,
                 },
             },
             orderBy: [
@@ -179,187 +351,27 @@ export async function getWorkerProductionOrders() {
         return orders;
     } catch (error) {
         console.error("Error fetching worker production orders:", error);
-        // The catch block re-throws a general error, which is caught by the page component
         throw new Error("Failed to fetch production orders");
     }
 }
 
-function sanitizeProductionOrderData(data: any): any {
-    if (!data || typeof data !== 'object') return data;
-
-    // Handle array case
-    if (Array.isArray(data)) {
-        return data.map(item => sanitizeProductionOrderData(item));
-    }
-
-    // Handle object case
-    const cleanData: Record<string, any> = {};
-    for (const key in data) {
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-            const value = data[key];
-
-            // Check if the value is a Decimal object (Prisma client exposes it via .d property)
-            // We use value.d to check for the internal Decimal structure
-            if (value && typeof value === 'object' && 'd' in value && Array.isArray(value.d)) {
-                // Convert Decimal to standard number (using toString() then Number() is safe)
-                cleanData[key] = Number(value.toString());
-            } else if (value instanceof Date) {
-                // Keep Date objects as they serialize correctly
-                cleanData[key] = value;
-            } else if (typeof value === 'object' && value !== null) {
-                // Recursively sanitize nested objects/arrays
-                cleanData[key] = sanitizeProductionOrderData(value);
-            } else {
-                // Keep primitive types (string, number, boolean, null)
-                cleanData[key] = value;
-            }
-        }
-    }
-    return cleanData;
-}
-// ------------------------------------------------------------------
-
-
 /**
- * Get a single production order with details if worker has access
- */
-export async function getWorkerProductionOrderById(orderId: string) {
-    // Assuming auth() is defined elsewhere and returns { userId: string }
-    const { userId } = await auth();
-
-    if (!userId) {
-        throw new Error("Unauthorized");
-    }
-
-    try {
-        // Step 1: Check if this production order ID is accessible to the worker
-        const productionOrderIds = await getWorkerProductionOrderIds(userId);
-
-        if (!productionOrderIds.includes(orderId)) {
-            throw new Error("Access denied: Production order not found in your assigned work centers");
-        }
-
-        // Step 2: Get user's work center IDs for filtering operations
-        const workCenterIds = await getWorkerWorkCenterIds(userId);
-
-        // Step 3: Fetch the production order with full details
-        const order = await prisma.productionOrder.findUnique({
-            where: {
-                id: orderId,
-            },
-            include: {
-                product: {
-                    select: {
-                        id: true,
-                        name: true,
-                        sku: true,
-                        description: true,
-                    },
-                },
-                productVariant: {
-                    select: {
-                        id: true,
-                        sku: true,
-                        displayName: true,
-                        sizeName: true,
-                        colorName: true,
-                    },
-                },
-                customerOrder: {
-                    select: {
-                        id: true,
-                        orderNumber: true,
-                        customerName: true,
-                    },
-                },
-                operations: {
-                    where: {
-                        workCenterId: {
-                            in: workCenterIds,
-                        },
-                    },
-                    include: {
-                        workCenter: {
-                            select: {
-                                id: true,
-                                name: true,
-                                description: true,
-                                capacityPerHour: true,
-                            },
-                        },
-                        assignedTo: {
-                            // Already fixed to use 'email'
-                            select: {
-                                id: true,
-                                email: true,
-                            },
-                        },
-                        performedBy: {
-                            // Already fixed to use 'email'
-                            select: {
-                                id: true,
-                                email: true,
-                            },
-                        },
-                    },
-                    orderBy: {
-                        startTime: "asc",
-                    },
-                },
-                qualityChecks: {
-                    select: {
-                        id: true,
-                        checkDate: true,
-                        status: true,
-                        defectsFound: true,
-                        notes: true,
-                    },
-                    orderBy: {
-                        checkDate: "desc",
-                    },
-                },
-            },
-        });
-
-        if (!order) {
-            throw new Error("Production order not found");
-        }
-
-        // 🚀 FIX: Sanitize the order object to convert Decimals to numbers
-        return sanitizeProductionOrderData(order); 
-
-    } catch (error) {
-        console.error("Error fetching worker production order:", error);
-        throw new Error("Failed to fetch production order");
-    }
-}
-
-/**
- * ----------------------------------------------------------------
- * 🎯 UPDATED SERVER ACTION: Update Operation Status
- * ----------------------------------------------------------------
- * Allows a worker to start, complete, or fail an operation they are authorized to perform.
- * Now includes optional 'notes' for logging information during the process.
- * * @param operationId - The ID of the operation to update.
- * @param newStatus - The status to set (STARTED, COMPLETED, FAILED).
- * @param actualQuantity - The quantity produced, required for COMPLETED/FAILED.
- * @param notes - Optional text notes to save with the operation update.
+ * Update Operation Status
  */
 export async function updateOperationStatus({
     operationId,
     newStatus,
     actualQuantity,
-    notes, // 💡 NEW: Accept optional notes
+    notes,
 }: {
     operationId: string;
     newStatus: OperationStatus;
     actualQuantity?: number;
-    notes?: string; // 💡 NEW: Notes parameter
+    notes?: string;
 }) {
-    // 1. Authenticate and get worker ID
     const { userId } = await auth();
 
-    // 2. Input Validation (Checks quantity for completion/failure)
+    // 1. Initial validation for COMPLETED/FAILED
     if ((newStatus === "COMPLETED" || newStatus === "FAILED") && (actualQuantity === undefined || actualQuantity === null)) {
         return {
             error: "Actual quantity is required when completing or failing an operation.",
@@ -367,10 +379,15 @@ export async function updateOperationStatus({
     }
     
     try {
-        // 3. Find operation and check authorization
         const operation = await prisma.operation.findUnique({
             where: { id: operationId },
-            select: { id: true, workCenterId: true, productionOrderId: true, status: true },
+            select: { 
+                id: true, 
+                workCenterId: true, 
+                productionOrderId: true, 
+                status: true,
+                productionOrder: { select: { quantity: true } } // Get order quantity for log context
+            },
         });
 
         if (!operation) {
@@ -383,52 +400,77 @@ export async function updateOperationStatus({
             return { error: "Access denied: You are not authorized to perform operations at this work center." };
         }
         
-        // 4. Update data based on status transition and include notes
-        let updateData: any = {
-            status: newStatus,
-            performedById: userId, // Record who performed the action
-        };
-        
-        // 💡 NEW: Add notes if provided
-        if (notes !== undefined && notes !== null) {
-            updateData.notes = notes; 
-        }
-
-
-        if (newStatus === "STARTED" && operation.status !== "STARTED") {
-            // Set start time only if transitioning from PENDING/null
-            updateData.startTime = new Date();
-        }
-        
-        if (newStatus === "COMPLETED" || newStatus === "FAILED") {
-            // Set end time and actual quantity for finished operations
-            updateData.endTime = new Date();
-            if (actualQuantity !== undefined && actualQuantity !== null) {
-                // Ensure quantity is not less than zero
-                updateData.actualQuantity = Math.max(0, actualQuantity); 
-            }
-        }
-
-        // Prevent invalid transitions (e.g., re-starting a finished job)
+        // Prevent starting an already finished operation
         if (newStatus === "STARTED" && (operation.status === "COMPLETED" || operation.status === "FAILED")) {
             return { error: "Cannot start an operation that is already finished." };
         }
 
-        // 5. Perform the update
-        await prisma.operation.update({
-            where: { id: operationId },
-            data: updateData,
-        });
+        // --- Prepare Update Data ---
+        let updateData: any = {
+            status: newStatus,
+            performedById: userId,
+        };
+        
+        // This is correct: apply user notes to the operation itself
+        if (notes !== undefined && notes !== null) {
+            updateData.notes = notes; 
+        }
 
-        // 6. Revalidate the path to force a refresh on the page component
+        if (newStatus === "STARTED" && operation.status !== "STARTED") {
+            updateData.startTime = new Date();
+        }
+        
+        if (newStatus === "COMPLETED" || newStatus === "FAILED") {
+            updateData.endTime = new Date();
+            if (actualQuantity !== undefined && actualQuantity !== null) {
+                updateData.actualQuantity = Math.max(0, actualQuantity); 
+            }
+        }
+        
+        // --- Transaction: Update Operation and Create Log ---
+        
+        // Prepare Log Message details
+        const operationIdShort = operation.id.substring(0, 8);
+        const quantityInfo = (actualQuantity !== undefined && operation.productionOrder.quantity !== undefined)
+            ? `Qty: ${actualQuantity}/${operation.productionOrder.quantity}.` 
+            : '';
+            
+        // Prepare Log Notes
+        const logMessage = [
+            `Operation '${operationIdShort}...' status changed to ${newStatus}.`,
+            quantityInfo,
+            notes ? `User notes: "${notes}".` : ''
+        ].filter(Boolean).join(' ').trim();
+        
+        await prisma.$transaction([
+            // 1. Update the Operation
+            prisma.operation.update({
+                where: { id: operationId },
+                data: updateData,
+            }),
+
+            // 2. Create a Production History Log entry
+            prisma.productionOrderHistoryLog.create({
+                data: {
+                    productionOrderId: operation.productionOrderId,
+                    userId: userId,
+                    status: newStatus, // Log the new status
+                    changeType: `OPERATION_STATUS_UPDATE`,
+                    notes: logMessage, // Use the prepared, robust log message
+                },
+            }),
+        ]);
+        
+        // --- Revalidation ---
         revalidatePath(`/worker/tasks/${operation.productionOrderId}`);
-        revalidatePath(`/worker/tasks`); // Also revalidate the job list page
+        revalidatePath(`/worker/tasks`);
 
         return { success: true };
 
     } catch (error) {
         console.error("Error updating operation status:", error);
-        return { error: "Failed to update operation status due to a server error." };
+        // RETURN A GENERIC ERROR MESSAGE to the client component, but log the detailed error on the server.
+        return { error: "Failed to update operation status due to a server error." }; 
     }
 }
 
@@ -443,7 +485,6 @@ export async function getWorkerProductionOrderStats() {
     }
 
     try {
-        // Step 1: Get production order IDs
         const productionOrderIds = await getWorkerProductionOrderIds(userId);
 
         if (productionOrderIds.length === 0) {
@@ -455,7 +496,6 @@ export async function getWorkerProductionOrderStats() {
             };
         }
 
-        // Step 2: Get counts for each status
         const [total, active, completed, pending] = await Promise.all([
             prisma.productionOrder.count({
                 where: {

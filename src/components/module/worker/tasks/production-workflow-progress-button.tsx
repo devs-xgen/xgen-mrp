@@ -50,11 +50,6 @@ const getProductionPhaseStatus = async (productionOrderId: string): Promise<Phas
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 1000));
   
-  // Use productionOrderId to determine mock status for demo purposes
-  if (productionOrderId === "PO-ERROR-001") {
-    throw new Error("Simulated backend communication error.");
-  }
-  
   // Simulate common in-progress status
   return {
     workCenters: {
@@ -115,28 +110,6 @@ interface ProductionWorkflowWorkerProgressButtonProps {
   onRefresh?: () => Promise<void>;
   showOverrideControls?: boolean;
   className?: string;
-}
-
-interface PhaseStatus {
-  workCenters: {
-    allCompleted: boolean;
-    completedCount: number;
-    totalOperations: number;
-    completionPercentage: number;
-  };
-  inspections: {
-    allCompleted: boolean;
-    completedCount: number;
-    totalChecks: number;
-    completionPercentage: number;
-  };
-  canStartDelivery: boolean;
-  currentPhase: "work_centers" | "inspection" | "delivery" | "completed";
-  overallProgress: {
-    workCentersComplete: boolean;
-    inspectionsComplete: boolean;
-    readyForDelivery: boolean;
-  };
 }
 
 export const ProductionWorkflowWorkerProgressButton: React.FC<ProductionWorkflowWorkerProgressButtonProps> = ({
@@ -254,15 +227,16 @@ export const ProductionWorkflowWorkerProgressButton: React.FC<ProductionWorkflow
   };
 
   const getButtonVariant = () => {
-    if (error) return "destructive";
+    // Note: Since this mock only uses `Button`, we'll simplify variants to fit the context.
+    if (error) return "destructive"; // Needs proper styling for 'destructive'
     
     const overallProgress = calculateOverallProgress();
     const blockingIssues = getBlockingIssues();
     
-    if (overallProgress >= 99) return "default";
-    if (blockingIssues.length > 0) return "secondary";
+    if (overallProgress >= 99) return "default"; // Needs proper styling for 'default'
+    if (blockingIssues.length > 0) return "secondary"; // Needs proper styling for 'secondary'
     
-    return "outline";
+    return "outline"; // Needs proper styling for 'outline'
   };
 
   const getStatusText = () => {
@@ -314,6 +288,7 @@ export const ProductionWorkflowWorkerProgressButton: React.FC<ProductionWorkflow
           <TooltipTrigger>
             <Button
               variant={getButtonVariant()}
+              // Custom class names to simulate the intended look
               className={`h-auto p-3 flex flex-col items-start space-y-2 w-full min-w-[200px] bg-white border border-gray-300 shadow-sm hover:bg-gray-50 transition ${className}`}
               onClick={() => setDialogOpen(true)}
               disabled={loading}
