@@ -1,10 +1,10 @@
+import { getAuditLogStats } from "@/lib/actions/superadmin/audit-logs"
+import AuditLogsClient from "@/components/module/superadmin/audit-logs/audit-logs-client"
+
 export const dynamic = "force-dynamic";
 
-export default function SuperAdminAuditLogsPage() {
-  return (
-    <div className="p-6 space-y-2">
-      <h1 className="text-2xl font-semibold">Audit Logs</h1>
-      <p className="text-sm text-muted-foreground">View and search audit logs across the system. (Coming soon)</p>
-    </div>
-  );
+export default async function SuperAdminAuditLogsPage() {
+  const stats = await getAuditLogStats()
+
+  return <AuditLogsClient stats={stats} />
 }
