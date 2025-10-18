@@ -883,10 +883,10 @@ export function QualityChecks({
               Quality control checks and inspection results
             </CardDescription>
           </div>
-          <CreateQualityCheckDialog
+          {/* <CreateQualityCheckDialog
             productionOrderId={productionOrderId}
             onRefresh={onRefresh || handleQualityCheckCreated}
-          />
+          /> */}
         </div>
       </CardHeader>
       <CardContent className="pt-4">

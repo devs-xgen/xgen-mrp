@@ -215,11 +215,11 @@ export function OperationsManagement({
               </CardDescription>
             </div>
           </div>
-          <AddOperationDialog
+          {/* <AddOperationDialog
             workCenters={workCenters}
             productionOrderId={productionOrderId}
             onOperationAdded={onRefresh}
-          />
+          /> */}
         </div>
       </CardHeader>
       <CardContent className="p-0">
