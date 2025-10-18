@@ -233,6 +233,37 @@ export async function getProductionChangeTypes() {
 }
 
 /**
+ * Get all users for filtering
+ */
+export async function getAuditLogUsers() {
+  try {
+    await ensureSuperAdmin()
+
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        profile: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: {
+        email: "asc",
+      },
+    })
+
+    return users
+  } catch (error) {
+    console.error("Error fetching users:", error)
+    throw new Error("Failed to fetch users")
+  }
+}
+
+/**
  * Get audit log statistics
  */
 export async function getAuditLogStats() {

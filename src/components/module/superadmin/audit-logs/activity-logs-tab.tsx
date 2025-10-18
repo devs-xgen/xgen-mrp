@@ -21,13 +21,16 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Download, Search, Filter, ChevronLeft, ChevronRight, Eye } from "lucide-react"
-import { format } from "date-fns"
+import { Download, Search, Filter, ChevronLeft, ChevronRight, Eye, Copy, Check } from "lucide-react"
+import { format, subDays, startOfDay, endOfDay } from "date-fns"
 import {
   getActivityLogs,
   getActivityLogTypes,
+  getAuditLogUsers,
   exportActivityLogsCSV,
 } from "@/lib/actions/superadmin/audit-logs"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
   DialogContent,
@@ -37,14 +40,18 @@ import {
 } from "@/components/ui/dialog"
 
 export default function ActivityLogsTab() {
+  const { toast } = useToast()
   const [logs, setLogs] = useState<any[]>([])
   const [logTypes, setLogTypes] = useState<string[]>([])
+  const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [selectedLog, setSelectedLog] = useState<any | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
   // Filters
   const [typeFilter, setTypeFilter] = useState("")
+  const [userFilter, setUserFilter] = useState("")
   const [searchFilter, setSearchFilter] = useState("")
   const [fromDate, setFromDate] = useState("")
   const [toDate, setToDate] = useState("")
@@ -57,11 +64,12 @@ export default function ActivityLogsTab() {
 
   useEffect(() => {
     loadLogTypes()
+    loadUsers()
   }, [])
 
   useEffect(() => {
     loadLogs()
-  }, [currentPage, typeFilter, fromDate, toDate])
+  }, [currentPage, typeFilter, userFilter, fromDate, toDate])
 
   async function loadLogTypes() {
     try {
@@ -72,12 +80,22 @@ export default function ActivityLogsTab() {
     }
   }
 
+  async function loadUsers() {
+    try {
+      const userList = await getAuditLogUsers()
+      setUsers(userList)
+    } catch (error) {
+      console.error("Error loading users:", error)
+    }
+  }
+
   async function loadLogs() {
     try {
       setLoading(true)
       const filters: any = {}
 
       if (typeFilter) filters.type = typeFilter
+      if (userFilter) filters.userId = userFilter
       if (fromDate) filters.fromDate = new Date(fromDate)
       if (toDate) filters.toDate = new Date(toDate)
 
@@ -90,6 +108,40 @@ export default function ActivityLogsTab() {
     } finally {
       setLoading(false)
     }
+  }
+
+  function setDatePreset(preset: string) {
+    const now = new Date()
+    let from: Date
+    let to: Date = endOfDay(now)
+
+    switch (preset) {
+      case "today":
+        from = startOfDay(now)
+        break
+      case "week":
+        from = startOfDay(subDays(now, 7))
+        break
+      case "month":
+        from = startOfDay(subDays(now, 30))
+        break
+      default:
+        return
+    }
+
+    setFromDate(format(from, "yyyy-MM-dd"))
+    setToDate(format(to, "yyyy-MM-dd"))
+    setCurrentPage(1)
+  }
+
+  function copyToClipboard(text: string, id: string) {
+    navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    toast({
+      title: "Copied!",
+      description: "Log ID copied to clipboard",
+    })
+    setTimeout(() => setCopiedId(null), 2000)
   }
 
   async function handleExport() {
@@ -127,6 +179,7 @@ export default function ActivityLogsTab() {
 
   function clearFilters() {
     setTypeFilter("")
+    setUserFilter("")
     setSearchFilter("")
     setFromDate("")
     setToDate("")
@@ -143,8 +196,40 @@ export default function ActivityLogsTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Date Presets */}
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDatePreset("today")}
+            >
+              Today
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDatePreset("week")}
+            >
+              Last 7 Days
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDatePreset("month")}
+            >
+              Last 30 Days
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearFilters}
+            >
+              Clear All
+            </Button>
+          </div>
+
           {/* Filters */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <div className="space-y-2">
               <Label htmlFor="type">Activity Type</Label>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -156,6 +241,25 @@ export default function ActivityLogsTab() {
                   {logTypes.map((type) => (
                     <SelectItem key={type} value={type}>
                       {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="user">User</Label>
+              <Select value={userFilter} onValueChange={setUserFilter}>
+                <SelectTrigger id="user">
+                  <SelectValue placeholder="All users" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All users</SelectItem>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.profile
+                        ? `${user.profile.firstName} ${user.profile.lastName}`
+                        : user.email}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -184,15 +288,10 @@ export default function ActivityLogsTab() {
 
             <div className="space-y-2">
               <Label>&nbsp;</Label>
-              <div className="flex gap-2">
-                <Button onClick={handleSearch} className="flex-1">
-                  <Search className="h-4 w-4 mr-2" />
-                  Search
-                </Button>
-                <Button onClick={clearFilters} variant="outline">
-                  <Filter className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button onClick={handleSearch} className="w-full">
+                <Search className="h-4 w-4 mr-2" />
+                Search
+              </Button>
             </div>
           </div>
 
@@ -221,11 +320,27 @@ export default function ActivityLogsTab() {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
-                      Loading logs...
-                    </TableCell>
-                  </TableRow>
+                  <>
+                    {[...Array(5)].map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell>
+                          <Skeleton className="h-6 w-32" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-10 w-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-6 w-20" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-10 w-full" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Skeleton className="h-8 w-8 ml-auto" />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </>
                 ) : logs.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
@@ -351,8 +466,21 @@ export default function ActivityLogsTab() {
 
               <div>
                 <Label>Log ID</Label>
-                <div className="mt-1 text-xs font-mono text-muted-foreground">
-                  {selectedLog.id}
+                <div className="mt-1 flex items-center gap-2">
+                  <div className="text-xs font-mono text-muted-foreground flex-1 truncate">
+                    {selectedLog.id}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(selectedLog.id, selectedLog.id)}
+                  >
+                    {copiedId === selectedLog.id ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
                 </div>
               </div>
             </div>

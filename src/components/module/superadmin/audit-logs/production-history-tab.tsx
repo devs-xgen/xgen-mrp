@@ -21,13 +21,16 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Download, Search, Filter, ChevronLeft, ChevronRight, Eye } from "lucide-react"
-import { format } from "date-fns"
+import { Download, Search, Filter, ChevronLeft, ChevronRight, Eye, Copy, Check } from "lucide-react"
+import { format, subDays, startOfDay, endOfDay } from "date-fns"
 import {
   getProductionHistoryLogs,
   getProductionChangeTypes,
+  getAuditLogUsers,
   exportProductionHistoryCSV,
 } from "@/lib/actions/superadmin/audit-logs"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
   DialogContent,
@@ -38,14 +41,18 @@ import {
 import Link from "next/link"
 
 export default function ProductionHistoryTab() {
+  const { toast } = useToast()
   const [logs, setLogs] = useState<any[]>([])
   const [changeTypes, setChangeTypes] = useState<string[]>([])
+  const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [selectedLog, setSelectedLog] = useState<any | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
   // Filters
   const [changeTypeFilter, setChangeTypeFilter] = useState("")
+  const [userFilter, setUserFilter] = useState("")
   const [fromDate, setFromDate] = useState("")
   const [toDate, setToDate] = useState("")
   const [productionOrderId, setProductionOrderId] = useState("")
@@ -58,11 +65,12 @@ export default function ProductionHistoryTab() {
 
   useEffect(() => {
     loadChangeTypes()
+    loadUsers()
   }, [])
 
   useEffect(() => {
     loadLogs()
-  }, [currentPage, changeTypeFilter, fromDate, toDate, productionOrderId])
+  }, [currentPage, changeTypeFilter, userFilter, fromDate, toDate, productionOrderId])
 
   async function loadChangeTypes() {
     try {
@@ -73,12 +81,22 @@ export default function ProductionHistoryTab() {
     }
   }
 
+  async function loadUsers() {
+    try {
+      const userList = await getAuditLogUsers()
+      setUsers(userList)
+    } catch (error) {
+      console.error("Error loading users:", error)
+    }
+  }
+
   async function loadLogs() {
     try {
       setLoading(true)
       const filters: any = {}
 
       if (changeTypeFilter) filters.changeType = changeTypeFilter
+      if (userFilter) filters.userId = userFilter
       if (productionOrderId) filters.productionOrderId = productionOrderId
       if (fromDate) filters.fromDate = new Date(fromDate)
       if (toDate) filters.toDate = new Date(toDate)
@@ -92,6 +110,40 @@ export default function ProductionHistoryTab() {
     } finally {
       setLoading(false)
     }
+  }
+
+  function setDatePreset(preset: string) {
+    const now = new Date()
+    let from: Date
+    let to: Date = endOfDay(now)
+
+    switch (preset) {
+      case "today":
+        from = startOfDay(now)
+        break
+      case "week":
+        from = startOfDay(subDays(now, 7))
+        break
+      case "month":
+        from = startOfDay(subDays(now, 30))
+        break
+      default:
+        return
+    }
+
+    setFromDate(format(from, "yyyy-MM-dd"))
+    setToDate(format(to, "yyyy-MM-dd"))
+    setCurrentPage(1)
+  }
+
+  function copyToClipboard(text: string, id: string) {
+    navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    toast({
+      title: "Copied!",
+      description: "ID copied to clipboard",
+    })
+    setTimeout(() => setCopiedId(null), 2000)
   }
 
   async function handleExport() {
@@ -130,6 +182,7 @@ export default function ProductionHistoryTab() {
 
   function clearFilters() {
     setChangeTypeFilter("")
+    setUserFilter("")
     setFromDate("")
     setToDate("")
     setProductionOrderId("")

@@ -583,6 +583,194 @@ export async function bulkUpdateProductionOrders(
 }
 
 /**
+ * OVERRIDE: Bulk update quantities
+ */
+export async function bulkUpdateProductionOrderQuantities(
+  orderIds: string[],
+  newQuantity: number,
+  reason: string
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized: SUPER_ADMIN access required");
+    }
+
+    const results = await prisma.$transaction(async (tx) => {
+      const updated = await tx.productionOrder.updateMany({
+        where: {
+          id: { in: orderIds },
+        },
+        data: {
+          quantity: newQuantity,
+          modifiedBy: session.user.id,
+          updatedAt: new Date(),
+        },
+      });
+
+      // Log bulk action
+      await tx.activityLog.create({
+        data: {
+          type: "SUPERADMIN_BULK_QUANTITY_UPDATE",
+          userId: session.user.id,
+          details: {
+            orderIds,
+            newQuantity,
+            reason,
+            count: updated.count,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+
+      return updated;
+    });
+
+    revalidatePath("/superadmin/production");
+    revalidatePath("/admin/production");
+
+    return { success: true, count: results.count };
+  } catch (error) {
+    console.error("[SUPERADMIN_BULK_UPDATE_QUANTITIES]", error);
+    throw error;
+  }
+}
+
+/**
+ * OVERRIDE: Bulk update costs
+ */
+export async function bulkUpdateProductionOrderCosts(
+  orderIds: string[],
+  costs: {
+    plannedMaterialCost?: number;
+    actualMaterialCost?: number;
+    materialVariance?: number;
+  },
+  reason: string
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized: SUPER_ADMIN access required");
+    }
+
+    const results = await prisma.$transaction(async (tx) => {
+      const updateData: any = {
+        modifiedBy: session.user.id,
+        updatedAt: new Date(),
+      };
+
+      if (costs.plannedMaterialCost !== undefined) {
+        updateData.plannedMaterialCost = costs.plannedMaterialCost;
+      }
+      if (costs.actualMaterialCost !== undefined) {
+        updateData.actualMaterialCost = costs.actualMaterialCost;
+      }
+      if (costs.materialVariance !== undefined) {
+        updateData.materialVariance = costs.materialVariance;
+      }
+
+      const updated = await tx.productionOrder.updateMany({
+        where: {
+          id: { in: orderIds },
+        },
+        data: updateData,
+      });
+
+      // Log bulk action
+      await tx.activityLog.create({
+        data: {
+          type: "SUPERADMIN_BULK_COST_UPDATE",
+          userId: session.user.id,
+          details: {
+            orderIds,
+            costs,
+            reason,
+            count: updated.count,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+
+      return updated;
+    });
+
+    revalidatePath("/superadmin/production");
+    revalidatePath("/admin/production");
+
+    return { success: true, count: results.count };
+  } catch (error) {
+    console.error("[SUPERADMIN_BULK_UPDATE_COSTS]", error);
+    throw error;
+  }
+}
+
+/**
+ * OVERRIDE: Bulk update dates
+ */
+export async function bulkUpdateProductionOrderDates(
+  orderIds: string[],
+  dates: {
+    startDate?: Date;
+    dueDate?: Date;
+  },
+  reason: string
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized: SUPER_ADMIN access required");
+    }
+
+    const results = await prisma.$transaction(async (tx) => {
+      const updateData: any = {
+        modifiedBy: session.user.id,
+        updatedAt: new Date(),
+      };
+
+      if (dates.startDate) {
+        updateData.startDate = dates.startDate;
+      }
+      if (dates.dueDate) {
+        updateData.dueDate = dates.dueDate;
+      }
+
+      const updated = await tx.productionOrder.updateMany({
+        where: {
+          id: { in: orderIds },
+        },
+        data: updateData,
+      });
+
+      // Log bulk action
+      await tx.activityLog.create({
+        data: {
+          type: "SUPERADMIN_BULK_DATE_UPDATE",
+          userId: session.user.id,
+          details: {
+            orderIds,
+            dates,
+            reason,
+            count: updated.count,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+
+      return updated;
+    });
+
+    revalidatePath("/superadmin/production");
+    revalidatePath("/admin/production");
+
+    return { success: true, count: results.count };
+  } catch (error) {
+    console.error("[SUPERADMIN_BULK_UPDATE_DATES]", error);
+    throw error;
+  }
+}
+
+/**
  * Get production order statistics for superadmin dashboard
  */
 export async function getProductionOrderStatsSuperadmin() {
@@ -837,6 +1025,244 @@ export async function exportProductionOrdersExcel(filters?: {
   } catch (error) {
     console.error("[SUPERADMIN_EXPORT_EXCEL]", error);
     throw error;
+  }
+}
+
+// ==================== SUPERADMIN PRODUCTION ORDER CREATION ====================
+
+/**
+ * SUPERADMIN: Create production order with override capabilities
+ * Allows bypassing validation, backdating, force-allocate materials
+ */
+export async function createProductionOrderSuperadmin(input: {
+  productId: string;
+  productVariantId?: string;
+  quantity: number;
+  startDate: string;
+  dueDate: string;
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT" | "CRITICAL";
+  notes?: string;
+  customerOrderId?: string;
+  overrides?: {
+    skipDateValidation?: boolean; // Allow backdated orders
+    skipMaterialCheck?: boolean; // Create even without materials
+    forceAllocateMaterials?: boolean; // Reserve materials even if insufficient
+    customOrderNumber?: string; // Custom order number
+    customCosts?: {
+      plannedMaterialCost?: number;
+      actualMaterialCost?: number;
+      materialVariance?: number;
+    };
+  };
+  options?: {
+    generateBOM?: boolean;
+    reserveMaterials?: boolean;
+  };
+  reason: string; // Required for audit trail
+}): Promise<{
+  success: true;
+  orderId: string;
+  warnings?: string[];
+  overridesApplied?: string[];
+} | {
+  success: false;
+  error: string;
+}> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "SUPER_ADMIN") {
+      return { success: false, error: "Unauthorized: SUPER_ADMIN access required" };
+    }
+
+    const warnings: string[] = [];
+    const overridesApplied: string[] = [];
+
+    // Validate dates (unless override is set)
+    const startDate = new Date(input.startDate);
+    const dueDate = new Date(input.dueDate);
+
+    if (!input.overrides?.skipDateValidation) {
+      if (dueDate <= startDate) {
+        return { success: false, error: "Due date must be after start date (use skipDateValidation override if intentional)" };
+      }
+
+      // Check for backdated orders
+      const now = new Date();
+      if (startDate < now) {
+        warnings.push("Warning: Start date is in the past. This is a backdated production order.");
+      }
+    } else {
+      overridesApplied.push("Date validation bypassed - backdated order allowed");
+    }
+
+    // Validate product exists
+    const product = await prisma.product.findUnique({
+      where: { id: input.productId },
+      select: { id: true, name: true, hasVariants: true, sku: true },
+    });
+
+    if (!product) {
+      return { success: false, error: "Product not found" };
+    }
+
+    // Validate variant if provided
+    let variant = null;
+    if (input.productVariantId) {
+      variant = await prisma.productVariant.findUnique({
+        where: { id: input.productVariantId },
+        select: { id: true, productId: true, displayName: true },
+      });
+
+      if (!variant || variant.productId !== input.productId) {
+        return { success: false, error: "Invalid product variant" };
+      }
+    }
+
+    // Check material availability (unless override is set)
+    if (!input.overrides?.skipMaterialCheck && input.options?.reserveMaterials) {
+      // Import material check function
+      const { checkProductionOrderMaterialRequirements } = await import("@/lib/actions/material-reservation");
+
+      try {
+        const materialCheck = await checkProductionOrderMaterialRequirements(
+          input.productId,
+          input.quantity,
+          input.productVariantId
+        );
+
+        if (!materialCheck.allMaterialsAvailable) {
+          if (!input.overrides?.forceAllocateMaterials) {
+            const shortageDetails = materialCheck.materials
+              .filter((m: any) => !m.isAvailable)
+              .map((m: any) => `${m.materialName}: need ${m.quantityNeeded}, available ${m.quantityAvailable}`)
+              .join("; ");
+
+            return {
+              success: false,
+              error: `Insufficient materials: ${shortageDetails}. Use forceAllocateMaterials override to proceed anyway.`,
+            };
+          } else {
+            overridesApplied.push("Force allocate materials - proceeding despite insufficient stock");
+            warnings.push("Materials reserved despite insufficient stock. This may cause production delays.");
+          }
+        }
+      } catch (materialCheckError) {
+        warnings.push("Could not verify material availability");
+      }
+    } else if (input.overrides?.skipMaterialCheck) {
+      overridesApplied.push("Material availability check bypassed");
+    }
+
+    // Create the production order
+    const order = await prisma.productionOrder.create({
+      data: {
+        productId: input.productId,
+        productVariantId: input.productVariantId || null,
+        quantity: input.quantity,
+        startDate: startDate,
+        dueDate: dueDate,
+        priority: input.priority,
+        customerOrderId: input.customerOrderId || null,
+        notes: input.notes || null,
+        status: "PENDING",
+        createdBy: session.user.id,
+        ...(input.overrides?.customCosts && {
+          plannedMaterialCost: input.overrides.customCosts.plannedMaterialCost,
+          actualMaterialCost: input.overrides.customCosts.actualMaterialCost,
+          materialVariance: input.overrides.customCosts.materialVariance,
+        }),
+      },
+      include: {
+        product: true,
+        productVariant: true,
+      },
+    });
+
+    if (input.overrides?.customCosts) {
+      overridesApplied.push("Custom costs applied on creation");
+    }
+
+    // Generate BOM if requested
+    if (input.options?.generateBOM) {
+      try {
+        const { generateProductionBOM } = await import("@/lib/actions/production-order");
+        const bomResult = await generateProductionBOM(order.id);
+
+        if (bomResult.warnings && bomResult.warnings.length > 0) {
+          warnings.push(...bomResult.warnings);
+        }
+      } catch (bomError) {
+        warnings.push("Failed to generate BOM automatically");
+        console.error("BOM generation error:", bomError);
+      }
+    }
+
+    // Reserve materials if requested
+    if (input.options?.reserveMaterials && input.options?.generateBOM) {
+      try {
+        const { reserveMaterialsForOrder } = await import("@/lib/actions/production-order");
+        const reservationResult = await reserveMaterialsForOrder(order.id);
+
+        if (reservationResult.partials.length > 0) {
+          warnings.push(`Partial reservations: ${reservationResult.partials.length} materials have limited stock`);
+        }
+      } catch (reservationError) {
+        warnings.push("Failed to reserve materials automatically");
+        console.error("Material reservation error:", reservationError);
+      }
+    }
+
+    // Log the creation with SUPERADMIN tag
+    try {
+      await prisma.activityLog.create({
+        data: {
+          type: "SUPERADMIN_PRODUCTION_ORDER_CREATED",
+          userId: session.user.id,
+          details: {
+            productionOrderId: order.id,
+            productName: order.product.name,
+            productVariantName: order.productVariant?.displayName,
+            quantity: order.quantity,
+            source: input.customerOrderId ? "customer_order" : "standalone",
+            customerOrderId: input.customerOrderId,
+            overridesApplied,
+            reason: input.reason,
+            backdated: startDate < new Date(),
+          },
+        },
+      });
+
+      // Also create production history log
+      await prisma.productionOrderHistoryLog.create({
+        data: {
+          productionOrderId: order.id,
+          userId: session.user.id,
+          status: "PENDING",
+          changeType: "SUPERADMIN_ORDER_CREATION",
+          notes: `SUPERADMIN CREATION: ${input.reason}${overridesApplied.length > 0 ? `\nOverrides: ${overridesApplied.join(", ")}` : ""}`,
+          timestamp: new Date(),
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log production order creation:", logError);
+    }
+
+    revalidatePath("/superadmin/production");
+    revalidatePath("/admin/production");
+    revalidatePath("/admin/customer-orders");
+
+    return {
+      success: true,
+      orderId: order.id,
+      warnings: warnings.length > 0 ? warnings : undefined,
+      overridesApplied: overridesApplied.length > 0 ? overridesApplied : undefined,
+    };
+  } catch (error) {
+    console.error("Error creating SuperAdmin production order:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create production order",
+    };
   }
 }
 

@@ -101,7 +101,7 @@ export default async function SuperadminProductionOrdersPage() {
         </PageHeaderMain>
         <PageHeaderActions>
           <SuperadminProductionExportButton />
-          <Link href="/admin/production/create">
+          <Link href="/superadmin/production/create">
             <Button>
               <Shield className="mr-2 h-4 w-4" />
               Create Production Order
