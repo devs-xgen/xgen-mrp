@@ -5,6 +5,7 @@ Welcome to the comprehensive documentation for the XGen MRP system. This documen
 ## 📚 Documentation Structure
 
 ### Role-Based Documentation
+- **[SuperAdmin Documentation](./roles/superadmin/README.md)** - System-wide control and override operations
 - **[Admin Documentation](./roles/admin/README.md)** - Complete system administration guide
 - **[Worker Documentation](./roles/worker/README.md)** - Production workflow and task management
 - **[Inspector Documentation](./roles/inspector/README.md)** - Quality control and inspection processes
@@ -34,6 +35,7 @@ Welcome to the comprehensive documentation for the XGen MRP system. This documen
 
 | Role | Primary Focus | Key Features |
 |------|---------------|--------------|
+| **SuperAdmin** | System-Wide Control | Cross-tenant access, override operations, force updates, database exports |
 | **Admin** | System Management | User management, system configuration, reporting |
 | **Worker** | Production Tasks | Task execution, inventory transactions, production updates |
 | **Inspector** | Quality Control | Inspection workflows, defect tracking, compliance reporting |

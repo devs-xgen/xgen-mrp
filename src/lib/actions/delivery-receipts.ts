@@ -700,6 +700,35 @@ export async function confirmDelivery(
       return { success: false, error: "Unauthorized" };
     }
 
+    // Get the delivery receipt with related data
+    const receipt = await prisma.deliveryReceipt.findUnique({
+      where: { id },
+      include: {
+        billingStatement: {
+          include: {
+            productionOrder: {
+              include: {
+                product: true,
+                productVariant: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!receipt) {
+      return { success: false, error: "Delivery receipt not found" };
+    }
+
+    // Check if already delivered to prevent double deduction
+    if (receipt.deliveryStatus === "DELIVERED") {
+      return {
+        success: false,
+        error: "This delivery has already been confirmed"
+      };
+    }
+
     const updateData: any = {
       deliveryStatus: "DELIVERED" as PrismaDeliveryStatus,
       modifiedBy: session.user.id,
@@ -714,9 +743,75 @@ export async function confirmDelivery(
       updateData.photoEvidence = photoEvidence;
     }
 
-    const updatedReceipt = await prisma.deliveryReceipt.update({
-      where: { id },
-      data: updateData,
+    // Use transaction to ensure atomicity
+    const updatedReceipt = await prisma.$transaction(async (tx) => {
+      // Update delivery receipt
+      const updated = await tx.deliveryReceipt.update({
+        where: { id },
+        data: updateData,
+      });
+
+      // Deduct product stock if there's a production order
+      if (receipt.billingStatement?.productionOrder) {
+        const productionOrder = receipt.billingStatement.productionOrder;
+        const product = productionOrder.product;
+        const deliveredQty = productionOrder.quantity;
+
+        // Update product stock
+        const updatedProduct = await tx.product.update({
+          where: { id: product.id },
+          data: {
+            currentStock: product.currentStock - deliveredQty,
+          },
+        });
+
+        // Update product variant stock if variant exists
+        if (productionOrder.productVariant) {
+          await tx.productVariant.update({
+            where: { id: productionOrder.productVariant.id },
+            data: {
+              currentStock: productionOrder.productVariant.currentStock - deliveredQty,
+            },
+          });
+        }
+
+        // Create inventory movement for product shipment
+        await tx.inventoryMovement.create({
+          data: {
+            productId: product.id,
+            movementType: "PRODUCT_SHIPMENT",
+            quantity: deliveredQty,
+            previousStock: product.currentStock,
+            newStock: updatedProduct.currentStock,
+            referenceId: id,
+            referenceType: "DELIVERY_RECEIPT",
+            performedBy: session.user.id,
+            notes: `Product shipped via delivery receipt ${receipt.receiptNumber}`,
+          },
+        });
+
+        // Log product stock decrement
+        try {
+          await tx.activityLog.create({
+            data: {
+              type: "PRODUCT_STOCK_DECREMENT",
+              userId: session.user.id,
+              details: {
+                productId: product.id,
+                productName: product.name,
+                change: -deliveredQty,
+                reason: `Delivery confirmed: ${receipt.receiptNumber}`,
+                deliveryReceiptId: id,
+                productionOrderId: productionOrder.id,
+              },
+            },
+          });
+        } catch (logError) {
+          console.error("Failed to create product stock decrement activity log:", logError);
+        }
+      }
+
+      return updated;
     });
 
     revalidatePath("/admin/billing/delivery-receipts");
@@ -728,7 +823,7 @@ export async function confirmDelivery(
     return {
       success: true,
       data: updatedReceipt as DeliveryReceipt,
-      message: "Delivery confirmed successfully",
+      message: "Delivery confirmed successfully and product stock updated",
     };
   } catch (error) {
     console.error("Error confirming delivery:", error);
