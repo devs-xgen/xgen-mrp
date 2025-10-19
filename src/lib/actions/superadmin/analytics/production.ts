@@ -3,9 +3,9 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db";
 import { Decimal } from "@prisma/client/runtime/library";
-import { Prisma } from "@prisma/client";
+import { Prisma, Priority, Status } from "@prisma/client";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 
 /**
@@ -40,8 +40,8 @@ export interface ProductionAnalyticsFilters {
   startDate: Date;
   endDate: Date;
   tenantId?: string;
-  status?: string[];
-  priority?: string[];
+  status?: Status[];
+  priority?: Priority[];
 }
 
 export interface KPIMetrics {
