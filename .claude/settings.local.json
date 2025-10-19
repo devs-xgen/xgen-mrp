@@ -5,7 +5,8 @@
       "Bash(npm run build)",
       "Bash(npm run type-check:*)",
       "Bash(ls:*)",
-      "Bash(mkdir -p \"E:\\Development\\xgen-mrp\\src\\components\\module\\superadmin\\customer-orders\\create\")"
+      "Bash(mkdir -p \"E:\\Development\\xgen-mrp\\src\\components\\module\\superadmin\\customer-orders\\create\")",
+      "Bash(npx prisma generate --no-engine)"
     ],
     "deny": [],
     "ask": []

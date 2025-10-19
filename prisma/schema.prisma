@@ -49,6 +49,9 @@ model User {
   restoredOrders            CustomerOrderArchive[]          @relation("RestoredOrders")
   supportTickets            SupportTicket[]                 @relation("UserSupportTickets")
   supportMessages           SupportMessage[]                @relation("UserSupportMessages")
+  createdReports            SavedReport[]                   @relation("CreatedReports")
+  createdAlertRules         AlertRule[]                     @relation("CreatedAlertRules")
+  createdOrganizations      Organization[]                  @relation("CreatedOrganizations")
 }
 
 model ProductionOrderHistoryLog {
@@ -1331,6 +1334,122 @@ model SupportMessage {
 
   @@index([ticketId])
   @@index([createdAt])
+}
+
+// Report Builder System
+model SavedReport {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdBy   String
+  config      Json     // Report configuration (entities, fields, filters, joins, etc.)
+  isPublic    Boolean  @default(false) // Share with other SuperAdmins
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  creator     User     @relation("CreatedReports", fields: [createdBy], references: [id])
+
+  @@index([createdBy])
+  @@index([isPublic])
+  @@index([createdAt])
+}
+
+// Organization/Client Management
+model Organization {
+  id                String              @id @default(cuid())
+  name              String
+  slug              String              @unique
+  contactEmail      String
+  contactPhone      String?
+  contactPerson     String?
+  address           String?
+  city              String?
+  country           String?
+  status            OrganizationStatus  @default(ACTIVE)
+  settings          Json?               // Custom settings (operating hours, defaults, branding)
+  resourceLimits    Json?               // { maxUsers, maxOrders, storageQuotaMB, etc. }
+  notes             String?             @db.Text
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  createdBy         String
+  archivedAt        DateTime?
+  archivedBy        String?
+  archivedReason    String?
+  creator           User                @relation("CreatedOrganizations", fields: [createdBy], references: [id])
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([slug])
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+  TRIAL
+}
+
+// System Health & Monitoring
+model SystemMetric {
+  id         String   @id @default(cuid())
+  timestamp  DateTime @default(now())
+  metricType String   // "request", "error", "database", "memory", "disk"
+  metricName String   // Specific metric identifier (e.g., "api.response_time", "db.query_duration")
+  value      Float
+  metadata   Json?    // Additional context (endpoint, query, user, etc.)
+
+  @@index([timestamp, metricType])
+  @@index([metricName])
+}
+
+model SystemError {
+  id               String    @id @default(cuid())
+  timestamp        DateTime  @default(now())
+  errorType        String    // Error class name or type
+  message          String
+  stackTrace       String?   @db.Text
+  context          Json?     // Request details, user, session info
+  resolved         Boolean   @default(false)
+  resolvedAt       DateTime?
+  resolvedBy       String?
+  resolutionNotes  String?
+
+  @@index([timestamp, errorType])
+  @@index([resolved])
+}
+
+model AlertRule {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  condition   Json           // { metric: "errorRate", operator: ">", threshold: 5, duration: 300 }
+  enabled     Boolean        @default(true)
+  channels    String[]       // ["email", "slack", "sms"]
+  recipients  String[]       // Email addresses, Slack webhook URLs, phone numbers
+  createdBy   String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  creator     User           @relation("CreatedAlertRules", fields: [createdBy], references: [id])
+  history     AlertHistory[]
+
+  @@index([enabled])
+  @@index([createdBy])
+}
+
+model AlertHistory {
+  id              String    @id @default(cuid())
+  ruleId          String
+  triggeredAt     DateTime  @default(now())
+  resolvedAt      DateTime?
+  acknowledged    Boolean   @default(false)
+  acknowledgedBy  String?
+  acknowledgedAt  DateTime?
+  notificationsSent Json?   // Record of which notifications were sent
+  metricValue     Float?    // Value that triggered the alert
+  rule            AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+  @@index([triggeredAt])
+  @@index([acknowledged])
 }
 
 enum SupportStatus {
