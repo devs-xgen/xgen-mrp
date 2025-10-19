@@ -395,4 +395,4 @@ After login, you'll land on the SuperAdmin Dashboard at `/superadmin/dashboard`.
 
 ---
 
-*Last Updated: 2025-10-18*
+*Last Updated: 2025-10-19*
