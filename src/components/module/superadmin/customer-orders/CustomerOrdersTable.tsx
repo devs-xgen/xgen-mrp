@@ -32,6 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, ChevronLeft, ChevronRight, Edit, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 interface CustomerOrdersTableProps {
   initialData: any[];
@@ -129,7 +130,7 @@ export function CustomerOrdersTable({
         header: "Total",
         cell: ({ row }) => (
           <div className="text-right font-medium">
-            ${Number(row.original.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            {formatCurrencyPHP(row.original.totalAmount)}
           </div>
         ),
       },

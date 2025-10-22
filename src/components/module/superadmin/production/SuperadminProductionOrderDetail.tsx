@@ -27,6 +27,7 @@ import { SuperadminOverrideStatusDialog } from "./SuperadminOverrideStatusDialog
 import { SuperadminOverrideCostsDialog } from "./SuperadminOverrideCostsDialog";
 import { SuperadminOverrideQuantityDialog } from "./SuperadminOverrideQuantityDialog";
 import { SuperadminOverrideDatesDialog } from "./SuperadminOverrideDatesDialog";
+import { formatCurrencyPHP } from "@/lib/constant";
 
 interface SuperadminProductionOrderDetailProps {
   order: any; // Full production order with all relations
@@ -271,13 +272,13 @@ export function SuperadminProductionOrderDetail({
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Planned Cost:</span>
                   <span className="font-medium">
-                    ₱{order.plannedMaterialCost.toLocaleString()}
+                    {formatCurrencyPHP(order.plannedMaterialCost)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Actual Cost:</span>
                   <span className="font-medium">
-                    ₱{order.actualMaterialCost.toLocaleString()}
+                    {formatCurrencyPHP(order.actualMaterialCost)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -380,7 +381,7 @@ export function SuperadminProductionOrderDetail({
                             </div>
                             <div className="flex justify-between">
                               <span className="text-sm text-muted-foreground">Cost:</span>
-                              <span>₱{operation.cost.toLocaleString()}</span>
+                              <span>{formatCurrencyPHP(operation.cost)}</span>
                             </div>
                           </div>
                           <div className="space-y-2">
@@ -452,7 +453,7 @@ export function SuperadminProductionOrderDetail({
                         </div>
                         <div className="text-sm">
                           <span className="text-muted-foreground">Cost: </span>
-                          <span>₱{bom.totalCost.toLocaleString()}</span>
+                          <span>{formatCurrencyPHP(bom.totalCost)}</span>
                         </div>
                       </div>
                     </div>

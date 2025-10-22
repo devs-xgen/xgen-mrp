@@ -83,15 +83,32 @@ export async function getAllProductsSuperadmin(filters?: {
           },
         },
         variants: {
-          where: {
-            archivedAt: null,
-          },
           select: {
             id: true,
             sku: true,
             displayName: true,
             currentStock: true,
             sellingPrice: true,
+            unitCost: true,
+            sizeName: true,
+            colorName: true,
+            styleName: true,
+            boms: {
+              include: {
+                material: {
+                  select: {
+                    id: true,
+                    name: true,
+                    sku: true,
+                  },
+                },
+              },
+            },
+            _count: {
+              select: {
+                boms: true,
+              },
+            },
           },
         },
         boms: {
@@ -130,11 +147,17 @@ export async function getAllProductsSuperadmin(filters?: {
         ...v,
         currentStock: v.currentStock instanceof Decimal ? v.currentStock.toNumber() : Number(v.currentStock || 0),
         sellingPrice: v.sellingPrice instanceof Decimal ? v.sellingPrice.toNumber() : Number(v.sellingPrice || 0),
+        unitCost: v.unitCost instanceof Decimal ? v.unitCost.toNumber() : Number(v.unitCost || 0),
+        boms: v.boms?.map(b => ({
+          ...b,
+          quantityNeeded: b.quantityNeeded instanceof Decimal ? b.quantityNeeded.toNumber() : Number(b.quantityNeeded || 0),
+          wastePercentage: b.wastePercentage instanceof Decimal ? b.wastePercentage.toNumber() : Number(b.wastePercentage || 0),
+        })) || [],
       })),
-      boms: product.boms.map(b => ({
+      boms: product.boms?.map(b => ({
         ...b,
         quantityRequired: b.quantityRequired instanceof Decimal ? b.quantityRequired.toNumber() : Number(b.quantityRequired || 0),
-      })),
+      })) || [],
     }));
   } catch (error) {
     console.error("[SuperAdmin] Error fetching products:", error);

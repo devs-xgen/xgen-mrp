@@ -14,6 +14,11 @@ XGen MRP is a comprehensive Manufacturing Resource Planning (MRP) system built f
 - React Hook Form + Zod for form validation
 - TanStack Table for data tables
 - Vitest for testing
+- React Query (@tanstack/react-query) for data fetching
+
+**Development Server:**
+- Runs on port **3001** (not default 3000)
+- Uses `npm run dev` to start
 
 ## Common Commands
 
@@ -66,21 +71,35 @@ npm run cleanup:links:stats    # Show link statistics
 
 ### Multi-Portal Role-Based Architecture
 
-The system is organized around **4 primary user roles**, each with dedicated portal interfaces:
+The system is organized around **5 primary user roles**, each with dedicated portal interfaces:
 
-1. **Admin/SuperAdmin** (`/admin`, `/superadmin`) - System management, production oversight, financial operations
-2. **Worker** (`/worker`) - Production execution, task management, inventory operations
-3. **Inspector** (`/inspector`) - Quality control, inspection workflows, defect tracking
-4. **Delivery** (`/delivery`) - Delivery management, route optimization, customer interaction
+1. **Admin** (`/admin`) - System management, production oversight, financial operations
+2. **SuperAdmin** (`/superadmin`) - Enhanced admin capabilities with production order material overrides
+3. **Worker** (`/worker`) - Production execution, task management, inventory operations
+4. **Inspector** (`/inspector`) - Quality control, inspection workflows, defect tracking
+5. **Delivery** (`/delivery`) - Delivery management, route optimization, customer interaction
+6. **Developer** (`/developer`) - System diagnostics, database studio, user management, support tickets
 
 **Portal Structure Pattern:**
 ```
-/app/{role}/
+src/app/{role}/
   /(protected)/          # Authenticated routes (uses layout.tsx for auth check)
     /dashboard/
     /[feature]/
   /(public)/             # Public routes (mainly login pages)
     /login/
+```
+
+**Special Routes:**
+```
+src/app/api/              # API routes for external integrations
+src/app/billing-statement/share/[token]/   # Public shareable billing statements
+src/app/sales-invoice/share/[token]/       # Public shareable invoices
+src/app/delivery-receipt/share/[token]/    # Public shareable delivery receipts
+src/app/changelog/                          # System changelog
+src/app/support/                            # Support ticket system
+src/app/install-app/                        # PWA installation instructions
+src/app/offline/                            # Offline fallback page
 ```
 
 ### Authentication & Authorization
@@ -127,11 +146,52 @@ Business logic is implemented as **Next.js Server Actions** in `src/lib/actions/
 ```typescript
 "use server"
 
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
+import { prisma } from "@/lib/db"
+import { z } from "zod"
+
+// Define validation schema
+const createEntitySchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  // ... other fields
+})
+
 export async function createEntity(data: FormData) {
-  // 1. Validate session/permissions
-  // 2. Parse and validate input (Zod)
-  // 3. Database operations (Prisma)
-  // 4. Return { success: boolean, data?, error? }
+  try {
+    // 1. Validate session/permissions
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return { success: false, error: "Unauthorized" }
+    }
+
+    // 2. Parse and validate input (Zod)
+    const validatedData = createEntitySchema.parse({
+      name: data.get("name"),
+      // ... other fields
+    })
+
+    // 3. Database operations (Prisma)
+    const entity = await prisma.entity.create({
+      data: {
+        ...validatedData,
+        createdBy: session.user.id,
+      }
+    })
+
+    // 4. Return success response
+    return {
+      success: true,
+      data: entity,
+      message: "Entity created successfully"
+    }
+  } catch (error) {
+    console.error("Error creating entity:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create entity"
+    }
+  }
 }
 ```
 
@@ -141,19 +201,61 @@ export async function createEntity(data: FormData) {
 - Shared utilities in `/shared/` subdirectory
 - Transaction-based operations for data consistency
 
+**Server Action Response Format:**
+All server actions should return an object with:
+- `success: boolean` - Indicates if operation succeeded
+- `data?: any` - The result data (if successful)
+- `error?: string` - Error message (if failed)
+- `message?: string` - Optional success message for user feedback
+
 ### Component Organization
 
 ```
-/src/components/
+src/components/
   /ui/                    # Shadcn/UI components (button, dialog, table, etc.)
   /module/                # Role-specific feature components
     /admin/              # Admin-specific components
     /worker/             # Worker-specific components
     /inspector/          # Inspector-specific components
     /delivery/           # Delivery-specific components
+    /superadmin/         # SuperAdmin-specific components
   /shared/               # Cross-role shared components (data tables, forms)
   /global/               # App-wide components (navbar, sidebar, layouts)
   /providers/            # Context providers (theme, query client)
+  /common/               # Common reusable components
+  /worker/               # Additional worker-specific utilities
+```
+
+**Source Structure:**
+```
+src/
+  /app/                  # Next.js App Router pages and API routes
+  /components/           # React components (organized as above)
+  /lib/                  # Business logic and utilities
+    /actions/           # Next.js Server Actions
+      /inspector/       # Inspector-specific actions
+      /worker/          # Worker-specific actions
+      /superadmin/      # SuperAdmin-specific actions
+      /shared/          # Shared business logic
+    /api/               # API helper functions
+    /config/            # Configuration files
+    /data/              # Static data and constants
+    /services/          # External service integrations
+    /utils/             # Utility functions
+    /validation/        # Zod validation schemas
+    /adapters/          # Data adapters
+  /types/                # TypeScript type definitions
+    /admin/             # Admin-specific types
+    /worker/            # Worker-specific types
+    /inspector/         # Inspector-specific types
+    /delivery/          # Delivery-specific types
+    /shared/            # Shared types
+  /hooks/                # Custom React hooks
+  /context/              # React context providers
+  /styles/               # Global styles
+  /assets/               # Static assets (images, etc.)
+  /config/               # App configuration
+  /data/                 # Static data files
 ```
 
 **Component Patterns:**
@@ -337,6 +439,21 @@ if (!["ADMIN", "SUPER_ADMIN"].includes(session.user.role)) {
 
 10. **Customer Order Fulfillment:** OrderLines track fulfillment through `fulfillmentType` (STOCK, PRODUCTION, HYBRID) and `fulfillmentStatus`. System auto-determines fulfillment strategy based on available stock.
 
+11. **TypeScript Configuration:** The project uses relaxed TypeScript settings (`strict: false`, `noImplicitAny: false`). Build errors and ESLint warnings are ignored during builds for faster iteration.
+
+12. **Next.js Configuration:**
+    - Output mode is `standalone` for containerized deployments
+    - Images are unoptimized for Netlify compatibility
+    - API routes have CORS headers enabled
+    - Uses webpack customizations for SVG/asset handling
+    - PWA-specific headers for service worker and manifest caching
+
+13. **Scripts Organization:** Utility scripts in `/scripts/` directory include:
+    - Database seeding scripts (comprehensive, worker-demo, billing)
+    - Cleanup utilities (shareable links)
+    - Migration scripts (billing schema)
+    - Validation and testing scripts
+
 ## Testing
 
 - Test files colocated in `/tests/` directory
@@ -351,33 +468,162 @@ Required variables (see `.env.example`):
 - `NEXTAUTH_SECRET`: Secret for JWT signing (generate with `openssl rand -base64 32`)
 - `NEXTAUTH_URL`: Base URL of application (e.g., `http://localhost:3001`)
 - `PG_BACKUP_URL`: Optional backup database URL
+- `NEXT_PUBLIC_APP_URL`: Public-facing application URL
+- `NEXT_PUBLIC_APP_VERSION`: Application version (auto-populated from package.json)
+- `NEXT_PUBLIC_ENABLE_ERROR_REPORTING`: Enable/disable error reporting in production
 
-## Known Patterns from Cursor Rules
+## Deployment
 
-From `.cursor/rules/cursorrules.mdc` and `mrp-knowledge.mdc`:
+The application supports multiple deployment strategies:
+
+1. **Netlify** (Primary)
+   - Uses `npm run build:netlify` command
+   - Prisma client generated with `--no-engine` flag
+   - See `NETLIFY_DEPLOYMENT_GUIDE.md` for details
+   - Husky git hooks disabled in CI (see `HUSKY_NETLIFY_FIX.md`)
+
+2. **Docker** (Recommended for Production)
+   - Complete Docker setup in `DOCKER_TUTORIAL.md`
+   - Production deployment guide in `DEPLOYMENT_DOCKER.md`
+   - Supports both development and production environments
+
+3. **Traditional Deployment**
+   - Standard Node.js deployment
+   - See `DEPLOYMENT_GUIDE.md` for details
+   - Uses `standalone` output mode
+
+**Pre-deployment Checklist:**
+- Run `npm run type-check` to verify TypeScript
+- Run `npm run lint` to check code quality
+- Run `npm test` to verify tests pass
+- Ensure `DATABASE_URL` is properly configured
+- Set `NEXTAUTH_SECRET` to a secure random value
+- Configure `NEXTAUTH_URL` to match deployment URL
+
+## Portal-to-Role Mapping & User Flows
+
+**Portal-to-Role Mapping (defined in `src/lib/auth.ts`):**
+- ADMIN_PORTAL: ADMIN, SUPER_ADMIN
+- SUPERADMIN_PORTAL: SUPER_ADMIN
+- WORKER_PORTAL: WORKER
+- INSPECTOR_PORTAL: INSPECTOR
+- DELIVERY_PORTAL: DELIVERY
+- DEVELOPER_PORTAL: DEVELOPER
+
+**User Flows:**
+- **Admin:** Order reception → Production planning → Material procurement → Monitor production → Financial management
+- **SuperAdmin:** All admin capabilities + Production order material override + Bulk operations + Export functionality
+- **Worker:** View tasks → Execute operations → Report progress → Material consumption → Quality reporting
+- **Inspector:** View quality checks → Perform inspections → Document defects → Approve/reject batches → Compliance reporting
+- **Delivery:** View assignments → Prepare shipments → Track deliveries → Confirm delivery → Digital proof of delivery
+- **Developer:** System monitoring → Database studio → User management → Support tickets → System diagnostics
+
+## Common Development Workflows
+
+### Adding a New Feature to Admin Portal
+
+1. **Create Database Schema Changes (if needed):**
+   ```bash
+   # Edit prisma/schema.prisma
+   npx prisma generate --no-engine
+   npx prisma db push  # or npx prisma migrate dev --name feature_name
+   ```
+
+2. **Create Server Actions:**
+   ```bash
+   # Create: src/lib/actions/[feature-name].ts
+   # Include validation, database operations, error handling
+   ```
+
+3. **Create Page Route:**
+   ```bash
+   # Create: src/app/admin/(protected)/[feature-name]/page.tsx
+   ```
+
+4. **Create Components:**
+   ```bash
+   # Create components in: src/components/module/admin/[feature-name]/
+   # Common components: columns.tsx, data-table.tsx, create-dialog.tsx, edit-dialog.tsx
+   ```
+
+5. **Update Navigation:**
+   ```bash
+   # Update: src/components/global/admin-nav.tsx or sidebar component
+   ```
+
+6. **Add TypeScript Types (if needed):**
+   ```bash
+   # Create: src/types/admin/[feature-name].ts
+   ```
+
+### Running Tests for Specific Feature
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode (useful during development)
+npm run test:watch
+
+# Open Vitest UI for interactive testing
+npm run test:ui
+```
+
+### Database Workflow
+
+```bash
+# Pull current schema from database
+npx prisma db pull
+
+# Push schema changes to database (development)
+npx prisma db push
+
+# Create migration (production-ready)
+npx prisma migrate dev --name descriptive_migration_name
+
+# Generate Prisma client (after schema changes)
+npx prisma generate --no-engine
+
+# Open Prisma Studio to view/edit data
+npm run prisma:studio
+
+# Seed database with sample data
+npm run seed:comprehensive
+```
+
+### Common Debugging Steps
+
+1. **Database Connection Issues:**
+   - Check `DATABASE_URL` in `.env` file
+   - Ensure PostgreSQL is running
+   - Verify connection string format: `postgresql://user:password@host:port/database`
+
+2. **Build Errors:**
+   - Clear Next.js cache: `rm -rf .next`
+   - Regenerate Prisma client: `npx prisma generate --no-engine`
+   - Clean build: `npm run build:clean`
+
+3. **Authentication Issues:**
+   - Verify `NEXTAUTH_SECRET` is set
+   - Check `NEXTAUTH_URL` matches your deployment URL
+   - Confirm user role matches portal access (check `src/lib/auth.ts` portal mappings)
+
+4. **Type Errors:**
+   - Run type check: `npm run type-check`
+   - Note: TypeScript strict mode is disabled, so some type errors may be ignored during builds
+
+## System Design Principles
 
 1. **Role-Based Route Structure:** Protected routes use `(protected)` folder with auth layout, public routes use `(public)`
 
-2. **Portal-to-Role Mapping:**
-   - ADMIN_PORTAL: ADMIN, SUPER_ADMIN
-   - WORKER_PORTAL: WORKER
-   - INSPECTOR_PORTAL: INSPECTOR
-   - DELIVERY_PORTAL: DELIVERY
-   - DEVELOPER_PORTAL: DEVELOPER
-
-3. **User Flows:**
-   - **Admin:** Order reception → Production planning → Material procurement → Monitor production
-   - **Worker:** View tasks → Execute operations → Report progress → Material consumption
-   - **Inspector:** View quality checks → Perform inspections → Document defects → Approve/reject batches
-   - **Delivery:** View assignments → Prepare shipments → Track deliveries → Confirm delivery
-
-4. **Component Patterns:**
+2. **Component Patterns:**
    - Data tables for CRUD operations (TanStack Table)
    - Dialogs for create/edit operations (Radix UI Dialog)
    - Server actions for backend operations
    - Form validation with React Hook Form + Zod
+   - React Query for client-side data fetching and caching
 
-5. **System Goals:**
+3. **System Goals:**
    - Centralize manufacturing operations
    - Optimize resource allocation
    - Ensure quality control throughout production
@@ -385,3 +631,10 @@ From `.cursor/rules/cursorrules.mdc` and `mrp-knowledge.mdc`:
    - Manage inventory accurately
    - Process orders efficiently
    - Support data-driven decision making
+
+4. **Code Organization Principles:**
+   - Server actions contain business logic, not components
+   - Components are presentational and call server actions
+   - Types are defined per-role in `/types/{role}/`
+   - Reusable UI components in `/components/ui/`
+   - Role-specific components in `/components/module/{role}/`

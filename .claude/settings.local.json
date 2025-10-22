@@ -5,7 +5,11 @@
       "Bash(npm run build)",
       "Bash(npm run type-check:*)",
       "Bash(ls:*)",
-      "Bash(mkdir -p \"E:\\Development\\xgen-mrp\\src\\components\\module\\superadmin\\customer-orders\\create\")"
+      "Bash(mkdir -p \"E:\\Development\\xgen-mrp\\src\\components\\module\\superadmin\\customer-orders\\create\")",
+      "Read(//Users/zafajardo/Documents/Development/**)",
+      "Bash(npm run dev:*)",
+      "Bash(find:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
