@@ -230,6 +230,13 @@ export function ProductShareDialog({
                     includeMargin
                   />
                 </div>
+                
+                {/* Share URL Display */}
+                <div className="w-full max-w-md p-3 border rounded-lg bg-white dark:bg-gray-900">
+                  <p className="text-xs font-medium text-muted-foreground mb-1 text-center">Share URL</p>
+                  <p className="text-sm font-mono break-all text-center">{shareUrl}</p>
+                </div>
+                
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={handleDownloadQR}>
                     <Download className="w-4 h-4 mr-2" />
@@ -253,11 +260,6 @@ export function ProductShareDialog({
 
               {/* Link Details */}
               <div className="space-y-3">
-                <div className="p-3 border rounded-lg bg-muted/50">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">Share URL</p>
-                  <p className="text-sm font-mono break-all">{shareUrl}</p>
-                </div>
-
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 border rounded-lg">
                     <div className="flex items-center gap-2 text-muted-foreground mb-1">

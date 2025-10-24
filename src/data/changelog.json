@@ -5,8 +5,8 @@
       "version": "1.5.11",
       "date": "2025-10-24",
       "changes": [
-        "NEW: Product QR Code Sharing - Generate secure shareable links with QR codes for products; public view displays product details, pricing, and variants",
-        "NEW: Production Order QR Code Sharing - B2B collaboration feature with shareable links/QR codes; public view shows operations, quality checks, delivery info, and worker assignments",
+        "NEW: Product QR Code Sharing - Generate secure shareable links with QR codes for products; public view displays product details, pricing, and variants (URL: /share/products/{token})",
+        "NEW: Production Order QR Code Sharing - B2B collaboration feature with shareable links/QR codes; public view shows operations, quality checks, delivery info, and worker assignments (URL: /share/production/{token})",
         "FEATURE: Share dialog with QR code generation, download as PNG, copy link, view tracking, and revocation for both products and production orders",
         "SECURITY: Time-limited links (30-day expiry), access tracking, and instant revocation capability",
         "UI/UX: Professional gradient-based public share pages optimized for mobile and desktop viewing"
