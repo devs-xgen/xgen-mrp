@@ -160,8 +160,7 @@ export async function bulkSuspendUsers(
     const result = await prisma.$transaction(async (tx) => {
       const updated = await tx.user.updateMany({
         where: {
-          id: { in: userIds },
-          id: { not: session.user.id }, // Extra safety
+          id: { in: userIds, not: session.user.id }, // Extra safety
         },
         data: {
           status: "INACTIVE",
@@ -296,8 +295,7 @@ export async function bulkChangeUserRoles(
     const result = await prisma.$transaction(async (tx) => {
       const updated = await tx.user.updateMany({
         where: {
-          id: { in: userIds },
-          id: { not: session.user.id },
+          id: { in: userIds, not: session.user.id },
         },
         data: {
           role: newRole as any,
@@ -398,5 +396,292 @@ export async function bulkResetPasswords(
       error: error instanceof Error ? error.message : "Failed to reset passwords",
     };
   }
+}
+
+// Dashboard Analytics Types
+export type ProductionOrderStatusData = {
+  status: string;
+  count: number;
+  value: number;
+};
+
+export type InventoryHealthData = {
+  category: string;
+  materials: number;
+  products: number;
+};
+
+export type RevenueData = {
+  month: string;
+  revenue: number;
+  orders: number;
+};
+
+export type QualityMetricsData = {
+  totalChecks: number;
+  passed: number;
+  failed: number;
+  pending: number;
+  passRate: number;
+};
+
+export type TopProductsData = {
+  name: string;
+  orders: number;
+  revenue: number;
+};
+
+export type MaterialConsumptionData = {
+  name: string;
+  consumed: number;
+  reserved: number;
+};
+
+export type DashboardAnalytics = {
+  productionOrdersByStatus: ProductionOrderStatusData[];
+  inventoryHealth: InventoryHealthData[];
+  revenueByMonth: RevenueData[];
+  qualityMetrics: QualityMetricsData;
+  topProducts: TopProductsData[];
+  materialConsumption: MaterialConsumptionData[];
+  lowStockAlerts: {
+    materials: number;
+    products: number;
+  };
+  productionEfficiency: {
+    onTime: number;
+    delayed: number;
+    total: number;
+  };
+};
+
+export async function getDashboardAnalytics(): Promise<DashboardAnalytics> {
+  await ensureSuperAdmin();
+
+  // Get production orders by status
+  const productionOrders = await prisma.productionOrder.groupBy({
+    by: ['status'],
+    _count: { id: true },
+    _sum: { actualMaterialCost: true, plannedMaterialCost: true },
+  });
+
+  const productionOrdersByStatus = productionOrders.map(order => ({
+    status: order.status,
+    count: order._count.id,
+    value: Number(order._sum.actualMaterialCost || order._sum.plannedMaterialCost || 0),
+  }));
+
+  // Get inventory health data
+  const materialsByType = await prisma.material.groupBy({
+    by: ['typeId'],
+    _count: { id: true },
+    where: { status: 'ACTIVE' },
+  });
+
+  // Get material type names
+  const materialTypes = await prisma.materialType.findMany({
+    where: { id: { in: materialsByType.map(m => m.typeId) } },
+    select: { id: true, name: true },
+  });
+
+  const materialTypeMap = Object.fromEntries(materialTypes.map(t => [t.id, t.name]));
+
+  const productsByCategory = await prisma.product.groupBy({
+    by: ['categoryId'],
+    _count: { id: true },
+    where: { status: 'ACTIVE', archivedAt: null },
+  });
+
+  // Get category names for products
+  const categories = await prisma.productCategory.findMany({
+    where: { id: { in: productsByCategory.map(p => p.categoryId) } },
+    select: { id: true, name: true },
+  });
+
+  const categoryMap = Object.fromEntries(categories.map(c => [c.id, c.name]));
+
+  const inventoryHealth: InventoryHealthData[] = [
+    ...materialsByType.map(m => ({
+      category: materialTypeMap[m.typeId] || 'Unknown',
+      materials: m._count.id,
+      products: 0,
+    })),
+    ...productsByCategory.map(p => ({
+      category: categoryMap[p.categoryId] || 'Unknown',
+      materials: 0,
+      products: p._count.id,
+    })),
+  ];
+
+  // Get revenue by month (last 6 months)
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+  const billingStatements = await prisma.billingStatement.findMany({
+    where: {
+      createdAt: { gte: sixMonthsAgo },
+      status: { in: ['PAID', 'PARTIAL'] },
+    },
+    select: {
+      createdAt: true,
+      totalAmount: true,
+    },
+  });
+
+  const revenueByMonth: { [key: string]: { revenue: number; orders: number } } = {};
+  billingStatements.forEach(statement => {
+    const monthKey = new Date(statement.createdAt).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short'
+    });
+    if (!revenueByMonth[monthKey]) {
+      revenueByMonth[monthKey] = { revenue: 0, orders: 0 };
+    }
+    revenueByMonth[monthKey].revenue += Number(statement.totalAmount);
+    revenueByMonth[monthKey].orders += 1;
+  });
+
+  const revenueData: RevenueData[] = Object.entries(revenueByMonth).map(([month, data]) => ({
+    month,
+    revenue: data.revenue,
+    orders: data.orders,
+  }));
+
+  // Get quality metrics
+  const qualityChecks = await prisma.qualityCheck.groupBy({
+    by: ['status'],
+    _count: { id: true },
+  });
+
+  const totalChecks = qualityChecks.reduce((sum, q) => sum + q._count.id, 0);
+  const passed = qualityChecks.find(q => q.status === 'APPROVED')?._count.id || 0;
+  const failed = qualityChecks.find(q => q.status === 'REJECTED')?._count.id || 0;
+  const pending = qualityChecks.find(q => q.status === 'PENDING')?._count.id || 0;
+
+  const qualityMetrics: QualityMetricsData = {
+    totalChecks,
+    passed,
+    failed,
+    pending,
+    passRate: totalChecks > 0 ? (passed / totalChecks) * 100 : 0,
+  };
+
+  // Get top products by order count - calculate revenue manually
+  const topProductsRaw = await prisma.orderLine.groupBy({
+    by: ['productId'],
+    _count: { id: true },
+    orderBy: { _count: { id: 'desc' } },
+    take: 5,
+  });
+
+  const productIds = topProductsRaw.map(p => p.productId).filter(Boolean) as string[];
+  const products = await prisma.product.findMany({
+    where: { id: { in: productIds } },
+    select: { id: true, name: true },
+  });
+
+  // Get revenue for these products
+  const productRevenue: { [key: string]: number } = {};
+  for (const productId of productIds) {
+    const orderLines = await prisma.orderLine.findMany({
+      where: { productId },
+      select: { quantity: true, unitPrice: true },
+    });
+    productRevenue[productId] = orderLines.reduce(
+      (sum, line) => sum + Number(line.unitPrice) * line.quantity,
+      0
+    );
+  }
+
+  const productMap = Object.fromEntries(products.map(p => [p.id, p.name]));
+
+  const topProducts: TopProductsData[] = topProductsRaw
+    .filter(p => p.productId)
+    .map(p => ({
+      name: productMap[p.productId!] || 'Unknown',
+      orders: p._count.id,
+      revenue: productRevenue[p.productId!] || 0,
+    }));
+
+  // Get material consumption
+  const materialConsumptionRaw = await prisma.productionMaterialConsumption.groupBy({
+    by: ['materialId'],
+    _sum: { actualQuantity: true },
+    orderBy: { _sum: { actualQuantity: 'desc' } },
+    take: 5,
+  });
+
+  const materialIds = materialConsumptionRaw.map(m => m.materialId);
+  const materials = await prisma.material.findMany({
+    where: { id: { in: materialIds } },
+    select: { id: true, name: true, committedStock: true },
+  });
+
+  const materialMap = Object.fromEntries(materials.map(m => [m.id, { name: m.name, reserved: m.committedStock }]));
+
+  const materialConsumption: MaterialConsumptionData[] = materialConsumptionRaw.map(m => ({
+    name: materialMap[m.materialId]?.name || 'Unknown',
+    consumed: Number(m._sum.actualQuantity || 0),
+    reserved: materialMap[m.materialId]?.reserved || 0,
+  }));
+
+  // Get low stock alerts - using raw query for field comparison
+  const lowStockMaterials = await prisma.$queryRaw<{ count: bigint }[]>`
+    SELECT COUNT(*) as count
+    FROM "Material"
+    WHERE "status" = 'ACTIVE'
+    AND "currentStock" <= "minimumStockLevel"
+  `;
+
+  const lowStockProducts = await prisma.$queryRaw<{ count: bigint }[]>`
+    SELECT COUNT(*) as count
+    FROM "Product"
+    WHERE "status" = 'ACTIVE'
+    AND "archivedAt" IS NULL
+    AND "currentStock" <= "minimumStockLevel"
+  `;
+
+  // Get production efficiency (simplified - comparing due date vs completion date)
+  const completedOrders = await prisma.productionOrder.findMany({
+    where: {
+      status: 'COMPLETED',
+      completedAt: { not: null },
+    },
+    select: {
+      dueDate: true,
+      completedAt: true,
+    },
+  });
+
+  let onTime = 0;
+  let delayed = 0;
+
+  completedOrders.forEach(order => {
+    if (order.completedAt && order.dueDate) {
+      if (order.completedAt <= order.dueDate) {
+        onTime++;
+      } else {
+        delayed++;
+      }
+    }
+  });
+
+  return {
+    productionOrdersByStatus,
+    inventoryHealth,
+    revenueByMonth: revenueData,
+    qualityMetrics,
+    topProducts,
+    materialConsumption,
+    lowStockAlerts: {
+      materials: Number(lowStockMaterials[0]?.count || 0),
+      products: Number(lowStockProducts[0]?.count || 0),
+    },
+    productionEfficiency: {
+      onTime,
+      delayed,
+      total: completedOrders.length,
+    },
+  };
 }
 

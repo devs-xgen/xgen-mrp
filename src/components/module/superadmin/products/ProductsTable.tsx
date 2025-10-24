@@ -1,18 +1,21 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import {
   useReactTable,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  getExpandedRowModel,
   ColumnDef,
   flexRender,
+  Row,
 } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatCurrencyPHP } from "@/lib/constant";
 import {
   Table,
   TableBody,
@@ -29,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, ChevronLeft, ChevronRight, Archive, TrendingUp, DollarSign } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Archive, TrendingUp, DollarSign, ChevronDown, Package } from "lucide-react";
 
 interface ProductsTableProps {
   initialData: any[];
@@ -51,6 +54,31 @@ export function ProductsTable({
 
   const columns: ColumnDef<any>[] = useMemo(
     () => [
+      {
+        id: "expander",
+        header: () => null,
+        cell: ({ row }) => {
+          const hasVariants = row.original._count?.variants > 0;
+          const hasBoms = row.original._count?.boms > 0;
+          const canExpand = hasVariants || hasBoms;
+
+          return canExpand ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => row.toggleExpanded()}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${
+                  row.getIsExpanded() ? "rotate-180" : ""
+                }`}
+              />
+            </Button>
+          ) : null;
+        },
+        enableSorting: false,
+      },
       {
         id: "select",
         header: ({ table }) => (
@@ -127,7 +155,7 @@ export function ProductsTable({
         header: "Price",
         cell: ({ row }) => (
           <div className="text-right font-medium">
-            ${Number(row.original.sellingPrice || 0).toFixed(2)}
+            {formatCurrencyPHP(row.original.sellingPrice)}
           </div>
         ),
       },
@@ -186,6 +214,7 @@ export function ProductsTable({
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
     onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter,
     state: {
@@ -197,6 +226,11 @@ export function ProductsTable({
         pageSize: 25,
       },
     },
+    getRowCanExpand: (row) => {
+      const hasVariants = row.original._count?.variants > 0;
+      const hasBoms = row.original._count?.boms > 0;
+      return hasVariants || hasBoms;
+    },
   });
 
   useMemo(() => {
@@ -205,6 +239,125 @@ export function ProductsTable({
   }, [rowSelection, table, onSelectionChange]);
 
   const selectedCount = table.getSelectedRowModel().rows.length;
+
+  const renderExpandedContent = (row: Row<any>) => {
+    const product = row.original;
+    const hasVariants = product.variants && product.variants.length > 0;
+    const hasBoms = product.boms && product.boms.length > 0;
+
+    return (
+      <div className="p-6 space-y-6">
+        {/* Product-level BOMs (for products without variants) */}
+        {hasBoms && !hasVariants && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+              <Package className="h-4 w-4" />
+              <span>Materials for {product.name}</span>
+            </div>
+            <div className="ml-6 space-y-2">
+              {product.boms.map((bom: any) => (
+                <div
+                  key={bom.id}
+                  className="flex items-center justify-between p-3 bg-background rounded-lg border"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Package className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-sm">{bom.material.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        SKU: {bom.material.sku}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium">
+                      Qty: {bom.quantityRequired}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Variants with their BOMs */}
+        {hasVariants && (
+          <div className="space-y-4">
+            <div className="text-sm font-semibold text-muted-foreground">
+              Variants ({product.variants.length})
+            </div>
+            <div className="space-y-4">
+              {product.variants.map((variant: any) => (
+                <div key={variant.id} className="ml-4 border-l-2 border-primary/20 pl-4 space-y-3">
+                  {/* Variant Header */}
+                  <div className="flex items-center justify-between p-3 bg-background rounded-lg border">
+                    <div>
+                      <div className="font-medium">{variant.displayName}</div>
+                      <div className="text-xs text-muted-foreground space-x-2">
+                        <span>SKU: {variant.sku}</span>
+                        {variant.sizeName && <span>• Size: {variant.sizeName}</span>}
+                        {variant.colorName && <span>• Color: {variant.colorName}</span>}
+                        {variant.styleName && <span>• Style: {variant.styleName}</span>}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm">Stock: {variant.currentStock}</div>
+                      <div className="text-sm font-medium">{formatCurrencyPHP(variant.sellingPrice)}</div>
+                    </div>
+                  </div>
+
+                  {/* Variant Materials */}
+                  {variant.boms && variant.boms.length > 0 && (
+                    <div className="ml-6 space-y-2">
+                      <div className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                        <Package className="h-3 w-3" />
+                        Materials ({variant.boms.length})
+                      </div>
+                      {variant.boms.map((bom: any) => (
+                        <div
+                          key={bom.id}
+                          className="flex items-center justify-between p-2.5 bg-muted/50 rounded-md border text-sm"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Package className="h-3 w-3 text-primary" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-xs">{bom.material.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {bom.material.sku}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right text-xs">
+                            <div className="font-medium">Qty: {bom.quantityNeeded}</div>
+                            {bom.wastePercentage > 0 && (
+                              <div className="text-muted-foreground">
+                                Waste: {bom.wastePercentage}%
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* No variants and no BOMs */}
+        {!hasVariants && !hasBoms && (
+          <div className="text-sm text-muted-foreground text-center py-4">
+            No variants or materials configured for this product
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -264,16 +417,22 @@ export function ProductsTable({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
+                <Fragment key={row.id}>
+                  <TableRow data-state={row.getIsSelected() && "selected"}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  {row.getIsExpanded() && (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} className="bg-muted/30 p-0">
+                        {renderExpandedContent(row)}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </Fragment>
               ))
             ) : (
               <TableRow>

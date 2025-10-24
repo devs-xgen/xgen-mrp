@@ -1259,6 +1259,8 @@ enum ShareableDocType {
   BILLING_STATEMENT
   SALES_INVOICE
   DELIVERY_RECEIPT
+  PRODUCT
+  PRODUCTION_ORDER
 }
 
 enum FulfillmentType {

@@ -15,6 +15,7 @@ import {
   getDeliveryAnalytics as baseGetDeliveryAnalytics,
   createDeliveryReceiptFromCustomerOrder as baseCreateDeliveryReceiptFromCustomerOrder,
   createDeliveryReceiptFromProductionOrder as baseCreateDeliveryReceiptFromProductionOrder,
+  downloadDeliveryReceiptPDF as baseDownloadDeliveryReceiptPDF,
 } from "@/lib/actions/delivery-receipts";
 import { ensureSuperAdmin } from "./index";
 import type {
@@ -142,4 +143,14 @@ export async function createDeliveryReceiptFromProductionOrder(
     revalidatePath("/superadmin/billing/delivery-receipts");
   }
   return result;
+}
+
+export async function downloadDeliveryReceiptPDF(id: string): Promise<{
+  success: boolean;
+  pdfData?: string;
+  filename?: string;
+  error?: string;
+}> {
+  await ensureSuperAdmin();
+  return baseDownloadDeliveryReceiptPDF(id);
 }
