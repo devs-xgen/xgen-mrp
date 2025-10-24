@@ -212,16 +212,18 @@ export async function reserveMaterialsForProduction(
       const reservations = []
       
       for (const material of requirements.materials) {
+        const quantityToReserve = Math.ceil(Number(material.quantityNeeded))
+
         // Create material reservation
         const reservation = await tx.materialReservation.create({
           data: {
             productionOrderId,
             materialId: material.materialId,
-            quantityReserved: material.quantityNeeded,
+            quantityReserved: quantityToReserve,
             status: ReservationStatus.RESERVED,
             reservedAt: new Date(),
             createdBy: session.user.id,
-            notes: `Material reserved and deducted for production order ${productionOrderId}`
+            notes: `Material reserved for production order ${productionOrderId}`
           }
         })
 
@@ -234,33 +236,38 @@ export async function reserveMaterialsForProduction(
           throw new Error(`Material not found: ${material.materialId}`)
         }
 
-        // Actually deduct materials from current stock (not just commit)
-        const newCurrentStock = currentMaterial.currentStock - material.quantityNeeded
-        const newAvailableStock = newCurrentStock - currentMaterial.committedStock
+        const newCommittedStock = currentMaterial.committedStock + quantityToReserve
+        const newAvailableStock = currentMaterial.currentStock - newCommittedStock
+
+        if (newAvailableStock < 0) {
+          throw new Error(
+            `Material ${material.materialId} would have negative available stock after reservation`
+          )
+        }
 
         await tx.material.update({
           where: { id: material.materialId },
           data: {
-            currentStock: newCurrentStock,
+            committedStock: newCommittedStock,
             availableStock: newAvailableStock
           }
         })
 
-        // Create inventory movement record for material deduction
+        // Create inventory movement record to capture commitment (no physical deduction)
         await tx.inventoryMovement.create({
           data: {
             materialId: material.materialId,
             movementType: MovementType.MATERIAL_RESERVATION,
-            quantity: material.quantityNeeded,
+            quantity: quantityToReserve,
             previousStock: currentMaterial.currentStock,
-            newStock: newCurrentStock,
+            newStock: currentMaterial.currentStock,
             unitCost: material.unitCost,
             totalValue: material.totalCost,
             referenceId: productionOrderId,
-            referenceType: 'ProductionOrder',
+            referenceType: "ProductionOrder",
             performedBy: session.user.id,
             transactionDate: new Date(),
-            notes: `Material deducted for production order ${productionOrderId}`
+            notes: `Material committed to production order ${productionOrderId}`
           }
         })
 
@@ -285,7 +292,7 @@ export async function reserveMaterialsForProduction(
     return {
       success: true,
       data: result,
-      message: `Successfully reserved and deducted materials for production order. Total cost: $${requirements.totalMaterialCost.toFixed(2)}`
+      message: `Successfully reserved materials for production order and marked them as committed. Total planned cost: $${requirements.totalMaterialCost.toFixed(2)}`
     }
 
   } catch (error) {
@@ -335,7 +342,10 @@ export async function releaseMaterialReservations(
       const releasedReservations = []
 
       for (const reservation of reservations) {
-        const quantityToRelease = Number(reservation.quantityReserved) - Number(reservation.quantityConsumed)
+        const quantityToRelease = Math.max(
+          0,
+          Math.ceil(Number(reservation.quantityReserved) - Number(reservation.quantityConsumed))
+        )
 
         if (quantityToRelease > 0) {
           // Update reservation status
@@ -346,7 +356,7 @@ export async function releaseMaterialReservations(
               quantityReleased: quantityToRelease,
               releasedAt: new Date(),
               notes: reservation.notes 
-                ? `${reservation.notes}; Released: ${reason || 'Production cancelled'}`
+                ? `${reservation.notes}; Released: ${reason || 'Production cancelled'}` 
                 : `Released: ${reason || 'Production cancelled'}`,
               modifiedBy: session.user.id
             }
@@ -361,31 +371,30 @@ export async function releaseMaterialReservations(
             throw new Error(`Material not found: ${reservation.materialId}`)
           }
 
-          // Return materials to current stock
-          const newCurrentStock = currentMaterial.currentStock + quantityToRelease
-          const newAvailableStock = newCurrentStock - currentMaterial.committedStock
+          const newCommittedStock = Math.max(0, currentMaterial.committedStock - quantityToRelease)
+          const newAvailableStock = currentMaterial.currentStock - newCommittedStock
 
           await tx.material.update({
             where: { id: reservation.materialId },
             data: {
-              currentStock: newCurrentStock,
+              committedStock: newCommittedStock,
               availableStock: newAvailableStock
             }
           })
 
-          // Create inventory movement record for material return
+          // Create inventory movement record for material release (commitment removed)
           await tx.inventoryMovement.create({
             data: {
               materialId: reservation.materialId,
               movementType: MovementType.MATERIAL_RETURN,
               quantity: quantityToRelease,
               previousStock: currentMaterial.currentStock,
-              newStock: newCurrentStock,
+              newStock: currentMaterial.currentStock,
               referenceId: productionOrderId,
-              referenceType: 'ProductionOrder',
+              referenceType: "ProductionOrder",
               performedBy: session.user.id,
               transactionDate: new Date(),
-              notes: `Material returned to stock: ${reason || 'Production cancelled'}`
+              notes: `Material commitment released: ${reason || "Production cancelled"}`
             }
           })
 
@@ -402,7 +411,7 @@ export async function releaseMaterialReservations(
     return {
       success: true,
       data: result,
-      message: `Successfully returned ${result.length} materials to stock`
+      message: `Successfully released material commitments for ${result.length} reservation(s)`
     }
 
   } catch (error) {

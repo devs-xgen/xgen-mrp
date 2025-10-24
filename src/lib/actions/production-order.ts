@@ -2310,7 +2310,7 @@
 // import { revalidatePath } from "next/cache"
 // import { getServerSession } from "next-auth"
 // import { authOptions } from "@/lib/auth"
-// import { Status } from "@prisma/client"
+// import { Status, ReservationStatus, MovementType, Prisma } from "@prisma/client"
 // import type { CreateProductionOrderInput, UpdateProductionOrderInput } from "@/types/admin/production-order"
 // import { getBOMForProduct } from "@/lib/actions/bom"
 // import {
@@ -4567,7 +4567,7 @@ import { prisma } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { Status } from "@prisma/client"
+import { Status, ReservationStatus, MovementType, Prisma } from "@prisma/client"
 import type { CreateProductionOrderInput, UpdateProductionOrderInput } from "@/types/admin/production-order"
 import { getBOMForProduct } from "@/lib/actions/bom"
 import {
@@ -5909,28 +5909,33 @@ export async function updateProductionOrderStatus(productionOrderId: string, sta
 
     // If completing production, increase product stock and update completion fields
     if (status === "COMPLETED" && oldStatus !== "COMPLETED") {
-      // 🔧 FIX: Use transaction to ensure all stock updates happen atomically
+      const now = new Date()
+
       await prisma.$transaction(async (tx) => {
         // 1. Update main product stock
         await tx.product.update({
           where: { id: currentOrder.productId },
           data: {
-            currentStock: currentOrder.product.currentStock + productionQty,
+            currentStock: {
+              increment: productionQty,
+            },
           },
         })
 
-        // 2. 🆕 FIX: Update product variant stock if this order is for a specific variant
+        // 2. Update product variant stock if this order is for a specific variant
         if (currentOrder.productVariantId) {
           const variant = await tx.productVariant.findUnique({
             where: { id: currentOrder.productVariantId },
-            select: { id: true, currentStock: true, displayName: true },
+            select: { id: true, displayName: true },
           })
 
           if (variant) {
             await tx.productVariant.update({
               where: { id: currentOrder.productVariantId },
               data: {
-                currentStock: variant.currentStock + productionQty,
+                currentStock: {
+                  increment: productionQty,
+                },
               },
             })
 
@@ -5956,8 +5961,8 @@ export async function updateProductionOrderStatus(productionOrderId: string, sta
           }
         }
 
-        // 3. 🆕 FIX: Consume materials from stock (reduce currentStock and committedStock)
-        const bomEntries = await tx.productionBOM.findMany({
+        // 3. Consume reserved materials and clear commitments
+        const reservations = await tx.materialReservation.findMany({
           where: { productionOrderId },
           include: {
             material: {
@@ -5967,23 +5972,48 @@ export async function updateProductionOrderStatus(productionOrderId: string, sta
                 sku: true,
                 currentStock: true,
                 committedStock: true,
+                costPerUnit: true,
               },
             },
           },
         })
 
-        // Process material consumption
-        for (const bomEntry of bomEntries) {
-          const quantityToConsume = Math.ceil(Number(bomEntry.quantityNeeded))
-          const material = bomEntry.material
+        const productionBOMEntries = await tx.productionBOM.findMany({
+          where: { productionOrderId },
+          select: {
+            materialId: true,
+            quantityNeeded: true,
+            unitCost: true,
+          },
+        })
 
-          // Calculate new stock levels
+        const bomByMaterialId = new Map<string, (typeof productionBOMEntries)[number]>()
+        productionBOMEntries.forEach((entry) => {
+          bomByMaterialId.set(entry.materialId, entry)
+        })
+
+        for (const reservation of reservations) {
+          const totalReserved = Number(reservation.quantityReserved)
+          const totalConsumed = Number(reservation.quantityConsumed)
+          const quantityToConsume = totalConsumed > 0 ? totalConsumed : totalReserved
+          const material = reservation.material
+
+          if (quantityToConsume <= 0) {
+            continue
+          }
+
+          if (material.currentStock < quantityToConsume) {
+            console.warn(
+              `Insufficient on-hand stock for material ${material.id} while completing production order ${productionOrderId}. Continuing with floor at zero.`
+            )
+          }
+
           const newCurrentStock = Math.max(0, material.currentStock - quantityToConsume)
           const newCommittedStock = Math.max(0, material.committedStock - quantityToConsume)
           const newAvailableStock = newCurrentStock - newCommittedStock
 
           await tx.material.update({
-            where: { id: bomEntry.materialId },
+            where: { id: reservation.materialId },
             data: {
               currentStock: newCurrentStock,
               committedStock: newCommittedStock,
@@ -5991,14 +6021,91 @@ export async function updateProductionOrderStatus(productionOrderId: string, sta
             },
           })
 
-          // Log material consumption
+          const bomEntry = bomByMaterialId.get(reservation.materialId)
+          const plannedQuantity = bomEntry ? Number(bomEntry.quantityNeeded) : totalReserved
+          const unitCost = bomEntry
+            ? Number(bomEntry.unitCost)
+            : Number(material.costPerUnit || 0)
+          const totalCost = unitCost * quantityToConsume
+
+          // Update reservation to consumed
+          await tx.materialReservation.update({
+            where: { id: reservation.id },
+            data: {
+              status: ReservationStatus.CONSUMED,
+              quantityConsumed: new Prisma.Decimal(quantityToConsume),
+              consumedAt: now,
+              modifiedBy: session.user.id,
+            },
+          })
+
+          // Record inventory movement for actual consumption
+          await tx.inventoryMovement.create({
+            data: {
+              materialId: reservation.materialId,
+              movementType: MovementType.MATERIAL_CONSUMPTION,
+              quantity: new Prisma.Decimal(quantityToConsume),
+              previousStock: new Prisma.Decimal(material.currentStock),
+              newStock: new Prisma.Decimal(newCurrentStock),
+              unitCost: unitCost ? new Prisma.Decimal(unitCost) : undefined,
+              totalValue: unitCost ? new Prisma.Decimal(totalCost) : undefined,
+              referenceId: productionOrderId,
+              referenceType: "ProductionOrder",
+              performedBy: session.user.id,
+              transactionDate: now,
+              notes: `Material consumed for production order ${productionOrderId}`,
+            },
+          })
+
+          // Upsert material consumption record
+          const existingConsumption = await tx.productionMaterialConsumption.findFirst({
+            where: {
+              productionOrderId,
+              materialId: reservation.materialId,
+            },
+          })
+
+          if (existingConsumption) {
+            await tx.productionMaterialConsumption.update({
+              where: { id: existingConsumption.id },
+              data: {
+                plannedQuantity: new Prisma.Decimal(plannedQuantity),
+                actualQuantity: new Prisma.Decimal(quantityToConsume),
+                wasteQuantity: new Prisma.Decimal(0),
+                unitCost: new Prisma.Decimal(unitCost || 0),
+                totalCost: new Prisma.Decimal(totalCost || 0),
+                consumedBy: session.user.id,
+                consumedAt: now,
+                notes:
+                  existingConsumption.notes ||
+                  `Auto consumption finalization for production order ${productionOrderId}`,
+              },
+            })
+          } else {
+            await tx.productionMaterialConsumption.create({
+              data: {
+                productionOrderId,
+                materialId: reservation.materialId,
+                plannedQuantity: new Prisma.Decimal(plannedQuantity),
+                actualQuantity: new Prisma.Decimal(quantityToConsume),
+                wasteQuantity: new Prisma.Decimal(0),
+                unitCost: new Prisma.Decimal(unitCost || 0),
+                totalCost: new Prisma.Decimal(totalCost || 0),
+                consumedBy: session.user.id,
+                consumedAt: now,
+                notes: `Auto consumption finalization for production order ${productionOrderId}`,
+              },
+            })
+          }
+
+          // Log material consumption in activity log
           try {
             await tx.activityLog.create({
               data: {
                 type: "MATERIAL_CONSUMED",
                 userId: session.user.id,
                 details: {
-                  materialId: bomEntry.materialId,
+                  materialId: reservation.materialId,
                   materialName: material.name,
                   materialSku: material.sku,
                   quantityConsumed: quantityToConsume,
@@ -6020,7 +6127,7 @@ export async function updateProductionOrderStatus(productionOrderId: string, sta
           where: { id: productionOrderId },
           data: {
             completedQuantity: productionQty,
-            completedAt: new Date(),
+            completedAt: now,
           },
         })
       })
