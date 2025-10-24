@@ -9,7 +9,8 @@
       "Read(//Users/zafajardo/Documents/Development/**)",
       "Bash(npm run dev:*)",
       "Bash(find:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

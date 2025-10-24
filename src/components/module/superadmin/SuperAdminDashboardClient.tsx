@@ -12,6 +12,14 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { DashboardAnalytics } from "@/lib/actions/superadmin";
+import { ProductionOrdersChart } from "./dashboard/ProductionOrdersChart";
+import { InventoryHealthChart } from "./dashboard/InventoryHealthChart";
+import { RevenueChart } from "./dashboard/RevenueChart";
+import { QualityMetricsCard } from "./dashboard/QualityMetricsCard";
+import { TopProductsChart } from "./dashboard/TopProductsChart";
+import { MaterialConsumptionChart } from "./dashboard/MaterialConsumptionChart";
+import { AlertsCard } from "./dashboard/AlertsCard";
 
 export interface SuperAdminDashboardProps {
   metrics: {
@@ -24,9 +32,10 @@ export interface SuperAdminDashboardProps {
     totalProducts: number;
     openSupportTickets: number;
   };
+  analytics: DashboardAnalytics;
 }
 
-export default function SuperAdminDashboardClient({ metrics }: SuperAdminDashboardProps) {
+export default function SuperAdminDashboardClient({ metrics, analytics }: SuperAdminDashboardProps) {
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -34,6 +43,7 @@ export default function SuperAdminDashboardClient({ metrics }: SuperAdminDashboa
         <p className="text-sm text-muted-foreground">System-wide overview and key performance indicators</p>
       </div>
 
+      {/* Key Metrics Stats */}
       <div className={cn("grid gap-4", "grid-cols-1 sm:grid-cols-2 xl:grid-cols-4") }>
         <StatCard title="Total Users" value={metrics.totalUsers} icon={Users} />
         <StatCard title="Active Users" value={metrics.activeUsers} icon={UserCheck} />
@@ -46,6 +56,32 @@ export default function SuperAdminDashboardClient({ metrics }: SuperAdminDashboa
         <StatCard title="Production Orders" value={metrics.totalProductionOrders} icon={Factory} />
         <StatCard title="Materials" value={metrics.totalMaterials} icon={Package} />
         <StatCard title="Products" value={metrics.totalProducts} icon={Box} />
+      </div>
+
+      {/* Production & Revenue Analytics */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+        <ProductionOrdersChart data={analytics.productionOrdersByStatus} />
+        <RevenueChart data={analytics.revenueByMonth} />
+      </div>
+
+      {/* Quality Metrics & Alerts */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+        <QualityMetricsCard data={analytics.qualityMetrics} />
+        <AlertsCard
+          lowStockAlerts={analytics.lowStockAlerts}
+          productionEfficiency={analytics.productionEfficiency}
+        />
+      </div>
+
+      {/* Inventory & Material Analysis */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+        <InventoryHealthChart data={analytics.inventoryHealth} />
+        <MaterialConsumptionChart data={analytics.materialConsumption} />
+      </div>
+
+      {/* Top Products */}
+      <div className="grid gap-6 grid-cols-1">
+        <TopProductsChart data={analytics.topProducts} />
       </div>
     </div>
   );

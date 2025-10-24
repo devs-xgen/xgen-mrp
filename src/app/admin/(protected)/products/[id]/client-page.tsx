@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Package, TrendingUp, AlertTriangle, Factory, Plus, Minus, History, Edit, Eye, PieChart, MoreVertical } from "lucide-react";
+import { ArrowLeft, Package, TrendingUp, AlertTriangle, Factory, Plus, Minus, History, Edit, Eye, PieChart, MoreVertical, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,7 @@ import {
   ProductWithNumberValues,
 } from "@/types/admin/product";
 import { EditProductDialog } from "@/components/module/admin/products/edit-product-dialog";
+import { ProductShareDialog } from "@/components/module/admin/products/product-share-dialog";
 import { ProductCategory } from "@prisma/client";
 
 interface WorkCenter {
@@ -68,6 +69,7 @@ export default function ProductDetailClientPage({
   const { toast } = useToast();
   const [showProductionDialog, setShowProductionDialog] = useState(false);
   const [showStockDialog, setShowStockDialog] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
 
 
@@ -154,6 +156,10 @@ export default function ProductDetailClientPage({
                   </Button>
                 }
               />
+            <Button variant="outline" size="sm" onClick={() => setShowShareDialog(true)}>
+              <Share2 className="h-4 w-4 mr-2" />
+              Share
+            </Button>
             <Button size="sm" onClick={() => setShowProductionDialog(true)}>
               <Factory className="h-4 w-4 mr-2" />
               Create Production
@@ -173,6 +179,10 @@ export default function ProductDetailClientPage({
                 <DropdownMenuItem onClick={() => router.push(`/admin/products/${id}/edit`)}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Product
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowShareDialog(true)}>
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share Product
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShowProductionDialog(true)}>
                   <Factory className="h-4 w-4 mr-2" />
@@ -502,6 +512,14 @@ export default function ProductDetailClientPage({
           minimumStockLevel: selectedVariant.minimumStockLevel
         } : undefined}
         onSuccess={() => router.refresh()}
+      />
+
+      {/* Product Share Dialog */}
+      <ProductShareDialog
+        open={showShareDialog}
+        onOpenChange={setShowShareDialog}
+        productId={product.id}
+        productName={product.name}
       />
     </div>
   );

@@ -175,12 +175,13 @@ import { notFound } from "next/navigation"
 import { ProductionQRGenerator } from "@/components/module/admin/production/production-qr-generator"
 import { ProductionWorkflowProgressButton } from "@/components/module/admin/production/production-workflow-progress-button"
 import { Button } from "@/components/ui/button"
-import { getDeliveryUsers } from "@/lib/actions/delivery/delivery-assignment" // Removed getDeliveryAssignment as it's fetched within ProductionOrderDetails
+import { getDeliveryUsers } from "@/lib/actions/delivery/delivery-assignment"
 import { getActiveInspectors } from "@/lib/actions/inspector"
 import { getProductionOrderWithPhaseStatus } from "@/lib/actions/production-order"
 import { convertDecimals } from "@/lib/convertDecimals"
 import { getAvailableWorkCenters } from "@/lib/actions/inspector/production-order"
 import { ProductionOrderDetails } from "@/components/module/admin/production/production-order-details"
+import { ProductionOrderHeaderActions } from "./production-order-header-actions"
 
 interface ProductionOrderPageProps {
   params: Promise<{
@@ -273,45 +274,40 @@ export default async function ProductionOrderPage({ params }: ProductionOrderPag
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <ProductionWorkflowProgressButton
-            productionOrderId={orderData.id}
-            currentStatus={orderData.status}
-            className="sm:w-auto"
-          />
-
-          <ProductionQRGenerator
-            order={{
-              id: orderData.id,
-              product: {
-                name: orderData.product.name,
-                sku: orderData.product.sku,
-              },
-              productVariant: orderData.productVariant
-                ? {
-                    displayName: orderData.productVariant.displayName,
-                    sku: orderData.productVariant.sku,
-                  }
-                : undefined,
-              quantity: orderData.quantity,
-              startDate: orderData.startDate,
-              dueDate: orderData.dueDate,
-              status: orderData.status,
-              priority: orderData.priority,
-              delivery: {
-                address: orderData.deliveryInfo?.deliveryAddress || "Not Assigned",
-                contactName: orderData.deliveryInfo?.userName || "Not Assigned",
-                contactPhone: "Not Assigned", // Assuming this is not in deliveryInfo
-                estimatedDelivery: orderData.deliveryInfo?.scheduledDate || new Date(),
-                instructions: orderData.deliveryInfo?.notes || "Not Assigned",
-              },
-              assignments: {
-                qualityInspector: order.qualityChecks?.[0]?.inspectorName || "Not Assigned",
-                logisticsCoordinator: orderData.deliveryInfo?.userName || "Not Assigned",
-              },
-            }}
-          />
-        </div>
+        <ProductionOrderHeaderActions
+          productionOrderId={orderData.id}
+          currentStatus={orderData.status}
+          productLabel={`${orderData.product.name}${orderData.productVariant ? ` - ${orderData.productVariant.displayName}` : ""}`}
+          qrOrderData={{
+            id: orderData.id,
+            product: {
+              name: orderData.product.name,
+              sku: orderData.product.sku,
+            },
+            productVariant: orderData.productVariant
+              ? {
+                  displayName: orderData.productVariant.displayName,
+                  sku: orderData.productVariant.sku,
+                }
+              : undefined,
+            quantity: orderData.quantity,
+            startDate: orderData.startDate,
+            dueDate: orderData.dueDate,
+            status: orderData.status,
+            priority: orderData.priority,
+            delivery: {
+              address: orderData.deliveryInfo?.deliveryAddress || "Not Assigned",
+              contactName: orderData.deliveryInfo?.userName || "Not Assigned",
+              contactPhone: "Not Assigned",
+              estimatedDelivery: orderData.deliveryInfo?.scheduledDate || new Date(),
+              instructions: orderData.deliveryInfo?.notes || "Not Assigned",
+            },
+            assignments: {
+              qualityInspector: order.qualityChecks?.[0]?.inspectorName || "Not Assigned",
+              logisticsCoordinator: orderData.deliveryInfo?.userName || "Not Assigned",
+            },
+          }}
+        />
       </div>
       {/* Production Order Details - Full width now */}
       <div className="w-full">
