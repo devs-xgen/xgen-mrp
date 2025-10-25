@@ -3,7 +3,7 @@
  * Lightweight utilities for recording system metrics and errors
  */
 
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db";
 
 // ============================================================================
 // Metrics Recording

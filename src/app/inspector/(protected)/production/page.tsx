@@ -7,6 +7,7 @@ import { Status } from "@prisma/client";
 import { QualityChecksTable } from "@/components/module/inspectors/tasks/TaskQualityCheck";
 import { getMyQualityChecks } from "@/lib/actions/inspector/production-order";
 
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: "My Quality Checks", // <-- Changed the title

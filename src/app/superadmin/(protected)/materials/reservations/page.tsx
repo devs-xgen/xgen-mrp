@@ -6,6 +6,8 @@ import {
 import { MaterialReservationsClient } from "@/components/module/superadmin/materials/reservations/MaterialReservationsClient";
 import { Skeleton } from "@/components/ui/skeleton";
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: "Material Reservations | SuperAdmin",
   description: "Manage material reservations across all production orders",

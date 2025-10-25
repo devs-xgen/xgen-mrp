@@ -7,6 +7,8 @@ import { Suspense } from "react";
 import { InspectorDashboardClient } from "@/components/module/inspectors/dashboard/InspectorDashboardClient";
 import { Metadata } from "next";
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: "Inspector Dashboard",
   description: "Overview of tasks, progress, and production orders for inspectors.",

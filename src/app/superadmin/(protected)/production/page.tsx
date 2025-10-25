@@ -22,6 +22,8 @@ import { AnalyticsCard, analyticsCardVariants } from "@/components/ui/analytics-
 import { SuperadminProductionOrdersTable } from "@/components/module/superadmin/production/SuperadminProductionOrdersTable";
 import { SuperadminProductionExportButton } from "@/components/module/superadmin/production/SuperadminProductionExportButton";
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: "Production Orders | Superadmin",
   description: "Manage all production orders with override capabilities",
