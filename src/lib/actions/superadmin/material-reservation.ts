@@ -82,7 +82,9 @@ export async function getAllMaterialReservationsSuperadmin(filters?: {
             committedStock: true,
             unitOfMeasure: {
               select: {
-                abbreviation: true,
+                id: true,
+                name: true,
+                symbol: true,
               },
             },
           },

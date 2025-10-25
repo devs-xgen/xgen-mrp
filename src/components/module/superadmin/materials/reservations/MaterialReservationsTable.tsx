@@ -109,7 +109,7 @@ export function MaterialReservationsTable({
               {Number(row.original.quantityReserved).toLocaleString()}
             </div>
             <div className="text-xs text-muted-foreground">
-              {row.original.material.unitOfMeasure?.abbreviation || "units"}
+              {row.original.material.unitOfMeasure?.symbol || "units"}
             </div>
           </div>
         ),

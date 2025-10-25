@@ -86,7 +86,7 @@ export function BulkReleaseReservationsDialog({
           materialSku: reservation.material.sku,
           totalReleased: releaseQty,
           reservationCount: 1,
-          unit: reservation.material.unitOfMeasure?.abbreviation || "units",
+          unit: reservation.material.unitOfMeasure?.symbol || "units",
           hasPartialConsumption: Number(reservation.quantityConsumed) > 0,
         });
       }
