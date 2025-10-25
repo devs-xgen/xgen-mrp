@@ -220,17 +220,19 @@ export default async function middleware(req: NextRequest) {
 
   // Public routes (allow access without authentication)
   // Include shareable document routes as public (handle both singular and plural forms)
-  const isShareableRoute = pathname.match(
-    /^\/(billing-statements?|sales-invoices?|delivery-receipts?)\/share\/[^\/]+$/
+  const shareableRoutePatterns = [
+    /^\/(billing-statements?|sales-invoices?|delivery-receipts?)\/share\/[^\/]+$/,
+    /^\/share\/(products|production)\/[^\/]+$/,
+  ];
+
+  const isShareableRoute = shareableRoutePatterns.some((pattern) =>
+    pattern.test(pathname)
   );
 
   // Debug logging for shareable routes
   if (pathname.includes("/share/")) {
     console.log(`🔍 Checking shareable route: ${pathname}`);
-    console.log(`🔍 Is shareable route: ${!!isShareableRoute}`);
-    console.log(
-      `🔍 Regex test result: ${/^\/(billing-statements?|sales-invoices?|delivery-receipts?)\/share\/[^\/]+$/.test(pathname)}`
-    );
+    console.log(`🔍 Is shareable route: ${isShareableRoute}`);
   }
 
   if (
