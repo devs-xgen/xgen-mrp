@@ -4,13 +4,12 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { DeliverySettings } from "@/components/module/delivery/settings";
 import {
+  PageBody,
   PageContainer,
+  PageDescription,
   PageHeader,
   PageHeaderMain,
   PageTitle,
-  PageDescription,
-  PageHeaderActions,
-  PageBody,
 } from "@/components/shared/page-layout";
 
 export const metadata: Metadata = {
@@ -31,12 +30,11 @@ export default async function DeliverySettingsPage() {
         <PageHeaderMain>
           <PageTitle>Settings</PageTitle>
           <PageDescription>
-            Dashboard details and analytics for user{" "}
+            Configure delivery preferences, notifications, and route defaults.
           </PageDescription>
         </PageHeaderMain>
       </PageHeader>
 
-      <PageHeaderActions></PageHeaderActions>
       <PageBody>
         <DeliverySettings user={session.user} />
       </PageBody>

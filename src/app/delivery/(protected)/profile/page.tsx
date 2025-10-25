@@ -3,6 +3,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { DeliveryProfile } from "@/components/module/delivery/profile";
+import {
+  PageBody,
+  PageContainer,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+} from "@/components/shared/page-layout";
 
 export const metadata: Metadata = {
   title: "Delivery Profile",
@@ -17,11 +24,16 @@ export default async function DeliveryProfilePage() {
   }
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
-      </div>
-      <DeliveryProfile user={session.user} />
-    </div>
+    <PageContainer>
+      <PageHeader>
+        <PageHeaderMain>
+          <PageTitle>Profile</PageTitle>
+        </PageHeaderMain>
+      </PageHeader>
+
+      <PageBody>
+        <DeliveryProfile user={session.user} />
+      </PageBody>
+    </PageContainer>
   );
-} 
+}

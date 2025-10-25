@@ -5,13 +5,12 @@ import { redirect } from "next/navigation";
 import { DeliveryManagement } from "@/components/module/delivery/deliveries";
 import { getDeliveryAssignments } from "@/lib/actions/delivery/delivery-assignment";
 import {
+  PageBody,
   PageContainer,
+  PageDescription,
   PageHeader,
   PageHeaderMain,
   PageTitle,
-  PageDescription,
-  PageHeaderActions,
-  PageBody,
 } from "@/components/shared/page-layout";
 
 export const metadata: Metadata = {
@@ -35,13 +34,10 @@ export default async function DeliveriesPage() {
         <PageHeader>
           <PageHeaderMain>
             <PageTitle>Delivery Management</PageTitle>
-            <PageDescription>
-              Dashboard details and analytics for user{" "}
-            </PageDescription>
+            <PageDescription>Organize daily routes and monitor fulfillment progress.</PageDescription>
           </PageHeaderMain>
         </PageHeader>
 
-        <PageHeaderActions></PageHeaderActions>
         <PageBody>
           <DeliveryManagement assignments={deliveryAssignments} />
         </PageBody>
@@ -50,12 +46,20 @@ export default async function DeliveriesPage() {
   } catch (error) {
     console.error("Error fetching deliveries:", error);
     return (
-      <div className="container mx-auto py-6">
-        <h1 className="text-3xl font-bold mb-6">Delivery Management</h1>
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          <p>Error loading deliveries. Please try again later.</p>
-        </div>
-      </div>
+      <PageContainer>
+        <PageHeader>
+          <PageHeaderMain>
+            <PageTitle>Delivery Management</PageTitle>
+            <PageDescription>Organize daily routes and monitor fulfillment progress.</PageDescription>
+          </PageHeaderMain>
+        </PageHeader>
+
+        <PageBody>
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+            Error loading deliveries. Please try again later.
+          </div>
+        </PageBody>
+      </PageContainer>
     );
   }
 }

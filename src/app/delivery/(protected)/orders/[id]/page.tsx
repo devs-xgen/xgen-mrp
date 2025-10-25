@@ -5,6 +5,14 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { DeliveryOrderDetails } from "@/components/module/delivery/order-details";
 import { getDeliveryAssignmentById } from "@/lib/actions/delivery/delivery-assignment";
+import {
+  PageBody,
+  PageContainer,
+  PageDescription,
+  PageHeader,
+  PageHeaderMain,
+  PageTitle,
+} from "@/components/shared/page-layout";
 
 export const metadata: Metadata = {
   title: "Delivery Order Details",
@@ -36,10 +44,20 @@ export default async function DeliveryOrderPage({
     }
 
     return (
-      <div className="container py-6">
-        <h1 className="text-3xl font-bold mb-6">Delivery Order Details</h1>
-        <DeliveryOrderDetails assignment={assignment} />
-      </div>
+      <PageContainer>
+        <PageHeader>
+          <PageHeaderMain>
+            <PageTitle>Delivery Order Details</PageTitle>
+            <PageDescription>
+              Review assignment specifics, scheduled stops, and delivery progress.
+            </PageDescription>
+          </PageHeaderMain>
+        </PageHeader>
+
+        <PageBody>
+          <DeliveryOrderDetails assignment={assignment} />
+        </PageBody>
+      </PageContainer>
     );
   } catch (error) {
     console.error("Error fetching delivery assignment:", error);

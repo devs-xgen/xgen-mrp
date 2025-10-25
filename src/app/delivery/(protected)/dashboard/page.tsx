@@ -5,13 +5,12 @@ import { redirect } from "next/navigation";
 import { DeliveryDashboard } from "@/components/module/delivery/dashboard";
 import { getDeliveryAssignments } from "@/lib/actions/delivery/delivery-assignment";
 import {
+  PageBody,
   PageContainer,
+  PageDescription,
   PageHeader,
   PageHeaderMain,
   PageTitle,
-  PageDescription,
-  PageHeaderActions,
-  PageBody,
 } from "@/components/shared/page-layout";
 
 export const metadata: Metadata = {
@@ -35,11 +34,12 @@ export default async function DeliveryDashboardPage() {
         <PageHeader>
           <PageHeaderMain>
             <PageTitle>Delivery Dashboard</PageTitle>
-            <PageDescription>Dashboard details and analytics for user </PageDescription>
+            <PageDescription>
+              Track assignments, progress, and recent activity across your delivery routes.
+            </PageDescription>
           </PageHeaderMain>
         </PageHeader>
 
-        <PageHeaderActions></PageHeaderActions>
         <PageBody>
           <DeliveryDashboard assignments={deliveryAssignments} />
         </PageBody>
@@ -48,12 +48,22 @@ export default async function DeliveryDashboardPage() {
   } catch (error) {
     console.error("Error fetching delivery assignments:", error);
     return (
-      <div className="container mx-auto py-6">
-        <h1 className="text-3xl font-bold mb-6">Delivery Dashboard</h1>
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          <p>Error loading delivery assignments. Please try again later.</p>
-        </div>
-      </div>
+      <PageContainer>
+        <PageHeader>
+          <PageHeaderMain>
+            <PageTitle>Delivery Dashboard</PageTitle>
+            <PageDescription>
+              Track assignments, progress, and recent activity across your delivery routes.
+            </PageDescription>
+          </PageHeaderMain>
+        </PageHeader>
+
+        <PageBody>
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+            Error loading delivery assignments. Please try again later.
+          </div>
+        </PageBody>
+      </PageContainer>
     );
   }
 }
