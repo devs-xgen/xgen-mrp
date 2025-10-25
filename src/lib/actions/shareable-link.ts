@@ -120,15 +120,7 @@ export async function getProductByShareableToken(token: string) {
       where: { id: shareableLink.documentId },
       include: {
         category: true,
-        variants: {
-          include: {
-            attributeValues: {
-              include: {
-                attribute: true,
-              },
-            },
-          },
-        },
+        variants: true,
       },
     });
 
@@ -334,15 +326,7 @@ export async function getProductionOrderByShareableToken(token: string) {
             category: true,
           },
         },
-        productVariant: {
-          include: {
-            attributeValues: {
-              include: {
-                attribute: true,
-              },
-            },
-          },
-        },
+        productVariant: true,
         operations: {
           include: {
             workCenter: true,

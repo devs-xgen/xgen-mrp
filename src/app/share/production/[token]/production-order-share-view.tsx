@@ -60,448 +60,633 @@ export function ProductionOrderShareView({
   const hasDelivery = productionOrder.deliveryAssignment;
   const hasCustomer = productionOrder.customerOrder?.customer;
 
+  const sharePath = `/share/production/${shareableLink.token}`;
+  const totalOperations = productionOrder.operations?.length ?? 0;
+  const completedOperations = productionOrder.operations?.filter(
+    (op: any) => op.status === "COMPLETED"
+  ).length ?? 0;
+  const progress = totalOperations > 0 ? Math.round((completedOperations / totalOperations) * 100) : 0;
+  const uniqueWorkCenters = totalOperations
+    ? new Set(
+        productionOrder.operations
+          .map((op: any) => op.workCenter?.name)
+          .filter((name: string | undefined) => Boolean(name))
+      ).size
+    : 0;
+  const uniqueOperators = totalOperations
+    ? new Set(
+        productionOrder.operations
+          .map((op: any) => op.assignedTo?.id)
+          .filter((id: string | undefined) => Boolean(id))
+      ).size
+    : 0;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                <Factory className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-100 via-white to-slate-200 text-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-100">
+      <span className="pointer-events-none absolute -right-32 -top-32 h-[28rem] w-[28rem] rounded-full bg-blue-400/20 blur-[120px] dark:bg-blue-500/10" />
+      <span className="pointer-events-none absolute -left-40 bottom-[-20%] h-[26rem] w-[26rem] rounded-full bg-purple-400/20 blur-[110px] dark:bg-purple-500/10" />
+
+      <div className="relative z-10">
+        <header className="px-4 py-12 sm:px-6 lg:px-8">
+          <div className="mx-auto flex max-w-6xl flex-col gap-6 rounded-3xl border border-white/40 bg-white/70 p-8 shadow-xl backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-900/70">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg">
+                  <Factory className="h-8 w-8" />
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-blue-500 dark:text-blue-400">
+                    Production Order
+                  </p>
+                  <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">
+                    {productionOrder.product.name}
+                    {hasVariant && (
+                      <span className="ml-2 text-lg font-normal text-blue-600/80 dark:text-blue-400/70">
+                        — {productionOrder.productVariant.displayName}
+                      </span>
+                    )}
+                  </h1>
+                  <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
+                    <Badge className={`${statusColors[productionOrder.status]} text-white px-3 py-1`}>
+                      {productionOrder.status.replace(/_/g, " ")}
+                    </Badge>
+                    <Separator orientation="vertical" className="hidden h-4 sm:flex" />
+                    <Badge
+                      variant="outline"
+                      className={`${priorityColors[productionOrder.priority]} text-white px-3 py-1`}
+                    >
+                      {productionOrder.priority} Priority
+                    </Badge>
+                    <Separator orientation="vertical" className="hidden h-4 sm:flex" />
+                    <div className="flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      <span>PO #{productionOrder.id.substring(0, 8).toUpperCase()}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                  {productionOrder.product.name}
-                  {hasVariant && (
-                    <span className="text-lg font-normal text-muted-foreground ml-2">
-                      - {productionOrder.productVariant.displayName}
-                    </span>
-                  )}
-                </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Production Order #{productionOrder.id.substring(0, 8).toUpperCase()}
+
+              <div className="grid gap-3 lg:min-w-[260px]">
+                <div className="rounded-2xl border border-blue-200/60 bg-blue-50/60 px-4 py-3 text-sm shadow-sm dark:border-blue-500/20 dark:bg-blue-500/10">
+                  <p className="font-medium text-blue-700 dark:text-blue-300">Share URL</p>
+                  <p className="mt-1 truncate text-xs text-blue-600/80 dark:text-blue-200/80">{sharePath}</p>
+                </div>
+                <div className="grid gap-2 text-sm text-slate-600 dark:text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    <span>Tokenized external access</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>Expires {new Date(shareableLink.expiresAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Info className="h-4 w-4" />
+                    <span>{shareableLink.accessCount} view events</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border border-white/40 bg-white/70 p-4 shadow-sm backdrop-blur-lg dark:border-slate-800/60 dark:bg-slate-900/60">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Quantity
+                </p>
+                <div className="mt-3 flex items-baseline gap-2">
+                  <span className="text-3xl font-semibold text-slate-800 dark:text-slate-100">
+                    {productionOrder.quantity}
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">units</span>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/40 bg-white/70 p-4 shadow-sm backdrop-blur-lg dark:border-slate-800/60 dark:bg-slate-900/60">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Start Date
+                </p>
+                <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">
+                  {format(new Date(productionOrder.startDate), "MMM dd, yyyy")}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/40 bg-white/70 p-4 shadow-sm backdrop-blur-lg dark:border-slate-800/60 dark:bg-slate-900/60">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Due Date
+                </p>
+                <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">
+                  {format(new Date(productionOrder.dueDate), "MMM dd, yyyy")}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/40 bg-white/70 p-4 shadow-sm backdrop-blur-lg dark:border-slate-800/60 dark:bg-slate-900/60">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Progress
+                </p>
+                <p className="mt-3 text-3xl font-semibold text-blue-600 dark:text-blue-400">{progress}%</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {completedOperations} of {totalOperations} operations completed
                 </p>
               </div>
             </div>
-            <div className="flex flex-col gap-2">
-              <Badge
-                className={`${statusColors[productionOrder.status]} text-white px-3 py-1`}
-              >
-                {productionOrder.status.replace(/_/g, " ")}
-              </Badge>
-              <Badge
-                variant="outline"
-                className={`${priorityColors[productionOrder.priority]} text-white px-3 py-1`}
-              >
-                {productionOrder.priority} Priority
-              </Badge>
-            </div>
           </div>
-        </div>
-      </div>
+        </header>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-6">
-          {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Quantity</p>
-                    <p className="text-2xl font-bold">{productionOrder.quantity}</p>
-                  </div>
-                  <Package className="w-8 h-8 text-blue-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Start Date</p>
-                    <p className="text-lg font-semibold">
-                      {format(new Date(productionOrder.startDate), "MMM dd, yyyy")}
-                    </p>
-                  </div>
-                  <Calendar className="w-8 h-8 text-green-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Due Date</p>
-                    <p className="text-lg font-semibold">
-                      {format(new Date(productionOrder.dueDate), "MMM dd, yyyy")}
-                    </p>
-                  </div>
-                  <Clock className="w-8 h-8 text-orange-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Progress</p>
-                    <p className="text-2xl font-bold">
-                      {hasOperations
-                        ? Math.round(
-                            (productionOrder.operations.filter(
-                              (op: any) => op.status === "COMPLETED"
-                            ).length /
-                              productionOrder.operations.length) *
-                              100
-                          )
-                        : 0}
-                      %
-                    </p>
-                  </div>
-                  <TrendingUp className="w-8 h-8 text-purple-500" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Product Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Info className="w-5 h-5" />
-                Product Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Product Name</p>
-                  <p className="text-lg font-semibold">{productionOrder.product.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">SKU</p>
-                  <p className="text-lg font-semibold">{productionOrder.product.sku}</p>
-                </div>
-                {productionOrder.product.category && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Category</p>
-                    <p className="text-lg font-semibold">
-                      {productionOrder.product.category.name}
-                    </p>
-                  </div>
-                )}
-                {hasVariant && (
-                  <>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Variant</p>
-                      <p className="text-lg font-semibold">
-                        {productionOrder.productVariant.displayName}
-                      </p>
-                    </div>
-                    <div className="md:col-span-2">
-                      <p className="text-sm font-medium text-muted-foreground mb-2">
-                        Variant Attributes
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {productionOrder.productVariant.attributeValues.map((av: any) => (
-                          <Badge key={av.id} variant="outline">
-                            {av.attribute.name}: {av.value}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Customer Information */}
-          {hasCustomer && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5" />
-                  Customer Information
+        <main className="px-4 pb-16 sm:px-6 lg:px-8">
+          <div className="mx-auto flex max-w-6xl flex-col gap-6">
+            <Card className="border-white/40 bg-white/70 shadow-lg backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-900/70">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Info className="h-5 w-5" />
+                  Production Narrative
                 </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Customer Name</p>
-                    <p className="text-lg font-semibold">
-                      {productionOrder.customerOrder.customer.name}
-                    </p>
-                  </div>
-                  {productionOrder.customerOrder.customer.email && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Email</p>
-                      <p className="text-lg font-semibold">
-                        {productionOrder.customerOrder.customer.email}
-                      </p>
-                    </div>
-                  )}
-                  {productionOrder.customerOrder.customer.phone && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Phone</p>
-                      <p className="text-lg font-semibold">
-                        {productionOrder.customerOrder.customer.phone}
-                      </p>
-                    </div>
-                  )}
-                  {productionOrder.customerOrder.customer.address && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Address</p>
-                      <p className="text-lg font-semibold">
-                        {productionOrder.customerOrder.customer.address}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Operations Timeline */}
-          {hasOperations && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  Production Operations
-                </CardTitle>
-                <CardDescription>
-                  Track the status of each operation in the production workflow
+                <CardDescription className="text-sm text-slate-600 dark:text-slate-400">
+                  At-a-glance context for planners and stakeholders
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+              <CardContent className="space-y-6">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="rounded-2xl border border-slate-200/60 bg-slate-50/80 p-4 dark:border-slate-800/60 dark:bg-slate-900/60">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Customer Order
+                    </p>
+                    <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
+                      {productionOrder.customerOrder?.orderNumber ?? "Independent production"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200/60 bg-slate-50/80 p-4 dark:border-slate-800/60 dark:bg-slate-900/60">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Priority
+                    </p>
+                    <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
+                      {productionOrder.priority.replace(/_/g, " ")}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200/60 bg-slate-50/80 p-4 dark:border-slate-800/60 dark:bg-slate-900/60">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Notes
+                    </p>
+                    <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
+                      {productionOrder.notes?.length ? productionOrder.notes : "No additional notes."}
+                    </p>
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-200/60 bg-slate-50/80 p-4 dark:border-slate-800/60 dark:bg-slate-900/60">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Start & Due
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-700 dark:text-slate-200">
+                      <span>Start: {format(new Date(productionOrder.startDate), "MMM dd, yyyy")}</span>
+                      <Separator orientation="vertical" className="hidden h-4 sm:flex" />
+                      <span>Due: {format(new Date(productionOrder.dueDate), "MMM dd, yyyy")}</span>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200/60 bg-slate-50/80 p-4 dark:border-slate-800/60 dark:bg-slate-900/60">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Work Centers & Personnel
+                    </p>
+                    <div className="mt-3 grid gap-2 text-sm text-slate-700 dark:text-slate-200 sm:grid-cols-2">
+                      <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Distinct work centers</p>
+                        <p className="text-lg font-semibold">{uniqueWorkCenters}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Assigned operators</p>
+                        <p className="text-lg font-semibold">{uniqueOperators}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-6 lg:grid-cols-[1.6fr,1fr]">
+              <Card className="border-white/40 bg-white/70 shadow-lg backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-900/70">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Package className="h-5 w-5" />
+                    Product & Variant
+                  </CardTitle>
+                  <CardDescription className="text-sm text-slate-600 dark:text-slate-400">
+                    Canonical product metadata for this build
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-4 dark:border-slate-800/50 dark:bg-slate-900/60">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        Product Name
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        {productionOrder.product.name}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-4 dark:border-slate-800/50 dark:bg-slate-900/60">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        SKU
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        {productionOrder.product.sku}
+                      </p>
+                    </div>
+                    {productionOrder.product.category && (
+                      <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-4 dark:border-slate-800/50 dark:bg-slate-900/60">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          Category
+                        </p>
+                        <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                          {productionOrder.product.category.name}
+                        </p>
+                      </div>
+                    )}
+                    {hasVariant && (
+                      <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-4 dark:border-slate-800/50 dark:bg-slate-900/60">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          Variant
+                        </p>
+                        <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                          {productionOrder.productVariant.displayName}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          SKU: {productionOrder.productVariant.sku}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {(() => {
+                            const attributes: { label: string; value: string }[] = [];
+
+                            if (productionOrder.productVariant?.sizeName) {
+                              attributes.push({
+                                label: "Size",
+                                value: productionOrder.productVariant.sizeName,
+                              });
+                            }
+
+                            if (productionOrder.productVariant?.colorName) {
+                              attributes.push({
+                                label: "Color",
+                                value: productionOrder.productVariant.colorName,
+                              });
+                            }
+
+                            if (productionOrder.productVariant?.styleName) {
+                              attributes.push({
+                                label: "Style",
+                                value: productionOrder.productVariant.styleName,
+                              });
+                            }
+
+                            if (productionOrder.productVariant?.materialName) {
+                              attributes.push({
+                                label: "Material",
+                                value: productionOrder.productVariant.materialName,
+                              });
+                            }
+
+                            if (productionOrder.productVariant?.variantGroup) {
+                              attributes.push({
+                                label: "Group",
+                                value: productionOrder.productVariant.variantGroup,
+                              });
+                            }
+
+                            return attributes.map((attr) => (
+                              <Badge
+                                key={`${productionOrder.productVariant.id}-${attr.label}`}
+                                variant="secondary"
+                                className="bg-slate-200/70 text-xs text-slate-700 dark:bg-slate-800/70 dark:text-slate-200"
+                              >
+                                {attr.label}: {attr.value}
+                              </Badge>
+                            ));
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-white/40 bg-white/70 shadow-lg backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-900/70">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <TrendingUp className="h-5 w-5" />
+                    Execution Metrics
+                  </CardTitle>
+                  <CardDescription className="text-sm text-slate-600 dark:text-slate-400">
+                    Operational cadence and resource deployment
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="rounded-2xl bg-gradient-to-br from-purple-500/90 to-indigo-600/90 p-5 text-white shadow-lg">
+                    <p className="text-xs uppercase tracking-[0.2em] text-white/70">Progress</p>
+                    <p className="mt-3 text-3xl font-semibold">{progress}%</p>
+                    <p className="mt-1 text-xs text-white/80">
+                      {completedOperations} of {totalOperations} operations complete
+                    </p>
+                  </div>
+                  <div className="grid gap-4">
+                    <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-4 text-sm dark:border-slate-800/50 dark:bg-slate-900/60">
+                      <p className="font-medium text-slate-700 dark:text-slate-200">Distinct Work Centers</p>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{uniqueWorkCenters}</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-4 text-sm dark;border-slate-800/50 dark:bg-slate-900/60">
+                      <p className="font-medium text-slate-700 dark:text-slate-200">Assigned Operators</p>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{uniqueOperators}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {hasCustomer && (
+              <Card className="border-white/40 bg-white/70 shadow-lg backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-900/70">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Building2 className="h-5 w-5" />
+                    Customer Partner
+                  </CardTitle>
+                  <CardDescription className="text-sm text-slate-600 dark:text-slate-400">
+                    Contact information for downstream coordination
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        Company
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        {productionOrder.customerOrder.customer.name}
+                      </p>
+                    </div>
+                    {productionOrder.customerOrder.customer.email && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          Email
+                        </p>
+                        <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
+                          {productionOrder.customerOrder.customer.email}
+                        </p>
+                      </div>
+                    )}
+                    {productionOrder.customerOrder.customer.phone && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          Phone
+                        </p>
+                        <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
+                          {productionOrder.customerOrder.customer.phone}
+                        </p>
+                      </div>
+                    )}
+                    {productionOrder.customerOrder.customer.address && (
+                      <div className="sm:col-span-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          Address
+                        </p>
+                        <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
+                          {productionOrder.customerOrder.customer.address}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {hasOperations && (
+              <Card className="border-white/40 bg-white/70 shadow-lg backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-900/70">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Users className="h-5 w-5" />
+                    Operations Timeline
+                  </CardTitle>
+                  <CardDescription className="text-sm text-slate-600 dark:text-slate-400">
+                    Phase-by-phase execution tracking
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
                   {productionOrder.operations.map((operation: any, index: number) => (
                     <div
                       key={operation.id}
-                      className={`p-4 border-l-4 rounded-lg ${
-                        operationStatusColors[operation.status]
-                      }`}
+                      className="rounded-2xl border border-slate-200/60 bg-white/80 p-5 shadow-sm transition-all hover:border-blue-200 dark:border-slate-800/50 dark:bg-slate-900/60 hover:dark:border-blue-500/30"
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="font-semibold text-lg">
-                              #{index + 1} {operation.name}
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+                              Phase {index + 1}
                             </span>
                             <Badge variant="outline" className="text-xs">
                               {operation.status.replace(/_/g, " ")}
                             </Badge>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+                            {operation.name}
+                          </h3>
+                          <div className="grid gap-4 text-sm text-slate-600 dark:text-slate-300 sm:grid-cols-3">
                             <div>
-                              <p className="text-muted-foreground">Work Center</p>
-                              <p className="font-medium">{operation.workCenter.name}</p>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                Work Center
+                              </p>
+                              <p className="mt-1 font-medium">{operation.workCenter.name}</p>
                             </div>
                             <div>
-                              <p className="text-muted-foreground">Assigned To</p>
-                              <p className="font-medium">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                Assigned To
+                              </p>
+                              <p className="mt-1 font-medium">
                                 {operation.assignedTo?.name || "Not Assigned"}
                               </p>
                             </div>
                             <div>
-                              <p className="text-muted-foreground">Duration</p>
-                              <p className="font-medium">{operation.estimatedDuration} hours</p>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                Duration
+                              </p>
+                              <p className="mt-1 font-medium">{operation.estimatedDuration} hrs</p>
                             </div>
                           </div>
-                          {operation.actualStartTime && (
-                            <div className="mt-2 text-sm">
-                              <span className="text-muted-foreground">Started: </span>
-                              <span className="font-medium">
+                          <div className="grid gap-3 text-xs text-slate-500 dark:text-slate-400 sm:grid-cols-2">
+                            {operation.actualStartTime && (
+                              <p>
+                                <span className="font-medium text-slate-600 dark:text-slate-300">Started:</span> {" "}
                                 {format(new Date(operation.actualStartTime), "MMM dd, yyyy HH:mm")}
-                              </span>
-                            </div>
-                          )}
-                          {operation.actualEndTime && (
-                            <div className="mt-1 text-sm">
-                              <span className="text-muted-foreground">Completed: </span>
-                              <span className="font-medium">
+                              </p>
+                            )}
+                            {operation.actualEndTime && (
+                              <p>
+                                <span className="font-medium text-slate-600 dark:text-slate-300">Completed:</span> {" "}
                                 {format(new Date(operation.actualEndTime), "MMM dd, yyyy HH:mm")}
-                              </span>
-                            </div>
-                          )}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            )}
 
-          {/* Quality Checks */}
-          {hasQualityChecks && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ClipboardCheck className="w-5 h-5" />
-                  Quality Control
-                </CardTitle>
-                <CardDescription>Quality inspection reports and findings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+            {hasQualityChecks && (
+              <Card className="border-white/40 bg-white/70 shadow-lg backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-900/70">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <ClipboardCheck className="h-5 w-5" />
+                    Quality Surveillance
+                  </CardTitle>
+                  <CardDescription className="text-sm text-slate-600 dark:text-slate-400">
+                    Inspection log and remediation notes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
                   {productionOrder.qualityChecks.map((check: any) => (
                     <div
                       key={check.id}
-                      className={`p-4 border rounded-lg ${
+                      className={`rounded-2xl border p-5 shadow-sm transition-all hover:border-blue-200 dark:hover:border-blue-500/30 ${
                         check.status === "PASSED"
-                          ? "border-green-200 bg-green-50 dark:bg-green-950"
+                          ? "border-green-200/80 bg-green-50/80 dark:border-green-500/20 dark:bg-green-500/10"
                           : check.status === "FAILED"
-                          ? "border-red-200 bg-red-50 dark:bg-red-950"
-                          : "border-yellow-200 bg-yellow-50 dark:bg-yellow-950"
+                          ? "border-red-200/80 bg-red-50/80 dark:border-red-500/20 dark:bg-red-500/10"
+                          : "border-yellow-200/80 bg-yellow-50/80 dark:border-yellow-500/20 dark:bg-yellow-500/10"
                       }`}
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             {check.status === "PASSED" ? (
-                              <CheckCircle2 className="w-5 h-5 text-green-600" />
+                              <CheckCircle2 className="h-5 w-5 text-green-600" />
                             ) : (
-                              <AlertCircle className="w-5 h-5 text-red-600" />
+                              <AlertCircle className="h-5 w-5 text-red-600" />
                             )}
-                            <span className="font-semibold">
+                            <p className="font-semibold text-slate-800 dark:text-slate-100">
                               {check.inspector
                                 ? `${check.inspector.firstName} ${check.inspector.lastName}`
                                 : "Unknown Inspector"}
-                            </span>
+                            </p>
                           </div>
-                          <p className="text-sm text-muted-foreground mt-1">
+                          <p className="text-xs text-slate-600 dark:text-slate-300">
                             {format(new Date(check.checkDate), "MMM dd, yyyy HH:mm")}
                           </p>
+                          {check.notes && (
+                            <p className="text-sm text-slate-700 dark:text-slate-200">{check.notes}</p>
+                          )}
                         </div>
-                        <Badge
-                          variant={check.status === "PASSED" ? "default" : "destructive"}
-                        >
+                        <Badge variant={check.status === "PASSED" ? "default" : "destructive"}>
                           {check.status}
                         </Badge>
                       </div>
-                      {check.defectsFound > 0 && (
-                        <div className="mb-2">
-                          <p className="text-sm">
-                            <span className="font-medium">Defects Found: </span>
-                            {check.defectsFound}
+                      <div className="mt-3 grid gap-3 text-xs text-slate-600 dark:text-slate-300 sm:grid-cols-2">
+                        <p>
+                          <span className="font-medium">Defects:</span> {check.defectsFound ?? 0}
+                        </p>
+                        {check.actionTaken && (
+                          <p>
+                            <span className="font-medium">Action Taken:</span> {check.actionTaken}
                           </p>
-                        </div>
-                      )}
-                      {check.actionTaken && (
-                        <div className="mb-2">
-                          <p className="text-sm">
-                            <span className="font-medium">Action Taken: </span>
-                            {check.actionTaken}
-                          </p>
-                        </div>
-                      )}
-                      {check.notes && (
-                        <div className="p-3 bg-white/50 dark:bg-gray-800/50 rounded">
-                          <p className="text-sm">{check.notes}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Delivery Information */}
-          {hasDelivery && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Truck className="w-5 h-5" />
-                  Delivery Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Assigned To</p>
-                    <p className="text-lg font-semibold">
-                      {productionOrder.deliveryAssignment.assignedUser?.name || "Not Assigned"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Status</p>
-                    <Badge variant="outline" className="text-sm">
-                      {productionOrder.deliveryAssignment.status.replace(/_/g, " ")}
-                    </Badge>
-                  </div>
-                  {productionOrder.deliveryAssignment.scheduledDate && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Scheduled Date</p>
-                      <p className="text-lg font-semibold">
-                        {format(
-                          new Date(productionOrder.deliveryAssignment.scheduledDate),
-                          "MMM dd, yyyy"
                         )}
-                      </p>
-                    </div>
-                  )}
-                  {productionOrder.deliveryAssignment.deliveryAddress && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Delivery Address
-                      </p>
-                      <p className="text-lg font-semibold">
-                        {productionOrder.deliveryAssignment.deliveryAddress}
-                      </p>
-                    </div>
-                  )}
-                  {productionOrder.deliveryAssignment.notes && (
-                    <div className="md:col-span-2">
-                      <p className="text-sm font-medium text-muted-foreground mb-2">
-                        Delivery Notes
-                      </p>
-                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded">
-                        <p>{productionOrder.deliveryAssignment.notes}</p>
                       </div>
                     </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {hasDelivery && (
+              <Card className="border-white/40 bg-white/70 shadow-lg backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-900/70">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Truck className="h-5 w-5" />
+                    Logistics & Delivery
+                  </CardTitle>
+                  <CardDescription className="text-sm text-slate-600 dark:text-slate-400">
+                    Downstream readiness checkpoints
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        Assigned Coordinator
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        {productionOrder.deliveryAssignment.assignedUser?.name || "Not Assigned"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        Delivery Status
+                      </p>
+                      <Badge variant="outline" className="mt-2 text-xs">
+                        {productionOrder.deliveryAssignment.status.replace(/_/g, " ")}
+                      </Badge>
+                    </div>
+                    {productionOrder.deliveryAssignment.scheduledDate && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          Scheduled Date
+                        </p>
+                        <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
+                          {format(
+                            new Date(productionOrder.deliveryAssignment.scheduledDate),
+                            "MMM dd, yyyy"
+                          )}
+                        </p>
+                      </div>
+                    )}
+                    {productionOrder.deliveryAssignment.deliveryAddress && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          Delivery Address
+                        </p>
+                        <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
+                          {productionOrder.deliveryAssignment.deliveryAddress}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {productionOrder.deliveryAssignment.notes && (
+                    <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-4 text-sm text-slate-600 dark:border-slate-800/50 dark:bg-slate-900/60 dark:text-slate-300">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        Special Instructions
+                      </p>
+                      <p className="mt-2">{productionOrder.deliveryAssignment.notes}</p>
+                    </div>
                   )}
+                </CardContent>
+              </Card>
+            )}
+
+            <Card className="border-white/40 bg-white/70 shadow-lg backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-900/70">
+              <CardContent className="flex flex-col gap-6 py-6 text-sm text-slate-600 dark:text-slate-400">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    <span>Secure token distribution</span>
+                  </div>
+                  <Separator orientation="vertical" className="hidden h-4 sm:flex" />
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>Valid through {new Date(shareableLink.expiresAt).toLocaleDateString()}</span>
+                  </div>
+                  <Separator orientation="vertical" className="hidden h-4 sm:flex" />
+                  <div className="flex items-center gap-2">
+                    <Info className="h-4 w-4" />
+                    <span>{shareableLink.accessCount} view events tracked</span>
+                  </div>
                 </div>
+                <p className="text-xs text-slate-500 dark:text-slate-500">
+                  This collaborative panel is generated in real time from XGEN MRP. Content is read-only and reflects the latest production state when accessed.
+                </p>
               </CardContent>
             </Card>
-          )}
+          </div>
+        </main>
 
-          {/* Share Info Footer */}
-          <Card className="border-dashed">
-            <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4" />
-                  <span>Secure shared link</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>Expires: {new Date(shareableLink.expiresAt).toLocaleDateString()}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Info className="w-4 h-4" />
-                  <span>Views: {shareableLink.accessCount}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center text-sm text-muted-foreground">
-          <p>This is a shared production order view for business collaboration.</p>
-          <p className="mt-1">Powered by XGEN MRP System</p>
-        </div>
+        <footer className="px-4 pb-12 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-6xl rounded-3xl border border-white/40 bg-white/60 p-6 text-center text-sm text-slate-500 shadow-lg backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-900/60 dark:text-slate-400">
+            <p>This dashboard is published for partner visibility. Direct edits are disabled in share mode.</p>
+            <p className="mt-1">Powered by XGEN MRP System</p>
+          </div>
+        </footer>
       </div>
     </div>
   );
