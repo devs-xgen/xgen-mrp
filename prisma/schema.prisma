@@ -52,6 +52,31 @@ model User {
   createdReports            SavedReport[]                   @relation("CreatedReports")
   createdAlertRules         AlertRule[]                     @relation("CreatedAlertRules")
   createdOrganizations      Organization[]                  @relation("CreatedOrganizations")
+  loginHistory              LoginHistory[]
+}
+
+model LoginHistory {
+  id            String    @id @default(cuid())
+  userId        String
+  ipAddress     String?
+  userAgent     String?   @db.Text
+  browser       String?
+  browserVersion String?
+  device        String?
+  deviceType    String?   // desktop, mobile, tablet
+  os            String?
+  osVersion     String?
+  portal        String
+  loginAt       DateTime  @default(now())
+  successful    Boolean   @default(true)
+  failureReason String?
+  location      String?   // Optional: city, country from IP
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([loginAt])
+  @@index([ipAddress])
+  @@index([successful])
 }
 
 model ProductionOrderHistoryLog {

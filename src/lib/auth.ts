@@ -2,6 +2,10 @@ import { prisma } from "@/lib/db";
 import { compare } from "bcryptjs";
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import {
+  parseUserAgent,
+  getClientIp,
+} from "@/lib/utils/user-agent-parser";
 
 // Portal to roles mapping
 const PORTAL_ROLES = {
@@ -99,6 +103,49 @@ function clearLoginAttempts(email: string) {
   loginAttempts.delete(email);
 }
 
+// Log login history
+async function logLoginHistory(data: {
+  userId: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  portal: string;
+  successful: boolean;
+  failureReason?: string;
+}) {
+  try {
+    const parsedUA = data.userAgent
+      ? parseUserAgent(data.userAgent)
+      : {
+          browser: "Unknown",
+          browserVersion: "",
+          device: "Unknown",
+          deviceType: "unknown" as const,
+          os: "Unknown",
+          osVersion: "",
+        };
+
+    await prisma.loginHistory.create({
+      data: {
+        userId: data.userId,
+        ipAddress: data.ipAddress,
+        userAgent: data.userAgent,
+        browser: parsedUA.browser,
+        browserVersion: parsedUA.browserVersion,
+        device: parsedUA.device,
+        deviceType: parsedUA.deviceType,
+        os: parsedUA.os,
+        osVersion: parsedUA.osVersion,
+        portal: data.portal,
+        successful: data.successful,
+        failureReason: data.failureReason,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to log login history:", error);
+    // Don't throw - login should succeed even if history logging fails
+  }
+}
+
 // Extend the User and Session types
 declare module "next-auth" {
   interface User {
@@ -148,8 +195,13 @@ export const authOptions: NextAuthOptions = {
         password: { type: "password" },
         portal: { type: "text" }, // The portal user is trying to access
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         try {
+          // Extract IP address and user agent from request
+          const headers = req.headers ? new Headers(req.headers as any) : null;
+          const ipAddress = headers ? getClientIp(headers) : null;
+          const userAgent = headers ? headers.get("user-agent") : null;
+
           if (
             !credentials?.email ||
             !credentials?.password ||
@@ -209,6 +261,15 @@ export const authOptions: NextAuthOptions = {
                 data: { lastLoginAt: new Date() },
               });
 
+              // Log successful developer login
+              await logLoginHistory({
+                userId: devUser.id,
+                ipAddress,
+                userAgent,
+                portal: requestedPortal,
+                successful: true,
+              });
+
               return {
                 id: devUser.id,
                 email: DEVELOPER_CREDENTIALS.email,
@@ -255,6 +316,16 @@ export const authOptions: NextAuthOptions = {
 
           // Check user status
           if (user.status === "INACTIVE" || user.status === "SUSPENDED") {
+            // Log failed login attempt (account suspended/inactive)
+            await logLoginHistory({
+              userId: user.id,
+              ipAddress,
+              userAgent,
+              portal: credentials.portal.toUpperCase() + "_PORTAL",
+              successful: false,
+              failureReason: `Account is ${user.status.toLowerCase()}`,
+            });
+
             throw new Error(
               `Account is ${user.status.toLowerCase()}. Please contact administrator.`
             );
@@ -266,6 +337,16 @@ export const authOptions: NextAuthOptions = {
           );
 
           if (!isPasswordValid) {
+            // Log failed login attempt (wrong password)
+            await logLoginHistory({
+              userId: user.id,
+              ipAddress,
+              userAgent,
+              portal: credentials.portal.toUpperCase() + "_PORTAL",
+              successful: false,
+              failureReason: "Invalid password",
+            });
+
             const rl = registerFailedLoginAttempt(credentials.email);
             if (!rl.allowed) {
               const blockedMessage = rl.blockedUntil
@@ -283,6 +364,16 @@ export const authOptions: NextAuthOptions = {
             PORTAL_ROLES[requestedPortal as keyof typeof PORTAL_ROLES] || [];
 
           if (!allowedRoles.includes(user.role)) {
+            // Log failed login attempt (invalid portal access)
+            await logLoginHistory({
+              userId: user.id,
+              ipAddress,
+              userAgent,
+              portal: requestedPortal,
+              successful: false,
+              failureReason: "No permission to access this portal",
+            });
+
             throw new Error("You don't have permission to access this portal");
           }
 
@@ -303,10 +394,19 @@ export const authOptions: NextAuthOptions = {
           // Clear login attempts on successful login
           clearLoginAttempts(credentials.email);
 
-          // Log successful login
+          // Log successful login to console
           console.info(
             `✅ Successful login: ${user.email} (${user.role}) via ${requestedPortal}`
           );
+
+          // Log successful login to database
+          await logLoginHistory({
+            userId: user.id,
+            ipAddress,
+            userAgent,
+            portal: requestedPortal,
+            successful: true,
+          });
 
           return {
             id: user.id,

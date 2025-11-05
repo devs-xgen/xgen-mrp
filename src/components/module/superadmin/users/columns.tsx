@@ -18,7 +18,7 @@ import {
   DataTableRowActions,
 } from "@/components/global/table";
 import type { UserData } from "@/types/admin/user";
-import { Eye, Pencil, Trash2, Lock } from "lucide-react";
+import { Eye, Pencil, Trash2, Lock, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { changeUserStatus } from "@/lib/actions/users";
 import type { UserStatus } from "@prisma/client";
@@ -108,6 +108,7 @@ interface ColumnCallbacks {
   onEdit: (user: UserData) => void;
   onResetPassword: (user: UserData) => void;
   onDelete: (user: UserData) => void;
+  onViewLoginHistory: (user: UserData) => void;
   onRefresh?: () => Promise<void> | void;
   currentUserId?: string;
 }
@@ -117,6 +118,7 @@ export const useSuperAdminUserColumns = ({
   onEdit,
   onResetPassword,
   onDelete,
+  onViewLoginHistory,
   onRefresh,
   currentUserId,
 }: ColumnCallbacks): ColumnDef<UserData>[] =>
@@ -188,6 +190,11 @@ export const useSuperAdminUserColumns = ({
                   onClick: (user) => onView(user),
                 },
                 {
+                  label: "Login history",
+                  icon: Activity,
+                  onClick: (user) => onViewLoginHistory(user),
+                },
+                {
                   label: "Edit user",
                   icon: Pencil,
                   onClick: (user) => onEdit(user),
@@ -212,5 +219,5 @@ export const useSuperAdminUserColumns = ({
         enableHiding: false,
       },
     ],
-    [currentUserId, onDelete, onEdit, onRefresh, onResetPassword, onView]
+    [currentUserId, onDelete, onEdit, onRefresh, onResetPassword, onView, onViewLoginHistory]
   );

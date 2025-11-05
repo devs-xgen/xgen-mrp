@@ -20,7 +20,7 @@ import {
   PageBody,
   SectionCard,
 } from "@/components/shared/page-layout";
-import { MaterialInventoryTable } from "@/components/module/worker/inventory/MaterialInventoryTable";
+import { MaterialInventoryClient } from "@/components/module/worker/inventory/MaterialInventoryClient";
 import type { MaterialInventoryItem } from "@/lib/actions/worker/inventory";
 
 export const metadata: Metadata = {
@@ -150,7 +150,7 @@ export default async function WorkerInventoryPage({
                 </div>
               }
             >
-              <MaterialInventoryTable
+              <MaterialInventoryClient
                 materials={inventoryResult.materials}
                 materialTypes={materialTypes}
                 suppliers={suppliers}

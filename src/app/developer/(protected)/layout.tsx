@@ -5,14 +5,15 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { 
+import {
   LayoutDashboard,
   MessageCircle,
   Users,
   Settings,
   LogOut,
   Code,
-  Database
+  Database,
+  Activity
 } from "lucide-react";
 
 interface NavItem {
@@ -28,6 +29,12 @@ const developerNavItems: NavItem[] = [
     label: "Dashboard",
     href: "/developer/dashboard",
     description: "Developer overview and system metrics",
+  },
+  {
+    icon: Activity,
+    label: "Login History",
+    href: "/developer/login-history",
+    description: "Track user login activity and security",
   },
   {
     icon: MessageCircle,

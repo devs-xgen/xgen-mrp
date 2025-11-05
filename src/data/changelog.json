@@ -2,6 +2,28 @@
   "project": "XGen MRP",
   "entries": [
     {
+      "version": "1.5.12",
+      "date": "2025-11-05",
+      "changes": [
+        "NEW: Comprehensive Login History Tracking - Track all login attempts with IP address, user agent, browser, device, and OS information",
+        "NEW: Developer Portal Login History Page - View all system login attempts with statistics (total logins, success rate, unique users, unique IPs)",
+        "NEW: SuperAdmin User Login History - Added 'Login history' action button in users table to view individual user login history in modal dialog",
+        "NEW: Custom User Agent Parser - Parse browser (Chrome, Firefox, Safari, Edge), device type (desktop, mobile, tablet), and OS information without external dependencies",
+        "FEATURE: Login history server actions with filtering (userId, successful/failed, date range) and pagination support",
+        "FEATURE: Login statistics dashboard with browser, OS, and device type breakdowns",
+        "SECURITY: Login tracking captures IP from various proxy headers (Cloudflare, Fastly, x-forwarded-for, x-real-ip)",
+        "SECURITY: Both DEVELOPER and SUPER_ADMIN roles can access login history features",
+        "FIX: Worker Inventory Page - Resolved '[Table] Column with id 'sku' does not exist' error by replacing helper with manual column definition",
+        "NEW: Material Details Dialog - Comprehensive modal showing stock info, cost, supplier details, notes, and products using the material",
+        "NEW: Material Details - Dynamic loading of products that use selected material with quantity requirements and waste percentage",
+        "UI/UX: Material Details Dialog - Changed Close button to circular icon button for better visual consistency",
+        "UI/UX: Worker Inventory Alerts Page - Updated to use shared page layout components (PageContainer, PageHeader, SectionCard) for uniform design",
+        "ENHANCEMENT: Worker Inventory - Added MaterialInventoryClient wrapper component for state management of material details dialog",
+        "TECHNICAL: Used 'npx prisma db push' instead of migrations to preserve existing database data when adding LoginHistory model",
+        "TECHNICAL: Fixed Prisma client generation issue after schema changes by running 'npx prisma generate --no-engine'"
+      ]
+    },
+    {
       "version": "1.5.11",
       "date": "2025-10-24",
       "changes": [

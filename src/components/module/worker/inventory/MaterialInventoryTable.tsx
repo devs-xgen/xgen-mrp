@@ -3,10 +3,9 @@
 import { Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ColumnDef } from "@tanstack/react-table";
-import { 
-  DataTable, 
-  createTextColumn, 
-  createCurrencyColumn, 
+import {
+  DataTable,
+  createCurrencyColumn,
   createActionsColumn,
 } from "@/components/global/table";
 import type { MaterialInventoryItem } from "@/lib/actions/worker/inventory";
@@ -27,6 +26,7 @@ interface MaterialInventoryTableProps {
     stockLevel?: string;
     supplierId?: string;
   };
+  onViewMaterial?: (material: MaterialInventoryItem) => void;
 }
 
 // Helper function to get stock level badge
@@ -51,11 +51,21 @@ export function MaterialInventoryTable({
   suppliers,
   pagination,
   currentFilters,
+  onViewMaterial,
 }: MaterialInventoryTableProps) {
   
   // Define columns for the global DataTable
   const materialColumns: ColumnDef<MaterialInventoryItem>[] = [
-    createTextColumn<MaterialInventoryItem>("name", "Material", "sku"),
+    {
+      accessorKey: "name",
+      header: "Material",
+      cell: ({ row }) => (
+        <div>
+          <div className="font-medium">{row.original.name}</div>
+          <div className="text-xs text-muted-foreground">{row.original.sku}</div>
+        </div>
+      ),
+    },
     {
       accessorKey: "materialTypeName",
       header: "Type",
@@ -112,8 +122,9 @@ export function MaterialInventoryTable({
         label: "View Details",
         icon: Eye,
         onClick: (material) => {
-          // TODO: Implement view details functionality
-          console.log("View material:", material);
+          if (onViewMaterial) {
+            onViewMaterial(material);
+          }
         },
       },
     ]),

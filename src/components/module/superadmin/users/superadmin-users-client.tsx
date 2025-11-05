@@ -10,6 +10,7 @@ import { DeleteUserDialog } from "@/components/module/admin/users/delete-user-di
 import { EditUserDialog } from "@/components/module/admin/users/edit-user-dialog";
 import { ResetPasswordDialog } from "./reset-password-dialog";
 import { SuperAdminUserViewDialog } from "./superadmin-user-view-dialog";
+import { UserLoginHistoryDialog } from "./user-login-history-dialog";
 
 interface SuperAdminUsersClientProps {
   data: UserData[];
@@ -23,6 +24,7 @@ export function SuperAdminUsersClient({ data, currentUserId }: SuperAdminUsersCl
   const [deletingUser, setDeletingUser] = useState<UserData | null>(null);
   const [editingUser, setEditingUser] = useState<UserData | null>(null);
   const [resettingUser, setResettingUser] = useState<UserData | null>(null);
+  const [loginHistoryUser, setLoginHistoryUser] = useState<UserData | null>(null);
 
   const handleRefresh = useCallback(async () => {
     startTransition(async () => {
@@ -38,6 +40,7 @@ export function SuperAdminUsersClient({ data, currentUserId }: SuperAdminUsersCl
     onEdit: (user) => setEditingUser(user),
     onResetPassword: (user) => setResettingUser(user),
     onDelete: (user) => setDeletingUser(user),
+    onViewLoginHistory: (user) => setLoginHistoryUser(user),
     onRefresh: handleRefresh,
   });
 
@@ -131,6 +134,16 @@ export function SuperAdminUsersClient({ data, currentUserId }: SuperAdminUsersCl
           }}
         />
       )}
+
+      <UserLoginHistoryDialog
+        user={loginHistoryUser}
+        open={!!loginHistoryUser}
+        onOpenChange={(open) => {
+          if (!open) {
+            setLoginHistoryUser(null);
+          }
+        }}
+      />
     </>
   );
 }
