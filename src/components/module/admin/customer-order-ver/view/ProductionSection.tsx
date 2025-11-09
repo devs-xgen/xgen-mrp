@@ -1,12 +1,13 @@
 "use client"
-import { useState } from "react";
-import { SectionCard } from "@/components/shared/page-layout";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
-import { Plus, Factory } from "lucide-react";
-import { CreateProductionOrdersDialog } from "@/components/module/admin/customer-orders/create-production-orders-dialog";
+import { useState } from "react"
+import Link from "next/link"
+import { SectionCard } from "@/components/shared/page-layout"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Button } from "@/components/ui/button"
+import { Plus, Factory, ArrowUpRight } from "lucide-react"
+import { CreateProductionOrdersDialog } from "@/components/module/admin/customer-orders/create-production-orders-dialog"
 
 interface ProductionSectionProps {
   order: any;
@@ -108,6 +109,7 @@ export function ProductionSection({ order }: ProductionSectionProps) {
                 <TableHead className="w-28">Priority</TableHead>
                 <TableHead className="w-80">Dates</TableHead>
                 <TableHead>Notes</TableHead>
+                <TableHead className="w-36 text-right">Details</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -155,6 +157,14 @@ export function ProductionSection({ order }: ProductionSectionProps) {
                     </TableCell>
                     <TableCell className="max-w-[20rem]">
                       <div className="truncate text-sm text-muted-foreground">{po?.notes || ""}</div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button asChild size="sm" variant="outline" className="gap-1">
+                        <Link href={`/admin/production/${po.id}`}>
+                          View
+                          <ArrowUpRight className="h-4 w-4" />
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );

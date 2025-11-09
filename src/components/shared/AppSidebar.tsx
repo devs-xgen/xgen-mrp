@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -10,6 +10,7 @@ import {
   ChevronRight,
   ChevronDown,
   Loader2,
+  HelpCircle,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,8 @@ import {
 } from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { RoleOnboardingDialog } from "@/components/shared/RoleOnboardingDialog";
+import { UserRoleKey } from "@/data/onboarding-content";
 
 // No props needed for AppSidebar
 
@@ -210,6 +213,28 @@ export default function AppSidebar() {
   const { data: session, status } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [openItemId, setOpenItemId] = useState<string>("");
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+  const normalizedRole = useMemo<UserRoleKey>(() => {
+    const currentRole = session?.user?.role?.toUpperCase() ?? "ADMIN";
+    const allowedRoles: UserRoleKey[] = [
+      "ADMIN",
+      "SUPER_ADMIN",
+      "WORKER",
+      "INSPECTOR",
+      "DELIVERY",
+      "DEVELOPER",
+    ];
+
+    return allowedRoles.includes(currentRole as UserRoleKey)
+      ? (currentRole as UserRoleKey)
+      : "ADMIN";
+  }, [session?.user?.role]);
+
+  const onboardingStorageKey = useMemo(
+    () => `xgen-onboarding-${normalizedRole.toLowerCase()}`,
+    [normalizedRole]
+  );
 
   // Get user data from session
   const user = session?.user;
@@ -243,6 +268,22 @@ export default function AppSidebar() {
   // Handle open/close of nav items to ensure only one is open at a time
   const handleNavItemToggle = (itemId: string) => {
     setOpenItemId(itemId);
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hasSeenOnboarding = localStorage.getItem(onboardingStorageKey);
+
+    if (!hasSeenOnboarding) {
+      setIsOnboardingOpen(true);
+    }
+  }, [onboardingStorageKey]);
+
+  const handleOnboardingOpenChange = (open: boolean) => {
+    setIsOnboardingOpen(open);
+    if (!open && typeof window !== "undefined") {
+      localStorage.setItem(onboardingStorageKey, "true");
+    }
   };
 
   // Loading state - true when session is loading
@@ -369,15 +410,32 @@ export default function AppSidebar() {
         )}
 
         {/* Theme Toggle */}
-        <div className={cn("mb-3", isCollapsed ? "flex justify-center" : "")}> 
-          <ThemeToggle
-            compact={isCollapsed}
-            variant="ghost"
-            className={cn(
-              "text-slate-300 hover:bg-slate-700 hover:text-slate-100 border border-slate-700",
-              isCollapsed ? "w-10 p-0" : "w-full justify-start"
-            )}
-          />
+        <div
+          className={cn(
+            "mb-3 flex items-center justify-center gap-2",
+            isCollapsed ? "flex-col" : ""
+          )}
+        >
+          <div className="flex items-center justify-center gap-2">
+            <ThemeToggle
+              compact
+              variant="ghost"
+              className={cn(
+                "text-slate-300 hover:bg-slate-700 hover:text-slate-100 border border-slate-700 rounded-full",
+                isCollapsed ? "w-10 h-10" : "w-10 h-10 p-0"
+              )}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 rounded-full border border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-slate-100"
+              onClick={() => setIsOnboardingOpen(true)}
+              aria-label="Show onboarding"
+              title="Show onboarding"
+            >
+              <HelpCircle className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         <Button
@@ -397,6 +455,12 @@ export default function AppSidebar() {
           {!isCollapsed && <span className="ml-3">Sign Out</span>}
         </Button>
       </div>
+
+      <RoleOnboardingDialog
+        role={normalizedRole}
+        open={isOnboardingOpen}
+        onOpenChange={handleOnboardingOpenChange}
+      />
     </div>
   );
 }
