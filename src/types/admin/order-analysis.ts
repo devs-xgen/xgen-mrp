@@ -27,6 +27,8 @@ export interface OrderLineStockStatus {
   unitPrice: number;
   totalValue: number; // quantity * unitPrice
   estimatedLeadTime?: number; // If production is needed
+  existingProductionQuantity?: number; // Quantity already in production orders
+  hasProductionOrders?: boolean; // Whether production orders exist for this line
 }
 
 /**
@@ -47,6 +49,9 @@ export interface CustomerOrderAnalysisResult {
   estimatedFulfillmentDate: Date;
   canFulfillImmediately: boolean;
   analysisDate: Date;
+  existingProductionOrders?: any[]; // Production orders already created for this customer order
+  hasExistingProductionOrders?: boolean; // Whether any production orders exist
+  needsSync?: boolean; // Whether customer order changed after production orders were created
 }
 
 /**

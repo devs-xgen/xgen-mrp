@@ -19,7 +19,7 @@ export const onboardingContent: Record<UserRoleKey, OnboardingStep[]> = {
       title: "Start at Mission Control",
       description:
         "Use the dashboard to understand demand, fulfillment progress, and any blockers that need your attention first.",
-      imageUrl: "/images/onboarding/admin-dashboard.png",
+      imageUrl: "/images/onboarding/admin/1.png",
       highlights: [
         "Scan KPI cards for overdue orders and production load",
         "Watch timeline widgets for promised delivery windows",
@@ -30,7 +30,7 @@ export const onboardingContent: Record<UserRoleKey, OnboardingStep[]> = {
       title: "Capture Customer Orders",
       description:
         "Create or review customer orders so every request has accurate products, variants, and promised quantities.",
-      imageUrl: "/images/onboarding/admin-orders.png",
+      imageUrl: "/images/onboarding/admin/2.png",
       highlights: [
         "Use the Customer Orders list to add new orders or continue drafts",
         "Confirm pricing, variants, and notes before saving",
@@ -41,7 +41,7 @@ export const onboardingContent: Record<UserRoleKey, OnboardingStep[]> = {
       title: "Plan Fulfillment Decisions",
       description:
         "Run the Analyze flow to decide whether to allocate stock, launch production, or split fulfillment for each line.",
-      imageUrl: "/images/onboarding/admin-analysis.png",
+      imageUrl: "/images/onboarding/admin/3.png",
       highlights: [
         "Review stock vs. production recommendations per order line",
         "Allocate available inventory directly from the analysis screen",
@@ -52,7 +52,7 @@ export const onboardingContent: Record<UserRoleKey, OnboardingStep[]> = {
       title: "Monitor Production & Close Billing",
       description:
         "Track in-progress manufacturing, confirm finished quantities, and finalize billing once deliveries are complete.",
-      imageUrl: "/images/onboarding/admin-production-billing.png",
+      imageUrl: "/images/onboarding/admin/1.pngg",
       highlights: [
         "Visit the Production board to monitor work centers and statuses",
         "Mark lines Finished once inspection confirms quality",
@@ -60,6 +60,10 @@ export const onboardingContent: Record<UserRoleKey, OnboardingStep[]> = {
       ],
     },
   ],
+
+
+
+
   SUPER_ADMIN: [
     {
       title: "Super Admin Overview",

@@ -1,18 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { 
-  ArrowLeft, 
-  Package, 
-  Factory, 
-  CheckCircle, 
-  AlertTriangle, 
-  Clock,
-  Loader2,
-  ShoppingCart
-} from "lucide-react";
+import { ArrowLeft, Package, Factory, CheckCircle, AlertTriangle, Clock, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 
 // UI Components
@@ -21,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FulfillmentDashboard } from "../fulfillment/FulfillmentDashboard";
-import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Table,
@@ -36,16 +23,13 @@ import {
 import { CustomerOrderAnalysisResult } from "@/types/admin/order-analysis";
 import { StockStatus, RecommendedAction, OverallOrderStatus } from "@/types/admin/order-analysis";
 
-// Actions
-import { createProductionOrdersForItems, allocateStockForOrder } from "@/lib/actions/order-analysis";
+// Utils
 import { formatCurrencyPHP } from "@/lib/constant";
 
 // Components
 import { StockStatusBadge } from "./StockStatusBadge";
 import { RecommendedActionBadge } from "./RecommendedActionBadge";
 import { OrderAnalysisSummaryCard } from "./OrderAnalysisSummaryCard";
-import { ProductionPlanningDialog } from "./ProductionPlanningDialog";
-import { StockAllocationDialog } from "./StockAllocationDialog";
 import { ProductionPlanningActions } from "./ProductionPlanningActions";
 
 interface CustomerOrderAnalysisClientProps {
@@ -59,58 +43,6 @@ export function CustomerOrderAnalysisClient({
   orderId,
   backHref = "/admin/customer-orders",
 }: CustomerOrderAnalysisClientProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [selectedLines, setSelectedLines] = useState<string[]>([]);
-  const [showProductionDialog, setShowProductionDialog] = useState(false);
-  const [showStockDialog, setShowStockDialog] = useState(false);
-
-  // Filter lines by recommendation type
-  const stockLines = orderAnalysis.orderLines.filter(
-    line => line.recommendedAction === RecommendedAction.USE_STOCK
-  );
-  const productionLines = orderAnalysis.orderLines.filter(
-    line => line.recommendedAction === RecommendedAction.PRODUCE_ALL ||
-           line.recommendedAction === RecommendedAction.HYBRID
-  );
-
-  const handleCreateProductionOrders = async (selections: any[]) => {
-    startTransition(async () => {
-      try {
-        const result = await createProductionOrdersForItems(selections);
-        
-        if (result.success) {
-          toast.success(`Successfully created ${result.createdOrders.length} production orders`);
-          router.refresh();
-          setShowProductionDialog(false);
-        } else {
-          toast.error(`Production orders created with errors: ${result.errors.join(', ')}`);
-        }
-      } catch (error) {
-        console.error("Error creating production orders:", error);
-        toast.error("Failed to create production orders");
-      }
-    });
-  };
-
-  const handleAllocateStock = async (allocations: any[]) => {
-    startTransition(async () => {
-      try {
-        const result = await allocateStockForOrder(orderId, allocations);
-        
-        if (result.success) {
-          toast.success(`Successfully allocated stock for ${result.allocatedItems.length} items`);
-          router.refresh();
-          setShowStockDialog(false);
-        } else {
-          toast.error(`Stock allocation completed with errors: ${result.errors.join(', ')}`);
-        }
-      } catch (error) {
-        console.error("Error allocating stock:", error);
-        toast.error("Failed to allocate stock");
-      }
-    });
-  };
 
   const getOverallStatusBadge = (status: OverallOrderStatus) => {
     const variants = {
@@ -215,36 +147,11 @@ export function CustomerOrderAnalysisClient({
           </CardContent>
         </Card>
 
-        {/* Production Planning Actions */}
+        {/* Production Planning Actions - Single Source of Truth */}
         <ProductionPlanningActions 
           orderAnalysis={orderAnalysis}
           orderId={orderId}
         />
-
-        {/* Legacy Action Buttons - keeping for backwards compatibility */}
-        {!orderAnalysis.canFulfillImmediately && (
-          <div className="flex flex-wrap gap-3">
-            {stockLines.length > 0 && (
-              <Button 
-                onClick={() => setShowStockDialog(true)}
-                disabled={isPending}
-                variant="outline"
-              >
-                <Package className="h-4 w-4 mr-2" />
-                Allocate Stock ({stockLines.length} items)
-              </Button>
-            )}
-            {productionLines.length > 0 && (
-              <Button 
-                onClick={() => setShowProductionDialog(true)}
-                disabled={isPending}
-              >
-                <Factory className="h-4 w-4 mr-2" />
-                Create Production Orders ({productionLines.length} items)
-              </Button>
-            )}
-          </div>
-        )}
 
         {/* Items Analysis Table */}
         <Card>
@@ -359,25 +266,6 @@ export function CustomerOrderAnalysisClient({
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* Dialogs */}
-      <ProductionPlanningDialog
-        open={showProductionDialog}
-        onOpenChange={setShowProductionDialog}
-        orderLines={productionLines}
-        orderAnalysis={orderAnalysis}
-        onConfirm={handleCreateProductionOrders}
-        isLoading={isPending}
-      />
-
-      <StockAllocationDialog
-        open={showStockDialog}
-        onOpenChange={setShowStockDialog}
-        orderLines={stockLines}
-        orderAnalysis={orderAnalysis}
-        onConfirm={handleAllocateStock}
-        isLoading={isPending}
-      />
     </>
   );
 }

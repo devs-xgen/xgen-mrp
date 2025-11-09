@@ -3,15 +3,16 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Factory, Package, ArrowRight, BarChart, CheckCircle } from "lucide-react";
+import { Factory, Package, ArrowRight, BarChart, CheckCircle, RefreshCw, AlertTriangle, ExternalLink } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-import { createProductionOrdersForItems, allocateStockForOrder } from "@/lib/actions/order-analysis";
+import { createProductionOrdersForItems, allocateStockForOrder, syncProductionOrdersWithCustomerOrder } from "@/lib/actions/order-analysis";
 import { CustomerOrderAnalysisResult, RecommendedAction } from "@/types/admin/order-analysis";
 
 interface ProductionPlanningActionsProps {
@@ -95,6 +96,24 @@ export function ProductionPlanningActions({
     router.push(`/admin/customer-orders-v2/${orderId}/production-planning`);
   };
 
+  const handleSyncProductionOrders = async () => {
+    startTransition(async () => {
+      try {
+        const result = await syncProductionOrdersWithCustomerOrder(orderId);
+        
+        if (result.success) {
+          toast.success(result.message);
+          router.refresh();
+        } else {
+          toast.error(`Sync failed: ${result.errors.join(', ')}`);
+        }
+      } catch (error) {
+        console.error("Error syncing production orders:", error);
+        toast.error("Failed to sync production orders");
+      }
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -138,7 +157,7 @@ export function ProductionPlanningActions({
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
-            {stockLines.length > 0 && (
+            {stockLines.length > 0 && !orderAnalysis.hasExistingProductionOrders && (
               <Button
                 onClick={handleAllocateStock}
                 disabled={isPending}
@@ -150,31 +169,53 @@ export function ProductionPlanningActions({
               </Button>
             )}
 
-            {productionLines.length > 0 && (
+            {productionLines.length > 0 && !orderAnalysis.hasExistingProductionOrders && (
               <Button
                 onClick={handleCreateProductionOrders}
                 className="flex-1"
+                disabled={isPending}
               >
                 <Factory className="mr-2 h-4 w-4" />
                 Create Production Orders ({productionLines.length} items)
               </Button>
             )}
 
+            {orderAnalysis.hasExistingProductionOrders && orderAnalysis.needsSync && (
+              <Button
+                onClick={handleSyncProductionOrders}
+                disabled={isPending}
+                className="flex-1"
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${isPending ? 'animate-spin' : ''}`} />
+                Sync Production Orders
+              </Button>
+            )}
+
             <Link href={`/admin/customer-orders-v2/${orderId}/production-planning`}>
               <Button variant="outline" className="w-full sm:w-auto">
                 <BarChart className="mr-2 h-4 w-4" />
-                Production Planning
+                View Details
               </Button>
             </Link>
           </div>
 
           {/* Workflow Guidance */}
-          {orderAnalysis.canFulfillImmediately ? (
+          {orderAnalysis.hasExistingProductionOrders ? (
+            <Alert>
+              <Factory className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Production orders exist.</strong> This customer order already has {orderAnalysis.existingProductionOrders?.length || 0} production order(s). 
+                {orderAnalysis.needsSync 
+                  ? ' Sync is required to update quantities and dates.' 
+                  : ' Orders are up to date with current requirements.'}
+              </AlertDescription>
+            </Alert>
+          ) : orderAnalysis.canFulfillImmediately ? (
             <Alert>
               <CheckCircle className="h-4 w-4" />
               <AlertDescription>
                 <strong>Ready for immediate fulfillment!</strong> All items are available in stock. 
-                Click "Allocate Stock" to reserve inventory for this order.
+                Click &quot;Allocate Stock&quot; to reserve inventory for this order.
               </AlertDescription>
             </Alert>
           ) : (
@@ -188,6 +229,111 @@ export function ProductionPlanningActions({
           )}
         </CardContent>
       </Card>
+
+      {/* Existing Production Orders Section */}
+      {orderAnalysis.hasExistingProductionOrders && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Factory className="h-5 w-5" />
+                  Existing Production Orders
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Production orders already created for this customer order
+                </p>
+              </div>
+              {orderAnalysis.needsSync && (
+                <Button
+                  onClick={handleSyncProductionOrders}
+                  disabled={isPending}
+                  variant="outline"
+                  size="sm"
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isPending ? 'animate-spin' : ''}`} />
+                  Sync Orders
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {orderAnalysis.needsSync && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Sync Required!</strong> Customer order has been updated after production orders were created. 
+                  Click &quot;Sync Orders&quot; to update production quantities and dates.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product</TableHead>
+                  <TableHead className="text-center">Quantity</TableHead>
+                  <TableHead className="text-center">Completed</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-center">Priority</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(orderAnalysis.existingProductionOrders || []).map((po: any) => {
+                  const productName = po.productVariant?.displayName || po.product?.name || 'Unknown Product';
+                  const sku = po.productVariant?.sku || po.product?.sku || '';
+                  
+                  return (
+                    <TableRow key={po.id}>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{productName}</span>
+                          <span className="text-xs text-muted-foreground">{sku}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center font-medium">
+                        {po.quantity}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {po.completedQuantity || 0}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={
+                          po.status === 'COMPLETED' ? 'default' :
+                          po.status === 'ACTIVE' ? 'secondary' :
+                          po.status === 'CANCELLED' ? 'destructive' : 'outline'
+                        }>
+                          {po.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={
+                          po.priority === 'URGENT' || po.priority === 'CRITICAL' ? 'destructive' :
+                          po.priority === 'HIGH' ? 'default' : 'outline'
+                        }>
+                          {po.priority}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Link href={`/admin/production/${po.id}`}>
+                          <Button variant="ghost" size="sm">
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+
+            <div className="text-sm text-muted-foreground">
+              Total: {orderAnalysis.existingProductionOrders?.length || 0} production order(s)
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Workflow Steps */}
       <Card>
