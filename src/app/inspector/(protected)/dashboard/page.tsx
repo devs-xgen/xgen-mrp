@@ -14,14 +14,27 @@ export const metadata: Metadata = {
   description: "Overview of tasks, progress, and production orders for inspectors.",
 };
 
+function serializeProductionOrders(orders: any[]): any[] {
+  return orders.map(order => ({
+    ...order,
+    // Convert Decimal to number, or null if it's null/undefined
+    plannedMaterialCost: order.plannedMaterialCost?.toNumber() ?? null,
+    actualMaterialCost: order.actualMaterialCost?.toNumber() ?? null,
+    materialVariance: order.materialVariance?.toNumber() ?? null,
+    // You might also need to check nested Decimal fields if any exist
+  }));
+}
+
 export default async function InspectorDashboard() {
   // Use Promise.all to fetch all necessary data in parallel
-  const [initialInspectorTasks, initialStats, fetchedProductionOrders, initialQualityChecks] = await Promise.all([
+  const [initialInspectorTasks, initialStats, rawProductionOrders, initialQualityChecks] = await Promise.all([
     getInspectorTasks(),
     getTaskStatistics(),
     getProductionOrders(),
     getInspectorQualityChecks(), // 👈 Fetch the quality checks
   ]);
+
+  const fetchedProductionOrders = serializeProductionOrders(rawProductionOrders);
 
   return (
     <div className="min-h-screen bg-gray-50">

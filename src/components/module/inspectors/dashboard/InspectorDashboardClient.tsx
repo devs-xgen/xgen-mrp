@@ -712,7 +712,7 @@ import { NotificationContainer } from "./notification-container";
 import { ProductionStatusCard } from "./ProductionStatusCard";
 import { getMyQualityChecks, updateQualityCheck } from "@/lib/actions/inspector/production-order";
 import { useRouter } from "next/navigation";
-import { handleTaskUpdate } from "@/lib/actions/inspector/tasks";
+
 
 // Using the InspectorsTask interface
 export interface InspectorsTask {
@@ -732,7 +732,7 @@ export interface InspectorsTask {
   isActive: boolean;
 }
 
-// Interface for the production orders from your getProductionOrders() action
+
 export interface ProductionOrder {
   id: string;
   orderNumber: string;
@@ -768,6 +768,7 @@ export interface QualityCheck {
   inspectorId: string;
   productionOrderId: string;
   productionOrder: {
+    id: string;
     orderNumber: string;
     product: {
       name: string;
@@ -954,6 +955,27 @@ export function InspectorDashboardClient({
     }
   };
 
+  // Compute counts for production order statuses
+  const getProductionOrderCounts = useCallback(() => {
+    const counts = {
+      PENDING: 0,
+      IN_PROGRESS: 0,
+      COMPLETED: 0,
+      CANCELLED: 0,
+    };
+
+    productionOrdersState.forEach((order) => {
+      if (counts[order.status] !== undefined) {
+        counts[order.status] += 1;
+      }
+    });
+
+    return counts;
+  }, [productionOrdersState]);
+
+  const productionCounts = useMemo(() => getProductionOrderCounts(), [getProductionOrderCounts]);
+
+
   return (
     <div className="container mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
@@ -977,6 +999,55 @@ export function InspectorDashboardClient({
         </TabsList>
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* PENDING */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
+                <ClipboardList className="h-4 w-4 text-gray-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{productionCounts.PENDING}</div>
+                <p className="text-xs text-muted-foreground">Orders waiting to start production</p>
+              </CardContent>
+            </Card>
+
+            {/* IN PROGRESS */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+                <Clock className="h-4 w-4 text-amber-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{productionCounts.IN_PROGRESS}</div>
+                <p className="text-xs text-muted-foreground">Orders currently in production</p>
+              </CardContent>
+            </Card>
+
+            {/* COMPLETED */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Completed Orders</CardTitle>
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{productionCounts.COMPLETED}</div>
+                <p className="text-xs text-muted-foreground">Orders successfully finished</p>
+              </CardContent>
+            </Card>
+
+            {/* CANCELLED */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Cancelled Orders</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{productionCounts.CANCELLED}</div>
+                <p className="text-xs text-muted-foreground">Orders that were cancelled</p>
+              </CardContent>
+            </Card>
+          </div>
+          {/* <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Not Started</CardTitle>
@@ -1017,7 +1088,7 @@ export function InspectorDashboardClient({
                 <p className="text-xs text-muted-foreground">High priority tasks requiring attention</p>
               </CardContent>
             </Card>
-          </div>
+          </div> */}
           <Card>
             <CardHeader>
               <CardTitle>Daily Progress</CardTitle>
