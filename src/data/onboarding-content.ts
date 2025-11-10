@@ -110,25 +110,58 @@ export const onboardingContent: Record<UserRoleKey, OnboardingStep[]> = {
 
   SUPER_ADMIN: [
     {
-      title: "Super Admin Overview",
+      title: "Assess Platform Health",
       description:
-        "Configure global settings, manage organizations, and unblock teams when they need help.",
-      imageUrl: "/images/onboarding/super-admin-overview.png",
+        "Start on the SuperAdmin dashboard to monitor cross-tenant production, inventory, and support metrics before diving into deep work.",
+      imageUrl: "/images/onboarding/admin/3.png",
       highlights: [
-        "Review platform health checks",
-        "Provision users and adjust permissions",
-        "Monitor audit logs for sensitive operations",
+        "Scan global KPIs for spikes in overdue orders, stockouts, or unresolved tickets",
+        "Verify system status widgets and recent activity logs for anomalies",
+        "Share a health summary with admin leads during daily coordination",
       ],
     },
     {
-      title: "Stay Proactive",
+      title: "Coordinate Tenant Operations",
       description:
-        "Use insights to anticipate issues before they impact production or deliveries.",
-      imageUrl: "/images/onboarding/super-admin-insights.png",
+        "Use cross-tenant views in production, materials, and customer orders to identify bottlenecks that require executive intervention.",
+      imageUrl: "/images/onboarding/admin/5.png",
       highlights: [
-        "Track material shortages across sites",
-        "Confirm compliance tasks are on schedule",
-        "Coordinate escalations with stakeholders",
+        "Compare tenant workloads to rebalance capacity across work centers",
+        "Surface critical production orders and confirm inspectors or delivery teams are assigned",
+        "Align admins, workers, and inspectors using the shared sync guides in scan-tech notes",
+      ],
+    },
+    {
+      title: "Execute Emergency Overrides",
+      description:
+        "Leverage SuperAdmin override actions to unblock stuck workflows while maintaining full audit trails for compliance.",
+      imageUrl: "/images/onboarding/admin/7.png",
+      highlights: [
+        "Force-complete or pause production orders when standard validations block urgent work",
+        "Adjust material reservations or production quantities after verifying downstream impact",
+        "Document override reasons with 15+ character justifications for audit logs",
+      ],
+    },
+    {
+      title: "Govern Organizations & Access",
+      description:
+        "Manage organization configuration, resource limits, and high-privilege user access to keep the platform compliant and scalable.",
+      imageUrl: "/images/onboarding/admin/2.png",
+      highlights: [
+        "Provision or suspend tenant orgs and update their configuration settings",
+        "Review role assignments before promoting users to SuperAdmin or Developer",
+        "Tune resource limits to align with contractual entitlements and capacity plans",
+      ],
+    },
+    {
+      title: "Enforce Compliance & Audits",
+      description:
+        "Audit activity logs, override trails, and support escalations to ensure every SuperAdmin action remains transparent and reviewable.",
+      imageUrl: "/images/onboarding/admin/8.png",
+      highlights: [
+        "Review activityLog entries for override operations each day",
+        "Export audit datasets for finance or compliance teams when requested",
+        "Confirm escalations and recovery efforts are documented in support tickets",
       ],
     },
   ],

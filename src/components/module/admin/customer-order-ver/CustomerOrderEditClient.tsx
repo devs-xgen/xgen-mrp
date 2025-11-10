@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,7 +32,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { updateCustomerOrderWithLines } from "@/lib/actions/customer-order";
 import { formatCurrencyPHP } from "@/lib/constant";
@@ -77,6 +87,8 @@ export function CustomerOrderEditClient({
   // Derive selected customer from form state; no separate state to avoid drift
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
   const [hasProductionOrders, setHasProductionOrders] = useState(false);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const pendingSubmissionRef = useRef<CustomerOrderCreateForm | null>(null);
 
   const form = useForm<CustomerOrderCreateForm>({
     resolver: zodResolver(customerOrderCreateSchema),
@@ -158,25 +170,19 @@ export function CustomerOrderEditClient({
   const subtotal = orderLines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
   const totalAmount = subtotal;
 
-  const onSubmit = async (data: CustomerOrderCreateForm) => {
-    if (orderLines.length === 0) {
-      toast.error("Please add at least one product to the order");
-      return;
-    }
-
+  const processSubmission = async (data: CustomerOrderCreateForm) => {
     setIsSubmitting(true);
-    
-    // Show loading toast
+
     const loadingToast = toast.loading("Updating customer order...");
-    
+
     try {
       await updateCustomerOrderWithLines(order.id, {
         customerId: data.customerId,
         requiredDate: new Date(data.requiredDate),
         notes: data.notes,
         totalAmount,
-        status: order.status || Status.PENDING, // Preserve existing status
-        orderLines: orderLines.map(line => ({
+        status: order.status || Status.PENDING,
+        orderLines: orderLines.map((line) => ({
           id: line.id,
           productId: line.productId,
           productVariantId: line.productVariantId,
@@ -186,43 +192,36 @@ export function CustomerOrderEditClient({
         })),
       });
 
-      // Dismiss loading toast and show success
       toast.dismiss(loadingToast);
       toast.success("Customer order updated successfully!", {
         description: `Order ${order.orderNumber} has been updated.`,
         duration: 3000,
       });
-      
-      // Add a small delay before navigation for user to see the success message
+
       setTimeout(() => {
         router.push(`/admin/customer-orders-v2/${order.id}`);
       }, 1000);
     } catch (error) {
       console.error("Error updating customer order:", error);
-      
-      // Extract meaningful error message
+
       let errorMessage = "Failed to update customer order. Please try again.";
-      
+
       if (error instanceof Error) {
         errorMessage = error.message;
-      } else if (typeof error === 'string') {
+      } else if (typeof error === "string") {
         errorMessage = error;
-      } else if (error && typeof error === 'object' && 'message' in error) {
-        errorMessage = String(error.message);
+      } else if (error && typeof error === "object" && "message" in error) {
+        errorMessage = String((error as { message?: unknown }).message);
       }
-      
-      // Check for specific database errors
-      if (errorMessage.includes('foreign key constraint')) {
+
+      if (errorMessage.includes("foreign key constraint")) {
         errorMessage = "Invalid customer or product selected. Please check your selections.";
-      } else if (errorMessage.includes('unique constraint')) {
+      } else if (errorMessage.includes("unique constraint")) {
         errorMessage = "This order number already exists. Please use a different order number.";
-      } else if (errorMessage.includes('required')) {
-        errorMessage = errorMessage; // Keep the specific required field message
-      } else if (errorMessage.includes('decimal')) {
+      } else if (errorMessage.includes("decimal")) {
         errorMessage = "Invalid price format. Please check all prices and quantities.";
       }
-      
-      // Dismiss loading toast and show error
+
       toast.dismiss(loadingToast);
       toast.error("Update Failed", {
         description: errorMessage,
@@ -235,6 +234,33 @@ export function CustomerOrderEditClient({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const onSubmit = async (data: CustomerOrderCreateForm) => {
+    if (orderLines.length === 0) {
+      toast.error("Please add at least one product to the order");
+      return;
+    }
+
+    if (hasProductionOrders) {
+      pendingSubmissionRef.current = data;
+      setConfirmationOpen(true);
+      return;
+    }
+
+    await processSubmission(data);
+  };
+
+  const handleConfirmSubmit = async () => {
+    if (!pendingSubmissionRef.current) {
+      setConfirmationOpen(false);
+      return;
+    }
+
+    const data = pendingSubmissionRef.current;
+    pendingSubmissionRef.current = null;
+    setConfirmationOpen(false);
+    await processSubmission(data);
   };
 
   const addOrderLine = () => {

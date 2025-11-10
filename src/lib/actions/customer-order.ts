@@ -20,6 +20,7 @@ import { Status, Priority } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { revalidatePath } from "next/cache";
 import { createProductionOrder } from "./production-order";
+import { syncProductionOrdersWithCustomerOrder } from "./order-analysis";
 import { createProductionBOMFromProduct } from "./production-bom";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -1982,6 +1983,61 @@ export async function updateCustomerOrderWithLines(
       throw new Error("Customer order not found");
     }
 
+    const includeOptions = {
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          address: true,
+          paymentTerms: true,
+          creditLimit: true,
+        },
+      },
+      orderLines: {
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              sku: true,
+              sellingPrice: true,
+              description: true,
+            },
+          },
+          productVariant: {
+            select: {
+              id: true,
+              sku: true,
+              displayName: true,
+              sizeName: true,
+              colorName: true,
+              sellingPrice: true,
+            },
+          },
+        },
+      },
+      productionOrders: {
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              sku: true,
+            },
+          },
+        },
+      },
+      _count: {
+        select: {
+          orderLines: true,
+          productionOrders: true,
+          billingStatements: true,
+        },
+      },
+    } as const;
+
     const updatedCustomerOrder = await prisma.customerOrder.update({
       where: { id },
       data: {
@@ -2015,61 +2071,33 @@ export async function updateCustomerOrderWithLines(
             }
           : undefined,
       },
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            address: true,
-            paymentTerms: true,
-            creditLimit: true,
-          },
-        },
-        orderLines: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                sku: true,
-                sellingPrice: true,
-                description: true,
-              },
-            },
-            productVariant: {
-              select: {
-                id: true,
-                sku: true,
-                displayName: true,
-                sizeName: true,
-                colorName: true,
-                sellingPrice: true,
-              },
-            },
-          },
-        },
-        productionOrders: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                sku: true,
-              },
-            },
-          },
-        },
-        _count: {
-          select: {
-            orderLines: true,
-            productionOrders: true,
-            billingStatements: true,
-          },
-        },
-      },
+      include: includeOptions,
     });
+
+    let finalCustomerOrder = updatedCustomerOrder;
+
+    if ((updatedCustomerOrder.productionOrders?.length || 0) > 0) {
+      try {
+        const syncResult = await syncProductionOrdersWithCustomerOrder(id);
+        if (!syncResult.success && syncResult.errors.length > 0) {
+          console.warn("Customer order update sync warnings:", syncResult.errors);
+        }
+
+        const refreshedOrder = await prisma.customerOrder.findUnique({
+          where: { id },
+          include: includeOptions,
+        });
+
+        if (refreshedOrder) {
+          finalCustomerOrder = refreshedOrder;
+        }
+      } catch (syncError) {
+        console.error(
+          "Failed to sync linked production orders after customer order update:",
+          syncError
+        );
+      }
+    }
 
     // Revalidate related pages
     revalidatePath("/admin/customer-orders");
@@ -2077,8 +2105,13 @@ export async function updateCustomerOrderWithLines(
     // Also revalidate the new v2 routes
     revalidatePath("/admin/customer-orders-v2");
     revalidatePath(`/admin/customer-orders-v2/${id}`);
+    revalidatePath("/admin/production");
 
-    return updatedCustomerOrder;
+    for (const productionOrder of updatedCustomerOrder.productionOrders || []) {
+      revalidatePath(`/admin/production/${productionOrder.id}`);
+    }
+
+    return finalCustomerOrder;
   } catch (error) {
     console.error("Error updating customer order:", error);
     throw new Error(
