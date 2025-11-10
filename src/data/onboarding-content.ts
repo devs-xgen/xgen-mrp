@@ -134,25 +134,58 @@ export const onboardingContent: Record<UserRoleKey, OnboardingStep[]> = {
   ],
   WORKER: [
     {
-      title: "Your Daily Brief",
+      title: "Start with Your Daily Brief",
       description:
-        "Start on the dashboard to see tasks, deadlines, and work center alerts.",
-      imageUrl: "/images/onboarding/worker-dashboard.png",
+        "Open the worker dashboard to review assignments, deadlines, and work center alerts before you head to the floor.",
+      imageUrl: "/images/onboarding/worker/1.png",
       highlights: [
-        "Check upcoming operations",
-        "Scan QR codes to update order status",
-        "View inventory alerts before you begin",
+        "Scan stats for pending, in-progress, and urgent operations",
+        "Use quick actions to jump into Tasks, Operations, or QR Scanner",
+        "Review upcoming work centers and recent activity for context",
       ],
     },
     {
-      title: "Execute with Confidence",
+      title: "Review Tasks & Prioritize",
       description:
-        "Log progress, add notes, and request support as you move through each operation.",
-      imageUrl: "/images/onboarding/worker-operations.png",
+        "Check the Tasks view to understand which production orders impact your stations and what needs attention first.",
+      imageUrl: "/images/onboarding/worker/2.png",
       highlights: [
-        "Mark tasks complete to notify supervisors",
-        "Flag blockers or defects instantly",
-        "Use support chat to coordinate in real time",
+        "Filter tasks by status or promised dates to spot urgent work",
+        "Open production order details for routing and material notes",
+        "Sync with supervisors on high-priority orders before starting",
+      ],
+    },
+    {
+      title: "Execute Assigned Operations",
+      description:
+        "Use the Operations workspace to move each assigned step forward, log notes, and keep the timeline accurate.",
+      imageUrl: "/images/onboarding/worker/3.png",
+      highlights: [
+        "Update statuses as you begin, pause, or complete tasks",
+        "Document findings or handoff notes directly on the operation",
+        "Verify prerequisites and dependencies before advancing",
+      ],
+    },
+    {
+      title: "Scan & Manage Materials",
+      description:
+        "Leverage the QR scanner and inventory views to confirm you have the right components and report shortages quickly.",
+      imageUrl: "/images/onboarding/worker/4.png",
+      highlights: [
+        "Scan production order QR codes to jump to the right workflow",
+        "Check material availability and alerts without leaving the floor",
+        "Flag low stock or defects so admins can raise purchase orders",
+      ],
+    },
+    {
+      title: "Close the Loop with Support",
+      description:
+        "Wrap up your shift by closing tasks, logging blockers, and looping in inspectors or support when needed.",
+      imageUrl: "/images/onboarding/worker/5.png",
+      highlights: [
+        "Confirm completed operations so inspectors receive notifications",
+        "Escalate issues through chat or support tickets for quick resolution",
+        "Review remaining tasks to prepare for the next shift",
       ],
     },
   ],
