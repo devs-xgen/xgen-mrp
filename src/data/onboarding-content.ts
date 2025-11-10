@@ -16,10 +16,32 @@ export type UserRoleKey =
 export const onboardingContent: Record<UserRoleKey, OnboardingStep[]> = {
   ADMIN: [
     {
+      title: "Configure the Operations Backbone",
+      description:
+        "Set up products, materials, units, work centers, and user roles so downstream workflows stay accurate and auditable.",
+      imageUrl: "/images/onboarding/admin/1.png",
+      highlights: [
+        "Create products, variants, and categories in the Products hub before intake",
+        "Define material types, units of measure, and supplier links inside Materials",
+        "Validate work centers and admin/user permissions under Settings > Users",
+      ],
+    },
+    {
+      title: "Register Customers & Suppliers",
+      description:
+        "Maintain customer and supplier directories with payment terms, lead times, and shipping data ready for every transaction.",
+      imageUrl: "/images/onboarding/admin/2.png",
+      highlights: [
+        "Add customer accounts with credit limits and delivery addresses",
+        "Update supplier contacts, lead times, and contracts for procurement coordination",
+        "Ensure tax IDs and compliance fields are populated for billing",
+      ],
+    },
+    {
       title: "Start at Mission Control",
       description:
         "Use the dashboard to understand demand, fulfillment progress, and any blockers that need your attention first.",
-      imageUrl: "/images/onboarding/admin/1.png",
+      imageUrl: "/images/onboarding/admin/3.png",
       highlights: [
         "Scan KPI cards for overdue orders and production load",
         "Watch timeline widgets for promised delivery windows",
@@ -30,33 +52,55 @@ export const onboardingContent: Record<UserRoleKey, OnboardingStep[]> = {
       title: "Capture Customer Orders",
       description:
         "Create or review customer orders so every request has accurate products, variants, and promised quantities.",
-      imageUrl: "/images/onboarding/admin/2.png",
+      imageUrl: "/images/onboarding/admin/4.png",
       highlights: [
         "Use the Customer Orders list to add new orders or continue drafts",
-        "Confirm pricing, variants, and notes before saving",
+        "Confirm pricing, variants, payment terms, and notes before saving",
         "Filter by status to triage urgent or pending approvals",
       ],
     },
     {
-      title: "Plan Fulfillment Decisions",
+      title: "Analyze Orders & Launch Production",
       description:
-        "Run the Analyze flow to decide whether to allocate stock, launch production, or split fulfillment for each line.",
-      imageUrl: "/images/onboarding/admin/3.png",
+        "Run the production-planning flows to allocate stock, generate production orders, and set fulfillment strategy per line.",
+      imageUrl: "/images/onboarding/admin/5.png",
       highlights: [
-        "Review stock vs. production recommendations per order line",
-        "Allocate available inventory directly from the analysis screen",
-        "Trigger production orders when stock is short or lead times are high",
+        "Review stock vs. production recommendations from the Analyze workspace",
+        "Allocate available inventory or open production orders directly from planning",
+        "Confirm work-center routings and due dates before committing",
       ],
     },
     {
-      title: "Monitor Production & Close Billing",
+      title: "Secure Materials & Purchase Orders",
       description:
-        "Track in-progress manufacturing, confirm finished quantities, and finalize billing once deliveries are complete.",
-      imageUrl: "/images/onboarding/admin/1.pngg",
+        "Cover material gaps and track supplier commitments so production schedules stay realistic.",
+      imageUrl: "/images/onboarding/admin/6.png",
       highlights: [
-        "Visit the Production board to monitor work centers and statuses",
-        "Mark lines Finished once inspection confirms quality",
-        "Generate invoices from the Billing module after proof of delivery",
+        "Review material KPIs and low-stock alerts from the Materials hub",
+        "Issue or update Purchase Orders to backfill shortages detected during planning",
+        "Monitor expected deliveries and adjust reservations as timelines shift",
+      ],
+    },
+    {
+      title: "Monitor Production & Coordinate Quality",
+      description:
+        "Oversee production progress, unblock teams, and keep inspectors aligned on readiness milestones.",
+      imageUrl: "/images/onboarding/admin/7.png",
+      highlights: [
+        "Track workflow progress, work centers, and history logs from Production detail pages",
+        "Review worker updates and resolve blockers through support chat or notes",
+        "Verify inspection readiness and address quality findings before delivery",
+      ],
+    },
+    {
+      title: "Deliver & Close the Books",
+      description:
+        "Coordinate delivery assignments, capture proof, and finalize billing and analytics for stakeholders.",
+      imageUrl: "/images/onboarding/admin/8.png",
+      highlights: [
+        "Schedule delivery assignments and share tracking links once inspections pass",
+        "Generate invoices or billing statements after proof of delivery is logged",
+        "Export analytics and update support tickets to keep executives informed",
       ],
     },
   ],
