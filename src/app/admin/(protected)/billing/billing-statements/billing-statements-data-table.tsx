@@ -365,8 +365,6 @@
 // }
 
 
-
-
 "use client";
 
 import { useState } from "react";
@@ -424,8 +422,11 @@ interface BillingStatementsDataTableProps {
   onRefresh: () => void;
 }
 
-// Helper function to get status badge variant
-function getStatusBadge(status: BillingStatus) {
+// Define custom status string for display
+type DisplayStatus = BillingStatus | 'NOT_PAID';
+
+// Helper function to get the badge configuration for the combined Status
+function getBadgeConfig(status: DisplayStatus) {
   const statusConfig = {
     DRAFT: { variant: "outline" as const, label: "Draft" },
     SENT: { variant: "secondary" as const, label: "Sent" },
@@ -433,9 +434,10 @@ function getStatusBadge(status: BillingStatus) {
     OVERDUE: { variant: "destructive" as const, label: "Overdue" },
     PARTIALLY_PAID: { variant: "secondary" as const, label: "Partially Paid" },
     CANCELLED: { variant: "destructive" as const, label: "Cancelled" },
+    NOT_PAID: { variant: "outline" as const, label: "Not Paid" }, // New configuration for unpaid, non-overdue
   };
   // Default to secondary if status is an unexpected string
-  return statusConfig[status] || { variant: "secondary" as const, label: status };
+  return statusConfig[status as keyof typeof statusConfig] || { variant: "secondary" as const, label: status };
 }
 
 // Billing Statement Actions Cell Component
@@ -446,7 +448,6 @@ function BillingStatementActionsCell({
   statement: SerializedBillingStatement; 
   onRefresh: () => void;
 }) {
-  // Share dialog is self-managed via trigger prop
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -522,7 +523,6 @@ function BillingStatementActionsCell({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
@@ -647,7 +647,7 @@ export function BillingStatementsDataTable({
     },
     {
       accessorKey: "status",
-      header: "Status",
+      header: "Status", // Single "Status" column
       cell: ({ row }) => {
         const statement = row.original;
         const totalAmount = Number(statement.totalAmount || 0);
@@ -658,26 +658,49 @@ export function BillingStatementsDataTable({
         
         const remainingBalance = totalAmount - paidAmount;
         
-        // Start with the status from the database
-        let displayStatus: BillingStatus = row.getValue("status") as BillingStatus;
+        // Start with the status from the database. Use 'string' to allow custom display labels.
+        let displayStatus: DisplayStatus = row.getValue("status") as BillingStatus;
         
-        // --- START OF NEW LOGIC ---
-        // Override status based on calculated balance for active statements
-        if (displayStatus !== 'DRAFT' && displayStatus !== 'CANCELLED') {
-          // If there is a balance remaining (> $0.01 for floating point safety)
-          if (remainingBalance > 0.01) { 
-            // Set to PARTIALLY_PAID as payment was made but not fully covered
-            displayStatus = 'PARTIALLY_PAID' as BillingStatus; 
-          } else if (remainingBalance <= 0.01 && totalAmount > 0) { 
-            // If balance is zero (or negligible) and total is non-zero, it is PAID
-            displayStatus = 'PAID' as BillingStatus;
-          }
-        }
-        // --- END OF NEW LOGIC ---
+        // --- START OF COMBINED STATUS LOGIC ---
+        // 1. Preserve DRAFT/CANCELLED (document lifecycle statuses)
+        if (displayStatus === 'DRAFT' || displayStatus === 'CANCELLED') {
+            // Keep DB status
+        
+        // 2. Check Financial Status (takes priority over due date)
+        // Note: Using 0.01 tolerance for floating point comparison to zero
+        } else if (remainingBalance <= 0.01 && totalAmount > 0) {
+            // Fully Paid (Balance is zero or negligible)
+            displayStatus = 'PAID';
+            
+        } else if (paidAmount > 0.01 && remainingBalance > 0.01) {
+            // Partially Paid (Some payment made, balance remains)
+            displayStatus = 'PARTIALLY_PAID';
+            
+        // 3. If UNPAID (paidAmount is 0 and balance remains), check for OVERDUE or NOT_PAID
+        } else if (remainingBalance > 0.01) {
+            
+            // Check for overdue status if a due date exists
+            if (statement.dueDate) {
+                const dueDate = new Date(statement.dueDate);
+                const now = new Date();
+                
+                if (dueDate < now) {
+                    // Unpaid and due date passed
+                    displayStatus = 'OVERDUE';
+                } else {
+                    // Unpaid and not overdue, explicitly set to "NOT_PAID"
+                    displayStatus = 'NOT_PAID';
+                }
+            } else {
+                 // If there's no due date but it's still unpaid, mark as NOT_PAID
+                 displayStatus = 'NOT_PAID';
+            }
+        } 
+        // --- END OF COMBINED STATUS LOGIC ---
 
-        const { variant, label } = getStatusBadge(displayStatus);
+        const { variant, label } = getBadgeConfig(displayStatus);
         return (
-          <Badge variant={variant} className="capitalize">
+          <Badge variant={variant} className="capitalize font-semibold">
             {label}
           </Badge>
         );
