@@ -1,6 +1,5 @@
-// src/app/admin/(protected)/purchase-orders/page.tsx
 import { Metadata } from "next";
-import { DataTable } from "@/components/module/admin/purchase-orders/data-table";
+import { PurchaseOrdersDataTable } from "@/components/module/admin/purchase-orders/purchase-orders-data-table";
 import { columns } from "@/components/module/admin/purchase-orders/columns";
 import { CreatePurchaseOrderDialog } from "@/components/module/admin/purchase-orders/create-dialog";
 import {
@@ -12,7 +11,10 @@ import {
   PageHeaderActions,
   SectionCard,
 } from "@/components/shared/page-layout";
-import { getPurchaseOrders } from "@/lib/actions/purchase-order";
+import {
+  getPaginatedPurchaseOrders,
+  getPurchaseOrderStats,
+} from "@/lib/actions/purchase-order";
 import { getAllMaterials } from "@/lib/actions/materials";
 import { getAllSuppliers } from "@/lib/actions/suppliers";
 import { PurchaseOrdersStats } from "@/components/module/admin/purchase-orders/stats-dashboard";
@@ -23,15 +25,24 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ highlight?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    limit?: string;
+    search?: string;
+    highlight?: string;
+  }>;
 }
 
 export default async function PurchaseOrdersPage({ searchParams }: PageProps) {
-  const { highlight } = await searchParams;
-  const highlightId = highlight;
+  const resolvedSearchParams = await searchParams;
+  const page = Number(resolvedSearchParams.page) || 1;
+  const limit = Number(resolvedSearchParams.limit) || 10;
+  const search = resolvedSearchParams.search || "";
+  const highlightId = resolvedSearchParams.highlight;
 
-  const [purchaseOrders, materials, suppliers] = await Promise.all([
-    getPurchaseOrders(),
+  const [paginatedOrders, stats, materials, suppliers] = await Promise.all([
+    getPaginatedPurchaseOrders({ page, limit, search }),
+    getPurchaseOrderStats(),
     getAllMaterials(),
     getAllSuppliers(),
   ]);
@@ -54,12 +65,13 @@ export default async function PurchaseOrdersPage({ searchParams }: PageProps) {
       </PageHeader>
 
       {/* Statistics Dashboard */}
-      <PurchaseOrdersStats purchaseOrders={purchaseOrders} />
+      <PurchaseOrdersStats stats={stats} />
 
       <SectionCard heading="All Purchase Orders">
-        <DataTable
+        <PurchaseOrdersDataTable
           columns={columns}
-          data={purchaseOrders}
+          data={paginatedOrders.data}
+          metadata={paginatedOrders.metadata}
           highlightId={highlightId}
         />
       </SectionCard>

@@ -1,7 +1,8 @@
 // src/app/admin/(protected)/materials/page.tsx
 import { Metadata } from "next";
 import {
-  getAllMaterials,
+  getPaginatedMaterials,
+  getMaterialStats,
   getMaterialTypes,
   getUnitOfMeasures,
   getSuppliers,
@@ -48,12 +49,23 @@ async function refreshData() {
   revalidatePath("/admin/materials");
 }
 
-export default async function MaterialsPage() {
+export default async function MaterialsPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
   try {
-    const materials = await getAllMaterials();
-    const materialTypes = await getMaterialTypes();
-    const unitOfMeasures = await getUnitOfMeasures();
-    const suppliers = await getSuppliers();
+    const page = Number(searchParams.page) || 1;
+    const limit = Number(searchParams.limit) || 10;
+    const search = typeof searchParams.search === "string" ? searchParams.search : "";
+
+    const [materialsData, stats, materialTypes, unitOfMeasures, suppliers] = await Promise.all([
+      getPaginatedMaterials({ page, limit, search }),
+      getMaterialStats(),
+      getMaterialTypes(),
+      getUnitOfMeasures(),
+      getSuppliers(),
+    ]);
 
     return (
       <PageContainer>
@@ -86,7 +98,7 @@ export default async function MaterialsPage() {
         <PageBody className="space-y-6">
           {/* Materials Statistics - Direct layout like Production page */}
           <MaterialsDashboard
-            materials={materials}
+            stats={stats}
             materialTypes={materialTypes}
             unitOfMeasures={unitOfMeasures}
             suppliers={suppliers}
@@ -95,7 +107,8 @@ export default async function MaterialsPage() {
           {/* Data Table */}
           <SectionCard heading="All Materials">
             <MaterialsDataTable
-              materials={materials}
+              materials={materialsData.data}
+              metadata={materialsData.metadata}
               materialTypes={materialTypes}
               unitOfMeasures={unitOfMeasures}
               suppliers={suppliers}

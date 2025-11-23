@@ -1,10 +1,10 @@
 // src/app/admin/(protected)/production/page.tsx
 import { Metadata } from "next";
 import {
-  getProductionOrders,
+  getPaginatedProductionOrders,
+  getProductionStats,
 } from "@/lib/actions/production-order";
-import { columns } from "@/components/module/admin/production/columns";
-import { DataTable, getTableConfig } from "@/components/global/table";
+import ProductionDataTable from "./production-data-table";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -20,7 +20,6 @@ import {
 } from "@/components/shared/page-layout";
 import { Badge } from "@/components/ui/badge";
 import { AnalyticsCard, analyticsCardVariants } from "@/components/ui/analytics-card";
-import { convertDecimals } from "@/lib/convertDecimals";
 
 import { FloatingChatbox } from "@/components/global/floating-chatbox";
 
@@ -29,63 +28,46 @@ export const metadata: Metadata = {
   description: "Manage production orders and manufacturing processes",
 };
 
-export default async function ProductionOrdersPage() {
-  const ordersRaw = await getProductionOrders();
+export default async function ProductionOrdersPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
+  const page = Number(searchParams.page) || 1;
+  const limit = Number(searchParams.limit) || 10;
+  const search = typeof searchParams.search === "string" ? searchParams.search : "";
 
-  // Convert Decimal fields to numbers for client component compatibility
-  const orders = convertDecimals(ordersRaw);
+  const [ordersData, stats] = await Promise.all([
+    getPaginatedProductionOrders({ page, limit, search }),
+    getProductionStats(),
+  ]);
 
   // Transform orders data for the table (Decimals already converted)
-  const tableData = orders.map((order: any) => ({
+  const tableData = ordersData.data.map((order: any) => ({
     id: order.id,
     productName: order.product.name,
     productSku: order.product.sku,
-    variantDisplayName: order.productVariant?.displayName, // 🆕 ADD: Include variant display name
+    variantDisplayName: order.productVariant?.displayName,
     quantity: order.quantity,
     startDate: order.startDate,
     dueDate: order.dueDate,
     status: order.status,
     priority: order.priority,
     customerOrderNumber: order.customerOrder?.orderNumber,
-    progress: order.operations.reduce((acc, op) => {
+    progress: order.operations.reduce((acc: number, op: any) => {
       if (op.status === "COMPLETED") return acc + 100 / order.operations.length;
       if (op.status === "IN_PROGRESS")
         return acc + 50 / order.operations.length;
       return acc;
     }, 0),
     lastUpdated: order.updatedAt,
-    
+
     // MRP Enhancement Fields (already converted to numbers)
     plannedMaterialCost: order.plannedMaterialCost,
     actualMaterialCost: order.actualMaterialCost,
     materialVariance: order.materialVariance,
     completedQuantity: order.completedQuantity,
   }));
-
-  // Global table configuration for production
-  const config = getTableConfig("production");
-
-  // Calculate statistics
-  const totalOrders = orders.length;
-
-  // Use type-safe string comparisons
-  const statusCounts = {
-    COMPLETED: 0,
-    IN_PROGRESS: 0,
-    PENDING: 0,
-  };
-
-  // Count the different statuses
-  orders.forEach((order) => {
-    if (order.status in statusCounts) {
-      statusCounts[order.status as keyof typeof statusCounts]++;
-    }
-  });
-
-  // Calculate overdue orders
-  const overdueOrders = orders.filter((order) => {
-    return order.status !== "COMPLETED" && new Date(order.dueDate) < new Date();
-  }).length;
 
   return (
     <PageContainer>
@@ -112,25 +94,25 @@ export default async function ProductionOrdersPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <AnalyticsCard
             title="Total Orders"
-            value={totalOrders}
+            value={stats.totalOrders}
             icon="ClipboardList"
             {...analyticsCardVariants.blue}
           />
           <AnalyticsCard
             title="Completed"
-            value={statusCounts["COMPLETED"]}
+            value={stats.completed}
             icon="CheckCircle"
             {...analyticsCardVariants.green}
           />
           <AnalyticsCard
             title="In Progress"
-            value={statusCounts["IN_PROGRESS"]}
+            value={stats.inProgress}
             icon="AlertTriangle"
             {...analyticsCardVariants.amber}
           />
           <AnalyticsCard
             title="Overdue"
-            value={overdueOrders}
+            value={stats.overdue}
             icon="Timer"
             {...analyticsCardVariants.red}
           />
@@ -139,39 +121,33 @@ export default async function ProductionOrdersPage() {
         {/* Quick Filters */}
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
-            All ({totalOrders})
+            All ({stats.totalOrders})
           </Badge>
           <Badge
             variant="secondary"
             className="cursor-pointer hover:bg-secondary"
           >
-            In Progress ({statusCounts["IN_PROGRESS"]})
+            In Progress ({stats.inProgress})
           </Badge>
           <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
-            Pending ({statusCounts["PENDING"]})
+            Pending ({stats.pending})
           </Badge>
           <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
-            Completed ({statusCounts["COMPLETED"]})
+            Completed ({stats.completed})
           </Badge>
           <Badge
             variant="destructive"
             className="cursor-pointer hover:bg-destructive/90"
           >
-            Overdue ({overdueOrders})
+            Overdue ({stats.overdue})
           </Badge>
         </div>
 
         {/* Data Table - Shared Section Card */}
         <SectionCard heading="All Production Orders">
-          <DataTable
-            columns={columns}
+          <ProductionDataTable
             data={tableData}
-            searchKey={config.searchKey}
-            searchPlaceholder={config.searchPlaceholder}
-            emptyMessage={config.emptyMessage}
-            enableSelection={config.enableSelection}
-            enableFiltering={config.enableFiltering}
-            filterOptions={config.filterOptions}
+            metadata={ordersData.metadata}
           />
         </SectionCard>
 

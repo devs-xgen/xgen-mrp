@@ -20,8 +20,8 @@ async function createVariantBOMsFromParent(
   colorName: string,
   modifications: any
 ): Promise<number> {
-    console.log(`Skipping BOM creation for variant ${variantId}. Implementation needed.`);
-    return 0;
+  console.log(`Skipping BOM creation for variant ${variantId}. Implementation needed.`);
+  return 0;
 }
 
 // Check if a product SKU is available. Optional excludeId to ignore an existing product.
@@ -927,7 +927,7 @@ export async function createProduct2(formData: {
             tx // Pass the transaction client to the helper function
           );
         }
-        
+
         return { product, createdVariants };
       }
     );
@@ -1401,5 +1401,106 @@ export async function bulkUpdateProductVariants(
   } catch (error) {
     console.error("Bulk update variants error:", error);
     return { success: false, error: "Error bulk updating variants" };
+  }
+}
+// Paginated fetch for products
+export async function getPaginatedProducts({
+  page = 1,
+  limit = 10,
+  search = "",
+}: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}) {
+  try {
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      status: { not: "ARCHIVED" as Status },
+    };
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { sku: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        include: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          variants: {
+            select: {
+              id: true,
+              sku: true,
+              sizeName: true,
+              sizeCode: true,
+              colorName: true,
+              colorCode: true,
+              currentStock: true,
+              minimumStockLevel: true,
+              unitCost: true,
+              sellingPrice: true,
+              displayName: true,
+              isActive: true,
+              sortOrder: true,
+            },
+            where: {
+              isActive: true,
+            },
+            orderBy: [
+              { sortOrder: "asc" },
+              { sizeName: "asc" },
+              { colorName: "asc" },
+            ],
+          },
+          productionOrders: {
+            select: {
+              id: true,
+              status: true,
+              quantity: true,
+              dueDate: true,
+            },
+            where: {
+              status: {
+                in: ["PENDING", "IN_PROGRESS", "ACTIVE"],
+              },
+            },
+            take: 5,
+            orderBy: {
+              createdAt: "desc",
+            },
+          },
+        },
+        orderBy: {
+          name: "asc",
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.product.count({ where }),
+    ]);
+
+    return {
+      data: convertDecimals(products),
+      metadata: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  } catch (error) {
+    console.error("❌ Error fetching paginated products:", error);
+    throw new Error("Failed to fetch paginated products");
   }
 }

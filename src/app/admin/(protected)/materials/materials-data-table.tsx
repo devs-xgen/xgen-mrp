@@ -1,7 +1,7 @@
 "use client";
 
 import { DataTable } from "@/components/global/table/data-table";
-import { 
+import {
   createSelectionColumn,
   createTextColumn,
   createStatusColumn,
@@ -12,7 +12,7 @@ import { EditMaterialDialog } from "@/components/module/admin/materials/edit-mat
 import { deleteMaterial } from "@/lib/actions/materials";
 import { Material, MaterialType, UnitOfMeasure, Supplier } from "@/types/admin/materials";
 import { AlertTriangle, MoreHorizontal, Pencil, Archive, Eye } from "lucide-react";
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -20,9 +20,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -37,9 +37,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { MaterialsExportButton } from "@/components/module/admin/materials/materials-export-button";
+import { PaginationState } from "@tanstack/react-table";
 
 interface MaterialsDataTableProps {
   materials: Material[];
+  metadata?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
   materialTypes: MaterialType[];
   unitOfMeasures: UnitOfMeasure[];
   suppliers: Supplier[];
@@ -47,14 +54,14 @@ interface MaterialsDataTableProps {
 }
 
 // Material Actions Cell Component
-function MaterialActionsCell({ 
-  material, 
-  materialTypes, 
-  unitOfMeasures, 
-  suppliers, 
-  onRefresh 
-}: { 
-  material: Material; 
+function MaterialActionsCell({
+  material,
+  materialTypes,
+  unitOfMeasures,
+  suppliers,
+  onRefresh
+}: {
+  material: Material;
   materialTypes: MaterialType[];
   unitOfMeasures: UnitOfMeasure[];
   suppliers: Supplier[];
@@ -184,13 +191,18 @@ function MaterialActionsCell({
   );
 }
 
-export function MaterialsDataTable({ 
-  materials, 
-  materialTypes, 
-  unitOfMeasures, 
-  suppliers, 
-  onRefresh 
+export function MaterialsDataTable({
+  materials,
+  metadata,
+  materialTypes,
+  unitOfMeasures,
+  suppliers,
+  onRefresh
 }: MaterialsDataTableProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   // Create columns using global table helpers
   const columns = [
     createSelectionColumn<Material>(),
@@ -263,12 +275,33 @@ export function MaterialsDataTable({
   // Get predefined table config
   const tableConfig = getTableConfig("materials");
 
+  // Handle server-side pagination
+  const pagination: PaginationState = {
+    pageIndex: (metadata?.page ?? 1) - 1,
+    pageSize: metadata?.limit ?? 10,
+  };
+
+  const onPaginationChange = (updaterOrValue: PaginationState | ((old: PaginationState) => PaginationState)) => {
+    const previous = pagination;
+    const next = typeof updaterOrValue === 'function' ? updaterOrValue(previous) : updaterOrValue;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", (next.pageIndex + 1).toString());
+    params.set("limit", next.pageSize.toString());
+
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
   return (
     <DataTable
       columns={columns}
       data={materials}
       {...tableConfig}
       customToolbarActions={<MaterialsExportButton />}
+      manualPagination={!!metadata}
+      pageCount={metadata?.totalPages ?? -1}
+      pagination={pagination}
+      onPaginationChange={onPaginationChange}
     />
   );
 }

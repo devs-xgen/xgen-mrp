@@ -1,4 +1,3 @@
-// src/components/module/admin/purchase-orders/stats-dashboard.tsx
 "use client";
 
 import { useState } from "react";
@@ -14,85 +13,52 @@ import {
 } from "@/components/ui/dialog";
 import {
   BarChart,
-  ChevronDownIcon,
-  ChevronUpIcon,
   CircleDollarSign,
   ClipboardList,
   Package,
   TrendingUp,
 } from "lucide-react";
-import { PurchaseOrder } from "@/types/admin/purchase-order";
-import { Status } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrencyPHP } from "@/lib/constant";
 
 interface PurchaseOrdersStatsProps {
-  purchaseOrders: PurchaseOrder[];
+  stats: {
+    totalOrders: number;
+    pendingOrders: number;
+    completedOrders: number;
+    cancelledOrders: number;
+    totalAmount: number;
+    pendingAmount: number;
+    topSupplier: {
+      name: string;
+      count: number;
+    };
+    mostRecentOrder: {
+      poNumber: string;
+      date: Date;
+    } | null;
+    monthlyTrends: {
+      currentMonth: number;
+      lastMonth: number;
+      growth: number;
+    };
+  };
 }
 
-export function PurchaseOrdersStats({
-  purchaseOrders,
-}: PurchaseOrdersStatsProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+export function PurchaseOrdersStats({ stats }: PurchaseOrdersStatsProps) {
+  const {
+    totalOrders,
+    pendingOrders,
+    completedOrders,
+    cancelledOrders,
+    totalAmount,
+    pendingAmount,
+    topSupplier,
+    mostRecentOrder,
+    monthlyTrends,
+  } = stats;
 
-  // Calculate statistics
-  const totalOrders = purchaseOrders.length;
-  const pendingOrders = purchaseOrders.filter(
-    (po) => po.status === "PENDING"
-  ).length;
-  const completedOrders = purchaseOrders.filter(
-    (po) => po.status === "COMPLETED"
-  ).length;
-  const cancelledOrders = purchaseOrders.filter(
-    (po) => po.status === "CANCELLED"
-  ).length;
-
-  const totalAmount = purchaseOrders.reduce(
-    (sum, po) => sum + Number(po.totalAmount),
-    0
-  );
-  const pendingAmount = purchaseOrders
-    .filter((po) => po.status === "PENDING")
-    .reduce((sum, po) => sum + Number(po.totalAmount), 0);
-
-  // Get most recent order
-  const mostRecentOrder =
-    purchaseOrders.length > 0
-      ? purchaseOrders.sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        )[0]
-      : null;
-
-  // Get supplier with most orders
-  const supplierCounts = purchaseOrders.reduce((acc, po) => {
-    acc[po.supplier.name] = (acc[po.supplier.name] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const topSupplier = Object.entries(supplierCounts).sort(
-    (a, b) => b[1] - a[1]
-  )[0] || ["None", 0];
-
-  // Calculate month-over-month comparison (simple version)
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth();
-  const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-
-  const currentMonthOrders = purchaseOrders.filter(
-    (po) => new Date(po.createdAt).getMonth() === currentMonth
-  ).length;
-
-  const lastMonthOrders = purchaseOrders.filter(
-    (po) => new Date(po.createdAt).getMonth() === lastMonth
-  ).length;
-
-  const orderGrowth =
-    lastMonthOrders === 0
-      ? 100
-      : Math.round(
-          ((currentMonthOrders - lastMonthOrders) / lastMonthOrders) * 100
-        );
+  const orderGrowth = monthlyTrends.growth;
 
   return (
     <>
@@ -106,9 +72,7 @@ export function PurchaseOrdersStats({
                 <p className="text-sm font-medium text-muted-foreground truncate">
                   Total Orders
                 </p>
-                <p className="text-2xl font-bold mt-1">
-                  {totalOrders}
-                </p>
+                <p className="text-2xl font-bold mt-1">{totalOrders}</p>
                 <p className="text-xs text-muted-foreground mt-1 truncate">
                   {pendingOrders} pending, {completedOrders} completed
                 </p>
@@ -153,7 +117,7 @@ export function PurchaseOrdersStats({
                   )}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 truncate">
-                  {currentMonthOrders} orders this month
+                  {monthlyTrends.currentMonth} orders this month
                 </p>
               </div>
             </div>
@@ -168,11 +132,9 @@ export function PurchaseOrdersStats({
                 <p className="text-sm font-medium text-muted-foreground truncate">
                   Top Supplier
                 </p>
-                <p className="text-2xl font-bold mt-1">
-                  {topSupplier[1]}
-                </p>
+                <p className="text-2xl font-bold mt-1">{topSupplier.count}</p>
                 <p className="text-xs text-muted-foreground mt-1 truncate">
-                  {topSupplier[0]}
+                  {topSupplier.name}
                 </p>
               </div>
             </div>
@@ -287,7 +249,7 @@ export function PurchaseOrdersStats({
                       Top Supplier
                     </p>
                     <p className="font-medium">
-                      {topSupplier[0]} ({topSupplier[1]} orders)
+                      {topSupplier.name} ({topSupplier.count} orders)
                     </p>
                   </div>
 
@@ -300,7 +262,7 @@ export function PurchaseOrdersStats({
                         <>
                           {mostRecentOrder.poNumber} -{" "}
                           {new Date(
-                            mostRecentOrder.createdAt
+                            mostRecentOrder.date
                           ).toLocaleDateString()}
                         </>
                       ) : (
@@ -319,20 +281,19 @@ export function PurchaseOrdersStats({
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Current Month Orders</span>
-                    <span className="font-medium">{currentMonthOrders}</span>
+                    <span className="font-medium">{monthlyTrends.currentMonth}</span>
                   </div>
 
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Previous Month Orders</span>
-                    <span className="font-medium">{lastMonthOrders}</span>
+                    <span className="font-medium">{monthlyTrends.lastMonth}</span>
                   </div>
 
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Month-over-Month Growth</span>
                     <span
-                      className={`font-medium ${
-                        orderGrowth >= 0 ? "text-green-500" : "text-red-500"
-                      }`}
+                      className={`font-medium ${orderGrowth >= 0 ? "text-green-500" : "text-red-500"
+                        }`}
                     >
                       {orderGrowth}%
                     </span>

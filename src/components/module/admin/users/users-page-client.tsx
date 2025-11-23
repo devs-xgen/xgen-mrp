@@ -1,21 +1,48 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import type { UserData } from "@/types/admin/user";
 import { createColumns } from "./columns";
 import { DataTable, getTableConfig } from "@/components/global/table";
+import { PaginationState } from "@tanstack/react-table";
 
 interface UsersPageClientProps {
   data: UserData[];
+  metadata?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
-export default function UsersPageClient({ data }: UsersPageClientProps) {
+export default function UsersPageClient({ data, metadata }: UsersPageClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const refresh = async () => {
     router.refresh();
   };
 
   const columns = createColumns(refresh);
+
+  // Handle server-side pagination
+  const pagination: PaginationState = {
+    pageIndex: (metadata?.page ?? 1) - 1,
+    pageSize: metadata?.limit ?? 10,
+  };
+
+  const onPaginationChange = (updaterOrValue: PaginationState | ((old: PaginationState) => PaginationState)) => {
+    const previous = pagination;
+    const next = typeof updaterOrValue === 'function' ? updaterOrValue(previous) : updaterOrValue;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", (next.pageIndex + 1).toString());
+    params.set("limit", next.pageSize.toString());
+
+    router.push(`${pathname}?${params.toString()}`);
+  };
 
   return (
     <DataTable
@@ -48,6 +75,10 @@ export default function UsersPageClient({ data }: UsersPageClientProps) {
         },
       ]}
       emptyMessage="No users found."
+      manualPagination={!!metadata}
+      pageCount={metadata?.totalPages ?? -1}
+      pagination={pagination}
+      onPaginationChange={onPaginationChange}
     />
   );
 }

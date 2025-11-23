@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import UsersPageClient from "@/components/module/admin/users/users-page-client";
 import { CreateUserDialog } from "@/components/module/admin/users/create-user-dialog";
-import { getUsers } from "@/lib/actions/users";
+import { getPaginatedUsers } from "@/lib/actions/users";
 import {
   PageContainer,
   PageHeader,
@@ -17,8 +17,16 @@ export const metadata: Metadata = {
   description: "Manage system users and their roles",
 };
 
-export default async function UsersPage() {
-  const users = await getUsers();
+export default async function UsersPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
+  const page = Number(searchParams.page) || 1;
+  const limit = Number(searchParams.limit) || 10;
+  const search = typeof searchParams.search === "string" ? searchParams.search : "";
+
+  const usersData = await getPaginatedUsers({ page, limit, search });
 
   return (
     <PageContainer>
@@ -37,7 +45,10 @@ export default async function UsersPage() {
 
       {/* Data Table */}
       <SectionCard heading="All Users">
-        <UsersPageClient data={users} />
+        <UsersPageClient
+          data={usersData.data}
+          metadata={usersData.metadata}
+        />
       </SectionCard>
     </PageContainer>
   );
