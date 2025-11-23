@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Edit } from "lucide-react";
 import Link from "next/link";
 import { OverviewSection } from "@/components/module/admin/customer-order-ver/view/OverviewSection";
-import { FulfillmentSection } from "@/components/module/admin/customer-order-ver/view/FulfillmentSection";
+// import { FulfillmentSection } from "@/components/module/admin/customer-order-ver/view/FulfillmentSection";
 import { ProductionSection } from "@/components/module/admin/customer-order-ver/view/ProductionSection";
 import { BillingSection } from "@/components/module/admin/customer-order-ver/view/BillingSection";
 import { PaymentSection } from "@/components/module/admin/customer-order-ver/view/PaymentSection";
@@ -28,9 +28,9 @@ function OrderDetails({ order }: { order: any }) {
     <div className="space-y-6">
       <Tabs defaultValue="overview" className="w-full">
         <div className="flex justify-center mb-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-5 bg-muted p-1 rounded-lg">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4 bg-muted p-1 rounded-lg">
             <TabsTrigger value="overview" className="text-sm font-medium">Overview</TabsTrigger>
-            <TabsTrigger value="fulfillment" className="text-sm font-medium">Fulfillment</TabsTrigger>
+            {/* <TabsTrigger value="fulfillment" className="text-sm font-medium">Fulfillment</TabsTrigger> */}
             <TabsTrigger value="production" className="text-sm font-medium">Production</TabsTrigger>
             <TabsTrigger value="billing" className="text-sm font-medium">Billing</TabsTrigger>
             <TabsTrigger value="payment" className="text-sm font-medium">Payment</TabsTrigger>
@@ -41,9 +41,9 @@ function OrderDetails({ order }: { order: any }) {
           <OverviewSection order={order} />
         </TabsContent>
 
-        <TabsContent value="fulfillment">
+        {/* <TabsContent value="fulfillment">
           <FulfillmentSection order={order} />
-        </TabsContent>
+        </TabsContent> */}
 
         <TabsContent value="production">
           <ProductionSection order={order} />

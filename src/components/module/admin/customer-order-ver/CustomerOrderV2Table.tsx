@@ -127,50 +127,50 @@ export function CustomerOrderV2Table({
     createStatusColumn<CustomerOrder>("status", "Status"),
 
     // Fulfillment Progress (custom)
-    {
-      accessorKey: "fulfillmentProgress",
-      header: "Fulfillment",
-      cell: ({ row }) => {
-        const order = row.original;
-        if (!order.orderLines || order.orderLines.length === 0) {
-          return <div className="text-sm text-muted-foreground">No items</div>;
-        }
+    // {
+    //   accessorKey: "fulfillmentProgress",
+    //   header: "Fulfillment",
+    //   cell: ({ row }) => {
+    //     const order = row.original;
+    //     if (!order.orderLines || order.orderLines.length === 0) {
+    //       return <div className="text-sm text-muted-foreground">No items</div>;
+    //     }
 
-        const totalItems = order.orderLines.length;
-        const fulfilledItems = order.orderLines.filter(
-          (line) => line.fulfillmentStatus === "FULFILLED"
-        ).length;
-        const progressPercent = (fulfilledItems / totalItems) * 100;
+    //     const totalItems = order.orderLines.length;
+    //     const fulfilledItems = order.orderLines.filter(
+    //       (line) => line.fulfillmentStatus === "FULFILLED"
+    //     ).length;
+    //     const progressPercent = (fulfilledItems / totalItems) * 100;
 
-        const fulfillmentTypes = [
-          ...new Set(order.orderLines.map((line) => line.fulfillmentType).filter(Boolean)),
-        ] as string[];
+    //     const fulfillmentTypes = [
+    //       ...new Set(order.orderLines.map((line) => line.fulfillmentType).filter(Boolean)),
+    //     ] as string[];
 
-        return (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Progress value={progressPercent} className="flex-1 h-2" />
-              <span className="text-xs text-muted-foreground">
-                {fulfilledItems}/{totalItems}
-              </span>
-            </div>
-            <div className="flex gap-1">
-              {fulfillmentTypes.map((type) => (
-                <Badge
-                  key={type}
-                  variant="outline"
-                  className={`text-xs ${fulfillmentTypeColors[type || "PENDING"]}`}
-                >
-                  {type === "STOCK" && <Package className="h-3 w-3 mr-1" />}
-                  {type === "PRODUCTION" && <Factory className="h-3 w-3 mr-1" />}
-                  {type || "Pending"}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        );
-      },
-    },
+    //     return (
+    //       <div className="space-y-2">
+    //         <div className="flex items-center gap-2">
+    //           <Progress value={progressPercent} className="flex-1 h-2" />
+    //           <span className="text-xs text-muted-foreground">
+    //             {fulfilledItems}/{totalItems}
+    //           </span>
+    //         </div>
+    //         <div className="flex gap-1">
+    //           {fulfillmentTypes.map((type) => (
+    //             <Badge
+    //               key={type}
+    //               variant="outline"
+    //               className={`text-xs ${fulfillmentTypeColors[type || "PENDING"]}`}
+    //             >
+    //               {type === "STOCK" && <Package className="h-3 w-3 mr-1" />}
+    //               {type === "PRODUCTION" && <Factory className="h-3 w-3 mr-1" />}
+    //               {type || "Pending"}
+    //             </Badge>
+    //           ))}
+    //         </div>
+    //       </div>
+    //     );
+    //   },
+    // },
 
     // Total Amount
     createCurrencyColumn<CustomerOrder>("totalAmount", "Total Amount"),

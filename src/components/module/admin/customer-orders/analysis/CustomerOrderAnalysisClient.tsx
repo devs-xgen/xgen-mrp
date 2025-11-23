@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FulfillmentDashboard } from "../fulfillment/FulfillmentDashboard";
+// import { FulfillmentDashboard } from "../fulfillment/FulfillmentDashboard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Table,
@@ -51,7 +51,7 @@ export function CustomerOrderAnalysisClient({
       [OverallOrderStatus.REQUIRES_PRODUCTION]: { variant: "outline" as const, color: "text-orange-600", icon: Factory },
       [OverallOrderStatus.MATERIAL_SHORTAGE]: { variant: "destructive" as const, color: "text-red-600", icon: AlertTriangle },
       [OverallOrderStatus.CANNOT_FULFILL]: { variant: "destructive" as const, color: "text-red-600", icon: AlertTriangle },
-      [OverallOrderStatus.PARTIAL_FULFILLMENT]: { variant: "secondary" as const, color: "text-yellow-600", icon: Clock },
+      // [OverallOrderStatus.PARTIAL_FULFILLMENT]: { variant: "secondary" as const, color: "text-yellow-600", icon: Clock },
     };
 
     const config = variants[status] || variants[OverallOrderStatus.MIXED];
@@ -81,7 +81,7 @@ export function CustomerOrderAnalysisClient({
         <Tabs defaultValue="analysis" className="w-full">
           <TabsList>
             <TabsTrigger value="analysis">Stock Analysis</TabsTrigger>
-            <TabsTrigger value="fulfillment">Fulfillment Tracker</TabsTrigger>
+            {/* <TabsTrigger value="fulfillment">Fulfillment Tracker</TabsTrigger> */}
           </TabsList>
           
           <TabsContent value="analysis" className="space-y-6 mt-6">
@@ -134,10 +134,10 @@ export function CustomerOrderAnalysisClient({
               <label className="text-sm font-medium text-muted-foreground">Required Date</label>
               <p className="font-medium">{orderAnalysis.requiredDate.toLocaleDateString()}</p>
             </div>
-            <div>
+            {/* <div>
               <label className="text-sm font-medium text-muted-foreground">Est. Fulfillment</label>
               <p className="font-medium">{orderAnalysis.estimatedFulfillmentDate.toLocaleDateString()}</p>
-            </div>
+            </div> */}
             <div>
               <label className="text-sm font-medium text-muted-foreground">Can Fulfill Immediately</label>
               <Badge variant={orderAnalysis.canFulfillImmediately ? "default" : "secondary"}>
@@ -235,7 +235,7 @@ export function CustomerOrderAnalysisClient({
         )}
           </TabsContent>
           
-          <TabsContent value="fulfillment" className="mt-6">
+          {/* <TabsContent value="fulfillment" className="mt-6">
             <FulfillmentDashboard 
               orderId={orderId}
               fulfillmentData={{
@@ -263,7 +263,7 @@ export function CustomerOrderAnalysisClient({
                 overallCompletion: 0, // This would be calculated based on actual fulfillment status
               }}
             />
-          </TabsContent>
+          </TabsContent> */}
         </Tabs>
       </div>
     </>

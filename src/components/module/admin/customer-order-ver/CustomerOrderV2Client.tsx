@@ -88,20 +88,20 @@ export function CustomerOrderV2Client({
       }
 
       // Fulfillment type filter
-      if (filters.fulfillmentType) {
-        const hasFulfillmentType = order.orderLines?.some(line => 
-          line.fulfillmentType === filters.fulfillmentType
-        );
-        if (!hasFulfillmentType) return false;
-      }
+      // if (filters.fulfillmentType) {
+      //   const hasFulfillmentType = order.orderLines?.some(line => 
+      //     line.fulfillmentType === filters.fulfillmentType
+      //   );
+      //   if (!hasFulfillmentType) return false;
+      // }
 
-      // Fulfillment status filter
-      if (filters.fulfillmentStatus) {
-        const hasFulfillmentStatus = order.orderLines?.some(line => 
-          line.fulfillmentStatus === filters.fulfillmentStatus
-        );
-        if (!hasFulfillmentStatus) return false;
-      }
+      // // Fulfillment status filter
+      // if (filters.fulfillmentStatus) {
+      //   const hasFulfillmentStatus = order.orderLines?.some(line => 
+      //     line.fulfillmentStatus === filters.fulfillmentStatus
+      //   );
+      //   if (!hasFulfillmentStatus) return false;
+      // }
 
       return true;
     });
