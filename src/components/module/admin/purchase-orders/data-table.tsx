@@ -1,4 +1,3 @@
-// src/components/module/admin/purchase-orders/data-table.tsx
 "use client";
 
 import * as React from "react";
@@ -14,6 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 import {
   Table,
@@ -31,13 +31,24 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   highlightId?: string; // Optional ID to highlight a row
+  metadata?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   highlightId,
+  metadata,
 }: DataTableProps<TData, TValue>) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
@@ -58,20 +69,42 @@ export function DataTable<TData, TValue>({
     }
   }, [highlightId, data]);
 
+  const onPaginationChange = (updaterOrValue: any) => {
+    const newPagination =
+      typeof updaterOrValue === "function"
+        ? updaterOrValue({
+          pageIndex: (metadata?.page || 1) - 1,
+          pageSize: metadata?.limit || 10,
+        })
+        : updaterOrValue;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", (newPagination.pageIndex + 1).toString());
+    params.set("limit", newPagination.pageSize.toString());
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
   const table = useReactTable({
     data,
     columns,
+    pageCount: metadata?.totalPages || -1,
+    manualPagination: true,
     state: {
       sorting,
       columnVisibility,
       rowSelection,
       columnFilters,
+      pagination: {
+        pageIndex: (metadata?.page || 1) - 1,
+        pageSize: metadata?.limit || 10,
+      },
     },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
+    onPaginationChange,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -107,9 +140,9 @@ export function DataTable<TData, TValue>({
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
                   </TableHead>
                 ))}
               </TableRow>

@@ -484,8 +484,8 @@ export async function deleteUser(id: string): Promise<void> {
 
       throw new Error(
         `This user cannot be deleted because there are related records tied to their account.\n\n` +
-          parts.map((p) => `- ${p}`).join("\n") +
-          `\n\nPlease reassign or remove these records first, or deactivate the user instead.\n`
+        parts.map((p) => `- ${p}`).join("\n") +
+        `\n\nPlease reassign or remove these records first, or deactivate the user instead.\n`
       );
     }
 
@@ -588,5 +588,72 @@ export async function changeUserStatus(
     throw error instanceof Error
       ? error
       : new Error("Failed to change user status");
+  }
+}
+// Paginated fetch for users
+export async function getPaginatedUsers({
+  page = 1,
+  limit = 10,
+  search = "",
+}: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { email: { contains: search, mode: "insensitive" } },
+        {
+          profile: {
+            OR: [
+              { firstName: { contains: search, mode: "insensitive" } },
+              { lastName: { contains: search, mode: "insensitive" } },
+            ],
+          },
+        },
+      ];
+    }
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        include: {
+          profile: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    // Remove password field from response
+    const sanitizedUsers = users.map((user) => {
+      const { password, ...userWithoutPassword } = user;
+      return userWithoutPassword as UserData;
+    });
+
+    return {
+      data: sanitizedUsers,
+      metadata: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching paginated users:", error);
+    throw new Error("Failed to fetch paginated users");
   }
 }

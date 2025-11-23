@@ -1,4 +1,3 @@
-// src/components/module/admin/purchase-orders/data-table-toolbar.tsx
 "use client";
 
 import { Cross2Icon } from "@radix-ui/react-icons";
@@ -14,6 +13,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Status } from "@prisma/client";
 import { PlusIcon } from "lucide-react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useCallback, useState, useEffect } from "react";
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
@@ -22,19 +23,43 @@ interface DataTableToolbarProps<TData> {
 export function DataTableToolbar<TData>({
   table,
 }: DataTableToolbarProps<TData>) {
-  const isFiltered = table.getState().columnFilters.length > 0;
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Initialize search from URL
+  const [searchValue, setSearchValue] = useState(searchParams.get("search") || "");
+
+  // Create a debounced search function
+  // Since I don't know if useDebounce exists, I'll use a useEffect with setTimeout
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (searchValue) {
+        params.set("search", searchValue);
+      } else {
+        params.delete("search");
+      }
+
+      // Reset page to 1 when searching
+      if (searchValue !== (searchParams.get("search") || "")) {
+        params.set("page", "1");
+        router.push(`${pathname}?${params.toString()}`);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchValue, router, pathname, searchParams]);
+
+  const isFiltered = table.getState().columnFilters.length > 0 || !!searchValue;
 
   return (
     <div className="flex items-center justify-between">
       <div className="flex flex-1 items-center space-x-2">
         <Input
-          placeholder="Filter by PO number..."
-          value={
-            (table.getColumn("poNumber")?.getFilterValue() as string) ?? ""
-          }
-          onChange={(event) =>
-            table.getColumn("poNumber")?.setFilterValue(event.target.value)
-          }
+          placeholder="Search orders..."
+          value={searchValue}
+          onChange={(event) => setSearchValue(event.target.value)}
           className="h-8 w-[150px] lg:w-[250px]"
         />
         {table.getColumn("status") && (
@@ -75,7 +100,7 @@ export function DataTableToolbar<TData>({
                           .getColumn("status")
                           ?.setFilterValue(
                             filterValue?.filter((value) => value !== status) ??
-                              []
+                            []
                           );
                       }
                     }}
@@ -90,7 +115,10 @@ export function DataTableToolbar<TData>({
         {isFiltered && (
           <Button
             variant="ghost"
-            onClick={() => table.resetColumnFilters()}
+            onClick={() => {
+              table.resetColumnFilters();
+              setSearchValue("");
+            }}
             className="h-8 px-2 lg:px-3"
           >
             Reset

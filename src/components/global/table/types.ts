@@ -19,6 +19,11 @@ export interface DataTableProps<TData, TValue = unknown> {
   emptyMessage?: string;
   filterOptions?: readonly FilterOption[];
   customToolbarActions?: React.ReactNode;
+  // Manual pagination props (optional for backward compatibility)
+  manualPagination?: boolean;
+  pageCount?: number;
+  pagination?: import("@tanstack/react-table").PaginationState;
+  onPaginationChange?: import("@tanstack/react-table").OnChangeFn<import("@tanstack/react-table").PaginationState>;
 }
 
 // Table toolbar props

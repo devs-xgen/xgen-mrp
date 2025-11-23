@@ -44,6 +44,10 @@ export function DataTable<TData, TValue>({
   emptyMessage = "No results found.",
   filterOptions = [],
   customToolbarActions,
+  manualPagination = false,
+  pageCount = -1,
+  pagination,
+  onPaginationChange,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
@@ -58,6 +62,7 @@ export function DataTable<TData, TValue>({
       columnVisibility,
       rowSelection: enableSelection ? rowSelection : {},
       columnFilters: enableFiltering ? columnFilters : [],
+      ...(manualPagination ? { pagination } : {}),
     },
     enableRowSelection: enableSelection,
     onRowSelectionChange: enableSelection ? setRowSelection : undefined,
@@ -70,6 +75,9 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: enableSorting ? getSortedRowModel() : undefined,
     getFacetedRowModel: enableFiltering ? getFacetedRowModel() : undefined,
     getFacetedUniqueValues: enableFiltering ? getFacetedUniqueValues() : undefined,
+    manualPagination,
+    pageCount: manualPagination ? pageCount : undefined,
+    onPaginationChange: manualPagination ? onPaginationChange : undefined,
     initialState: {
       pagination: {
         pageSize,
@@ -78,7 +86,8 @@ export function DataTable<TData, TValue>({
   });
 
   // Compute rows to render: only current page when pagination is enabled
-  const rowsToRender = enablePagination
+  // If manual pagination is on, we assume 'data' is already the current page slice.
+  const rowsToRender = enablePagination && !manualPagination
     ? table.getPaginationRowModel().rows
     : table.getRowModel().rows;
 
@@ -95,7 +104,7 @@ export function DataTable<TData, TValue>({
           customActions={customToolbarActions}
         />
       )}
-      
+
       <div className="rounded-md border overflow-hidden">
         <Table>
           <TableHeader className="bg-muted/50">
@@ -107,9 +116,9 @@ export function DataTable<TData, TValue>({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   );
                 })}
@@ -147,9 +156,14 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      
+
       {enablePagination && (
-        <DataTablePagination table={table} enableSelection={enableSelection} />
+        <div className="space-y-2">
+          <DataTablePagination table={table} enableSelection={enableSelection} />
+          <div className="text-[10px] text-muted-foreground text-center">
+            Pagination Mode: {manualPagination ? "Server-side" : "Client-side"}
+          </div>
+        </div>
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { getAllProducts, getCategories } from "@/lib/actions/product";
+import { getPaginatedProducts, getCategories } from "@/lib/actions/product";
 import ProductsPageClient from "@/components/module/admin/products/products-page-client";
 import {
   PageContainer,
@@ -26,9 +26,17 @@ async function refreshData() {
   revalidatePath("/admin/products");
 }
 
-export default async function ProductsPage() {
-  const [products, categories] = await Promise.all([
-    getAllProducts(),
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
+  const page = Number(searchParams.page) || 1;
+  const limit = Number(searchParams.limit) || 10;
+  const search = typeof searchParams.search === "string" ? searchParams.search : "";
+
+  const [productsData, categories] = await Promise.all([
+    getPaginatedProducts({ page, limit, search }),
     getCategories(),
   ]);
 
@@ -54,7 +62,10 @@ export default async function ProductsPage() {
       </PageHeader>
 
       <SectionCard heading="All Products">
-        <ProductsPageClient data={products as any} />
+        <ProductsPageClient
+          data={productsData.data as any}
+          metadata={productsData.metadata}
+        />
       </SectionCard>
     </PageContainer>
   );

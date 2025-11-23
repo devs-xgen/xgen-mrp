@@ -4577,6 +4577,8 @@ import {
 } from "@/lib/actions/material-reservation"
 import { createProductionBOMFromProduct, getProductionBOMForDisplay } from "@/lib/actions/production-bom"
 
+import { convertDecimals } from "@/lib/convertDecimals";
+
 export async function getProductionOrders() {
   try {
     const orders = await prisma.productionOrder.findMany({
@@ -6794,24 +6796,24 @@ export async function getProductionOrderWithAssignments(id: string) {
       })),
       delivery: order.delivery
         ? {
-            id: order.delivery.id,
-            userId: order.delivery.userId,
-            scheduledDate: order.delivery.scheduledDate,
-            status: order.delivery.status,
-            deliveryAddress: order.delivery.deliveryAddress,
-            notes: order.delivery.notes,
-            user: {
-              id: order.delivery.user.id,
-              email: order.delivery.user.email,
-              role: order.delivery.user.role,
-              name: order.delivery.user.profile
-                ? `${order.delivery.user.profile.firstName} ${order.delivery.user.profile.lastName}`
-                : order.delivery.user.email,
-              phoneNumber: order.delivery.user.profile?.phoneNumber,
-              department: order.delivery.user.profile?.department,
-              position: order.delivery.user.profile?.position,
-            },
-          }
+          id: order.delivery.id,
+          userId: order.delivery.userId,
+          scheduledDate: order.delivery.scheduledDate,
+          status: order.delivery.status,
+          deliveryAddress: order.delivery.deliveryAddress,
+          notes: order.delivery.notes,
+          user: {
+            id: order.delivery.user.id,
+            email: order.delivery.user.email,
+            role: order.delivery.user.role,
+            name: order.delivery.user.profile
+              ? `${order.delivery.user.profile.firstName} ${order.delivery.user.profile.lastName}`
+              : order.delivery.user.email,
+            phoneNumber: order.delivery.user.profile?.phoneNumber,
+            department: order.delivery.user.profile?.department,
+            position: order.delivery.user.profile?.position,
+          },
+        }
         : null,
     }
     return assignmentData
@@ -7099,20 +7101,20 @@ export async function getProductionOrderWithPhaseStatus(productionOrderId: strin
     // Enhanced delivery info
     const deliveryInfo = deliveryAssignment
       ? {
-          id: deliveryAssignment.id,
-          userId: deliveryAssignment.userId,
-          userName: deliveryAssignment.user.profile
-            ? `${deliveryAssignment.user.profile.firstName} ${deliveryAssignment.user.profile.lastName}`
-            : deliveryAssignment.user.email,
-          status: deliveryAssignment.status,
-          scheduledDate: deliveryAssignment.scheduledDate,
-          deliveryAddress: deliveryAssignment.deliveryAddress,
-          notes: deliveryAssignment.notes,
-          canStart: phaseStatus.canStartDelivery && deliveryAssignment.status === "PENDING",
-          canComplete: phaseStatus.canStartDelivery && deliveryAssignment.status === "IN_PROGRESS",
-          createdAt: deliveryAssignment.createdAt,
-          updatedAt: deliveryAssignment.updatedAt,
-        }
+        id: deliveryAssignment.id,
+        userId: deliveryAssignment.userId,
+        userName: deliveryAssignment.user.profile
+          ? `${deliveryAssignment.user.profile.firstName} ${deliveryAssignment.user.profile.lastName}`
+          : deliveryAssignment.user.email,
+        status: deliveryAssignment.status,
+        scheduledDate: deliveryAssignment.scheduledDate,
+        deliveryAddress: deliveryAssignment.deliveryAddress,
+        notes: deliveryAssignment.notes,
+        canStart: phaseStatus.canStartDelivery && deliveryAssignment.status === "PENDING",
+        canComplete: phaseStatus.canStartDelivery && deliveryAssignment.status === "IN_PROGRESS",
+        createdAt: deliveryAssignment.createdAt,
+        updatedAt: deliveryAssignment.updatedAt,
+      }
       : null
 
     return {
@@ -7474,5 +7476,131 @@ export async function getWorkflowOverrideRecommendations(productionOrderId: stri
   } catch (error) {
     console.error("Error getting workflow override recommendations:", error)
     throw error
+  }
+}
+
+// Paginated fetch for production orders
+export async function getPaginatedProductionOrders({
+  page = 1,
+  limit = 10,
+  search = "",
+}: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}) {
+  try {
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { product: { name: { contains: search, mode: "insensitive" } } },
+        { product: { sku: { contains: search, mode: "insensitive" } } },
+        { customerOrder: { orderNumber: { contains: search, mode: "insensitive" } } },
+      ];
+    }
+
+    const [orders, total] = await Promise.all([
+      prisma.productionOrder.findMany({
+        where,
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              sku: true,
+            },
+          },
+          productVariant: {
+            select: {
+              id: true,
+              sku: true,
+              displayName: true,
+              sizeName: true,
+              colorName: true,
+            },
+          },
+          customerOrder: {
+            select: {
+              id: true,
+              orderNumber: true,
+            },
+          },
+          operations: {
+            include: {
+              workCenter: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+          qualityChecks: {
+            select: {
+              id: true,
+              checkDate: true,
+              status: true,
+              defectsFound: true,
+            },
+          },
+        },
+        orderBy: [{ status: "asc" }, { startDate: "asc" }],
+        skip,
+        take: limit,
+      }),
+      prisma.productionOrder.count({ where }),
+    ]);
+
+    // Convert Decimals
+    const convertedOrders = convertDecimals(orders);
+
+    return {
+      data: convertedOrders,
+      metadata: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching paginated production orders:", error);
+    throw new Error("Failed to fetch paginated production orders");
+  }
+}
+
+export async function getProductionStats() {
+  try {
+    const [total, completed, inProgress, pending, overdue] = await Promise.all([
+      prisma.productionOrder.count(),
+      prisma.productionOrder.count({ where: { status: "COMPLETED" } }),
+      prisma.productionOrder.count({ where: { status: "IN_PROGRESS" } }),
+      prisma.productionOrder.count({ where: { status: "PENDING" } }),
+      prisma.productionOrder.count({
+        where: {
+          status: { not: "COMPLETED" },
+          dueDate: { lt: new Date() },
+        },
+      }),
+    ]);
+
+    return {
+      totalOrders: total,
+      completed,
+      inProgress,
+      pending,
+      overdue,
+    };
+  } catch (error) {
+    console.error("Error fetching production stats:", error);
+    return {
+      totalOrders: 0,
+      completed: 0,
+      inProgress: 0,
+      pending: 0,
+      overdue: 0,
+    };
   }
 }

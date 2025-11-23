@@ -1,29 +1,27 @@
 // src/components/module/admin/materials/materialDashboard.tsx
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Package, AlertTriangle, Factory, Users } from "lucide-react";
-import type { Material, MaterialType, UnitOfMeasure, Supplier } from "@/types/admin/materials";
+import type { MaterialType, UnitOfMeasure, Supplier } from "@/types/admin/materials";
 
 interface MaterialsDashboardProps {
-  materials: Material[];
+  stats: {
+    totalMaterials: number;
+    activeMaterials: number;
+    inactiveMaterials: number;
+    lowStockCount: number;
+  };
   materialTypes: MaterialType[];
   unitOfMeasures: UnitOfMeasure[];
   suppliers: Supplier[];
 }
 
 export default function MaterialsDashboard({
-  materials,
+  stats,
   materialTypes,
   unitOfMeasures,
   suppliers,
 }: MaterialsDashboardProps) {
-  const totalMaterials = materials.length;
-  const activeMaterials = materials.filter((m) => m.status === "ACTIVE").length;
-  const inactiveMaterials = totalMaterials - activeMaterials;
-  const lowStockCount = materials.filter(
-    (m) => Number(m.currentStock) <= Number(m.minimumStockLevel)
-  ).length;
-
+  const { totalMaterials, activeMaterials, inactiveMaterials, lowStockCount } = stats;
   const totalTypes = materialTypes.length;
   const totalUnits = unitOfMeasures.length;
   const totalSuppliers = suppliers.length;
@@ -43,7 +41,7 @@ export default function MaterialsDashboard({
     },
     {
       title: "Types & Units",
-      value: `${totalTypes} types` ,
+      value: `${totalTypes} types`,
       icon: Factory,
       footer: `${totalUnits} units of measure`,
     },
@@ -63,12 +61,12 @@ export default function MaterialsDashboard({
             <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
             <card.icon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-                     <CardContent>
-             <div className="text-2xl font-bold">
-               {card.value}
-             </div>
-             <p className="text-xs text-muted-foreground mt-1">{card.footer}</p>
-           </CardContent>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {card.value}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">{card.footer}</p>
+          </CardContent>
         </Card>
       ))}
     </div>

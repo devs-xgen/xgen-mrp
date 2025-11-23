@@ -175,28 +175,28 @@ export async function getCustomerOrdersForBilling(options?: {
         status: line.status,
         product: line.product
           ? {
-              id: line.product.id,
-              name: line.product.name,
-              sku: line.product.sku,
-              description: line.product.description,
-              sellingPrice:
-                line.product.sellingPrice instanceof Decimal
-                  ? line.product.sellingPrice.toNumber()
-                  : Number(line.product.sellingPrice || 0),
-            }
+            id: line.product.id,
+            name: line.product.name,
+            sku: line.product.sku,
+            description: line.product.description,
+            sellingPrice:
+              line.product.sellingPrice instanceof Decimal
+                ? line.product.sellingPrice.toNumber()
+                : Number(line.product.sellingPrice || 0),
+          }
           : undefined,
         productVariant: line.productVariant
           ? {
-              id: line.productVariant.id,
-              sku: line.productVariant.sku,
-              displayName: line.productVariant.displayName,
-              sizeName: line.productVariant.sizeName,
-              colorName: line.productVariant.colorName,
-              unitPrice:
-                line.productVariant.sellingPrice instanceof Decimal
-                  ? line.productVariant.sellingPrice.toNumber()
-                  : Number(line.productVariant.sellingPrice || 0),
-            }
+            id: line.productVariant.id,
+            sku: line.productVariant.sku,
+            displayName: line.productVariant.displayName,
+            sizeName: line.productVariant.sizeName,
+            colorName: line.productVariant.colorName,
+            unitPrice:
+              line.productVariant.sellingPrice instanceof Decimal
+                ? line.productVariant.sellingPrice.toNumber()
+                : Number(line.productVariant.sellingPrice || 0),
+          }
           : undefined,
       })),
       productionOrders: order.productionOrders?.map((po) => ({
@@ -465,19 +465,19 @@ export async function getCustomerOrders(): Promise<CustomerOrder[]> {
         status: line.status,
         product: line.product
           ? {
-              id: line.product.id,
-              name: line.product.name,
-              sku: line.product.sku,
-            }
+            id: line.product.id,
+            name: line.product.name,
+            sku: line.product.sku,
+          }
           : undefined,
         productVariant: line.productVariant
           ? {
-              id: line.productVariant.id,
-              sku: line.productVariant.sku,
-              displayName: line.productVariant.displayName,
-              sizeName: line.productVariant.sizeName,
-              colorName: line.productVariant.colorName,
-            }
+            id: line.productVariant.id,
+            sku: line.productVariant.sku,
+            displayName: line.productVariant.displayName,
+            sizeName: line.productVariant.sizeName,
+            colorName: line.productVariant.colorName,
+          }
           : undefined,
       })),
       productionOrders: order.productionOrders?.map((po) => ({
@@ -505,10 +505,10 @@ export async function getCustomerOrders(): Promise<CustomerOrder[]> {
         billingDate: bs.billingDate,
         salesInvoice: bs.salesInvoice
           ? {
-              id: bs.salesInvoice.id,
-              invoiceNumber: bs.salesInvoice.invoiceNumber,
-              status: bs.salesInvoice.status,
-            }
+            id: bs.salesInvoice.id,
+            invoiceNumber: bs.salesInvoice.invoiceNumber,
+            status: bs.salesInvoice.status,
+          }
           : undefined,
         deliveryReceipts: bs.deliveryReceipts?.map((dr) => ({
           id: dr.id,
@@ -559,12 +559,12 @@ export async function checkInventoryLevels(
     // Ensure any potential Decimal fields are converted to numbers
     currentStock:
       typeof product.currentStock === "object" &&
-      "toNumber" in product.currentStock
+        "toNumber" in product.currentStock
         ? (product.currentStock as any).toNumber()
         : Number(product.currentStock),
     minimumStockLevel:
       typeof product.minimumStockLevel === "object" &&
-      "toNumber" in product.minimumStockLevel
+        "toNumber" in product.minimumStockLevel
         ? (product.minimumStockLevel as any).toNumber()
         : Number(product.minimumStockLevel),
     leadTime:
@@ -816,28 +816,28 @@ export async function getCustomerOrderForBilling(
         status: line.status,
         product: line.product
           ? {
-              id: line.product.id,
-              name: line.product.name,
-              sku: line.product.sku,
-              description: line.product.description,
-              sellingPrice:
-                line.product.sellingPrice instanceof Decimal
-                  ? line.product.sellingPrice.toNumber()
-                  : Number(line.product.sellingPrice || 0),
-            }
+            id: line.product.id,
+            name: line.product.name,
+            sku: line.product.sku,
+            description: line.product.description,
+            sellingPrice:
+              line.product.sellingPrice instanceof Decimal
+                ? line.product.sellingPrice.toNumber()
+                : Number(line.product.sellingPrice || 0),
+          }
           : undefined,
         productVariant: line.productVariant
           ? {
-              id: line.productVariant.id,
-              sku: line.productVariant.sku,
-              displayName: line.productVariant.displayName,
-              sizeName: line.productVariant.sizeName,
-              colorName: line.productVariant.colorName,
-              unitPrice:
-                line.productVariant.sellingPrice instanceof Decimal
-                  ? line.productVariant.sellingPrice.toNumber()
-                  : Number(line.productVariant.sellingPrice || 0),
-            }
+            id: line.productVariant.id,
+            sku: line.productVariant.sku,
+            displayName: line.productVariant.displayName,
+            sizeName: line.productVariant.sizeName,
+            colorName: line.productVariant.colorName,
+            unitPrice:
+              line.productVariant.sellingPrice instanceof Decimal
+                ? line.productVariant.sellingPrice.toNumber()
+                : Number(line.productVariant.sellingPrice || 0),
+          }
           : undefined,
       })),
       productionOrders: order.productionOrders?.map((po) => ({
@@ -967,7 +967,7 @@ export async function createCustomerOrder(data: CreateCustomerOrderInput) {
     return customerOrder;
   } catch (error) {
     console.error("Error creating customer order:", error);
-    
+
     // Provide detailed error messages
     if (error instanceof Error) {
       if (error.message.includes('foreign key constraint')) {
@@ -1057,10 +1057,10 @@ export async function updateCustomerOrder(
         status: line.status,
         product: line.product
           ? {
-              id: line.product.id,
-              name: line.product.name,
-              sku: line.product.sku,
-            }
+            id: line.product.id,
+            name: line.product.name,
+            sku: line.product.sku,
+          }
           : undefined,
       })),
     };
@@ -1294,26 +1294,26 @@ async function analyzeOrderLine(
       },
       variants: productVariantId
         ? {
-            where: { id: productVariantId },
-            include: {
-              boms: {
-                include: {
-                  material: {
-                    select: {
-                      id: true,
-                      name: true,
-                      sku: true,
-                      currentStock: true,
-                      minimumStockLevel: true,
-                      availableStock: true,
-                      costPerUnit: true,
-                      leadTime: true,
-                    },
+          where: { id: productVariantId },
+          include: {
+            boms: {
+              include: {
+                material: {
+                  select: {
+                    id: true,
+                    name: true,
+                    sku: true,
+                    currentStock: true,
+                    minimumStockLevel: true,
+                    availableStock: true,
+                    costPerUnit: true,
+                    leadTime: true,
                   },
                 },
               },
             },
-          }
+          },
+        }
         : false,
     },
   });
@@ -1523,8 +1523,8 @@ function generateProductionOptions(
       risks:
         stockAvailability.recommendations.stockToUse < requestedQuantity
           ? [
-              `Shortfall of ${requestedQuantity - stockAvailability.recommendations.stockToUse} units`,
-            ]
+            `Shortfall of ${requestedQuantity - stockAvailability.recommendations.stockToUse} units`,
+          ]
           : [],
     });
   }
@@ -1547,8 +1547,8 @@ function generateProductionOptions(
     risks: materialAvailability.allMaterialsAvailable
       ? []
       : [
-          `Material shortages: ${materialAvailability.materialShortages.length} items`,
-        ],
+        `Material shortages: ${materialAvailability.materialShortages.length} items`,
+      ],
   });
 
   // Option 3: Hybrid approach (use stock + produce remainder)
@@ -1946,7 +1946,7 @@ export async function updateCustomerOrderWithLines(
     if (!id) {
       throw new Error("Customer order ID is required");
     }
-    
+
     // Validate required fields
     if (!data.customerId) {
       throw new Error("Customer ID is required");
@@ -2057,18 +2057,18 @@ export async function updateCustomerOrderWithLines(
         updatedAt: new Date(),
         orderLines: data.orderLines
           ? {
-              deleteMany: {}, // Clear existing lines and recreate
-              create: data.orderLines.map((orderLineData) => ({
-                productId: orderLineData.productId,
-                productVariantId: orderLineData.productVariantId ?? null,
-                quantity: orderLineData.quantity,
-                unitPrice: new Decimal(orderLineData.unitPrice),
-                status: orderLineData.status || Status.PENDING,
-                notes: orderLineData.notes,
-                createdBy: orderLineData.createdBy || userId,
-                modifiedBy: userId || orderLineData.modifiedBy,
-              })),
-            }
+            deleteMany: {}, // Clear existing lines and recreate
+            create: data.orderLines.map((orderLineData) => ({
+              productId: orderLineData.productId,
+              productVariantId: orderLineData.productVariantId ?? null,
+              quantity: orderLineData.quantity,
+              unitPrice: new Decimal(orderLineData.unitPrice),
+              status: orderLineData.status || Status.PENDING,
+              notes: orderLineData.notes,
+              createdBy: orderLineData.createdBy || userId,
+              modifiedBy: userId || orderLineData.modifiedBy,
+            })),
+          }
           : undefined,
       },
       include: includeOptions,
@@ -2119,3 +2119,196 @@ export async function updateCustomerOrderWithLines(
     );
   }
 }
+
+// Paginated fetch for customer orders
+export async function getPaginatedCustomerOrders({
+  page = 1,
+  limit = 10,
+  search = "",
+}: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}) {
+  try {
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { orderNumber: { contains: search, mode: "insensitive" } },
+        { customer: { name: { contains: search, mode: "insensitive" } } },
+      ];
+    }
+
+    const [orders, total] = await Promise.all([
+      prisma.customerOrder.findMany({
+        where,
+        include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              address: true,
+            },
+          },
+          orderLines: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  sku: true,
+                },
+              },
+              productVariant: {
+                select: {
+                  id: true,
+                  sku: true,
+                  displayName: true,
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              productionOrders: true,
+              orderLines: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.customerOrder.count({ where }),
+    ]);
+
+    // Convert Decimal values to numbers before sending to client
+    const convertedOrders = orders.map((order) => ({
+      ...order,
+      totalAmount: order.totalAmount.toNumber(),
+      customer: {
+        ...order.customer,
+        creditLimit: order.customer.creditLimit?.toNumber() || 0,
+      },
+      orderLines: order.orderLines.map((line) => ({
+        ...line,
+        unitPrice: line.unitPrice.toNumber(),
+        product: line.product
+          ? {
+            ...line.product,
+            sellingPrice: line.product.sellingPrice?.toNumber() || 0,
+          }
+          : undefined,
+        productVariant: line.productVariant
+          ? {
+            ...line.productVariant,
+            sellingPrice: line.productVariant.sellingPrice?.toNumber() || 0,
+          }
+          : undefined,
+      })),
+    }));
+
+    return {
+      data: convertedOrders,
+      metadata: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching paginated customer orders:", error);
+    throw new Error("Failed to fetch paginated customer orders");
+  }
+}
+
+export async function getCustomerOrderStats() {
+  try {
+    const [total, pending, completed, cancelled, totalAmountResult, pendingAmountResult] = await Promise.all([
+      prisma.customerOrder.count(),
+      prisma.customerOrder.count({ where: { status: "PENDING" } }),
+      prisma.customerOrder.count({ where: { status: "COMPLETED" } }),
+      prisma.customerOrder.count({ where: { status: "CANCELLED" } }),
+      prisma.customerOrder.aggregate({
+        _sum: { totalAmount: true },
+      }),
+      prisma.customerOrder.aggregate({
+        where: { status: "PENDING" },
+        _sum: { totalAmount: true },
+      }),
+    ]);
+
+    // Get most recent order
+    const mostRecentOrder = await prisma.customerOrder.findFirst({
+      orderBy: { createdAt: 'desc' },
+      select: { orderNumber: true, createdAt: true }
+    });
+
+    // Calculate monthly growth
+    const currentDate = new Date();
+    const currentMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const lastMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0);
+
+    const [currentMonthOrders, lastMonthOrders] = await Promise.all([
+      prisma.customerOrder.count({
+        where: {
+          createdAt: {
+            gte: currentMonthStart
+          }
+        }
+      }),
+      prisma.customerOrder.count({
+        where: {
+          createdAt: {
+            gte: lastMonthStart,
+            lte: lastMonthEnd
+          }
+        }
+      })
+    ]);
+
+    const orderGrowth = lastMonthOrders === 0
+      ? 100
+      : Math.round(((currentMonthOrders - lastMonthOrders) / lastMonthOrders) * 100);
+
+    return {
+      totalOrders: total,
+      pendingOrders: pending,
+      completedOrders: completed,
+      cancelledOrders: cancelled,
+      totalAmount: totalAmountResult._sum.totalAmount?.toNumber() || 0,
+      pendingAmount: pendingAmountResult._sum.totalAmount?.toNumber() || 0,
+      mostRecentOrder: mostRecentOrder ? {
+        orderNumber: mostRecentOrder.orderNumber,
+        date: mostRecentOrder.createdAt
+      } : null,
+      monthlyTrends: {
+        currentMonth: currentMonthOrders,
+        lastMonth: lastMonthOrders,
+        growth: orderGrowth
+      }
+    };
+  } catch (error) {
+    console.error("Error fetching customer order stats:", error);
+    return {
+      totalOrders: 0,
+      pendingOrders: 0,
+      completedOrders: 0,
+      cancelledOrders: 0,
+      totalAmount: 0,
+      pendingAmount: 0,
+      mostRecentOrder: null,
+      monthlyTrends: { currentMonth: 0, lastMonth: 0, growth: 0 }
+    };
+  }
+}
+

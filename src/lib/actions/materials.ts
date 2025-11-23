@@ -1,8 +1,8 @@
-// src/lib/actions/materials.ts - Partial fixed version focusing on the updateMaterial function
+// src/lib/actions/materials.ts
 'use server'
 
 import { prisma } from "@/lib/db"
-import { getServerSession } from "next-auth/next" 
+import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 import { Material, MaterialCreateInput, MaterialUpdateInput } from "@/types/admin/materials"
@@ -212,7 +212,7 @@ async function createLowStockAlert({
     const suggestedOrderQuantity = Math.max(minimumLevel * 2 - currentLevel, 0)
 
     console.warn(`LOW STOCK ALERT: Material "${material.name}" (SKU: ${material.sku}) has fallen below minimum stock level. Current: ${currentLevel} ${material.unitOfMeasure?.symbol || 'units'}, Minimum: ${minimumLevel} ${material.unitOfMeasure?.symbol || 'units'}.`);
-    
+
     return true
   } catch (error) {
     console.error("Error creating low stock alert:", error)
@@ -248,14 +248,14 @@ export async function getAllMaterials(): Promise<Material[]> {
         },
       },
     });
-    
+
     // Properly convert Decimal values to numbers to match Material interface
     const convertedMaterials = materials.map(material => {
       // First handle the Decimal conversion for costPerUnit
       const costPerUnit = typeof material.costPerUnit === 'object' && 'toNumber' in material.costPerUnit
         ? material.costPerUnit.toNumber()
         : Number(material.costPerUnit);
-      
+
       // Then return a properly shaped Material object
       return {
         ...material,
@@ -264,7 +264,7 @@ export async function getAllMaterials(): Promise<Material[]> {
         boms: [], // Add empty array if it's required in your Material interface
       } as Material; // Explicit casting to Material type
     });
-    
+
     return convertedMaterials;
   } catch (error) {
     console.error('Error fetching materials:', error);
@@ -344,7 +344,7 @@ export async function getMaterialTypes() {
       orderBy: {
         name: 'asc'
       }
-    })
+    });
   } catch (error) {
     console.error('Error fetching material types:', error);
     throw new Error('Failed to fetch material types')
@@ -366,7 +366,7 @@ export async function getUnitOfMeasures() {
       orderBy: {
         name: 'asc'
       }
-    })
+    });
   } catch (error) {
     console.error('Error fetching units of measure:', error);
     throw new Error('Failed to fetch units of measure')
@@ -387,7 +387,7 @@ export async function getSuppliers() {
       orderBy: {
         name: 'asc'
       }
-    })
+    });
   } catch (error) {
     console.error('Error fetching suppliers:', error);
     throw new Error('Failed to fetch suppliers')
@@ -398,15 +398,15 @@ export async function createMaterial(data: MaterialCreateInput) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) throw new Error('Unauthorized')
-    
-    const costPerUnit = typeof data.costPerUnit === 'string' 
-      ? parseFloat(data.costPerUnit) 
+
+    const costPerUnit = typeof data.costPerUnit === 'string'
+      ? parseFloat(data.costPerUnit)
       : data.costPerUnit;
-    
+
     if (isNaN(costPerUnit)) {
       throw new Error('Invalid cost per unit value');
     }
-    
+
     // Prepare create data with only the fields that exist in the Prisma schema
     const createData: any = {
       name: data.name,
@@ -419,34 +419,39 @@ export async function createMaterial(data: MaterialCreateInput) {
       status: Status.ACTIVE,
       createdBy: session.user.id
     };
-    
+
     // Only add committedStock if it exists (this field exists in the schema)
     if (data.committedStock !== undefined) {
       createData.committedStock = data.committedStock;
     }
-    
+
     // Handle relations
     if (data.typeId) {
       createData.type = { connect: { id: data.typeId } };
     }
-    
+
     if (data.unitOfMeasureId) {
       createData.unitOfMeasure = { connect: { id: data.unitOfMeasureId } };
     }
-    
+
     if (data.supplierId) {
       createData.supplier = { connect: { id: data.supplierId } };
     }
-    
+
     const material = await prisma.material.create({
       data: createData,
       include: {
         type: true,
         unitOfMeasure: true,
         supplier: true,
+        boms: {
+          include: {
+            product: true,
+          },
+        },
       },
     });
-    
+
     // Properly convert to match Material interface
     // Add the virtual fields that are in the interface but not in the database
     const result = {
@@ -455,12 +460,12 @@ export async function createMaterial(data: MaterialCreateInput) {
         ? material.costPerUnit.toNumber()
         : Number(material.costPerUnit),
       // Add virtual fields for the TypeScript interface
-      calculatedStock: data.calculatedStock !== undefined ? data.calculatedStock : 
-                       (data.currentStock || 0) - (data.committedStock || 0),
+      calculatedStock: data.calculatedStock !== undefined ? data.calculatedStock :
+        (data.currentStock || 0) - (data.committedStock || 0),
       expectedStock: data.expectedStock || 0,
       boms: [] // Add any other required properties from your Material interface
     } as Material;
-    
+
     revalidatePath('/admin/materials');
     return result;
   } catch (error) {
@@ -527,7 +532,7 @@ export async function updateMaterial(data: MaterialUpdateInput) {
       modifiedBy: userId,
       updatedAt: new Date(),
     };
-    
+
     // Only add fields to updateData if they exist in Prisma schema
     if (data.name !== undefined) updateData.name = data.name;
     if (data.sku !== undefined) updateData.sku = data.sku;
@@ -538,18 +543,18 @@ export async function updateMaterial(data: MaterialUpdateInput) {
     if (data.committedStock !== undefined) updateData.committedStock = data.committedStock;
     if (data.status !== undefined) updateData.status = data.status;
     if (data.notes !== undefined) updateData.notes = data.notes;
-    
+
     // NOTE: We don't include calculatedStock or expectedStock as they're not in the Prisma schema
-    
+
     // Handle relations with connect if IDs are provided
     if (data.typeId) {
       updateData.type = { connect: { id: data.typeId } };
     }
-    
+
     if (data.unitOfMeasureId) {
       updateData.unitOfMeasure = { connect: { id: data.unitOfMeasureId } };
     }
-    
+
     if (data.supplierId) {
       updateData.supplier = { connect: { id: data.supplierId } };
     }
@@ -578,7 +583,7 @@ export async function updateMaterial(data: MaterialUpdateInput) {
     // Check for low stock levels and create alerts if necessary
     const currentStock = data.currentStock !== undefined ? data.currentStock : updatedMaterial.currentStock;
     const minimumLevel = data.minimumStockLevel !== undefined ? data.minimumStockLevel : updatedMaterial.minimumStockLevel;
-    
+
     if (currentStock <= minimumLevel) {
       await createLowStockAlert({
         materialId: data.id,
@@ -592,7 +597,7 @@ export async function updateMaterial(data: MaterialUpdateInput) {
     revalidatePath('/admin/materials')
     revalidatePath('/materials')
     revalidatePath(`/materials/${data.id}`)
-    
+
     // Return the updated material with converted values for the TypeScript interface
     const result = {
       ...updatedMaterial,
@@ -600,11 +605,11 @@ export async function updateMaterial(data: MaterialUpdateInput) {
         ? updatedMaterial.costPerUnit.toNumber()
         : Number(updatedMaterial.costPerUnit),
       // Add virtual fields for the TypeScript interface
-      calculatedStock: data.calculatedStock !== undefined ? data.calculatedStock : 
-                       currentStock - (data.committedStock || updatedMaterial.committedStock),
+      calculatedStock: data.calculatedStock !== undefined ? data.calculatedStock :
+        currentStock - (data.committedStock || updatedMaterial.committedStock),
       expectedStock: data.expectedStock || 0
     };
-    
+
     return result;
   } catch (error) {
     console.error("Error updating material:", error)
@@ -627,15 +632,15 @@ export async function getMaterialById(id: string): Promise<Material | null> {
         }
       }
     });
-    
+
     if (!material) {
       return null;
     }
 
     const materialData = JSON.parse(JSON.stringify(material));
-  
+
     return materialData as Material;
-    
+
   } catch (error) {
     console.error('Error fetching material by ID:', error);
     throw new Error('Failed to fetch material');
@@ -667,5 +672,100 @@ export async function deleteMaterial(id: string, reason?: string) {
   } catch (error) {
     console.error("Error archiving material:", error);
     throw new Error(`Failed to archive material: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+
+// Paginated fetch for materials
+export async function getPaginatedMaterials({
+  page = 1,
+  limit = 10,
+  search = "",
+}: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}) {
+  try {
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      status: { not: Status.ARCHIVED },
+    };
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { sku: { contains: search, mode: "insensitive" } },
+        { notes: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    const [materials, total] = await Promise.all([
+      prisma.material.findMany({
+        where,
+        include: {
+          type: { select: { id: true, name: true } },
+          unitOfMeasure: { select: { id: true, name: true, symbol: true } },
+          supplier: { select: { id: true, name: true } },
+        },
+        orderBy: { name: 'asc' },
+        skip,
+        take: limit,
+      }),
+      prisma.material.count({ where }),
+    ]);
+
+    // Convert Decimal to number
+    const convertedMaterials = materials.map(material => ({
+      ...material,
+      costPerUnit: typeof material.costPerUnit === 'object' && 'toNumber' in material.costPerUnit
+        ? material.costPerUnit.toNumber()
+        : Number(material.costPerUnit),
+      boms: [],
+    })) as Material[];
+
+    return {
+      data: convertedMaterials,
+      metadata: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  } catch (error) {
+    console.error('Error fetching paginated materials:', error);
+    throw new Error('Failed to fetch paginated materials');
+  }
+}
+
+export async function getMaterialStats() {
+  try {
+    const [total, active, lowStock] = await Promise.all([
+      prisma.material.count({ where: { status: { not: Status.ARCHIVED } } }),
+      prisma.material.count({ where: { status: Status.ACTIVE } }),
+      prisma.material.findMany({
+        where: {
+          status: { not: Status.ARCHIVED },
+          currentStock: { lte: prisma.material.fields.minimumStockLevel }
+        },
+        select: { id: true }
+      })
+    ]);
+
+    return {
+      totalMaterials: total,
+      activeMaterials: active,
+      inactiveMaterials: total - active,
+      lowStockCount: lowStock.length
+    };
+  } catch (error) {
+    console.error('Error fetching material stats:', error);
+    return {
+      totalMaterials: 0,
+      activeMaterials: 0,
+      inactiveMaterials: 0,
+      lowStockCount: 0
+    };
   }
 }
