@@ -2,6 +2,7 @@
 "use client";
 
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,6 +20,29 @@ export function DataTableRowActions<TData>({
     return null;
   }
 
+  const router = useRouter();
+
+  const handleAction = (action: RowAction<TData>) => {
+    const isDisabled = action.disabled ? action.disabled(row) : false;
+    if (isDisabled) {
+      return;
+    }
+
+    if (typeof action.onClick === "function") {
+      action.onClick(row);
+      return;
+    }
+
+    if (action.href) {
+      const targetHref =
+        typeof action.href === "function" ? action.href(row) : action.href;
+
+      if (targetHref) {
+        router.push(targetHref);
+      }
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -34,7 +58,7 @@ export function DataTableRowActions<TData>({
         {actions.map((action, index) => (
           <DropdownMenuItem
             key={index}
-            onClick={() => action.onClick(row)}
+            onClick={() => handleAction(action)}
             disabled={action.disabled ? action.disabled(row) : false}
             className={
               action.variant === "destructive"

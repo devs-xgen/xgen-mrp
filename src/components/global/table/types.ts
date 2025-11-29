@@ -69,7 +69,8 @@ export interface DataTableRowActionsProps<TData> {
 export interface RowAction<TData> {
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
-  onClick: (row: TData) => void;
+  onClick?: (row: TData) => void;
+  href?: string | ((row: TData) => string);
   variant?: "default" | "destructive" | "secondary";
   disabled?: (row: TData) => boolean;
 }
