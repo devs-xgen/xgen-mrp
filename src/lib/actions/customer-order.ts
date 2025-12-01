@@ -15,8 +15,13 @@ import {
   MaterialAvailabilityStatus,
   MaterialShortage,
   ProductionDecisionInput,
+  ProductionWorkflowSummary,
+  ProductionWorkflowPhase,
 } from "@/types/admin/customer-order";
 import { Status, Priority } from "@prisma/client";
+import {
+  getProductionPhaseStatus,
+} from "@/lib/actions/production-order";
 import { Decimal } from "@prisma/client/runtime/library";
 import { revalidatePath } from "next/cache";
 import { createProductionOrder } from "./production-order";
@@ -2127,12 +2132,14 @@ export async function getPaginatedCustomerOrders({
   search = "",
   dateFrom,
   dateTo,
+  statuses,
 }: {
   page?: number;
   limit?: number;
   search?: string;
   dateFrom?: Date;
   dateTo?: Date;
+  statuses?: Status[];
 }) {
   try {
     const skip = (page - 1) * limit;
@@ -2156,6 +2163,10 @@ export async function getPaginatedCustomerOrders({
         adjustedEnd.setHours(23, 59, 59, 999);
         where.orderDate.lte = adjustedEnd;
       }
+    }
+
+    if (statuses && statuses.length > 0) {
+      where.status = { in: statuses };
     }
 
     const [orders, total] = await Promise.all([
@@ -2189,6 +2200,15 @@ export async function getPaginatedCustomerOrders({
               },
             },
           },
+          productionOrders: {
+            include: {
+              delivery: {
+                select: {
+                  status: true,
+                },
+              },
+            },
+          },
           _count: {
             select: {
               productionOrders: true,
@@ -2206,30 +2226,153 @@ export async function getPaginatedCustomerOrders({
     ]);
 
     // Convert Decimal values to numbers before sending to client
-    const convertedOrders = orders.map((order) => ({
-      ...order,
-      totalAmount: order.totalAmount.toNumber(),
-      customer: {
-        ...order.customer,
-        creditLimit: order.customer.creditLimit?.toNumber() || 0,
-      },
-      orderLines: order.orderLines.map((line) => ({
-        ...line,
-        unitPrice: line.unitPrice.toNumber(),
-        product: line.product
-          ? {
-            ...line.product,
-            sellingPrice: line.product.sellingPrice?.toNumber() || 0,
+    const convertedOrders = [];
+
+    for (const order of orders) {
+      const { productionOrders: productionOrderRecords, ...orderWithoutProduction } = order as any;
+      const productionOrdersList = (productionOrderRecords ?? []) as Array<{
+        id: string;
+        status: Status;
+        delivery?: { status: Status } | null;
+      }>;
+
+      const workerSummary = { totalOperations: 0, completed: 0, pending: 0 } as {
+        totalOperations: number;
+        completed: number;
+        pending: number;
+      };
+      const inspectorSummary = { totalChecks: 0, completed: 0, pending: 0 } as {
+        totalChecks: number;
+        completed: number;
+        pending: number;
+      };
+
+      let phaseSnapshots: { productionOrderId: string; phaseStatus: any }[] = [];
+
+      if (productionOrdersList.length > 0) {
+        const snapshotResults = await Promise.all(
+          productionOrdersList.map(async (po) => {
+            try {
+              const phaseStatus = await getProductionPhaseStatus(po.id);
+              return { productionOrderId: po.id, phaseStatus };
+            } catch (error) {
+              console.error("Failed to fetch phase status for production order", po.id, error);
+              return null;
+            }
+          })
+        );
+
+        phaseSnapshots = snapshotResults.filter(Boolean) as {
+          productionOrderId: string;
+          phaseStatus: any;
+        }[];
+
+        if (phaseSnapshots.length > 0) {
+          for (const snapshot of phaseSnapshots) {
+            const { workCenters, inspections } = snapshot.phaseStatus;
+
+            workerSummary.totalOperations += workCenters.totalOperations;
+            workerSummary.completed += workCenters.completedCount;
+            workerSummary.pending += workCenters.pendingCount + workCenters.inProgressCount;
+
+            inspectorSummary.totalChecks += inspections.totalChecks;
+            inspectorSummary.completed += inspections.completedCount;
+            inspectorSummary.pending += inspections.pendingCount + inspections.inProgressCount;
           }
-          : undefined,
-        productVariant: line.productVariant
-          ? {
-            ...line.productVariant,
-            sellingPrice: line.productVariant.sellingPrice?.toNumber() || 0,
+        }
+      }
+
+      const deliveryStats = productionOrdersList.reduce(
+        (acc, po) => {
+          if (po.delivery) {
+            acc.assigned += 1;
+            if (po.delivery.status === "COMPLETED") {
+              acc.completed += 1;
+            } else if (po.delivery.status === "IN_PROGRESS") {
+              acc.inProgress += 1;
+            } else {
+              acc.pending += 1;
+            }
+          } else {
+            acc.unassigned += 1;
           }
-          : undefined,
-      })),
-    }));
+          return acc;
+        },
+        { assigned: 0, completed: 0, inProgress: 0, pending: 0, unassigned: 0 }
+      );
+
+      const deliverySummary = {
+        assigned: deliveryStats.assigned,
+        completed: deliveryStats.completed,
+        pending: Math.max(deliveryStats.assigned - deliveryStats.completed, 0) + deliveryStats.unassigned,
+      };
+
+      const hasProduction = productionOrdersList.length > 0;
+      let phase: ProductionWorkflowPhase = hasProduction ? "NOT_STARTED" : "NOT_STARTED";
+
+      if (hasProduction) {
+        if (phaseSnapshots.length === 0) {
+          phase = "NOT_STARTED";
+        } else if (workerSummary.pending > 0) {
+          phase = "WORKER";
+        } else if (inspectorSummary.pending > 0) {
+          phase = "INSPECTOR";
+        } else if (deliverySummary.pending > 0) {
+          phase = "DELIVERY";
+        } else {
+          phase = "COMPLETED";
+        }
+      }
+
+      const description = !hasProduction
+        ? "No production order yet"
+        : phaseSnapshots.length === 0
+          ? "Production status unavailable"
+          : phase === "WORKER"
+            ? `${workerSummary.completed}/${workerSummary.totalOperations || 0} work center operations completed`
+            : phase === "INSPECTOR"
+              ? `${inspectorSummary.completed}/${inspectorSummary.totalChecks || 0} inspections completed`
+              : phase === "DELIVERY"
+                ? deliverySummary.assigned > 0
+                  ? `${deliverySummary.completed}/${deliverySummary.assigned} deliveries completed`
+                  : "Awaiting delivery scheduling"
+                : "Production and delivery completed";
+
+      const productionWorkflow: ProductionWorkflowSummary = {
+        phase,
+        hasProduction,
+        worker: workerSummary,
+        inspector: inspectorSummary,
+        delivery: deliverySummary,
+        description,
+      };
+
+      convertedOrders.push({
+        ...orderWithoutProduction,
+        totalAmount: order.totalAmount.toNumber(),
+        customer: {
+          ...order.customer,
+          creditLimit: order.customer.creditLimit?.toNumber() || 0,
+        },
+        orderLines: order.orderLines.map((line) => ({
+          ...line,
+          unitPrice: line.unitPrice.toNumber(),
+          product: line.product
+            ? {
+              ...line.product,
+              sellingPrice: line.product.sellingPrice?.toNumber() || 0,
+            }
+            : undefined,
+          productVariant: line.productVariant
+            ? {
+              ...line.productVariant,
+              sellingPrice: line.productVariant.sellingPrice?.toNumber() || 0,
+            }
+            : undefined,
+        })),
+        productionWorkflow,
+      });
+    }
 
     return {
       data: convertedOrders,

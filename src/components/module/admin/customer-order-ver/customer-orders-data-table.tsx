@@ -6,13 +6,15 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/global/table/data-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, X } from "lucide-react";
+import { Search, X, CalendarIcon, Filter } from "lucide-react";
 import { DateRange } from "react-day-picker";
-import { addDays, format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Status } from "@prisma/client";
+import { Badge } from "@/components/ui/badge";
 
 interface CustomerOrdersDataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
@@ -47,6 +49,35 @@ export function CustomerOrdersDataTable<TData, TValue>({
         }
         return undefined;
     });
+    const parseStatusParam = (value?: string | null): Status[] => {
+        if (!value) return [];
+        return value
+            .split(",")
+            .map((status) => status.trim())
+            .filter((status): status is Status => (Object.values(Status) as string[]).includes(status));
+    };
+
+    const [selectedStatuses, setSelectedStatuses] = useState<Status[]>(() =>
+        parseStatusParam(searchParams.get("status"))
+    );
+
+    const statusDisplayOrder: Status[] = [
+        Status.PENDING,
+        Status.IN_PROGRESS,
+        Status.COMPLETED,
+        Status.CANCELLED,
+        Status.ON_HOLD,
+        Status.ACTIVE,
+        Status.INACTIVE,
+    ];
+
+    const toggleStatus = (status: Status) => {
+        setSelectedStatuses((prev) =>
+            prev.includes(status)
+                ? prev.filter((item) => item !== status)
+                : [...prev, status]
+        );
+    };
 
     const onPaginationChange = (updaterOrValue: any) => {
         const newPagination =
@@ -83,6 +114,11 @@ export function CustomerOrdersDataTable<TData, TValue>({
         } else {
             params.delete("dateTo");
         }
+        if (selectedStatuses.length > 0) {
+            params.set("status", selectedStatuses.join(","));
+        } else {
+            params.delete("status");
+        }
         params.set("page", "1");
         router.push(`${pathname}?${params.toString()}`);
     };
@@ -90,10 +126,12 @@ export function CustomerOrdersDataTable<TData, TValue>({
     const handleSearchReset = () => {
         setSearchValue("");
         setDateRange(undefined);
+        setSelectedStatuses([]);
         const params = new URLSearchParams(searchParams.toString());
         params.delete("search");
         params.delete("dateFrom");
         params.delete("dateTo");
+        params.delete("status");
         params.set("page", "1");
         router.push(`${pathname}?${params.toString()}`);
     };
@@ -158,6 +196,62 @@ export function CustomerOrdersDataTable<TData, TValue>({
                             />
                         </PopoverContent>
                     </Popover>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                    <label className="text-xs font-medium text-muted-foreground">Status</label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full justify-between"
+                            >
+                                <span className="flex items-center gap-2">
+                                    <Filter className="h-4 w-4" />
+                                    {selectedStatuses.length === 0
+                                        ? "Any status"
+                                        : `${selectedStatuses.length} selected`}
+                                </span>
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-4" align="start">
+                            <div className="space-y-3">
+                                {statusDisplayOrder.map((statusValue) => (
+                                    <label
+                                        key={statusValue}
+                                        className="flex items-center gap-2 text-sm"
+                                    >
+                                        <Checkbox
+                                            checked={selectedStatuses.includes(statusValue)}
+                                            onCheckedChange={() => toggleStatus(statusValue)}
+                                        />
+                                        <span className="capitalize">{statusValue.replace("_", " ")}</span>
+                                    </label>
+                                ))}
+                                {selectedStatuses.length > 0 && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="w-full"
+                                        onClick={() => setSelectedStatuses([])}
+                                    >
+                                        Clear status filter
+                                    </Button>
+                                )}
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                    {selectedStatuses.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                            {selectedStatuses.map((status) => (
+                                <Badge key={status} variant="secondary" className="capitalize">
+                                    {status.replace("_", " ")}
+                                </Badge>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex gap-2">

@@ -2,6 +2,17 @@
   "project": "XGen MRP",
   "entries": [
     {
+      "version": "1.5.13",
+      "date": "2025-12-01",
+      "changes": [
+        "FEATURE: Customer Orders V2 now supports multi-select status filtering alongside search and custom date ranges for precise list slicing",
+        "FEATURE: Added production workflow summary per order with server-side aggregation of worker, inspector, and delivery phases",
+        "UI/UX: Production state badge opens a detail popover on click, showing phase counts and guidance without leaving the table",
+        "UI/UX: Customer column links directly to the customer profile in a new tab for faster cross-navigation",
+        "COPY: Updated no-production state to encourage starting a production order (\"Start its PO\")"
+      ]
+    },
+    {
       "version": "1.5.12",
       "date": "2025-11-05",
       "changes": [

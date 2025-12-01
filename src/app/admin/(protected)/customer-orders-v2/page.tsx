@@ -15,6 +15,7 @@ import {
   getPaginatedCustomerOrders,
   getCustomerOrderStats,
 } from "@/lib/actions/customer-order";
+import { Status } from "@prisma/client";
 
 export const metadata: Metadata = {
   title: "Customer Orders V2 | Admin Dashboard",
@@ -29,6 +30,7 @@ interface PageProps {
     highlight?: string;
     dateFrom?: string;
     dateTo?: string;
+    status?: string;
   }>;
 }
 
@@ -47,6 +49,13 @@ export default async function CustomerOrderV2Page({ searchParams }: PageProps) {
   const normalizedDateFrom = dateFrom && !isNaN(dateFrom.getTime()) ? dateFrom : undefined;
   const normalizedDateTo = dateTo && !isNaN(dateTo.getTime()) ? dateTo : undefined;
 
+  const statusValues = resolvedSearchParams.status
+    ? resolvedSearchParams.status
+        .split(",")
+        .map((value) => value.trim())
+        .filter((value): value is Status => (Object.values(Status) as string[]).includes(value))
+    : [];
+
   const [paginatedOrders, stats] = await Promise.all([
     getPaginatedCustomerOrders({
       page,
@@ -54,6 +63,7 @@ export default async function CustomerOrderV2Page({ searchParams }: PageProps) {
       search,
       dateFrom: normalizedDateFrom,
       dateTo: normalizedDateTo,
+      statuses: statusValues,
     }),
     getCustomerOrderStats(),
   ]);

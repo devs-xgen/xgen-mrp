@@ -42,6 +42,34 @@ export interface OrderLine {
   };
 }
 
+export type ProductionWorkflowPhase =
+  | "NOT_STARTED"
+  | "WORKER"
+  | "INSPECTOR"
+  | "DELIVERY"
+  | "COMPLETED";
+
+export interface ProductionWorkflowSummary {
+  phase: ProductionWorkflowPhase;
+  hasProduction: boolean;
+  worker: {
+    totalOperations: number;
+    completed: number;
+    pending: number;
+  };
+  inspector: {
+    totalChecks: number;
+    completed: number;
+    pending: number;
+  };
+  delivery: {
+    assigned: number;
+    completed: number;
+    pending: number;
+  };
+  description: string;
+}
+
 export interface CustomerOrder {
   id: string;
   orderNumber: string;
@@ -68,6 +96,7 @@ export interface CustomerOrder {
     orderLines: number;
     billingStatements: number;
   };
+  productionWorkflow?: ProductionWorkflowSummary;
 }
 
 export interface ProductionOrderSummary {
