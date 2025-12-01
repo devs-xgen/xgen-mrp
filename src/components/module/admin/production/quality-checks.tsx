@@ -259,13 +259,16 @@ export function QualityChecks({
   // Row background color based on status and defects
   const getRowBackgroundClass = (status: Status, hasDefects: boolean): string => {
     if (status === "COMPLETED" && hasDefects) {
-      return "bg-red-50";
-    } else if (status === "COMPLETED") {
-      return "bg-green-50";
-    } else if (status === "IN_PROGRESS") {
-      return "bg-secondary/10";
-    } else if (status === "CANCELLED") {
-      return "bg-destructive/10";
+      return "bg-amber-500/5";
+    }
+    if (status === "COMPLETED") {
+      return "bg-emerald-500/5";
+    }
+    if (status === "IN_PROGRESS") {
+      return "bg-sky-500/5";
+    }
+    if (status === "CANCELLED") {
+      return "bg-rose-500/5";
     }
     return "";
   };
@@ -288,14 +291,12 @@ export function QualityChecks({
   console.log("All quality checks:", qualityChecks);
 
   return (
-    <Card className="border-2 border-muted">
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-center">
+    <Card className="rounded-3xl border border-border/70 bg-card/80 shadow-lg backdrop-blur">
+      <CardHeader className="border-b border-border/50 bg-gradient-to-r from-muted/50 via-background to-muted/30 pb-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="text-xl font-bold">
-              Quality Inspections
-            </CardTitle>
-            <CardDescription className="text-sm mt-1">
+            <CardTitle className="text-xl font-semibold">Quality Inspections</CardTitle>
+            <CardDescription className="text-sm mt-1 text-muted-foreground">
               Quality control checks and inspection results
             </CardDescription>
           </div>
@@ -305,23 +306,22 @@ export function QualityChecks({
           />
         </div>
       </CardHeader>
-      <CardContent className="pt-4">
+      <CardContent className="p-0">
         {isLoading ? (
-          <div className="flex justify-center items-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2">Loading quality checks...</span>
+          <div className="flex items-center justify-center py-10 text-muted-foreground">
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading quality checks...
           </div>
         ) : (
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 border-b border-border/40 bg-muted/30/80 text-xs uppercase tracking-wide text-muted-foreground">
               <TableRow>
-                <TableHead>Date</TableHead>
+                <TableHead className="text-foreground">Date</TableHead>
                 <TableHead>Inspector</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-center">Defects</TableHead>
                 <TableHead className="text-center">Action</TableHead>
                 <TableHead className="text-center">Notes</TableHead>
-                <TableHead className="text-right font-bold bg-muted/30">Actions</TableHead>
+                <TableHead className="text-right font-bold">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

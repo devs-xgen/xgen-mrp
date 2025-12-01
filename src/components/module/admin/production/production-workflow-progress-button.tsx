@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { getProductionPhaseStatus } from "@/lib/actions/production-order";
 import { ProductionWorkflowProgressDialog } from "./production-workflow-progress-dialog";
+import { cn } from "@/lib/utils";
 
 interface ProductionWorkflowProgressButtonProps {
   productionOrderId: string;
@@ -62,7 +63,7 @@ export const ProductionWorkflowProgressButton: React.FC<ProductionWorkflowProgre
   const [dialogOpen, setDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadPhaseStatus = async () => {
+  const loadPhaseStatus = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -73,11 +74,11 @@ export const ProductionWorkflowProgressButton: React.FC<ProductionWorkflowProgre
     } finally {
       setLoading(false);
     }
-  };
+  }, [productionOrderId]);
 
   useEffect(() => {
     loadPhaseStatus();
-  }, [productionOrderId]);
+  }, [loadPhaseStatus]);
 
   const calculateOverallProgress = () => {
     if (!phaseStatus) return 0;
@@ -123,32 +124,32 @@ export const ProductionWorkflowProgressButton: React.FC<ProductionWorkflowProgre
   };
 
   const getStatusIcon = () => {
-    if (loading) return <Loader2 className="h-4 w-4 animate-spin" />;
-    if (error) return <AlertTriangle className="h-4 w-4 text-red-500" />;
-    
+    if (loading) return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
+    if (error) return <AlertTriangle className="h-4 w-4 text-destructive" />;
+
     const overallProgress = calculateOverallProgress();
     const blockingIssues = getBlockingIssues();
-    
+
     if (overallProgress === 100) {
-      return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+      return <CheckCircle2 className="h-4 w-4 text-emerald-500 dark:text-emerald-300" />;
     }
-    
+
     if (blockingIssues.length > 0) {
-      return <AlertCircle className="h-4 w-4 text-orange-500" />;
+      return <AlertCircle className="h-4 w-4 text-amber-500 dark:text-amber-300" />;
     }
-    
-    return <TrendingUp className="h-4 w-4 text-blue-600" />;
+
+    return <TrendingUp className="h-4 w-4 text-sky-500 dark:text-sky-300" />;
   };
 
   const getButtonVariant = () => {
     if (error) return "destructive";
-    
+
     const overallProgress = calculateOverallProgress();
     const blockingIssues = getBlockingIssues();
-    
+
     if (overallProgress === 100) return "default";
     if (blockingIssues.length > 0) return "secondary";
-    
+
     return "outline";
   };
 
@@ -201,53 +202,67 @@ export const ProductionWorkflowProgressButton: React.FC<ProductionWorkflowProgre
           <TooltipTrigger asChild>
             <Button
               variant={getButtonVariant()}
-              className={`h-auto p-3 flex flex-col items-start space-y-2 w-full min-w-[200px] ${className}`}
+              className={cn(
+                "h-auto w-full min-w-[240px] rounded-2xl border border-border/80 bg-card/80 p-4 text-left shadow-sm transition-colors",
+                "hover:border-primary/40 hover:bg-card",
+                "flex flex-col space-y-3",
+                className,
+              )}
               onClick={() => setDialogOpen(true)}
               disabled={loading}
             >
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   {getStatusIcon()}
-                  <span className="font-medium text-sm">Workflow Progress</span>
+                  <span>Workflow Progress</span>
                 </div>
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-[11px] uppercase tracking-wide">
                   {getStatusText()}
                 </Badge>
               </div>
-              
+
               {!loading && !error && phaseStatus && (
                 <>
-                  <div className="w-full space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">
+                  <div className="w-full space-y-1.5">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">
                         {getCurrentPhaseText()}
                       </span>
-                      <span className="font-medium">
+                      <span className="font-semibold text-foreground">
                         {calculateOverallProgress()}%
                       </span>
                     </div>
-                    <Progress 
-                      value={calculateOverallProgress()} 
+                    <Progress
+                      value={calculateOverallProgress()}
                       className="h-1.5 w-full"
                     />
                   </div>
-                  
-                  <div className="flex justify-between text-xs w-full text-muted-foreground">
-                    <span>
-                      Work: {phaseStatus.workCenters.completionPercentage}%
-                    </span>
-                    <span>
-                      QC: {phaseStatus.inspections.completionPercentage}%
-                    </span>
-                    <span>
-                      Delivery: {currentStatus === "COMPLETED" ? "100%" : phaseStatus.canStartDelivery ? "Ready" : "Waiting"}
-                    </span>
+
+                  <div className="grid w-full grid-cols-3 gap-2 text-[11px] text-muted-foreground">
+                    <div className="rounded-lg border border-border/70 bg-muted/40 px-2 py-1 text-center">
+                      <p className="font-medium text-foreground">Work</p>
+                      <p>{phaseStatus.workCenters.completionPercentage}%</p>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-muted/40 px-2 py-1 text-center">
+                      <p className="font-medium text-foreground">QC</p>
+                      <p>{phaseStatus.inspections.completionPercentage}%</p>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-muted/40 px-2 py-1 text-center">
+                      <p className="font-medium text-foreground">Delivery</p>
+                      <p>
+                        {currentStatus === "COMPLETED"
+                          ? "100%"
+                          : phaseStatus.canStartDelivery
+                            ? "Ready"
+                            : "Waiting"}
+                      </p>
+                    </div>
                   </div>
                 </>
               )}
-              
+
               {error && (
-                <div className="text-xs text-red-600 text-left">
+                <div className="text-xs text-destructive">
                   {error}
                 </div>
               )}

@@ -336,31 +336,38 @@ export const ProductionHistory: React.FC<ProductionHistoryProps> = ({ production
   }, [fetchProductionLogs])
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-center">
+    <Card className="rounded-3xl border border-border/70 bg-card/80 shadow-lg backdrop-blur">
+      <CardHeader className="border-b border-border/50 bg-gradient-to-r from-muted/50 via-background to-muted/30 pb-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="text-lg">Production History</CardTitle>
-            <CardDescription>Log of status changes and important events</CardDescription>
+            <CardTitle className="text-lg font-semibold">Production History</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">
+              Log of status changes and key workflow events
+            </CardDescription>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={fetchProductionLogs} disabled={loadingLogs}>
-              {loadingLogs ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-              Refresh
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchProductionLogs}
+            disabled={loadingLogs}
+            className="gap-2"
+          >
+            {loadingLogs && <Loader2 className="h-4 w-4 animate-spin" />}
+            Refresh
+          </Button>
         </div>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[200px]">
+      <CardContent className="p-0">
+        <ScrollArea className="h-[240px] px-6 py-4">
           {loadingLogs ? (
-            <div className="flex justify-center p-4">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="flex items-center justify-center py-6 text-muted-foreground">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading history...
             </div>
           ) : error ? (
-            <div className="text-center p-4 text-red-500">
-              <p>Error loading logs: {error}</p>
-              <Button variant="ghost" size="sm" onClick={fetchProductionLogs} className="mt-2">
+            <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive-foreground">
+              <p className="font-medium">Error loading logs</p>
+              <p className="mt-1 text-destructive-foreground/80">{error}</p>
+              <Button variant="ghost" size="sm" onClick={fetchProductionLogs} className="mt-3">
                 Try Again
               </Button>
             </div>
@@ -369,23 +376,23 @@ export const ProductionHistory: React.FC<ProductionHistoryProps> = ({ production
               {productionLogs.map((log: any) => (
                 <div
                   key={log.id}
-                  className={`flex flex-col sm:flex-row items-start gap-2 text-sm p-3 rounded-lg border shadow-sm bg-card text-card-foreground ${getBorderColor(log.type)} border-l-4`}
+                  className={`flex flex-col gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4 text-sm shadow-sm transition-colors ${getBorderColor(log.type)} border-l-4`}
                 >
-                  <div className="flex-1">
-                    <p className="font-medium">{log.type.replace(/_/g, " ")}</p>
+                  <div className="flex flex-col gap-1">
+                    <p className="font-semibold text-foreground">{log.type.replace(/_/g, " ")}</p>
                     {log.details && <div className="text-muted-foreground">{renderDetails(log.details, log.type)}</div>}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      By {log.userName || log.userId || "Unknown user"}
-                    </p>
                   </div>
-                  <div className="text-xs text-muted-foreground whitespace-nowrap sm:self-start sm:ml-auto">
-                    {format(parseISO(log.timestamp), "MMM dd, yyyy HH:mm:ss")}
+                  <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+                    <span>By {log.userName || log.userId || "Unknown user"}</span>
+                    <span>{format(parseISO(log.timestamp), "MMM dd, yyyy HH:mm:ss")}</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center p-4 text-muted-foreground">No production history available</div>
+            <div className="rounded-2xl border border-dashed border-border/70 bg-muted/10 py-8 text-center text-muted-foreground">
+              No production history available
+            </div>
           )}
         </ScrollArea>
       </CardContent>

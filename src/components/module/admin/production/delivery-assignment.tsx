@@ -136,13 +136,19 @@ export function DeliveryAssignment({
       setIsSubmitting(true);
       if (deliveryAssignment) {
         await updateDeliveryAssignment(deliveryAssignment.id, {
-          ...data,
+          userId: data.userId,
+          scheduledDate: data.scheduledDate,
+          deliveryAddress: data.deliveryAddress,
+          notes: data.notes,
           modifiedBy: "system", // TODO: Get from session
         });
       } else {
         await assignDeliveryToProductionOrder({
           productionOrderId,
-          ...data,
+          userId: data.userId,
+          scheduledDate: data.scheduledDate,
+          deliveryAddress: data.deliveryAddress,
+          notes: data.notes,
         });
       }
 
@@ -198,23 +204,9 @@ export function DeliveryAssignment({
       case "IN_PROGRESS":
         return <Badge variant="default">In Progress</Badge>;
       case "COMPLETED":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-green-50 text-green-700 border-green-200"
-          >
-            Completed
-          </Badge>
-        );
+        return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600">Completed</Badge>;
       case "CANCELLED":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-red-50 text-red-700 border-red-200"
-          >
-            Cancelled
-          </Badge>
-        );
+        return <Badge variant="outline" className="bg-rose-500/10 text-rose-600">Cancelled</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -224,12 +216,12 @@ export function DeliveryAssignment({
     if (!deliveryAssignment) return null;
     
     return (
-      <Select 
-        defaultValue={deliveryAssignment.status} 
+      <Select
+        defaultValue={deliveryAssignment.status}
         onValueChange={handleStatusChange}
         disabled={isUpdatingStatus}
       >
-        <SelectTrigger className="w-[140px]">
+        <SelectTrigger className="w-[160px]">
           <SelectValue>
             {isUpdatingStatus ? (
               <div className="flex items-center">
@@ -242,62 +234,41 @@ export function DeliveryAssignment({
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="PENDING">
-            <Badge variant="secondary" className="mr-2">Pending</Badge>
-          </SelectItem>
-          <SelectItem value="IN_PROGRESS">
-            <Badge variant="default" className="mr-2">In Progress</Badge>
-          </SelectItem>
-          <SelectItem value="COMPLETED">
-            <Badge 
-              variant="outline" 
-              className="bg-green-50 text-green-700 border-green-200 mr-2"
-            >
-              Completed
-            </Badge>
-          </SelectItem>
-          <SelectItem value="CANCELLED">
-            <Badge 
-              variant="outline" 
-              className="bg-red-50 text-red-700 border-red-200 mr-2"
-            >
-              Cancelled
-            </Badge>
-          </SelectItem>
+          {(["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as Status[]).map((status) => (
+            <SelectItem key={status} value={status}>
+              {getStatusBadge(status)}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
     );
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-start">
+    <Card className="rounded-3xl border border-border/70 bg-card/80 shadow-lg backdrop-blur">
+      <CardHeader className="border-b border-border/50 bg-gradient-to-r from-muted/50 via-background to-muted/30 pb-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle>Delivery Assignment</CardTitle>
-            <CardDescription>
-              Manage delivery assignment for this production order
-            </CardDescription>
+            <CardTitle className="text-lg">Delivery Assignment</CardTitle>
+            <CardDescription>Manage delivery responsibilities for this order</CardDescription>
           </div>
           {!deliveryAssignment && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
-                  <Truck className="h-4 w-4 mr-2" />
+                <Button className="gap-2">
+                  <Truck className="h-4 w-4" />
                   Assign Delivery
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Assign Delivery</DialogTitle>
-                  <DialogDescription>
-                    Assign a delivery personnel to handle this order
-                  </DialogDescription>
+                  <DialogDescription>Assign a delivery personnel to handle this order</DialogDescription>
                 </DialogHeader>
                 <DeliveryAssignmentForm
                   onSubmit={handleAssignDelivery}
                   deliveryUsers={deliveryUsers}
-                  customerAddress={null}
+                  customerAddress={deliveryAssignment?.productionOrder?.customerOrder?.shippingAddress ?? null}
                   isSubmitting={isSubmitting}
                 />
               </DialogContent>
@@ -305,70 +276,62 @@ export function DeliveryAssignment({
           )}
         </div>
       </CardHeader>
-      <CardContent>
-        {deliveryAssignment ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h3 className="font-medium text-muted-foreground mb-1">
-                  Status
-                </h3>
-                {renderStatusSelect()}
+      <CardContent className="space-y-6 p-6">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-10 text-muted-foreground">
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading delivery details...
+          </div>
+        ) : deliveryAssignment ? (
+          <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Status</p>
+                <div className="mt-2">{renderStatusSelect()}</div>
               </div>
-              <div>
-                <h3 className="font-medium text-muted-foreground mb-1">
-                  Assigned To
-                </h3>
-                <p>{deliveryAssignment.userName}</p>
+              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Assigned To</p>
+                <p className="mt-2 text-base font-semibold text-foreground">{deliveryAssignment.userName ?? "Unassigned"}</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h3 className="font-medium text-muted-foreground mb-1">
-                  Scheduled Date
-                </h3>
-                <p>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Scheduled Date</p>
+                <p className="mt-2">
                   {deliveryAssignment.scheduledDate
-                    ? format(
-                        new Date(deliveryAssignment.scheduledDate),
-                        "PPP p"
-                      )
+                    ? format(new Date(deliveryAssignment.scheduledDate), "PPP p")
                     : "Not scheduled"}
                 </p>
               </div>
-              <div>
-                <h3 className="font-medium text-muted-foreground mb-1">
-                  Delivery Address
-                </h3>
-                <p className="whitespace-pre-wrap">
+              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Delivery Address</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">
                   {deliveryAssignment.deliveryAddress ||
-                    deliveryAssignment.productionOrder?.customerOrder
-                      ?.shippingAddress ||
+                    deliveryAssignment.productionOrder?.customerOrder?.shippingAddress ||
                     "No address specified"}
                 </p>
               </div>
             </div>
+
             {deliveryAssignment.notes && (
-              <div>
-                <h3 className="font-medium text-muted-foreground mb-1">
-                  Notes
-                </h3>
-                <p className="whitespace-pre-wrap">
-                  {deliveryAssignment.notes}
-                </p>
+              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Notes</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm">{deliveryAssignment.notes}</p>
               </div>
             )}
+
             <div className="flex justify-end">
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="outline">Edit Assignment</Button>
+                  <Button variant="outline" className="gap-2">
+                    <UserPlus className="h-4 w-4" />
+                    Edit Assignment
+                  </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Edit Delivery Assignment</DialogTitle>
-                    <DialogDescription>
-                      Update the delivery assignment details
-                    </DialogDescription>
+                    <DialogDescription>Update the delivery assignment details</DialogDescription>
                   </DialogHeader>
                   <DeliveryAssignmentForm
                     onSubmit={handleAssignDelivery}
@@ -382,12 +345,8 @@ export function DeliveryAssignment({
                       notes: deliveryAssignment.notes || "",
                     }}
                     customerAddress={
-                      deliveryAssignment.productionOrder?.customerOrder
-                        ?.shippingAddress
-                        ? String(
-                            deliveryAssignment.productionOrder.customerOrder
-                              .shippingAddress
-                          )
+                      deliveryAssignment.productionOrder?.customerOrder?.shippingAddress
+                        ? String(deliveryAssignment.productionOrder.customerOrder.shippingAddress)
                         : ""
                     }
                     isSubmitting={isSubmitting}
@@ -397,7 +356,7 @@ export function DeliveryAssignment({
             </div>
           </div>
         ) : (
-          <div className="text-center py-6 text-muted-foreground">
+          <div className="rounded-2xl border border-dashed border-border/70 bg-muted/10 py-10 text-center text-muted-foreground">
             No delivery assignment yet
           </div>
         )}

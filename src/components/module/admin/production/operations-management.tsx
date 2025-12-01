@@ -177,11 +177,11 @@ export function OperationsManagement({
   const getRowBackgroundClass = (status: Status): string => {
     switch (status) {
       case "COMPLETED":
-        return "bg-muted/30";
+        return "bg-emerald-500/5";
       case "IN_PROGRESS":
-        return "bg-secondary/10";
+        return "bg-sky-500/5";
       case "CANCELLED":
-        return "bg-destructive/10";
+        return "bg-rose-500/5";
       default:
         return "";
     }
@@ -199,8 +199,8 @@ export function OperationsManagement({
   }
 
   return (
-    <Card className="border shadow-sm overflow-hidden">
-      <CardHeader className="bg-muted/10 pb-3">
+    <Card className="rounded-3xl border border-border/70 bg-card/80 shadow-lg backdrop-blur overflow-hidden">
+      <CardHeader className="border-b border-border/50 bg-gradient-to-r from-muted/50 via-background to-muted/30 pb-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div className="flex items-center">
             <Factory className="h-5 w-5 mr-2 text-primary/80" />
@@ -240,9 +240,9 @@ export function OperationsManagement({
           <ScrollArea className="max-h-[500px]">
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader className="bg-muted/50 sticky top-0">
+                <TableHeader className="sticky top-0 border-b border-border/40 bg-muted/30/80 text-xs uppercase tracking-wide text-muted-foreground">
                   <TableRow>
-                    <TableHead>Work Center</TableHead>
+                    <TableHead className="text-foreground">Work Center</TableHead>
                     <TableHead>Start Time</TableHead>
                     <TableHead>End Time</TableHead>
                     <TableHead>Status</TableHead>
@@ -256,7 +256,7 @@ export function OperationsManagement({
                     return (
                       <TableRow
                         key={operation.id}
-                        className={`${getRowBackgroundClass(operation.status)} hover:bg-muted/20 transition-colors`}
+                        className={`${getRowBackgroundClass(operation.status)} hover:bg-primary/5 transition-colors`}
                       >
                         <TableCell className="font-medium">
                           {operation.workCenter.name}
