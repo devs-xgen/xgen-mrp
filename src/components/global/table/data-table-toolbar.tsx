@@ -7,17 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTableViewOptions } from "./data-table-view-options";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
-import { DataTableToolbarProps, FilterOption } from "./types";
+import { DataTableToolbarProps } from "./types";
 
 export function DataTableToolbar<TData>({
   table,
   searchKey = "name",
   searchPlaceholder = "Filter records...",
+  showSearchInput = true,
   enableFiltering = true,
   enableColumnVisibility = true,
   filterOptions = [],
   customActions,
 }: DataTableToolbarProps<TData>) {
+  const searchColumn = searchKey ? table.getColumn(searchKey) : null;
+  const canShowSearch = showSearchInput !== false && !!searchColumn;
   const isFiltered = table.getState().columnFilters.length > 0;
 
   return (
@@ -25,14 +28,16 @@ export function DataTableToolbar<TData>({
       <div className="flex flex-1 items-center space-x-2">
         {enableFiltering && (
           <>
-            <Input
-              placeholder={searchPlaceholder}
-              value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ""}
-              onChange={(event) =>
-                table.getColumn(searchKey)?.setFilterValue(event.target.value)
-              }
-              className="h-8 w-[150px] lg:w-[250px]"
-            />
+            {canShowSearch && (
+              <Input
+                placeholder={searchPlaceholder}
+                value={(searchColumn?.getFilterValue() as string) ?? ""}
+                onChange={(event) =>
+                  searchColumn?.setFilterValue(event.target.value)
+                }
+                className="h-8 w-[150px] lg:w-[250px]"
+              />
+            )}
             
             {filterOptions.map((filterOption) => (
               table.getColumn(filterOption.column) && (

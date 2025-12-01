@@ -1408,17 +1408,37 @@ export async function getPaginatedProducts({
   page = 1,
   limit = 10,
   search = "",
+  status,
+  categoryId,
+  priceMin,
+  priceMax,
+  stockMin,
+  stockMax,
 }: {
   page?: number;
   limit?: number;
   search?: string;
+  status?: Status;
+  categoryId?: string;
+  priceMin?: number;
+  priceMax?: number;
+  stockMin?: number;
+  stockMax?: number;
 }) {
   try {
     const skip = (page - 1) * limit;
 
-    const where: any = {
-      status: { not: "ARCHIVED" as Status },
-    };
+    const where: Prisma.ProductWhereInput = {};
+
+    if (status) {
+      where.status = status;
+    } else {
+      where.status = { not: Status.ARCHIVED };
+    }
+
+    if (categoryId) {
+      where.categoryId = categoryId;
+    }
 
     if (search) {
       where.OR = [
@@ -1426,6 +1446,26 @@ export async function getPaginatedProducts({
         { sku: { contains: search, mode: "insensitive" } },
         { description: { contains: search, mode: "insensitive" } },
       ];
+    }
+
+    if (priceMin !== undefined || priceMax !== undefined) {
+      where.sellingPrice = {};
+      if (priceMin !== undefined) {
+        where.sellingPrice.gte = priceMin;
+      }
+      if (priceMax !== undefined) {
+        where.sellingPrice.lte = priceMax;
+      }
+    }
+
+    if (stockMin !== undefined || stockMax !== undefined) {
+      where.currentStock = {};
+      if (stockMin !== undefined) {
+        where.currentStock.gte = stockMin;
+      }
+      if (stockMax !== undefined) {
+        where.currentStock.lte = stockMax;
+      }
     }
 
     const [products, total] = await Promise.all([

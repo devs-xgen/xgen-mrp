@@ -8,6 +8,7 @@ export interface DataTableProps<TData, TValue = unknown> {
   data: TData[];
   searchKey?: string;
   searchPlaceholder?: string;
+  showSearchInput?: boolean;
   onRowAction?: (row: TData) => void;
   enableSelection?: boolean;
   enablePagination?: boolean;
@@ -31,6 +32,7 @@ export interface DataTableToolbarProps<TData> {
   table: Table<TData>;
   searchKey?: string;
   searchPlaceholder?: string;
+  showSearchInput?: boolean;
   enableFiltering?: boolean;
   enableColumnVisibility?: boolean;
   filterOptions?: readonly FilterOption[];

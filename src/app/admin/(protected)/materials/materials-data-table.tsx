@@ -11,7 +11,7 @@ import { getTableConfig } from "@/components/global/table/table-utils";
 import { EditMaterialDialog } from "@/components/module/admin/materials/edit-material-dialog";
 import { deleteMaterial } from "@/lib/actions/materials";
 import { Material, MaterialType, UnitOfMeasure, Supplier } from "@/types/admin/materials";
-import { AlertTriangle, MoreHorizontal, Pencil, Archive, Eye } from "lucide-react";
+import { AlertTriangle, MoreHorizontal, Pencil, Archive, Eye, Search } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -38,6 +38,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { MaterialsExportButton } from "@/components/module/admin/materials/materials-export-button";
 import { PaginationState } from "@tanstack/react-table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Status } from "@prisma/client";
 
 interface MaterialsDataTableProps {
   materials: Material[];
@@ -202,6 +210,47 @@ export function MaterialsDataTable({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const initialSearchValue = searchParams.get("search") ?? "";
+  const initialStatus = searchParams.get("status") ?? "all";
+  const initialType = searchParams.get("typeId") ?? "all";
+  const [searchValue, setSearchValue] = useState(initialSearchValue);
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [typeFilter, setTypeFilter] = useState(initialType);
+
+  useEffect(() => {
+    setSearchValue(initialSearchValue);
+  }, [initialSearchValue]);
+
+  useEffect(() => {
+    setStatusFilter(initialStatus);
+  }, [initialStatus]);
+
+  useEffect(() => {
+    setTypeFilter(initialType);
+  }, [initialType]);
+
+  useEffect(() => {
+    const currentSearchParam = searchParams.get("search") ?? "";
+    if (searchValue === currentSearchParam) {
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      const normalized = searchValue.trim();
+
+      if (normalized) {
+        params.set("search", normalized);
+      } else {
+        params.delete("search");
+      }
+
+      params.set("page", "1");
+      router.push(`${pathname}?${params.toString()}`);
+    }, 400);
+
+    return () => clearTimeout(handler);
+  }, [pathname, router, searchParams, searchValue]);
 
   // Create columns using global table helpers
   const columns = [
@@ -281,27 +330,163 @@ export function MaterialsDataTable({
     pageSize: metadata?.limit ?? 10,
   };
 
-  const onPaginationChange = (updaterOrValue: PaginationState | ((old: PaginationState) => PaginationState)) => {
-    const previous = pagination;
-    const next = typeof updaterOrValue === 'function' ? updaterOrValue(previous) : updaterOrValue;
-
+  const applyFilters = (filters: {
+    search?: string;
+    status?: string;
+    typeId?: string;
+    page?: string;
+    limit?: string;
+  }) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("page", (next.pageIndex + 1).toString());
-    params.set("limit", next.pageSize.toString());
+
+    if (filters.search !== undefined) {
+      const normalized = filters.search.trim();
+      if (normalized) {
+        params.set("search", normalized);
+      } else {
+        params.delete("search");
+      }
+    }
+
+    if (filters.status !== undefined) {
+      if (filters.status && filters.status !== "all") {
+        params.set("status", filters.status);
+      } else {
+        params.delete("status");
+      }
+    }
+
+    if (filters.typeId !== undefined) {
+      if (filters.typeId && filters.typeId !== "all") {
+        params.set("typeId", filters.typeId);
+      } else {
+        params.delete("typeId");
+      }
+    }
+
+    if (filters.page !== undefined) {
+      params.set("page", filters.page);
+    }
+
+    if (filters.limit !== undefined) {
+      params.set("limit", filters.limit);
+    }
 
     router.push(`${pathname}?${params.toString()}`);
   };
 
+  const onPaginationChange = (
+    updaterOrValue: PaginationState | ((old: PaginationState) => PaginationState)
+  ) => {
+    const previous = pagination;
+    const next = typeof updaterOrValue === "function" ? updaterOrValue(previous) : updaterOrValue;
+
+    applyFilters({
+      page: (next.pageIndex + 1).toString(),
+      limit: next.pageSize.toString(),
+    });
+  };
+
   return (
-    <DataTable
-      columns={columns}
-      data={materials}
-      {...tableConfig}
-      customToolbarActions={<MaterialsExportButton />}
-      manualPagination={!!metadata}
-      pageCount={metadata?.totalPages ?? -1}
-      pagination={pagination}
-      onPaginationChange={onPaginationChange}
-    />
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex w-full max-w-xl items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchValue}
+                onChange={(event) => setSearchValue(event.target.value)}
+                placeholder="Search materials by name or SKU"
+                className="pl-8"
+              />
+            </div>
+            {searchValue && (
+              <Button variant="ghost" size="sm" onClick={() => setSearchValue("")}>
+                Clear
+              </Button>
+            )}
+          </div>
+          {metadata && (
+            <div className="text-sm text-muted-foreground text-right">
+              Showing {materials.length} of {metadata.total} materials
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-1 flex-wrap gap-3">
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => {
+                setStatusFilter(value);
+                applyFilters({ status: value, page: "1" });
+              }}
+            >
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                {Object.values(Status)
+                  .filter((statusValue) => statusValue !== Status.ARCHIVED)
+                  .map((statusValue) => (
+                    <SelectItem key={statusValue} value={statusValue}>
+                      {statusValue.replace(/_/g, " ")}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={typeFilter}
+              onValueChange={(value) => {
+                setTypeFilter(value);
+                applyFilters({ typeId: value, page: "1" });
+              }}
+            >
+              <SelectTrigger className="w-full md:w-[200px]">
+                <SelectValue placeholder="Material Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {materialTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {(statusFilter !== "all" || typeFilter !== "all") && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="self-start"
+              onClick={() => {
+                setStatusFilter("all");
+                setTypeFilter("all");
+                applyFilters({ status: "all", typeId: "all", page: "1" });
+              }}
+            >
+              Reset filters
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={materials}
+        {...tableConfig}
+        showSearchInput={false}
+        customToolbarActions={<MaterialsExportButton />}
+        manualPagination={!!metadata}
+        pageCount={metadata?.totalPages ?? -1}
+        pagination={pagination}
+        onPaginationChange={onPaginationChange}
+      />
+    </div>
   );
 }

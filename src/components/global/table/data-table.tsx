@@ -34,6 +34,7 @@ export function DataTable<TData, TValue>({
   data,
   searchKey = "name",
   searchPlaceholder = "Filter records...",
+  showSearchInput = true,
   enableSelection = false,
   enablePagination = true,
   enableFiltering = true,
@@ -98,6 +99,7 @@ export function DataTable<TData, TValue>({
           table={table}
           searchKey={searchKey}
           searchPlaceholder={searchPlaceholder}
+          showSearchInput={showSearchInput}
           enableFiltering={enableFiltering}
           enableColumnVisibility={enableColumnVisibility}
           filterOptions={filterOptions}

@@ -409,51 +409,42 @@ export default function AppSidebar() {
           </div>
         )}
 
-        {/* Theme Toggle */}
-        <div
-          className={cn(
-            "mb-3 flex items-center justify-center gap-2",
-            isCollapsed ? "flex-col" : ""
-          )}
-        >
-          <div className="flex items-center justify-center gap-2">
-            <ThemeToggle
-              compact
-              variant="ghost"
-              className={cn(
-                "text-slate-300 hover:bg-slate-700 hover:text-slate-100 border border-slate-700 rounded-full",
-                isCollapsed ? "w-10 h-10" : "w-10 h-10 p-0"
-              )}
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10 rounded-full border border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-slate-100"
-              onClick={() => setIsOnboardingOpen(true)}
-              aria-label="Show onboarding"
-              title="Show onboarding"
-            >
-              <HelpCircle className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
+        {/* Quick actions: theme toggle, onboarding, sign out */}
+        <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
+          <ThemeToggle
+            compact
+            variant="ghost"
+            className="h-10 w-10 rounded-full border border-indigo-500/60 bg-indigo-500/15 text-indigo-100 hover:bg-indigo-500/30 hover:text-white"
+            aria-label="Toggle color mode"
+          />
 
-        <Button
-          variant="ghost"
-          className={cn(
-            "text-slate-300 hover:bg-slate-700 hover:text-slate-100 border border-slate-700",
-            isCollapsed ? "w-10 p-0" : "w-full justify-start"
-          )}
-          onClick={() => signOut({ callbackUrl: getLogoutCallbackUrl() })}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <LogOut className="h-5 w-5" />
-          )}
-          {!isCollapsed && <span className="ml-3">Sign Out</span>}
-        </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 rounded-full border border-emerald-500/60 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/30 hover:text-white"
+            onClick={() => setIsOnboardingOpen(true)}
+            aria-label="Show onboarding"
+            title="Show onboarding"
+          >
+            <HelpCircle className="h-5 w-5" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 rounded-full border border-rose-500/60 bg-rose-500/15 text-rose-100 hover:bg-rose-500/30 hover:text-white"
+            onClick={() => signOut({ callbackUrl: getLogoutCallbackUrl() })}
+            disabled={isLoading}
+            aria-label="Sign out"
+            title="Sign out"
+          >
+            {isLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <LogOut className="h-5 w-5" />
+            )}
+          </Button>
+        </div>
       </div>
 
       <RoleOnboardingDialog

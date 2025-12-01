@@ -7,6 +7,7 @@ import {
   getUnitOfMeasures,
   getSuppliers,
 } from "@/lib/actions/materials";
+import { Status } from "@prisma/client";
 import { MaterialTypeDialog } from "@/components/module/admin/materials/material-type-dialog";
 import { UnitOfMeasureDialog } from "@/components/module/admin/materials/unit-of-measure-dialog";
 import { revalidatePath } from "next/cache";
@@ -52,15 +53,27 @@ async function refreshData() {
 export default async function MaterialsPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   try {
-    const page = Number(searchParams.page) || 1;
-    const limit = Number(searchParams.limit) || 10;
-    const search = typeof searchParams.search === "string" ? searchParams.search : "";
+    const resolvedSearchParams = await searchParams;
+    const pageParam = resolvedSearchParams.page;
+    const limitParam = resolvedSearchParams.limit;
+    const searchParam = resolvedSearchParams.search;
+    const statusParam = resolvedSearchParams.status;
+    const typeParam = resolvedSearchParams.typeId;
+
+    const page = Number(Array.isArray(pageParam) ? pageParam[0] : pageParam) || 1;
+    const limit = Number(Array.isArray(limitParam) ? limitParam[0] : limitParam) || 10;
+    const search = typeof searchParam === "string" ? searchParam : "";
+    const status =
+      typeof statusParam === "string" && statusParam in Status
+        ? (statusParam as Status)
+        : undefined;
+    const typeId = typeof typeParam === "string" ? typeParam : undefined;
 
     const [materialsData, stats, materialTypes, unitOfMeasures, suppliers] = await Promise.all([
-      getPaginatedMaterials({ page, limit, search }),
+      getPaginatedMaterials({ page, limit, search, status, typeId }),
       getMaterialStats(),
       getMaterialTypes(),
       getUnitOfMeasures(),

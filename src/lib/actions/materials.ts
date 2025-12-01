@@ -1,12 +1,12 @@
 // src/lib/actions/materials.ts
-'use server'
+"use server";
 
 import { prisma } from "@/lib/db"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 import { Material, MaterialCreateInput, MaterialUpdateInput } from "@/types/admin/materials"
-import { Status } from "@prisma/client"
+import { Prisma, Status } from "@prisma/client"
 import { convertDecimalsToNumbers } from "@/types/admin/product";
 
 // Check if a material SKU is available. Optional excludeId to ignore an existing material.
@@ -36,7 +36,8 @@ export async function exportMaterialsData(filters?: {
   uomIds?: string[]; // unit of measure ids
 }): Promise<{ csvContent: string; filename: string }> {
   const session = await getServerSession(authOptions);
-  if (!session?.user) throw new Error("Unauthorized: Please log in to export data");
+  if (!session?.user)
+    throw new Error("Unauthorized: Please log in to export data");
 
   const where: any = {};
   if (filters?.statusIn?.length) {
@@ -52,12 +53,13 @@ export async function exportMaterialsData(filters?: {
     ];
   }
   if (filters?.typeIds?.length) where.typeId = { in: filters.typeIds };
-  if (filters?.supplierIds?.length) where.supplierId = { in: filters.supplierIds };
+  if (filters?.supplierIds?.length)
+    where.supplierId = { in: filters.supplierIds };
   if (filters?.uomIds?.length) where.unitOfMeasureId = { in: filters.uomIds };
 
   const materials = await prisma.material.findMany({
     where,
-    orderBy: { name: 'asc' },
+    orderBy: { name: "asc" },
     include: {
       type: { select: { name: true } },
       unitOfMeasure: { select: { name: true, symbol: true } },
@@ -66,40 +68,49 @@ export async function exportMaterialsData(filters?: {
   });
 
   const headers = [
-    'Material Name',
-    'SKU',
-    'Type',
-    'Unit',
-    'Supplier',
-    'Cost / Unit',
-    'Current Stock',
-    'Min Stock Level',
-    'Lead Time (days)',
-    'Status',
+    "Material Name",
+    "SKU",
+    "Type",
+    "Unit",
+    "Supplier",
+    "Cost / Unit",
+    "Current Stock",
+    "Min Stock Level",
+    "Lead Time (days)",
+    "Status",
   ];
 
-  const toNum = (v: any) => (typeof v === 'number' ? v : v?.toNumber ? v.toNumber() : Number(v ?? 0));
+  const toNum = (v: any) =>
+    typeof v === "number" ? v : v?.toNumber ? v.toNumber() : Number(v ?? 0);
   const esc = (val: any) => {
-    const s = val == null ? '' : String(val);
-    return s.includes('"') || s.includes(',') || s.includes('\n') ? '"' + s.replaceAll('"', '""') + '"' : s;
+    const s = val == null ? "" : String(val);
+    return s.includes('"') || s.includes(",") || s.includes("\n")
+      ? '"' + s.replaceAll('"', '""') + '"'
+      : s;
   };
 
-  const rows = materials.map((m: any) => [
-    m.name,
-    m.sku,
-    m.type?.name || '',
-    m.unitOfMeasure ? `${m.unitOfMeasure.name} (${m.unitOfMeasure.symbol})` : '',
-    m.supplier?.name || '',
-    toNum(m.costPerUnit),
-    Number(m.currentStock ?? 0),
-    Number(m.minimumStockLevel ?? 0),
-    Number(m.leadTime ?? 0),
-    m.status,
-  ].map(esc).join(','));
+  const rows = materials.map((m: any) =>
+    [
+      m.name,
+      m.sku,
+      m.type?.name || "",
+      m.unitOfMeasure
+        ? `${m.unitOfMeasure.name} (${m.unitOfMeasure.symbol})`
+        : "",
+      m.supplier?.name || "",
+      toNum(m.costPerUnit),
+      Number(m.currentStock ?? 0),
+      Number(m.minimumStockLevel ?? 0),
+      Number(m.leadTime ?? 0),
+      m.status,
+    ]
+      .map(esc)
+      .join(",")
+  );
 
-  const csvContent = [headers.join(','), ...rows].join('\n');
+  const csvContent = [headers.join(","), ...rows].join("\n");
   const today = new Date();
-  const filename = `materials-export-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}.csv`;
+  const filename = `materials-export-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}.csv`;
 
   return { csvContent, filename };
 }
@@ -112,27 +123,28 @@ export async function exportMaterialsExcel(filters?: {
   uomIds?: string[];
 }): Promise<{ base64: string; filename: string }> {
   const session = await getServerSession(authOptions);
-  if (!session?.user) throw new Error('Authentication required.');
+  if (!session?.user) throw new Error("Authentication required.");
 
-  const { default: ExcelJS } = await import('exceljs');
+  const { default: ExcelJS } = await import("exceljs");
 
   const where: any = {};
   if (filters?.statusIn?.length) where.status = { in: filters.statusIn as any };
   else where.status = { not: Status.ARCHIVED };
   if (filters?.search) {
     where.OR = [
-      { name: { contains: filters.search, mode: 'insensitive' } },
-      { sku: { contains: filters.search, mode: 'insensitive' } },
-      { notes: { contains: filters.search, mode: 'insensitive' } },
+      { name: { contains: filters.search, mode: "insensitive" } },
+      { sku: { contains: filters.search, mode: "insensitive" } },
+      { notes: { contains: filters.search, mode: "insensitive" } },
     ];
   }
   if (filters?.typeIds?.length) where.typeId = { in: filters.typeIds };
-  if (filters?.supplierIds?.length) where.supplierId = { in: filters.supplierIds };
+  if (filters?.supplierIds?.length)
+    where.supplierId = { in: filters.supplierIds };
   if (filters?.uomIds?.length) where.unitOfMeasureId = { in: filters.uomIds };
 
   const materials = await prisma.material.findMany({
     where,
-    orderBy: { name: 'asc' },
+    orderBy: { name: "asc" },
     include: {
       type: { select: { name: true } },
       unitOfMeasure: { select: { name: true, symbol: true } },
@@ -141,9 +153,18 @@ export async function exportMaterialsExcel(filters?: {
   });
 
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet('Materials');
+  const ws = wb.addWorksheet("Materials");
   const headers = [
-    'Material Name', 'SKU', 'Type', 'Unit', 'Supplier', 'Cost / Unit', 'Current Stock', 'Min Stock Level', 'Lead Time (days)', 'Status'
+    "Material Name",
+    "SKU",
+    "Type",
+    "Unit",
+    "Supplier",
+    "Cost / Unit",
+    "Current Stock",
+    "Min Stock Level",
+    "Lead Time (days)",
+    "Status",
   ];
   ws.addRow(headers);
   ws.getRow(1).font = { bold: true };
@@ -152,9 +173,11 @@ export async function exportMaterialsExcel(filters?: {
     ws.addRow([
       m.name,
       m.sku,
-      m.type?.name || '',
-      m.unitOfMeasure ? `${m.unitOfMeasure.name} (${m.unitOfMeasure.symbol})` : '',
-      m.supplier?.name || '',
+      m.type?.name || "",
+      m.unitOfMeasure
+        ? `${m.unitOfMeasure.name} (${m.unitOfMeasure.symbol})`
+        : "",
+      m.supplier?.name || "",
       Number(m.costPerUnit ?? 0),
       Number(m.currentStock ?? 0),
       Number(m.minimumStockLevel ?? 0),
@@ -164,10 +187,10 @@ export async function exportMaterialsExcel(filters?: {
   });
 
   // Number formats
-  ws.getColumn(6).numFmt = '#,##0.00'; // Cost / Unit
-  ws.getColumn(7).numFmt = '#,##0'; // Current Stock
-  ws.getColumn(8).numFmt = '#,##0'; // Min Stock Level
-  ws.getColumn(9).numFmt = '#,##0'; // Lead Time
+  ws.getColumn(6).numFmt = "#,##0.00"; // Cost / Unit
+  ws.getColumn(7).numFmt = "#,##0"; // Current Stock
+  ws.getColumn(8).numFmt = "#,##0"; // Min Stock Level
+  ws.getColumn(9).numFmt = "#,##0"; // Lead Time
 
   // Auto width
   ws.columns.forEach((c: any) => {
@@ -181,8 +204,8 @@ export async function exportMaterialsExcel(filters?: {
   });
 
   const buffer = await wb.xlsx.writeBuffer();
-  const base64 = Buffer.from(buffer).toString('base64');
-  const ts = new Date().toISOString().split('T')[0];
+  const base64 = Buffer.from(buffer).toString("base64");
+  const ts = new Date().toISOString().split("T")[0];
   return { base64, filename: `materials-export-${ts}.xlsx` };
 }
 
@@ -190,12 +213,12 @@ async function createLowStockAlert({
   materialId,
   currentLevel,
   minimumLevel,
-  createdBy
+  createdBy,
 }: {
-  materialId: string
-  currentLevel: number
-  minimumLevel: number
-  createdBy: string
+  materialId: string;
+  currentLevel: number;
+  minimumLevel: number;
+  createdBy: string;
 }) {
   try {
     const material = await prisma.material.findUnique({
@@ -204,19 +227,21 @@ async function createLowStockAlert({
         supplier: true,
         unitOfMeasure: true,
       },
-    })
+    });
 
     if (!material) {
-      throw new Error("Material not found")
+      throw new Error("Material not found");
     }
-    const suggestedOrderQuantity = Math.max(minimumLevel * 2 - currentLevel, 0)
+    const suggestedOrderQuantity = Math.max(minimumLevel * 2 - currentLevel, 0);
 
-    console.warn(`LOW STOCK ALERT: Material "${material.name}" (SKU: ${material.sku}) has fallen below minimum stock level. Current: ${currentLevel} ${material.unitOfMeasure?.symbol || 'units'}, Minimum: ${minimumLevel} ${material.unitOfMeasure?.symbol || 'units'}.`);
+    console.warn(
+      `LOW STOCK ALERT: Material "${material.name}" (SKU: ${material.sku}) has fallen below minimum stock level. Current: ${currentLevel} ${material.unitOfMeasure?.symbol || "units"}, Minimum: ${minimumLevel} ${material.unitOfMeasure?.symbol || "units"}.`
+    );
 
-    return true
+    return true;
   } catch (error) {
-    console.error("Error creating low stock alert:", error)
-    return false
+    console.error("Error creating low stock alert:", error);
+    return false;
   }
 }
 
@@ -250,11 +275,13 @@ export async function getAllMaterials(): Promise<Material[]> {
     });
 
     // Properly convert Decimal values to numbers to match Material interface
-    const convertedMaterials = materials.map(material => {
+    const convertedMaterials = materials.map((material) => {
       // First handle the Decimal conversion for costPerUnit
-      const costPerUnit = typeof material.costPerUnit === 'object' && 'toNumber' in material.costPerUnit
-        ? material.costPerUnit.toNumber()
-        : Number(material.costPerUnit);
+      const costPerUnit =
+        typeof material.costPerUnit === "object" &&
+        "toNumber" in material.costPerUnit
+          ? material.costPerUnit.toNumber()
+          : Number(material.costPerUnit);
 
       // Then return a properly shaped Material object
       return {
@@ -267,8 +294,8 @@ export async function getAllMaterials(): Promise<Material[]> {
 
     return convertedMaterials;
   } catch (error) {
-    console.error('Error fetching materials:', error);
-    throw new Error('Failed to fetch materials');
+    console.error("Error fetching materials:", error);
+    throw new Error("Failed to fetch materials");
   }
 }
 
@@ -282,14 +309,14 @@ export async function getArchivedMaterials(): Promise<Material[]> {
         unitOfMeasure: { select: { id: true, name: true, symbol: true } },
         supplier: { select: { id: true, name: true } },
       },
-      orderBy: { name: 'asc' },
+      orderBy: { name: "asc" },
     });
 
     // Convert Decimal to number to align with Material type usage in UI
     const converted = materials.map((m: any) => ({
       ...m,
       costPerUnit:
-        typeof m.costPerUnit === 'object' && 'toNumber' in m.costPerUnit
+        typeof m.costPerUnit === "object" && "toNumber" in m.costPerUnit
           ? m.costPerUnit.toNumber()
           : Number(m.costPerUnit),
       boms: m.boms ?? [],
@@ -297,8 +324,8 @@ export async function getArchivedMaterials(): Promise<Material[]> {
 
     return converted;
   } catch (error) {
-    console.error('Error fetching archived materials:', error);
-    throw new Error('Failed to fetch archived materials');
+    console.error("Error fetching archived materials:", error);
+    throw new Error("Failed to fetch archived materials");
   }
 }
 
@@ -306,7 +333,7 @@ export async function getArchivedMaterials(): Promise<Material[]> {
 export async function unarchiveMaterial(id: string) {
   try {
     const session = await getServerSession(authOptions);
-    const userId = session?.user?.id || 'system';
+    const userId = session?.user?.id || "system";
 
     await prisma.material.update({
       where: { id },
@@ -320,12 +347,12 @@ export async function unarchiveMaterial(id: string) {
       },
     });
 
-    revalidatePath('/admin/materials');
-    revalidatePath('/admin/materials/archived');
-    return { success: true, message: 'Material unarchived successfully' };
+    revalidatePath("/admin/materials");
+    revalidatePath("/admin/materials/archived");
+    return { success: true, message: "Material unarchived successfully" };
   } catch (error) {
-    console.error('Error unarchiving material:', error);
-    return { success: false, error: 'Failed to unarchive material' };
+    console.error("Error unarchiving material:", error);
+    return { success: false, error: "Failed to unarchive material" };
   }
 }
 
@@ -333,21 +360,21 @@ export async function getMaterialTypes() {
   try {
     return await prisma.materialType.findMany({
       where: {
-        status: Status.ACTIVE
+        status: Status.ACTIVE,
       },
       select: {
         id: true,
         name: true,
         description: true,
-        status: true
+        status: true,
       },
       orderBy: {
-        name: 'asc'
-      }
+        name: "asc",
+      },
     });
   } catch (error) {
-    console.error('Error fetching material types:', error);
-    throw new Error('Failed to fetch material types')
+    console.error("Error fetching material types:", error);
+    throw new Error("Failed to fetch material types");
   }
 }
 
@@ -355,21 +382,21 @@ export async function getUnitOfMeasures() {
   try {
     return await prisma.unitOfMeasure.findMany({
       where: {
-        status: Status.ACTIVE
+        status: Status.ACTIVE,
       },
       select: {
         id: true,
         name: true,
         symbol: true,
-        status: true
+        status: true,
       },
       orderBy: {
-        name: 'asc'
-      }
+        name: "asc",
+      },
     });
   } catch (error) {
-    console.error('Error fetching units of measure:', error);
-    throw new Error('Failed to fetch units of measure')
+    console.error("Error fetching units of measure:", error);
+    throw new Error("Failed to fetch units of measure");
   }
 }
 
@@ -377,34 +404,35 @@ export async function getSuppliers() {
   try {
     return await prisma.supplier.findMany({
       where: {
-        status: Status.ACTIVE
+        status: Status.ACTIVE,
       },
       select: {
         id: true,
         name: true,
-        code: true
+        code: true,
       },
       orderBy: {
-        name: 'asc'
-      }
+        name: "asc",
+      },
     });
   } catch (error) {
-    console.error('Error fetching suppliers:', error);
-    throw new Error('Failed to fetch suppliers')
+    console.error("Error fetching suppliers:", error);
+    throw new Error("Failed to fetch suppliers");
   }
 }
 
 export async function createMaterial(data: MaterialCreateInput) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) throw new Error('Unauthorized')
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
 
-    const costPerUnit = typeof data.costPerUnit === 'string'
-      ? parseFloat(data.costPerUnit)
-      : data.costPerUnit;
+    const costPerUnit =
+      typeof data.costPerUnit === "string"
+        ? parseFloat(data.costPerUnit)
+        : data.costPerUnit;
 
     if (isNaN(costPerUnit)) {
-      throw new Error('Invalid cost per unit value');
+      throw new Error("Invalid cost per unit value");
     }
 
     // Prepare create data with only the fields that exist in the Prisma schema
@@ -417,7 +445,7 @@ export async function createMaterial(data: MaterialCreateInput) {
       leadTime: data.leadTime,
       notes: data.notes,
       status: Status.ACTIVE,
-      createdBy: session.user.id
+      createdBy: session.user.id,
     };
 
     // Only add committedStock if it exists (this field exists in the schema)
@@ -456,21 +484,27 @@ export async function createMaterial(data: MaterialCreateInput) {
     // Add the virtual fields that are in the interface but not in the database
     const result = {
       ...material,
-      costPerUnit: typeof material.costPerUnit === 'object' && 'toNumber' in material.costPerUnit
-        ? material.costPerUnit.toNumber()
-        : Number(material.costPerUnit),
+      costPerUnit:
+        typeof material.costPerUnit === "object" &&
+        "toNumber" in material.costPerUnit
+          ? material.costPerUnit.toNumber()
+          : Number(material.costPerUnit),
       // Add virtual fields for the TypeScript interface
-      calculatedStock: data.calculatedStock !== undefined ? data.calculatedStock :
-        (data.currentStock || 0) - (data.committedStock || 0),
+      calculatedStock:
+        data.calculatedStock !== undefined
+          ? data.calculatedStock
+          : (data.currentStock || 0) - (data.committedStock || 0),
       expectedStock: data.expectedStock || 0,
-      boms: [] // Add any other required properties from your Material interface
+      boms: [], // Add any other required properties from your Material interface
     } as Material;
 
-    revalidatePath('/admin/materials');
+    revalidatePath("/admin/materials");
     return result;
   } catch (error) {
-    console.error('Error creating material:', error);
-    throw new Error(`Failed to create material: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error("Error creating material:", error);
+    throw new Error(
+      `Failed to create material: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
   }
 }
 
@@ -486,7 +520,10 @@ export async function createMaterialsBulk(items: MaterialCreateInput[]) {
 
     // Map to Prisma data payloads. Use direct foreign keys for createMany.
     const data = items.map((m) => {
-      const costPerUnit = typeof m.costPerUnit === "string" ? parseFloat(m.costPerUnit as any) : m.costPerUnit;
+      const costPerUnit =
+        typeof m.costPerUnit === "string"
+          ? parseFloat(m.costPerUnit as any)
+          : m.costPerUnit;
       if (isNaN(Number(costPerUnit))) {
         throw new Error(`Invalid costPerUnit for SKU ${m.sku}`);
       }
@@ -513,19 +550,26 @@ export async function createMaterialsBulk(items: MaterialCreateInput[]) {
       skipDuplicates: true, // respects unique constraints like sku
     });
 
-    revalidatePath('/admin/materials');
-    return { success: true, insertedCount: result.count, attempted: items.length };
+    revalidatePath("/admin/materials");
+    return {
+      success: true,
+      insertedCount: result.count,
+      attempted: items.length,
+    };
   } catch (error) {
-    console.error('Error bulk-creating materials:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error("Error bulk-creating materials:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
 
 export async function updateMaterial(data: MaterialUpdateInput) {
   try {
     // Get the current user for audit trail
-    const session = await getServerSession(authOptions)
-    const userId = session?.user?.id || "system"
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id || "system";
 
     // Initialize update data with audit fields
     const updateData: any = {
@@ -536,11 +580,15 @@ export async function updateMaterial(data: MaterialUpdateInput) {
     // Only add fields to updateData if they exist in Prisma schema
     if (data.name !== undefined) updateData.name = data.name;
     if (data.sku !== undefined) updateData.sku = data.sku;
-    if (data.costPerUnit !== undefined) updateData.costPerUnit = data.costPerUnit;
-    if (data.currentStock !== undefined) updateData.currentStock = data.currentStock;
-    if (data.minimumStockLevel !== undefined) updateData.minimumStockLevel = data.minimumStockLevel;
+    if (data.costPerUnit !== undefined)
+      updateData.costPerUnit = data.costPerUnit;
+    if (data.currentStock !== undefined)
+      updateData.currentStock = data.currentStock;
+    if (data.minimumStockLevel !== undefined)
+      updateData.minimumStockLevel = data.minimumStockLevel;
     if (data.leadTime !== undefined) updateData.leadTime = data.leadTime;
-    if (data.committedStock !== undefined) updateData.committedStock = data.committedStock;
+    if (data.committedStock !== undefined)
+      updateData.committedStock = data.committedStock;
     if (data.status !== undefined) updateData.status = data.status;
     if (data.notes !== undefined) updateData.notes = data.notes;
 
@@ -577,12 +625,18 @@ export async function updateMaterial(data: MaterialUpdateInput) {
             purchaseOrder: true,
           },
         },
-      }
-    })
+      },
+    });
 
     // Check for low stock levels and create alerts if necessary
-    const currentStock = data.currentStock !== undefined ? data.currentStock : updatedMaterial.currentStock;
-    const minimumLevel = data.minimumStockLevel !== undefined ? data.minimumStockLevel : updatedMaterial.minimumStockLevel;
+    const currentStock =
+      data.currentStock !== undefined
+        ? data.currentStock
+        : updatedMaterial.currentStock;
+    const minimumLevel =
+      data.minimumStockLevel !== undefined
+        ? data.minimumStockLevel
+        : updatedMaterial.minimumStockLevel;
 
     if (currentStock <= minimumLevel) {
       await createLowStockAlert({
@@ -590,30 +644,37 @@ export async function updateMaterial(data: MaterialUpdateInput) {
         currentLevel: currentStock,
         minimumLevel: minimumLevel,
         createdBy: userId,
-      })
+      });
     }
 
     // Revalidate paths
-    revalidatePath('/admin/materials')
-    revalidatePath('/materials')
-    revalidatePath(`/materials/${data.id}`)
+    revalidatePath("/admin/materials");
+    revalidatePath("/materials");
+    revalidatePath(`/materials/${data.id}`);
 
     // Return the updated material with converted values for the TypeScript interface
     const result = {
       ...updatedMaterial,
-      costPerUnit: typeof updatedMaterial.costPerUnit === 'object' && 'toNumber' in updatedMaterial.costPerUnit
-        ? updatedMaterial.costPerUnit.toNumber()
-        : Number(updatedMaterial.costPerUnit),
+      costPerUnit:
+        typeof updatedMaterial.costPerUnit === "object" &&
+        "toNumber" in updatedMaterial.costPerUnit
+          ? updatedMaterial.costPerUnit.toNumber()
+          : Number(updatedMaterial.costPerUnit),
       // Add virtual fields for the TypeScript interface
-      calculatedStock: data.calculatedStock !== undefined ? data.calculatedStock :
-        currentStock - (data.committedStock || updatedMaterial.committedStock),
-      expectedStock: data.expectedStock || 0
+      calculatedStock:
+        data.calculatedStock !== undefined
+          ? data.calculatedStock
+          : currentStock -
+            (data.committedStock || updatedMaterial.committedStock),
+      expectedStock: data.expectedStock || 0,
     };
 
     return result;
   } catch (error) {
-    console.error("Error updating material:", error)
-    throw new Error(`Failed to update material: ${error instanceof Error ? error.message : "Unknown error"}`)
+    console.error("Error updating material:", error);
+    throw new Error(
+      `Failed to update material: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
   }
 }
 
@@ -627,10 +688,10 @@ export async function getMaterialById(id: string): Promise<Material | null> {
         supplier: true,
         boms: {
           include: {
-            product: true
-          }
-        }
-      }
+            product: true,
+          },
+        },
+      },
     });
 
     if (!material) {
@@ -640,10 +701,9 @@ export async function getMaterialById(id: string): Promise<Material | null> {
     const materialData = JSON.parse(JSON.stringify(material));
 
     return materialData as Material;
-
   } catch (error) {
-    console.error('Error fetching material by ID:', error);
-    throw new Error('Failed to fetch material');
+    console.error("Error fetching material by ID:", error);
+    throw new Error("Failed to fetch material");
   }
 }
 
@@ -665,13 +725,15 @@ export async function deleteMaterial(id: string, reason?: string) {
     });
 
     // Revalidate paths
-    revalidatePath('/admin/materials');
-    revalidatePath('/materials');
+    revalidatePath("/admin/materials");
+    revalidatePath("/materials");
 
     return { success: true, message: "Material archived successfully" };
   } catch (error) {
     console.error("Error archiving material:", error);
-    throw new Error(`Failed to archive material: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(
+      `Failed to archive material: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
   }
 }
 
@@ -680,23 +742,35 @@ export async function getPaginatedMaterials({
   page = 1,
   limit = 10,
   search = "",
+  status,
+  typeId,
 }: {
   page?: number;
   limit?: number;
   search?: string;
+  status?: Status;
+  typeId?: string;
 }) {
   try {
     const skip = (page - 1) * limit;
 
-    const where: any = {
-      status: { not: Status.ARCHIVED },
-    };
+    const where: Prisma.MaterialWhereInput = {};
 
-    if (search) {
+    if (status) {
+      where.status = status;
+    } else {
+      where.status = { not: Status.ARCHIVED };
+    }
+
+    if (typeId) {
+      where.typeId = typeId;
+    }
+
+    const searchTerm = search.trim();
+    if (searchTerm) {
       where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { sku: { contains: search, mode: "insensitive" } },
-        { notes: { contains: search, mode: "insensitive" } },
+        { name: { contains: searchTerm, mode: "insensitive" } },
+        { sku: { contains: searchTerm, mode: "insensitive" } },
       ];
     }
 
@@ -708,7 +782,7 @@ export async function getPaginatedMaterials({
           unitOfMeasure: { select: { id: true, name: true, symbol: true } },
           supplier: { select: { id: true, name: true } },
         },
-        orderBy: { name: 'asc' },
+        orderBy: { name: "asc" },
         skip,
         take: limit,
       }),
@@ -716,11 +790,13 @@ export async function getPaginatedMaterials({
     ]);
 
     // Convert Decimal to number
-    const convertedMaterials = materials.map(material => ({
+    const convertedMaterials = materials.map((material) => ({
       ...material,
-      costPerUnit: typeof material.costPerUnit === 'object' && 'toNumber' in material.costPerUnit
-        ? material.costPerUnit.toNumber()
-        : Number(material.costPerUnit),
+      costPerUnit:
+        typeof material.costPerUnit === "object" &&
+        "toNumber" in material.costPerUnit
+          ? material.costPerUnit.toNumber()
+          : Number(material.costPerUnit),
       boms: [],
     })) as Material[];
 
@@ -734,8 +810,8 @@ export async function getPaginatedMaterials({
       },
     };
   } catch (error) {
-    console.error('Error fetching paginated materials:', error);
-    throw new Error('Failed to fetch paginated materials');
+    console.error("Error fetching paginated materials:", error);
+    throw new Error("Failed to fetch paginated materials");
   }
 }
 
@@ -747,25 +823,25 @@ export async function getMaterialStats() {
       prisma.material.findMany({
         where: {
           status: { not: Status.ARCHIVED },
-          currentStock: { lte: prisma.material.fields.minimumStockLevel }
+          currentStock: { lte: prisma.material.fields.minimumStockLevel },
         },
-        select: { id: true }
-      })
+        select: { id: true },
+      }),
     ]);
 
     return {
       totalMaterials: total,
       activeMaterials: active,
       inactiveMaterials: total - active,
-      lowStockCount: lowStock.length
+      lowStockCount: lowStock.length,
     };
   } catch (error) {
-    console.error('Error fetching material stats:', error);
+    console.error("Error fetching material stats:", error);
     return {
       totalMaterials: 0,
       activeMaterials: 0,
       inactiveMaterials: 0,
-      lowStockCount: 0
+      lowStockCount: 0,
     };
   }
 }
