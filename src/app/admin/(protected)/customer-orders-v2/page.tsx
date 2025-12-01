@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { CustomerOrdersDataTable } from "@/components/module/admin/customer-order-ver/customer-orders-data-table";
+import { CustomerOrderV2HeaderActions } from "@/components/module/admin/customer-order-ver/CustomerOrderV2HeaderActions";
 import { columns } from "@/components/module/admin/customer-order-ver/columns";
 import {
   PageContainer,
@@ -8,6 +9,7 @@ import {
   PageTitle,
   PageDescription,
   SectionCard,
+  PageHeaderActions,
 } from "@/components/shared/page-layout";
 import {
   getPaginatedCustomerOrders,
@@ -25,6 +27,8 @@ interface PageProps {
     limit?: string;
     search?: string;
     highlight?: string;
+    dateFrom?: string;
+    dateTo?: string;
   }>;
 }
 
@@ -34,9 +38,23 @@ export default async function CustomerOrderV2Page({ searchParams }: PageProps) {
   const limit = Number(resolvedSearchParams.limit) || 10;
   const search = resolvedSearchParams.search || "";
   const highlightId = resolvedSearchParams.highlight;
+  const dateFrom = resolvedSearchParams.dateFrom
+    ? new Date(resolvedSearchParams.dateFrom)
+    : undefined;
+  const dateTo = resolvedSearchParams.dateTo
+    ? new Date(resolvedSearchParams.dateTo)
+    : undefined;
+  const normalizedDateFrom = dateFrom && !isNaN(dateFrom.getTime()) ? dateFrom : undefined;
+  const normalizedDateTo = dateTo && !isNaN(dateTo.getTime()) ? dateTo : undefined;
 
   const [paginatedOrders, stats] = await Promise.all([
-    getPaginatedCustomerOrders({ page, limit, search }),
+    getPaginatedCustomerOrders({
+      page,
+      limit,
+      search,
+      dateFrom: normalizedDateFrom,
+      dateTo: normalizedDateTo,
+    }),
     getCustomerOrderStats(),
   ]);
 
@@ -44,11 +62,14 @@ export default async function CustomerOrderV2Page({ searchParams }: PageProps) {
     <PageContainer>
       <PageHeader>
         <PageHeaderMain>
-          <PageTitle>Customer Orders V2</PageTitle>
+          <PageTitle>Purchase Orders</PageTitle>
           <PageDescription>
-            Enhanced customer order management with real-time tracking
+            Enhanced customer order management with real-time tracking, (It is Customer Order we just tried putting Purchase Order for you guys)
           </PageDescription>
         </PageHeaderMain>
+        <PageHeaderActions>
+          <CustomerOrderV2HeaderActions />
+        </PageHeaderActions>
       </PageHeader>
 
       {/* Statistics Cards */}

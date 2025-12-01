@@ -229,11 +229,16 @@ export function ChatSupportPage({ isAdminView = false }: ChatSupportPageProps) {
               {isAdminView ? "Support Management" : "Customer Support"}
             </h1>
             <p className="text-gray-600 mt-2">
-              {isAdminView 
-                ? "Manage all customer support tickets and conversations" 
-                : "Get help and support for your questions"
-              }
+              {isAdminView
+                ? "Manage all customer support tickets and conversations"
+                : "Get help and support for your questions"}
             </p>
+            {isAdminView && (
+              <p className="text-gray-500 mt-1 text-sm">
+                This is a support ticket space, but if you want to request a new
+                feature or addition to the system, let us know and we can work on it.
+              </p>
+            )}
           </div>
           <Button onClick={() => setShowCreateForm(true)}>
             <Plus className="w-4 h-4 mr-2" />

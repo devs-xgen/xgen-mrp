@@ -11,10 +11,51 @@ import { getCustomerOrderById } from "@/lib/actions/customer-order";
 import { getAllCustomers } from "@/lib/actions/customers";
 import { getAllProducts } from "@/lib/actions/product";
 import { CustomerOrderEditClient } from "@/components/module/admin/customer-order-ver/CustomerOrderEditClient";
+import { Prisma } from "@prisma/client";
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
+
+const serializeForClient = (value: any): any => {
+  if (value === null || value === undefined) return value;
+  const t = typeof value;
+  if (t === "string" || t === "number" || t === "boolean") return value;
+  if (typeof BigInt !== "undefined" && t === "bigint") return value.toString();
+  if (value instanceof Date) return value.toISOString();
+
+  const isPrismaDecimal = (() => {
+    try {
+      if (value?.constructor?.name === "Decimal") return true;
+      const DecimalCtor = (Prisma as any)?.Decimal;
+      if (DecimalCtor?.isDecimal && DecimalCtor.isDecimal(value)) return true;
+      if (DecimalCtor && value instanceof DecimalCtor) return true;
+    } catch {
+      // ignore detection errors
+    }
+    return false;
+  })();
+
+  if (isPrismaDecimal) {
+    const asString = value.toString();
+    const asNumber = Number(asString);
+    return Number.isFinite(asNumber) ? asNumber : asString;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(serializeForClient);
+  }
+
+  if (t === "object") {
+    const result: Record<string, any> = {};
+    for (const [key, subValue] of Object.entries(value)) {
+      result[key] = serializeForClient(subValue);
+    }
+    return result;
+  }
+
+  return undefined;
+};
 
 async function EditOrderData({ id }: { id: string }) {
   // Fetch all required data
@@ -32,17 +73,21 @@ async function EditOrderData({ id }: { id: string }) {
     );
   }
 
+  const safeOrder = serializeForClient(order);
+  const safeCustomers = serializeForClient(customers);
+  const safeProducts = serializeForClient(products);
+
   return (
-    <CustomerOrderEditClient 
-      order={order}
-      customers={customers}
-      products={products}
+    <CustomerOrderEditClient
+      order={safeOrder}
+      customers={safeCustomers}
+      products={safeProducts}
     />
   );
 }
 
 export default async function CustomerOrderEditPage({ params }: PageProps) {
-  const { id } = params;
+  const { id } = await params;
 
   return (
     <PageContainer>

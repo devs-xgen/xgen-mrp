@@ -2125,10 +2125,14 @@ export async function getPaginatedCustomerOrders({
   page = 1,
   limit = 10,
   search = "",
+  dateFrom,
+  dateTo,
 }: {
   page?: number;
   limit?: number;
   search?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
 }) {
   try {
     const skip = (page - 1) * limit;
@@ -2140,6 +2144,18 @@ export async function getPaginatedCustomerOrders({
         { orderNumber: { contains: search, mode: "insensitive" } },
         { customer: { name: { contains: search, mode: "insensitive" } } },
       ];
+    }
+
+    if (dateFrom || dateTo) {
+      where.orderDate = {};
+      if (dateFrom) {
+        where.orderDate.gte = dateFrom;
+      }
+      if (dateTo) {
+        const adjustedEnd = new Date(dateTo);
+        adjustedEnd.setHours(23, 59, 59, 999);
+        where.orderDate.lte = adjustedEnd;
+      }
     }
 
     const [orders, total] = await Promise.all([

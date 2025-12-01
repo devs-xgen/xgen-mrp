@@ -1,8 +1,18 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { DataTable } from "@/components/global/table/data-table";
+import { useState, FormEvent } from "react";
 import { ColumnDef } from "@tanstack/react-table";
+import { DataTable } from "@/components/global/table/data-table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Search, X } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { addDays, format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 interface CustomerOrdersDataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
@@ -25,6 +35,18 @@ export function CustomerOrdersDataTable<TData, TValue>({
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const [searchValue, setSearchValue] = useState(searchParams.get("search") ?? "");
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+        const fromParam = searchParams.get("dateFrom");
+        const toParam = searchParams.get("dateTo");
+        if (fromParam || toParam) {
+            return {
+                from: fromParam ? new Date(fromParam) : undefined,
+                to: toParam ? new Date(toParam) : undefined,
+            };
+        }
+        return undefined;
+    });
 
     const onPaginationChange = (updaterOrValue: any) => {
         const newPagination =
@@ -41,24 +63,129 @@ export function CustomerOrdersDataTable<TData, TValue>({
         router.push(`${pathname}?${params.toString()}`);
     };
 
+    const applyFilters = (event?: FormEvent<HTMLFormElement>) => {
+        if (event) {
+            event.preventDefault();
+        }
+        const params = new URLSearchParams(searchParams.toString());
+        if (searchValue.trim()) {
+            params.set("search", searchValue.trim());
+        } else {
+            params.delete("search");
+        }
+        if (dateRange?.from) {
+            params.set("dateFrom", dateRange.from.toISOString());
+        } else {
+            params.delete("dateFrom");
+        }
+        if (dateRange?.to) {
+            params.set("dateTo", dateRange.to.toISOString());
+        } else {
+            params.delete("dateTo");
+        }
+        params.set("page", "1");
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
+    const handleSearchReset = () => {
+        setSearchValue("");
+        setDateRange(undefined);
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("search");
+        params.delete("dateFrom");
+        params.delete("dateTo");
+        params.set("page", "1");
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
     return (
-        <DataTable
-            columns={columns}
-            data={data}
-            searchKey="orderNumber"
-            searchPlaceholder="Search customer orders..."
-            enableSelection={false}
-            enablePagination={true}
-            enableFiltering={true}
-            enableSorting={true}
-            manualPagination={true}
-            pageCount={metadata.totalPages}
-            pagination={{
-                pageIndex: metadata.page - 1,
-                pageSize: metadata.limit,
-            }}
-            onPaginationChange={onPaginationChange}
-            pageSize={metadata.limit}
-        />
+        <div className="space-y-4">
+            <form onSubmit={applyFilters} className="flex flex-col gap-3 lg:flex-row lg:items-end lg:gap-4">
+                <div className="flex flex-1 flex-col gap-2">
+                    <label className="text-xs font-medium text-muted-foreground">Search</label>
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            value={searchValue}
+                            onChange={(event) => setSearchValue(event.target.value)}
+                            placeholder="Search by order number or customer name"
+                            className="pl-9"
+                        />
+                        {(searchValue || dateRange) && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                                onClick={handleSearchReset}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                    <label className="text-xs font-medium text-muted-foreground">Order Date Range</label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !dateRange && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {dateRange?.from ? (
+                                    dateRange.to ? (
+                                        `${format(dateRange.from, "LLL dd, y")} - ${format(dateRange.to, "LLL dd, y")}`
+                                    ) : (
+                                        format(dateRange.from, "LLL dd, y")
+                                    )
+                                ) : (
+                                    "Select date range"
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="range"
+                                selected={dateRange}
+                                onSelect={setDateRange}
+                                numberOfMonths={2}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+
+                <div className="flex gap-2">
+                    <Button type="submit" className="flex-1 sm:flex-none">
+                        Apply Filters
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={handleSearchReset}>
+                        Reset
+                    </Button>
+                </div>
+            </form>
+
+            <DataTable
+                columns={columns}
+                data={data}
+                enableSelection={false}
+                enablePagination={true}
+                enableFiltering={false}
+                enableSorting={true}
+                manualPagination={true}
+                pageCount={metadata.totalPages}
+                pagination={{
+                    pageIndex: metadata.page - 1,
+                    pageSize: metadata.limit,
+                }}
+                onPaginationChange={onPaginationChange}
+                pageSize={metadata.limit}
+            />
+        </div>
     );
 }
