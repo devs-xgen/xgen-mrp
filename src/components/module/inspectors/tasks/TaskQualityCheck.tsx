@@ -103,8 +103,8 @@ export function QualityChecksTable() {
             <TableHead className="text-gray-900 dark:text-gray-50">Status</TableHead>
             <TableHead className="text-gray-900 dark:text-gray-50">Defects Found</TableHead>
             <TableHead className="text-gray-900 dark:text-gray-50">Notes</TableHead>
-            <TableHead className="text-right text-gray-900 dark:text-gray-50">Check Date</TableHead>
-            <TableHead className="text-right text-gray-900 dark:text-gray-50">Action</TableHead>
+            <TableHead className=" text-gray-900 dark:text-gray-50">Check Date</TableHead>
+            <TableHead className=" text-gray-900 dark:text-gray-50">Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -114,13 +114,6 @@ export function QualityChecksTable() {
                 <TableCell className="font-medium text-gray-900 dark:text-gray-50">
                   {check.id.substring(0, 8)}...
                 </TableCell>
-                {/* <TableCell className="text-gray-900 dark:text-gray-50">
-                  <Button variant="link" asChild className="p-0 h-auto text-gray-900 dark:text-gray-50">
-                    <Link href={`/inspector/production/${check.productionOrder.id}`}>
-                      {check.productionOrder.orderNumber}
-                    </Link>
-                  </Button>
-                </TableCell> */}
                 <TableCell className="text-gray-900 dark:text-gray-50">
                   {check.productionOrder.product.name}
                 </TableCell>
@@ -146,13 +139,13 @@ export function QualityChecksTable() {
                 <TableCell>
                   {check.productionOrder?.startDate && format(new Date(check.productionOrder.startDate), "MMM d, yyyy")}
                 </TableCell>
-                {/* <TableCell className="text-right text-gray-900 dark:text-gray-50">
-                  {format(new Date(check.checkDate), "MMM d, yyyy h:mm a")}
-                </TableCell> */}
-                <TableCell className="text-right">
+                <TableCell className="">
                   <Button variant="outline" size="sm" asChild>
                     {/* Corrected Link here */}
                     <Link href={`/inspector/production/${check.productionOrder.id}`}>View</Link>
+                  </Button>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/inspector/production/quality-history/${check.productionOrder.id}`}>View Inspection History</Link>
                   </Button>
                 </TableCell>
               </TableRow>

@@ -1635,3 +1635,103 @@ export interface UpdateFormData {
     actionTaken: string | null;
     notes: string | null;
 }
+
+
+
+export async function getMyQualityCheckNotes() {
+    try {
+      const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const qualityChecks = await prisma.qualityCheck.findMany({
+      where: {
+        inspectorId: session.user.id,
+      },
+      select: {
+        id: true,
+        checkDate: true,
+        status: true,
+
+        // 👇 These were missing
+        defectsFound: true,
+        notes: true,
+        actionTaken: true,
+
+        productionOrder: {
+          select: {
+            id: true,
+            status: true,
+            startDate: true,
+            dueDate: true,
+            product: {
+              select: {
+                name: true,
+                sku: true,
+              },
+            },
+            productVariant: {
+              select: {
+                displayName: true,
+                sku: true,
+                sizeName: true,
+                colorName: true,
+              },
+            },
+          },
+        },
+
+        inspector: {
+          select: {
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+
+      orderBy: {
+        checkDate: "desc",
+      },
+    });
+
+    return qualityChecks;
+  } catch (error) {
+    console.error("Error fetching quality checks for inspector:", error);
+    throw new Error("Failed to fetch quality checks");
+  }
+}
+
+export async function updateQualityChecks(
+  id: string,
+  data: { defectsFound: string; actionTaken: string; notes: string }
+) {
+  try {
+    const existing = await prisma.qualityCheck.findUnique({
+      where: { id },
+    });
+
+    if (!existing) throw new Error("Quality check not found");
+
+    const updated = await prisma.qualityCheck.update({
+      where: { id },
+      data: {
+        defectsFound: (existing.defectsFound || "") + "\n" + data.defectsFound,
+        actionTaken: (existing.actionTaken || "") + "\n" + data.actionTaken,
+        notes: (existing.notes || "") + "\n" + data.notes,
+      },
+    });
+
+    // 🔥 IMPORTANT: refresh the page cache
+    revalidatePath(`/inspector/production/quality-history/${id}`);
+
+    return updated;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
