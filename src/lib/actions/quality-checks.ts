@@ -409,7 +409,10 @@ export async function getQualityMetrics() {
       orderBy: { checkDate: "desc" },
       include: {
         productionOrder: {
-          include: {
+          select: {
+            id: true,
+            quantity: true,
+            status: true,
             product: {
               select: {
                 name: true,

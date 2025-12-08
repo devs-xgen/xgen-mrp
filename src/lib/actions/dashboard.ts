@@ -1507,3 +1507,156 @@ export async function getTopMaterialsByConsumption(
     return [];
   }
 }
+
+/**
+ * Get workflow pipeline tracking data
+ * Shows the complete journey: Customer Orders → Production Orders → Work Centers → Quality Checks → Delivery
+ */
+export async function getWorkflowPipelineData() {
+  try {
+    // 1. Customer Orders with Production Orders
+    const customerOrdersWithProduction = await prisma.customerOrder.count({
+      where: {
+        productionOrders: {
+          some: {},
+        },
+      },
+    });
+
+    const totalCustomerOrders = await prisma.customerOrder.count();
+
+    // 2. Production Orders by Status
+    const productionOrdersByStatus = await prisma.productionOrder.groupBy({
+      by: ['status'],
+      _count: {
+        id: true,
+      },
+    });
+
+    // 3. Production Orders in Work Centers (via Operations)
+    // Get all operations to show complete work center activity
+    const productionOrdersInWorkCenters = await prisma.operation.groupBy({
+      by: ['workCenterId'],
+      _count: {
+        productionOrderId: true,
+      },
+      // Remove status filter to include ALL operations (ACTIVE, IN_PROGRESS, COMPLETED, etc.)
+    });
+
+    // Get work center names
+    const workCenterIds = productionOrdersInWorkCenters.map(wc => wc.workCenterId);
+    const workCenters = await prisma.workCenter.findMany({
+      where: {
+        id: {
+          in: workCenterIds,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    const workCenterMap = new Map(workCenters.map(wc => [wc.id, wc.name]));
+
+    // 4. Production Orders with Quality Checks
+    const productionOrdersWithQualityChecks = await prisma.productionOrder.count({
+      where: {
+        qualityChecks: {
+          some: {},
+        },
+      },
+    });
+
+    // Quality checks by status
+    const qualityChecksByStatus = await prisma.qualityCheck.groupBy({
+      by: ['status'],
+      _count: {
+        id: true,
+      },
+    });
+
+    // 5. Production Orders with Delivery Assignments
+    const productionOrdersWithDelivery = await prisma.deliveryAssignment.groupBy({
+      by: ['status'],
+      _count: {
+        id: true,
+      },
+    });
+
+    // 6. Overall workflow stages count
+    const totalProductionOrders = await prisma.productionOrder.count();
+    // Get all production orders that have operations (regardless of status)
+    const productionOrdersInOperations = await prisma.operation.findMany({
+      select: {
+        productionOrderId: true,
+      },
+      distinct: ['productionOrderId'],
+    });
+
+    const uniqueProductionOrdersInWorkCenters = productionOrdersInOperations.length;
+
+    // 7. Pending quality checks
+    const pendingQualityChecks = await prisma.qualityCheck.count({
+      where: {
+        status: 'PENDING',
+      },
+    });
+
+    // 8. Delivery status breakdown
+    const deliveryStatusBreakdown = await prisma.deliveryAssignment.groupBy({
+      by: ['status'],
+      _count: {
+        id: true,
+      },
+    });
+
+    return {
+      summary: {
+        totalCustomerOrders,
+        customerOrdersWithProduction,
+        customerOrdersWithoutProduction: totalCustomerOrders - customerOrdersWithProduction,
+        totalProductionOrders,
+        productionOrdersInWorkCenters: uniqueProductionOrdersInWorkCenters,
+        productionOrdersWithQualityChecks,
+        productionOrdersWithDelivery: productionOrdersWithDelivery.reduce((sum, d) => sum + d._count.id, 0),
+        pendingQualityChecks,
+      },
+      productionOrdersByStatus: productionOrdersByStatus.map(item => ({
+        status: item.status,
+        count: item._count.id,
+      })),
+      workCenterDistribution: productionOrdersInWorkCenters.map(item => ({
+        workCenterId: item.workCenterId,
+        workCenterName: workCenterMap.get(item.workCenterId) || 'Unknown',
+        count: item._count.productionOrderId,
+      })),
+      qualityChecksByStatus: qualityChecksByStatus.map(item => ({
+        status: item.status,
+        count: item._count.id,
+      })),
+      deliveryStatusBreakdown: deliveryStatusBreakdown.map(item => ({
+        status: item.status,
+        count: item._count.id,
+      })),
+    };
+  } catch (error) {
+    console.error("Failed to fetch workflow pipeline data:", error);
+    return {
+      summary: {
+        totalCustomerOrders: 0,
+        customerOrdersWithProduction: 0,
+        customerOrdersWithoutProduction: 0,
+        totalProductionOrders: 0,
+        productionOrdersInWorkCenters: 0,
+        productionOrdersWithQualityChecks: 0,
+        productionOrdersWithDelivery: 0,
+        pendingQualityChecks: 0,
+      },
+      productionOrdersByStatus: [],
+      workCenterDistribution: [],
+      qualityChecksByStatus: [],
+      deliveryStatusBreakdown: [],
+    };
+  }
+}

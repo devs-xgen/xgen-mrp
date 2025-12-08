@@ -180,3 +180,33 @@ export interface DashboardData {
   topCustomers: CustomerInsights[]
   operationalAlerts: OperationalAlerts
 }
+
+export interface WorkflowPipelineData {
+  summary: {
+    totalCustomerOrders: number
+    customerOrdersWithProduction: number
+    customerOrdersWithoutProduction: number
+    totalProductionOrders: number
+    productionOrdersInWorkCenters: number
+    productionOrdersWithQualityChecks: number
+    productionOrdersWithDelivery: number
+    pendingQualityChecks: number
+  }
+  productionOrdersByStatus: Array<{
+    status: string
+    count: number
+  }>
+  workCenterDistribution: Array<{
+    workCenterId: string
+    workCenterName: string
+    count: number
+  }>
+  qualityChecksByStatus: Array<{
+    status: string
+    count: number
+  }>
+  deliveryStatusBreakdown: Array<{
+    status: string
+    count: number
+  }>
+}

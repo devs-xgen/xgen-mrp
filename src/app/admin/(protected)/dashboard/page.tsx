@@ -7,6 +7,7 @@ import {
   WorkflowQuickActions,
   TopProductsByOrdersChart,
   TopMaterialsConsumptionChart,
+  WorkflowPipelineTracker,
 } from "@/components/module/admin/dashboard";
 
 // Import page layout components
@@ -37,6 +38,9 @@ export default function AdminDashboard() {
         <div className="space-y-6">
           {/* Manufacturing Workflow Connections */}
           <WorkflowConnections />
+
+          {/* Workflow Pipeline Tracker - NEW SECTION */}
+          <WorkflowPipelineTracker />
 
           {/* Order Status Comparison (Customer vs Production) */}
           <OrderStatusComparison />
