@@ -240,6 +240,7 @@ export default async function middleware(req: NextRequest) {
     pathname === "/install-app" ||
     pathname === "/changelog" ||
     pathname === "/offline" ||
+    pathname === "/forgot-password" ||
     pathname.includes("/login") ||
     isShareableRoute
   ) {
