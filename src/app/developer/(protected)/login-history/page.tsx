@@ -8,6 +8,8 @@ export const metadata = {
   description: "View and analyze login history and statistics",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function LoginHistoryPage() {
   return (
     <div className="container mx-auto py-6 space-y-6">

@@ -1,5 +1,6 @@
 import { ArrowLeft } from "lucide-react"
 import type { Metadata } from "next"
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -9,9 +10,27 @@ import { getProductionOrderWithPhaseStatus } from "@/lib/actions/production-orde
 import { convertDecimals } from "@/lib/convertDecimals"
 import { getAvailableWorkCenters } from "@/lib/actions/inspector/production-order"
 import { ProductionOrderDetails } from "@/components/module/worker/tasks/production-order-details"
-import { ProductionQRGenerator } from "@/components/module/worker/tasks/production-qr-generator"
-import { ProductionWorkflowProgressButton } from "@/components/module/admin/production/production-workflow-progress-button"
 import { getCurrentUserRole } from "@/lib/actions/worker/get-user-role" // Removed canAccessProductionOrder
+
+const ProductionQRGenerator = dynamic(
+  () =>
+    import("@/components/module/worker/tasks/production-qr-generator").then(
+      (mod) => mod.ProductionQRGenerator
+    ),
+  {
+    loading: () => <Button variant="outline" size="sm" disabled>Loading QR...</Button>,
+  }
+)
+
+const ProductionWorkflowProgressButton = dynamic(
+  () =>
+    import("@/components/module/admin/production/production-workflow-progress-button").then(
+      (mod) => mod.ProductionWorkflowProgressButton
+    ),
+  {
+    loading: () => <Button variant="outline" size="sm" disabled>Loading status...</Button>,
+  }
+)
 
 interface ProductionOrderPageProps {
   params: Promise<{

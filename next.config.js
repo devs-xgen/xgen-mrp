@@ -11,6 +11,13 @@ const nextConfig = {
   
   experimental: {
     scrollRestoration: true,
+    optimizePackageImports: [
+      'lucide-react',
+      'date-fns',
+      '@heroicons/react',
+      '@headlessui/react',
+      '@radix-ui/react-icons',
+    ],
   },
   eslint: {
     ignoreDuringBuilds: true,

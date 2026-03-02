@@ -51,8 +51,6 @@ export default async function ProductionOrderPage({ params }: ProductionOrderPag
 
   // Convert Decimal fields to numbers for client component compatibility
   const orderData = convertDecimals(orderDataRaw)
-  console.log("Enhanced order data with phase status:", JSON.stringify(orderData, null, 2))
-
   const allInspectors = await getActiveInspectors() // fetch once
   const inspectorsMap = new Map()
   for (const inspector of allInspectors) {

@@ -1,12 +1,38 @@
 // src/app/admin/(protected)/production/[id]/production-order-header-actions.tsx
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ProductionWorkflowProgressButton } from "@/components/module/admin/production/production-workflow-progress-button";
-import { ProductionQRGenerator } from "@/components/module/admin/production/production-qr-generator";
-import { ProductionOrderShareDialog } from "@/components/module/admin/production/production-order-share-dialog";
+
+const ProductionWorkflowProgressButton = dynamic(
+  () =>
+    import("@/components/module/admin/production/production-workflow-progress-button").then(
+      (mod) => mod.ProductionWorkflowProgressButton
+    ),
+  {
+    loading: () => <Button variant="outline" size="sm" disabled>Loading status...</Button>,
+  }
+);
+
+const ProductionQRGenerator = dynamic(
+  () =>
+    import("@/components/module/admin/production/production-qr-generator").then(
+      (mod) => mod.ProductionQRGenerator
+    ),
+  {
+    ssr: false,
+    loading: () => <Button variant="outline" size="sm" disabled>Loading QR...</Button>,
+  }
+);
+
+const ProductionOrderShareDialog = dynamic(
+  () =>
+    import("@/components/module/admin/production/production-order-share-dialog").then(
+      (mod) => mod.ProductionOrderShareDialog
+    )
+);
 
 interface ProductionOrderHeaderActionsProps {
   productionOrderId: string;
