@@ -7604,3 +7604,217 @@ export async function getProductionStats() {
     };
   }
 }
+
+// ============================================================================
+// EXPORT FUNCTIONS
+// ============================================================================
+
+export async function exportProductionOrdersData(filters?: {
+  status?: string;
+  search?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+}): Promise<{ csvContent: string; filename: string }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) throw new Error("Unauthorized: Please log in to export data");
+
+  const where: any = {};
+  if (filters?.status) where.status = filters.status;
+  if (filters?.search) {
+    where.OR = [
+      { product: { name: { contains: filters.search, mode: "insensitive" } } },
+      { product: { sku: { contains: filters.search, mode: "insensitive" } } },
+      { customerOrder: { orderNumber: { contains: filters.search, mode: "insensitive" } } },
+    ];
+  }
+  if (filters?.dateFrom || filters?.dateTo) {
+    where.startDate = {};
+    if (filters.dateFrom) where.startDate.gte = filters.dateFrom;
+    if (filters.dateTo) where.startDate.lte = filters.dateTo;
+  }
+
+  const orders = await prisma.productionOrder.findMany({
+    where,
+    orderBy: { startDate: "desc" },
+    include: {
+      product: { select: { name: true, sku: true } },
+      productVariant: { select: { displayName: true } },
+      customerOrder: { select: { orderNumber: true, customer: { select: { name: true } } } },
+      operations: { select: { id: true } },
+      qualityChecks: { select: { id: true } },
+    },
+  });
+
+  const headers = [
+    "Order ID",
+    "Product Name",
+    "Product SKU",
+    "Variant",
+    "Quantity",
+    "Completed Qty",
+    "Progress %",
+    "Status",
+    "Priority",
+    "Customer",
+    "Customer Order",
+    "Start Date",
+    "Due Date",
+    "Planned Cost",
+    "Actual Cost",
+    "Operations",
+    "Quality Checks",
+    "Created At",
+  ];
+
+  const toNum = (v: any) => (typeof v === "number" ? v : v?.toNumber ? v.toNumber() : Number(v ?? 0));
+  const fmtDate = (d: Date | null | undefined) => (d ? new Date(d).toISOString().split("T")[0] : "");
+  const esc = (val: any) => {
+    const s = val == null ? "" : String(val);
+    return s.includes('"') || s.includes(",") || s.includes("\n")
+      ? '"' + s.replaceAll('"', '""') + '"'
+      : s;
+  };
+
+  const rows = orders.map((o: any) => {
+    const progress = o.quantity > 0
+      ? Math.round((o.completedQuantity / o.quantity) * 100)
+      : 0;
+    return [
+      o.id.substring(0, 12),
+      o.product.name,
+      o.product.sku,
+      o.productVariant?.displayName || "",
+      o.quantity,
+      o.completedQuantity,
+      progress,
+      o.status,
+      o.priority,
+      o.customerOrder?.customer?.name || "Standalone",
+      o.customerOrder?.orderNumber || "",
+      fmtDate(o.startDate),
+      fmtDate(o.dueDate),
+      toNum(o.plannedMaterialCost),
+      toNum(o.actualMaterialCost),
+      o.operations.length,
+      o.qualityChecks.length,
+      fmtDate(o.createdAt),
+    ]
+      .map(esc)
+      .join(",");
+  });
+
+  const csvContent = [headers.join(","), ...rows].join("\n");
+  const ts = new Date().toISOString().split("T")[0];
+  return { csvContent, filename: `production-orders-export-${ts}.csv` };
+}
+
+export async function exportProductionOrdersExcelAdmin(filters?: {
+  status?: string;
+  search?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+}): Promise<{ base64: string; filename: string }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) throw new Error("Unauthorized: Please log in to export data");
+
+  const where: any = {};
+  if (filters?.status) where.status = filters.status;
+  if (filters?.search) {
+    where.OR = [
+      { product: { name: { contains: filters.search, mode: "insensitive" } } },
+      { product: { sku: { contains: filters.search, mode: "insensitive" } } },
+      { customerOrder: { orderNumber: { contains: filters.search, mode: "insensitive" } } },
+    ];
+  }
+  if (filters?.dateFrom || filters?.dateTo) {
+    where.startDate = {};
+    if (filters.dateFrom) where.startDate.gte = filters.dateFrom;
+    if (filters.dateTo) where.startDate.lte = filters.dateTo;
+  }
+
+  const orders = await prisma.productionOrder.findMany({
+    where,
+    orderBy: { startDate: "desc" },
+    include: {
+      product: { select: { name: true, sku: true } },
+      productVariant: { select: { displayName: true } },
+      customerOrder: { select: { orderNumber: true, customer: { select: { name: true } } } },
+      operations: { select: { id: true } },
+      qualityChecks: { select: { id: true } },
+    },
+  });
+
+  const { default: ExcelJS } = await import("exceljs");
+  const workbook = new ExcelJS.Workbook();
+  const ws = workbook.addWorksheet("Production Orders");
+
+  ws.addRow([
+    "Order ID",
+    "Product Name",
+    "Product SKU",
+    "Variant",
+    "Quantity",
+    "Completed Qty",
+    "Progress %",
+    "Status",
+    "Priority",
+    "Customer",
+    "Customer Order",
+    "Start Date",
+    "Due Date",
+    "Planned Cost",
+    "Actual Cost",
+    "Operations",
+    "Quality Checks",
+    "Created At",
+  ]);
+  ws.getRow(1).font = { bold: true };
+
+  const toNum = (v: any) => (typeof v === "number" ? v : v?.toNumber ? v.toNumber() : Number(v ?? 0));
+
+  orders.forEach((o: any) => {
+    const progress = o.quantity > 0
+      ? Math.round((o.completedQuantity / o.quantity) * 100)
+      : 0;
+    ws.addRow([
+      o.id.substring(0, 12),
+      o.product.name,
+      o.product.sku,
+      o.productVariant?.displayName || "",
+      o.quantity,
+      o.completedQuantity,
+      progress,
+      o.status,
+      o.priority,
+      o.customerOrder?.customer?.name || "Standalone",
+      o.customerOrder?.orderNumber || "",
+      o.startDate ? new Date(o.startDate) : null,
+      o.dueDate ? new Date(o.dueDate) : null,
+      toNum(o.plannedMaterialCost),
+      toNum(o.actualMaterialCost),
+      o.operations.length,
+      o.qualityChecks.length,
+      o.createdAt ? new Date(o.createdAt) : null,
+    ]);
+  });
+
+  ws.getColumn(14).numFmt = "₱#,##0.00";
+  ws.getColumn(15).numFmt = "₱#,##0.00";
+  [12, 13, 18].forEach((col) => {
+    ws.getColumn(col).numFmt = "yyyy-mm-dd";
+  });
+
+  ws.columns.forEach((col: any) => {
+    let max = 12;
+    col.eachCell({ includeEmpty: true }, (cell: any) => {
+      const len = cell.value ? String(cell.value).length : 0;
+      if (len > max) max = len;
+    });
+    col.width = Math.min(42, max + 2);
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const base64 = Buffer.from(buffer).toString("base64");
+  const ts = new Date().toISOString().split("T")[0];
+  return { base64, filename: `production-orders-export-${ts}.xlsx` };
+}

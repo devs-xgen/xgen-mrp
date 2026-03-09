@@ -2,6 +2,32 @@
   "project": "XGen MRP",
   "entries": [
     {
+      "version": "1.5.15",
+      "date": "2026-03-09",
+      "changes": [
+        "SECURITY: findUserByEmail now blocks inactive/suspended accounts from self-service password reset",
+        "FEATURE: Forgot password link now passes ?from=<portal> query param so the reset page knows which portal the user came from",
+        "UX: Forgot-password back link is now portal-aware — e.g. 'Back to Worker Login' instead of generic 'Back to home'",
+        "UX: Post-reset 'Go to Login' button falls back to the originating portal if role lookup is ambiguous",
+        "UX: Simplified-reset disclaimer moved inside the card as a visible Alert — no longer hidden below the card as tiny text",
+        "POLISH: Inspector login page now has a proper Metadata export for browser tab title, matching all other role login pages"
+      ]
+    },
+    {
+      "version": "1.5.14",
+      "date": "2025-01-15",
+      "changes": [
+        "FIX: exportToExcel in report-export.ts now generates a true .xlsx file via ExcelJS instead of renaming a .csv file",
+        "FIX: exportAuditToExcel in audit-export.ts now generates a true .xlsx file with a Summary sheet and Audit Log sheet via ExcelJS",
+        "FEATURE: Admin Customer Orders V2 — added CSV and Excel (.xlsx) export with order number, status, customer, amounts, dates, and linked production count",
+        "FEATURE: Admin Production Orders — added CSV and Excel (.xlsx) export with product, variant, quantity, progress, costs, customer, and dates",
+        "UI/UX: Export button added to Customer Orders V2 page header (Export dropdown with CSV and Excel options)",
+        "UI/UX: Export button added to Production Orders page header (Export dropdown with CSV and Excel options)",
+        "DOCS: Import scope documented as invoice line-items only (bulk-item-operations.tsx) — no entity-level import in this phase",
+        "DOCS: Google Sheets / Google Drive integration explicitly deferred — requires OAuth credentials and policy approval before implementation"
+      ]
+    },
+    {
       "version": "1.5.13",
       "date": "2025-12-01",
       "changes": [

@@ -51,8 +51,8 @@ This folder is the canonical planning area for implementation scopes that are no
 
 ## Current Priority Order
 
-1. Export and import stabilization
-2. Reset password entry points for all role logins
+1. ~~Export and import stabilization~~ — **Done (v1.5.14)**
+2. ~~Reset password entry points for all role logins~~ — **Done (v1.5.15)**
 3. Soft delete and restore
 4. Customer orders homepage route fix
 5. Delivery task view error
@@ -60,14 +60,14 @@ This folder is the canonical planning area for implementation scopes that are no
 
 ## Scope Index
 
-| Priority | Type | Status | Scope | File | Notes |
-|----------|------|--------|-------|------|-------|
-| P1 | Active | Planned | Export and import stabilization across the system | [active/P1-export-import-stabilization.md](./active/P1-export-import-stabilization.md) | Highest priority; existing export paths appear partial and inconsistent |
-| P2 | Active | Planned | Reset password entry points for all role logins | [active/P2-reset-password-entrypoints.md](./active/P2-reset-password-entrypoints.md) | Global forgot-password flow exists but needs to be treated as a first-class feature |
-| P3 | Active | Planned | Soft delete and restore for customer orders, production orders, materials, and products | [active/P3-soft-delete-and-restore.md](./active/P3-soft-delete-and-restore.md) | Separate from existing archive behavior |
-| P4 | Active | Planned | Customer orders homepage 404 and route consistency | [active/P4-customer-orders-homepage-route-fix.md](./active/P4-customer-orders-homepage-route-fix.md) | Admin route surface already centers on `customer-orders-v2` |
-| P5 | Active | Planned | Delivery task detail error investigation and stabilization | [active/P5-delivery-task-view-error.md](./active/P5-delivery-task-view-error.md) | Delivery detail currently routes through `/delivery/orders/[id]` |
-| D1 | Decision | Decision Needed | Superadmin role scope review | [decisions/D1-superadmin-role-scope.md](./decisions/D1-superadmin-role-scope.md) | On hold pending discussion with boss ma'am |
+| Priority | Type      | Status          | Scope                                                                                   | File                                                                                                 | Notes                                                                                        |
+| -------- | --------- | --------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --- |
+| P1       | Completed | Done            | Export and import stabilization across the system                                       | [completed/P1-export-import-stabilization.md](./completed/P1-export-import-stabilization.md)         | Shipped v1.5.14 — fixed fake Excel, added Customer Orders + Production Orders exports        |
+| P2       | Completed | Done            | Reset password entry points for all role logins                                         | [completed/P2-reset-password-entrypoints.md](./completed/P2-reset-password-entrypoints.md)           | Shipped v1.5.15 — security guard, portal context, portal-aware back link, disclaimer in card |     |
+| P3       | Active    | Planned         | Soft delete and restore for customer orders, production orders, materials, and products | [active/P3-soft-delete-and-restore.md](./active/P3-soft-delete-and-restore.md)                       | Separate from existing archive behavior                                                      |
+| P4       | Active    | Planned         | Customer orders homepage 404 and route consistency                                      | [active/P4-customer-orders-homepage-route-fix.md](./active/P4-customer-orders-homepage-route-fix.md) | Admin route surface already centers on `customer-orders-v2`                                  |
+| P5       | Active    | Planned         | Delivery task detail error investigation and stabilization                              | [active/P5-delivery-task-view-error.md](./active/P5-delivery-task-view-error.md)                     | Delivery detail currently routes through `/delivery/orders/[id]`                             |
+| D1       | Decision  | Decision Needed | Superadmin role scope review                                                            | [decisions/D1-superadmin-role-scope.md](./decisions/D1-superadmin-role-scope.md)                     | On hold pending discussion with boss ma'am                                                   |
 
 ## Planning File Template
 

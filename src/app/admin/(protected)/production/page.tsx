@@ -8,6 +8,7 @@ import ProductionDataTable from "./production-data-table";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import { ProductionOrdersExportButton } from "@/components/module/admin/production/production-orders-export-button";
 import {
   PageContainer,
   PageHeader,
@@ -19,7 +20,10 @@ import {
   SectionCard,
 } from "@/components/shared/page-layout";
 import { Badge } from "@/components/ui/badge";
-import { AnalyticsCard, analyticsCardVariants } from "@/components/ui/analytics-card";
+import {
+  AnalyticsCard,
+  analyticsCardVariants,
+} from "@/components/ui/analytics-card";
 
 import { FloatingChatbox } from "@/components/global/floating-chatbox";
 
@@ -35,7 +39,8 @@ export default async function ProductionOrdersPage({
 }) {
   const page = Number(searchParams.page) || 1;
   const limit = Number(searchParams.limit) || 10;
-  const search = typeof searchParams.search === "string" ? searchParams.search : "";
+  const search =
+    typeof searchParams.search === "string" ? searchParams.search : "";
 
   const [ordersData, stats] = await Promise.all([
     getPaginatedProductionOrders({ page, limit, search }),
@@ -80,6 +85,7 @@ export default async function ProductionOrdersPage({
           </PageDescription>
         </PageHeaderMain>
         <PageHeaderActions>
+          <ProductionOrdersExportButton />
           <Link href="/admin/production/create">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -120,7 +126,10 @@ export default async function ProductionOrdersPage({
 
         {/* Quick Filters */}
         <div className="flex flex-wrap gap-2">
-          <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
+          <Badge
+            variant="outline"
+            className="cursor-pointer hover:bg-secondary"
+          >
             All ({stats.totalOrders})
           </Badge>
           <Badge
@@ -129,10 +138,16 @@ export default async function ProductionOrdersPage({
           >
             In Progress ({stats.inProgress})
           </Badge>
-          <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
+          <Badge
+            variant="outline"
+            className="cursor-pointer hover:bg-secondary"
+          >
             Pending ({stats.pending})
           </Badge>
-          <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
+          <Badge
+            variant="outline"
+            className="cursor-pointer hover:bg-secondary"
+          >
             Completed ({stats.completed})
           </Badge>
           <Badge

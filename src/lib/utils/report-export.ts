@@ -41,14 +41,53 @@ export function exportToCSV(data: any[], filename: string = "report.csv") {
 }
 
 // ============================================================================
-// Excel Export (CSV format compatible with Excel)
+// Excel Export (true .xlsx via ExcelJS)
 // ============================================================================
 
-export function exportToExcel(data: any[], filename: string = "report.xlsx") {
-  // For now, we'll use CSV format which Excel can open
-  // In a production app, you'd use a library like xlsx or exceljs
-  const csvFilename = filename.replace(".xlsx", ".csv");
-  exportToCSV(data, csvFilename);
+export async function exportToExcel(data: any[], filename: string = "report.xlsx") {
+  if (data.length === 0) {
+    alert("No data to export");
+    return;
+  }
+
+  const ExcelJS = (await import("exceljs")).default;
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Report");
+
+  const headers = Object.keys(data[0]);
+  worksheet.addRow(headers);
+  worksheet.getRow(1).font = { bold: true };
+
+  data.forEach(row => {
+    worksheet.addRow(headers.map(h => {
+      const v = row[h];
+      if (v === null || v === undefined) return "";
+      if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v)) return new Date(v);
+      return v;
+    }));
+  });
+
+  worksheet.columns.forEach(col => {
+    let max = 12;
+    col.eachCell?.({ includeEmpty: true }, cell => {
+      const len = cell.value ? String(cell.value).length : 0;
+      if (len > max) max = len;
+    });
+    col.width = Math.min(50, max + 2);
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename.endsWith(".xlsx") ? filename : filename.replace(/\.csv$/, ".xlsx");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
 }
 
 // ============================================================================

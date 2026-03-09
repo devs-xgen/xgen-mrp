@@ -2471,3 +2471,174 @@ export async function getCustomerOrderStats() {
   }
 }
 
+// ============================================================================
+// EXPORT FUNCTIONS
+// ============================================================================
+
+export async function exportCustomerOrdersData(filters?: {
+  search?: string;
+  statuses?: Status[];
+  dateFrom?: Date;
+  dateTo?: Date;
+}): Promise<{ csvContent: string; filename: string }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) throw new Error("Unauthorized: Please log in to export data");
+
+  const where: any = {};
+  if (filters?.statuses?.length) where.status = { in: filters.statuses };
+  if (filters?.search) {
+    where.OR = [
+      { orderNumber: { contains: filters.search, mode: "insensitive" } },
+      { customer: { name: { contains: filters.search, mode: "insensitive" } } },
+    ];
+  }
+  if (filters?.dateFrom || filters?.dateTo) {
+    where.orderDate = {};
+    if (filters.dateFrom) where.orderDate.gte = filters.dateFrom;
+    if (filters.dateTo) where.orderDate.lte = filters.dateTo;
+  }
+
+  const orders = await prisma.customerOrder.findMany({
+    where,
+    orderBy: { orderDate: "desc" },
+    include: {
+      customer: { select: { name: true, email: true } },
+      productionOrders: { select: { id: true } },
+    },
+  });
+
+  const headers = [
+    "Order Number",
+    "Status",
+    "Customer Name",
+    "Customer Email",
+    "Total Amount",
+    "Order Date",
+    "Due Date",
+    "Payment Status",
+    "Production Orders",
+    "Notes",
+    "Created At",
+  ];
+
+  const toNum = (v: any) => (typeof v === "number" ? v : v?.toNumber ? v.toNumber() : Number(v ?? 0));
+  const fmtDate = (d: Date | null | undefined) => (d ? new Date(d).toISOString().split("T")[0] : "");
+  const esc = (val: any) => {
+    const s = val == null ? "" : String(val);
+    return s.includes('"') || s.includes(",") || s.includes("\n")
+      ? '"' + s.replaceAll('"', '""') + '"'
+      : s;
+  };
+
+  const rows = orders.map((o) =>
+    [
+      o.orderNumber,
+      o.status,
+      o.customer?.name || "",
+      o.customer?.email || "",
+      toNum((o as any).totalAmount),
+      fmtDate(o.orderDate),
+      fmtDate((o as any).dueDate),
+      (o as any).paymentStatus || "",
+      (o as any).productionOrders?.length ?? 0,
+      (o as any).notes || "",
+      fmtDate(o.createdAt),
+    ]
+      .map(esc)
+      .join(",")
+  );
+
+  const csvContent = [headers.join(","), ...rows].join("\n");
+  const ts = new Date().toISOString().split("T")[0];
+  return { csvContent, filename: `customer-orders-export-${ts}.csv` };
+}
+
+export async function exportCustomerOrdersExcel(filters?: {
+  search?: string;
+  statuses?: Status[];
+  dateFrom?: Date;
+  dateTo?: Date;
+}): Promise<{ base64: string; filename: string }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) throw new Error("Unauthorized: Please log in to export data");
+
+  const where: any = {};
+  if (filters?.statuses?.length) where.status = { in: filters.statuses };
+  if (filters?.search) {
+    where.OR = [
+      { orderNumber: { contains: filters.search, mode: "insensitive" } },
+      { customer: { name: { contains: filters.search, mode: "insensitive" } } },
+    ];
+  }
+  if (filters?.dateFrom || filters?.dateTo) {
+    where.orderDate = {};
+    if (filters.dateFrom) where.orderDate.gte = filters.dateFrom;
+    if (filters.dateTo) where.orderDate.lte = filters.dateTo;
+  }
+
+  const orders = await prisma.customerOrder.findMany({
+    where,
+    orderBy: { orderDate: "desc" },
+    include: {
+      customer: { select: { name: true, email: true } },
+      productionOrders: { select: { id: true } },
+    },
+  });
+
+  const { default: ExcelJS } = await import("exceljs");
+  const workbook = new ExcelJS.Workbook();
+  const ws = workbook.addWorksheet("Customer Orders");
+
+  ws.addRow([
+    "Order Number",
+    "Status",
+    "Customer Name",
+    "Customer Email",
+    "Total Amount",
+    "Order Date",
+    "Due Date",
+    "Payment Status",
+    "Production Orders",
+    "Notes",
+    "Created At",
+  ]);
+  ws.getRow(1).font = { bold: true };
+
+  const toNum = (v: any) => (typeof v === "number" ? v : v?.toNumber ? v.toNumber() : Number(v ?? 0));
+
+  orders.forEach((o) => {
+    ws.addRow([
+      o.orderNumber,
+      o.status,
+      o.customer?.name || "",
+      o.customer?.email || "",
+      toNum((o as any).totalAmount),
+      o.orderDate ? new Date(o.orderDate) : null,
+      (o as any).dueDate ? new Date((o as any).dueDate) : null,
+      (o as any).paymentStatus || "",
+      (o as any).productionOrders?.length ?? 0,
+      (o as any).notes || "",
+      o.createdAt ? new Date(o.createdAt) : null,
+    ]);
+  });
+
+  ws.getColumn(5).numFmt = "#,##0.00";
+  [6, 7, 11].forEach((col) => {
+    ws.getColumn(col).numFmt = "yyyy-mm-dd";
+  });
+
+  ws.columns.forEach((col: any) => {
+    let max = 12;
+    col.eachCell({ includeEmpty: true }, (cell: any) => {
+      const len = cell.value ? String(cell.value).length : 0;
+      if (len > max) max = len;
+    });
+    col.width = Math.min(42, max + 2);
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const base64 = Buffer.from(buffer).toString("base64");
+  const ts = new Date().toISOString().split("T")[0];
+  return { base64, filename: `customer-orders-export-${ts}.xlsx` };
+}
+

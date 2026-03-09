@@ -29,6 +29,10 @@ export async function findUserByEmail(email: string) {
       return { success: false, error: "No account found with this email address." }
     }
 
+    if (user.status !== "ACTIVE") {
+      return { success: false, error: "This account is inactive. Please contact your administrator." }
+    }
+
     return { success: true, data: { email: user.email, role: user.role } }
   } catch (error) {
     console.error("Error finding user:", error)

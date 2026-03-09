@@ -72,14 +72,81 @@ export function exportAuditToCSV(reportData: AuditReportData, filename: string =
 }
 
 // ============================================================================
-// Excel Export (CSV format compatible with Excel)
+// Excel Export (true .xlsx via ExcelJS)
 // ============================================================================
 
-export function exportAuditToExcel(reportData: AuditReportData, filename: string = "audit-report.xlsx") {
-  // For simplicity, export as CSV which Excel can open
-  // In production, use a library like exceljs for true .xlsx format
-  const csvFilename = filename.replace(".xlsx", ".csv");
-  exportAuditToCSV(reportData, csvFilename);
+export async function exportAuditToExcel(reportData: AuditReportData, filename: string = "audit-report.xlsx") {
+  if (reportData.entries.length === 0) {
+    alert("No data to export");
+    return;
+  }
+
+  const ExcelJS = (await import("exceljs")).default;
+  const workbook = new ExcelJS.Workbook();
+
+  // Summary sheet
+  const summarySheet = workbook.addWorksheet("Summary");
+  summarySheet.addRow(["Report Type", reportData.summary.reportType]);
+  summarySheet.addRow(["Period", reportData.summary.period]);
+  summarySheet.addRow(["Total Entries", reportData.summary.totalEntries]);
+  summarySheet.addRow(["Unique Users", reportData.summary.uniqueUsers]);
+  summarySheet.addRow(["Generated", new Date(reportData.summary.generatedAt).toLocaleString()]);
+  summarySheet.getColumn(1).font = { bold: true };
+  summarySheet.getColumn(1).width = 20;
+  summarySheet.getColumn(2).width = 40;
+
+  // Entries sheet
+  const sheet = workbook.addWorksheet("Audit Log");
+  const headers = [
+    "Timestamp",
+    "User Name",
+    "User Email",
+    "Role",
+    "Action Type",
+    "Entity Type",
+    "Entity ID",
+    "Description",
+    "IP Address",
+  ];
+  sheet.addRow(headers);
+  sheet.getRow(1).font = { bold: true };
+
+  reportData.entries.forEach(entry => {
+    sheet.addRow([
+      new Date(entry.timestamp),
+      entry.userName,
+      entry.userEmail,
+      entry.userRole,
+      entry.actionType,
+      entry.entityType || "",
+      entry.entityId || "",
+      entry.description || "",
+      entry.ipAddress || "",
+    ]);
+  });
+
+  sheet.getColumn(1).numFmt = "yyyy-mm-dd hh:mm:ss";
+  sheet.columns.forEach(col => {
+    let max = 12;
+    col.eachCell?.({ includeEmpty: true }, cell => {
+      const len = cell.value ? String(cell.value).length : 0;
+      if (len > max) max = len;
+    });
+    col.width = Math.min(50, max + 2);
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename.endsWith(".xlsx") ? filename : filename.replace(/\.csv$/, ".xlsx");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
 }
 
 // ============================================================================

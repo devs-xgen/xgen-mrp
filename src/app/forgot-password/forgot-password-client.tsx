@@ -1,13 +1,28 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { ArrowLeft, CheckCircle, EyeIcon, EyeOffIcon, Loader2, KeyRound } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  ArrowLeft,
+  CheckCircle,
+  EyeIcon,
+  EyeOffIcon,
+  Loader2,
+  KeyRound,
+  Info,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -15,90 +30,120 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { findUserByEmail, resetPassword } from "@/lib/actions/auth"
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { findUserByEmail, resetPassword } from "@/lib/actions/auth";
 
 const emailSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
-})
+});
 
-const resetSchema = z.object({
-  newPassword: z.string().min(6, "Password must be at least 6 characters."),
-  confirmPassword: z.string().min(6, "Password must be at least 6 characters."),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords do not match.",
-  path: ["confirmPassword"],
-})
+const resetSchema = z
+  .object({
+    newPassword: z.string().min(6, "Password must be at least 6 characters."),
+    confirmPassword: z
+      .string()
+      .min(6, "Password must be at least 6 characters."),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  });
 
-type Step = "email" | "reset" | "success"
+type Step = "email" | "reset" | "success";
+
+const PORTAL_LOGIN_PATHS: Record<string, string> = {
+  admin: "/admin/login",
+  worker: "/worker/login",
+  inspector: "/inspector/login",
+  delivery: "/delivery/login",
+  superadmin: "/superadmin/login",
+  super_admin: "/superadmin/login",
+  developer: "/developer/login",
+};
 
 export function ForgotPasswordClient() {
-  const [step, setStep] = useState<Step>("email")
-  const [confirmedEmail, setConfirmedEmail] = useState("")
-  const [userRole, setUserRole] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [showNewPassword, setShowNewPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const searchParams = useSearchParams();
+  const fromPortal = searchParams.get("from")?.toLowerCase() ?? "";
+
+  const [step, setStep] = useState<Step>("email");
+  const [confirmedEmail, setConfirmedEmail] = useState("");
+  const [userRole, setUserRole] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const emailForm = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),
     defaultValues: { email: "" },
-  })
+  });
 
   const resetForm = useForm<z.infer<typeof resetSchema>>({
     resolver: zodResolver(resetSchema),
     defaultValues: { newPassword: "", confirmPassword: "" },
-  })
+  });
 
   async function onEmailSubmit(values: z.infer<typeof emailSchema>) {
-    setIsLoading(true)
-    setError("")
+    setIsLoading(true);
+    setError("");
     try {
-      const result = await findUserByEmail(values.email)
+      const result = await findUserByEmail(values.email);
       if (!result.success) {
-        setError(result.error ?? "An error occurred.")
-        return
+        setError(result.error ?? "An error occurred.");
+        return;
       }
-      setConfirmedEmail(values.email)
-      setUserRole(result.data?.role ?? "")
-      setStep("reset")
+      setConfirmedEmail(values.email);
+      setUserRole(result.data?.role ?? "");
+      setStep("reset");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   async function onResetSubmit(values: z.infer<typeof resetSchema>) {
-    setIsLoading(true)
-    setError("")
+    setIsLoading(true);
+    setError("");
     try {
       const result = await resetPassword({
         email: confirmedEmail,
         newPassword: values.newPassword,
         confirmPassword: values.confirmPassword,
-      })
+      });
       if (!result.success) {
-        setError(result.error ?? "An error occurred.")
-        return
+        setError(result.error ?? "An error occurred.");
+        return;
       }
-      setStep("success")
+      setStep("success");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   const getLoginHref = () => {
-    const role = userRole.toLowerCase()
-    if (role === "super_admin") return "/superadmin/login"
-    if (role === "admin") return "/admin/login"
-    if (role === "worker") return "/worker/login"
-    if (role === "inspector") return "/inspector/login"
-    if (role === "delivery") return "/delivery/login"
-    if (role === "developer") return "/developer/login"
-    return "/admin/login"
-  }
+    const role = userRole.toLowerCase();
+    return (
+      PORTAL_LOGIN_PATHS[role] ??
+      PORTAL_LOGIN_PATHS[fromPortal] ??
+      "/admin/login"
+    );
+  };
+
+  const getBackHref = () => PORTAL_LOGIN_PATHS[fromPortal] ?? "/";
+
+  const getBackLabel = () => {
+    const labels: Record<string, string> = {
+      admin: "Back to Admin Login",
+      worker: "Back to Worker Login",
+      inspector: "Back to Inspector Login",
+      delivery: "Back to Delivery Login",
+      superadmin: "Back to Super Admin Login",
+      super_admin: "Back to Super Admin Login",
+      developer: "Back to Developer Login",
+    };
+    return labels[fromPortal] ?? "Back to home";
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -120,10 +165,13 @@ export function ForgotPasswordClient() {
               {step === "reset" && (
                 <>
                   Setting new password for{" "}
-                  <span className="font-medium text-foreground">{confirmedEmail}</span>
+                  <span className="font-medium text-foreground">
+                    {confirmedEmail}
+                  </span>
                 </>
               )}
-              {step === "success" && "Your password has been changed successfully"}
+              {step === "success" &&
+                "Your password has been changed successfully"}
             </CardDescription>
           </CardHeader>
 
@@ -137,7 +185,10 @@ export function ForgotPasswordClient() {
             {/* Step 1 — Email lookup */}
             {step === "email" && (
               <Form {...emailForm}>
-                <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
+                <form
+                  onSubmit={emailForm.handleSubmit(onEmailSubmit)}
+                  className="space-y-4"
+                >
                   <FormField
                     control={emailForm.control}
                     name="email"
@@ -173,7 +224,10 @@ export function ForgotPasswordClient() {
             {/* Step 2 — New password */}
             {step === "reset" && (
               <Form {...resetForm}>
-                <form onSubmit={resetForm.handleSubmit(onResetSubmit)} className="space-y-4">
+                <form
+                  onSubmit={resetForm.handleSubmit(onResetSubmit)}
+                  className="space-y-4"
+                >
                   <FormField
                     control={resetForm.control}
                     name="newPassword"
@@ -193,7 +247,9 @@ export function ForgotPasswordClient() {
                               variant="ghost"
                               size="sm"
                               className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-transparent"
-                              onClick={() => setShowNewPassword(!showNewPassword)}
+                              onClick={() =>
+                                setShowNewPassword(!showNewPassword)
+                              }
                             >
                               {showNewPassword ? (
                                 <EyeOffIcon className="h-4 w-4" />
@@ -226,7 +282,9 @@ export function ForgotPasswordClient() {
                               variant="ghost"
                               size="sm"
                               className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-transparent"
-                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              onClick={() =>
+                                setShowConfirmPassword(!showConfirmPassword)
+                              }
                             >
                               {showConfirmPassword ? (
                                 <EyeOffIcon className="h-4 w-4" />
@@ -246,11 +304,18 @@ export function ForgotPasswordClient() {
                       variant="outline"
                       className="w-full"
                       disabled={isLoading}
-                      onClick={() => { setStep("email"); setError("") }}
+                      onClick={() => {
+                        setStep("email");
+                        setError("");
+                      }}
                     >
                       Back
                     </Button>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={isLoading}
+                    >
                       {isLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -280,26 +345,35 @@ export function ForgotPasswordClient() {
               </div>
             )}
 
-            {/* Back to home link */}
+            {/* Simplified reset disclaimer — shown on email step */}
+            {step === "email" && (
+              <Alert className="border-muted bg-muted/40">
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-xs text-muted-foreground">
+                  This is a simplified password reset. No email verification is
+                  required.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Portal-aware back link */}
             {step !== "success" && (
               <div className="text-center">
-                <Link href="/">
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+                <Link href={getBackHref()}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-primary"
+                  >
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to home
+                    {getBackLabel()}
                   </Button>
                 </Link>
               </div>
             )}
           </CardContent>
         </Card>
-
-        {step === "email" && (
-          <p className="mt-4 text-center text-xs text-muted-foreground">
-            Note: This is a simplified password reset. No email verification is required.
-          </p>
-        )}
       </div>
     </div>
-  )
+  );
 }

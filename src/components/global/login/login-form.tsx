@@ -132,7 +132,7 @@ export function LoginForm() {
               <div className="flex items-center justify-between">
                 <FormLabel>Password</FormLabel>
                 <Link
-                  href="/forgot-password"
+                  href={`/forgot-password?from=${portal.toLowerCase()}`}
                   className="text-xs text-muted-foreground hover:text-primary hover:underline"
                 >
                   Forgot password?
