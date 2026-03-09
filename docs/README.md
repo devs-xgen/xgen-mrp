@@ -11,6 +11,10 @@ The application is a Next.js 15 App Router system for manufacturing operations, 
 
 ## Documentation Map
 
+### Planning
+
+- [Plan Spec](./plan-spec/README.md)
+
 ### Technical
 
 - [Technical Overview](./technical/README.md)
