@@ -1,5 +1,6 @@
 // src\app\delivery\(public)\login\page.tsx
 
+import { Metadata } from "next";
 import { LoginForm } from "@/components/global/login/login-form";
 import {
   Card,
@@ -11,6 +12,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Delivery Login",
+  description: "Login to access the logistics and delivery system",
+};
 
 export default function DeliveryLoginPage() {
   return (
@@ -27,7 +33,11 @@ export default function DeliveryLoginPage() {
             <LoginForm />
             <div className="mt-6 text-center">
               <Link href="/">
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-primary"
+                >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to home
                 </Button>

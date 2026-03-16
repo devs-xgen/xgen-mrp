@@ -214,6 +214,9 @@ export async function getDeliveryAssignmentById(id: string) {
     return serializeObject(assignment);
   } catch (error) {
     console.error("Error fetching delivery assignment:", error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error("Failed to fetch delivery assignment");
   }
 }

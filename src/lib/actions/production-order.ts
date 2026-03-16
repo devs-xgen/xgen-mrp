@@ -5556,7 +5556,7 @@ export async function createProductionOrderUnified(input: {
     }
 
     revalidatePath("/admin/production");
-    revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
 
     return {
       success: true,

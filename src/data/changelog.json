@@ -2,6 +2,17 @@
   "project": "XGen MRP",
   "entries": [
     {
+      "version": "1.5.16",
+      "date": "2026-03-10",
+      "changes": [
+        "FIX: All customer order links (billing statements, row actions, edit, create, details, archives) now point to /admin/customer-orders-v2 — eliminates 404s from the removed v1 route",
+        "FIX: All revalidatePath calls in server actions (customer-order, stock-allocation, order-archiving, order-analysis, production-order, transactions, enhanced-billing-statements, superadmin variants) updated to target /admin/customer-orders-v2",
+        "FIX: Delivery order detail page now distinguishes not-found (404) from unexpected fetch errors and shows a recoverable error UI with a Return to Tasks link instead of a silent crash",
+        "FIX: getDeliveryAssignmentById now preserves the original Error message when re-throwing, allowing callers to correctly identify not-found vs data errors",
+        "STABILITY: /delivery/orders index page already exists with proper auth guard and error fallback — confirmed no dead nav link"
+      ]
+    },
+    {
       "version": "1.5.15",
       "date": "2026-03-09",
       "changes": [
@@ -10,7 +21,8 @@
         "UX: Forgot-password back link is now portal-aware — e.g. 'Back to Worker Login' instead of generic 'Back to home'",
         "UX: Post-reset 'Go to Login' button falls back to the originating portal if role lookup is ambiguous",
         "UX: Simplified-reset disclaimer moved inside the card as a visible Alert — no longer hidden below the card as tiny text",
-        "POLISH: Inspector login page now has a proper Metadata export for browser tab title, matching all other role login pages"
+        "POLISH: Inspector login page now has a proper Metadata export for browser tab title, matching all other role login pages",
+        "POLISH: Delivery login page now has a proper Metadata export for browser tab title, completing the set across all 6 role login pages"
       ]
     },
     {

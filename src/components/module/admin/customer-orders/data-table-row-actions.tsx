@@ -1,20 +1,30 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Row } from "@tanstack/react-table"
-import { Eye, MoreHorizontal, Trash, Factory, Plus, FileText, Receipt, Search, Archive } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useState } from "react";
+import { Row } from "@tanstack/react-table";
+import {
+  Eye,
+  MoreHorizontal,
+  Trash,
+  Factory,
+  Plus,
+  FileText,
+  Receipt,
+  Search,
+  Archive,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { CustomerOrderColumn } from "@/types/admin/customer-order"
+} from "@/components/ui/dropdown-menu";
+import { CustomerOrderColumn } from "@/types/admin/customer-order";
 // Server actions will be passed as props instead of direct imports
-import { useToast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +34,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -32,32 +42,40 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
-import { ProductionOrdersDialog } from "./production-orders-dialog"
-import { CreateProductionOrdersDialog } from "./create-production-orders-dialog"
-import { CreateBillingStatementDialog } from "./create-billing-statement-dialog"
-import { ViewBillingDocumentsDialog } from "./view-billing-documents-dialog"
+import { ProductionOrdersDialog } from "./production-orders-dialog";
+import { CreateProductionOrdersDialog } from "./create-production-orders-dialog";
+import { CreateBillingStatementDialog } from "./create-billing-statement-dialog";
+import { ViewBillingDocumentsDialog } from "./view-billing-documents-dialog";
 
 interface DataTableRowActionsProps {
-  row: Row<CustomerOrderColumn>
-  onDelete?: (id: string) => Promise<void>
-  onArchive?: (id: string, reason: string) => Promise<{ success: boolean; message: string }>
+  row: Row<CustomerOrderColumn>;
+  onDelete?: (id: string) => Promise<void>;
+  onArchive?: (
+    id: string,
+    reason: string,
+  ) => Promise<{ success: boolean; message: string }>;
 }
 
-export function DataTableRowActions({ row, onDelete: onDeleteProp, onArchive: onArchiveProp }: DataTableRowActionsProps) {
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [showArchiveDialog, setShowArchiveDialog] = useState(false)
-  const [showProductionDialog, setShowProductionDialog] = useState(false)
-  const [showCreateProductionDialog, setShowCreateProductionDialog] = useState(false)
-  const [showCreateBillingDialog, setShowCreateBillingDialog] = useState(false)
-  const [showViewBillingDialog, setShowViewBillingDialog] = useState(false)
-  const [archiveReason, setArchiveReason] = useState("")
-  const { toast } = useToast()
-  const router = useRouter()
-  const customerOrder = row.original
+export function DataTableRowActions({
+  row,
+  onDelete: onDeleteProp,
+  onArchive: onArchiveProp,
+}: DataTableRowActionsProps) {
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [showProductionDialog, setShowProductionDialog] = useState(false);
+  const [showCreateProductionDialog, setShowCreateProductionDialog] =
+    useState(false);
+  const [showCreateBillingDialog, setShowCreateBillingDialog] = useState(false);
+  const [showViewBillingDialog, setShowViewBillingDialog] = useState(false);
+  const [archiveReason, setArchiveReason] = useState("");
+  const { toast } = useToast();
+  const router = useRouter();
+  const customerOrder = row.original;
 
   const onDelete = async () => {
     if (!onDeleteProp) {
@@ -65,27 +83,27 @@ export function DataTableRowActions({ row, onDelete: onDeleteProp, onArchive: on
         title: "Error",
         description: "Delete function not available",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     try {
-      await onDeleteProp(customerOrder.id)
+      await onDeleteProp(customerOrder.id);
       toast({
         title: "Success",
         description: "Customer order deleted successfully",
-      })
-      setShowDeleteDialog(false)
+      });
+      setShowDeleteDialog(false);
       // Refresh the page to update the list
-      router.refresh()
+      router.refresh();
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to delete customer order",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const onArchive = async () => {
     if (!archiveReason.trim()) {
@@ -93,8 +111,8 @@ export function DataTableRowActions({ row, onDelete: onDeleteProp, onArchive: on
         title: "Archive Reason Required",
         description: "Please provide a reason for archiving this order.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     if (!onArchiveProp) {
@@ -102,37 +120,37 @@ export function DataTableRowActions({ row, onDelete: onDeleteProp, onArchive: on
         title: "Error",
         description: "Archive function not available",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     try {
-      const result = await onArchiveProp(customerOrder.id, archiveReason)
-      
+      const result = await onArchiveProp(customerOrder.id, archiveReason);
+
       if (result.success) {
         toast({
           title: "Order Archived",
           description: result.message,
-        })
-        setShowArchiveDialog(false)
-        setArchiveReason("")
+        });
+        setShowArchiveDialog(false);
+        setArchiveReason("");
         // Refresh the page to update the list
-        router.refresh()
+        router.refresh();
       } else {
         toast({
           title: "Archive Failed",
           description: result.message,
           variant: "destructive",
-        })
+        });
       }
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to archive customer order",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   return (
     <>
@@ -147,48 +165,60 @@ export function DataTableRowActions({ row, onDelete: onDeleteProp, onArchive: on
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[180px]">
-          <DropdownMenuItem onClick={() => router.push(`/admin/customer-orders/${customerOrder.id}`)}>
+          <DropdownMenuItem
+            onClick={() =>
+              router.push(`/admin/customer-orders-v2/${customerOrder.id}`)
+            }
+          >
             <Eye className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
             View Details
           </DropdownMenuItem>
-          
-          <DropdownMenuItem onClick={() => router.push(`/admin/customer-orders/${customerOrder.id}/analyze`)}>
+
+          <DropdownMenuItem
+            onClick={() =>
+              router.push(
+                `/admin/customer-orders-v2/${customerOrder.id}/production-planning`,
+              )
+            }
+          >
             <Search className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
             Analyze Stock
           </DropdownMenuItem>
-          
+
           <DropdownMenuSeparator />
-          
+
           <DropdownMenuItem onClick={() => setShowCreateBillingDialog(true)}>
             <FileText className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
             Create Billing Statement
           </DropdownMenuItem>
-          
+
           {customerOrder.billingStatementCount > 0 && (
             <DropdownMenuItem onClick={() => setShowViewBillingDialog(true)}>
               <Receipt className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
               View Billing Documents ({customerOrder.billingStatementCount})
             </DropdownMenuItem>
           )}
-          
+
           {customerOrder.productionOrderCount > 0 ? (
             <DropdownMenuItem onClick={() => setShowProductionDialog(true)}>
               <Factory className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
               View Production
             </DropdownMenuItem>
           ) : (
-            <DropdownMenuItem onClick={() => setShowCreateProductionDialog(true)}>
+            <DropdownMenuItem
+              onClick={() => setShowCreateProductionDialog(true)}
+            >
               <Plus className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
               Create Production
             </DropdownMenuItem>
           )}
-          
+
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setShowArchiveDialog(true)}>
             <Archive className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
             Archive Order
           </DropdownMenuItem>
-          
+
           <DropdownMenuItem
             onClick={() => setShowDeleteDialog(true)}
             className="text-destructive focus:text-destructive"
@@ -204,8 +234,8 @@ export function DataTableRowActions({ row, onDelete: onDeleteProp, onArchive: on
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the customer order {customerOrder.orderNumber}.
-              This action cannot be undone.
+              This will permanently delete the customer order{" "}
+              {customerOrder.orderNumber}. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -226,8 +256,9 @@ export function DataTableRowActions({ row, onDelete: onDeleteProp, onArchive: on
           <DialogHeader>
             <DialogTitle>Archive Order</DialogTitle>
             <DialogDescription>
-              Archive order {customerOrder.orderNumber} with complete history preservation. 
-              The order will be moved to archives but can be restored if needed.
+              Archive order {customerOrder.orderNumber} with complete history
+              preservation. The order will be moved to archives but can be
+              restored if needed.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -246,8 +277,8 @@ export function DataTableRowActions({ row, onDelete: onDeleteProp, onArchive: on
             <Button
               variant="outline"
               onClick={() => {
-                setShowArchiveDialog(false)
-                setArchiveReason("")
+                setShowArchiveDialog(false);
+                setArchiveReason("");
               }}
             >
               Cancel
@@ -287,5 +318,5 @@ export function DataTableRowActions({ row, onDelete: onDeleteProp, onArchive: on
         billingDocuments={customerOrder.billingStatements || []}
       />
     </>
-  )
+  );
 }

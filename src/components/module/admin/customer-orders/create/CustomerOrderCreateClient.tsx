@@ -4,7 +4,15 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, ArrowRight, Check, Plus, X, Package, ShoppingCart } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Plus,
+  X,
+  Package,
+  ShoppingCart,
+} from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -32,7 +40,10 @@ import {
 
 import { createCustomerOrder } from "@/lib/actions/customer-order";
 import { formatCurrencyPHP } from "@/lib/constant";
-import { customerOrderCreateSchema, type CustomerOrderCreateForm } from "@/lib/validation/customer-order-create";
+import {
+  customerOrderCreateSchema,
+  type CustomerOrderCreateForm,
+} from "@/lib/validation/customer-order-create";
 import type { Customer } from "@prisma/client";
 
 interface OrderLine {
@@ -75,7 +86,9 @@ export function CustomerOrderCreateClient({
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null,
+  );
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
 
   const form = useForm<CustomerOrderForm>({
@@ -94,7 +107,7 @@ export function CustomerOrderCreateClient({
     watch,
     setValue,
     handleSubmit,
-    formState: { errors }
+    formState: { errors },
   } = form;
   const customerId = watch("customerId");
 
@@ -108,7 +121,10 @@ export function CustomerOrderCreateClient({
   }, [customerId, customers]);
 
   useEffect(() => {
-    setValue("orderLines", orderLines, { shouldValidate: true, shouldDirty: true });
+    setValue("orderLines", orderLines, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
   }, [orderLines, setValue]);
 
   const nextStep = () => {
@@ -153,60 +169,63 @@ export function CustomerOrderCreateClient({
     setOrderLines(newLines);
   };
 
- const updateOrderLine = (index: number, field: string, value: any) => {
-  const newLines = [...orderLines];
-  const line = newLines[index];
+  const updateOrderLine = (index: number, field: string, value: any) => {
+    const newLines = [...orderLines];
+    const line = newLines[index];
 
-  if (field === "productId") {
-    const product = products.find((p) => p.id === value);
-    if (product) {
-      line.productId = value;
-      line.product = {
-        name: product.name,
-        sku: product.sku,
-        sellingPrice: product.sellingPrice,
-        hasVariants: product.hasVariants,
-        variants: product.variants,
-      };
-      line.unitPrice = product.sellingPrice; // default to product's price
-      line.productVariantId = "";
-      line.productVariant = undefined;
-    }
-  } else if (field === "productVariantId") {
-    const product = products.find((p) => p.id === line.productId);
-    if (value === "none") {
-      line.productVariantId = "";
-      line.productVariant = undefined;
-      if (line.product) {
-        line.unitPrice = line.product.sellingPrice; // reset to product price
-      }
-    } else if (product && value) {
-      const variant = product.variants?.find((v: any) => v.id === value);
-      if (variant) {
-        line.productVariantId = value;
-        line.productVariant = {
-          displayName: variant.displayName,
-          sku: variant.sku,
-          sellingPrice: variant.unitPrice, // This line was the issue - it was sellingPrice
+    if (field === "productId") {
+      const product = products.find((p) => p.id === value);
+      if (product) {
+        line.productId = value;
+        line.product = {
+          name: product.name,
+          sku: product.sku,
+          sellingPrice: product.sellingPrice,
+          hasVariants: product.hasVariants,
+          variants: product.variants,
         };
-        line.unitPrice = variant.unitPrice; // This line was the issue - it was sellingPrice
+        line.unitPrice = product.sellingPrice; // default to product's price
+        line.productVariantId = "";
+        line.productVariant = undefined;
+      }
+    } else if (field === "productVariantId") {
+      const product = products.find((p) => p.id === line.productId);
+      if (value === "none") {
+        line.productVariantId = "";
+        line.productVariant = undefined;
+        if (line.product) {
+          line.unitPrice = line.product.sellingPrice; // reset to product price
+        }
+      } else if (product && value) {
+        const variant = product.variants?.find((v: any) => v.id === value);
+        if (variant) {
+          line.productVariantId = value;
+          line.productVariant = {
+            displayName: variant.displayName,
+            sku: variant.sku,
+            sellingPrice: variant.unitPrice, // This line was the issue - it was sellingPrice
+          };
+          line.unitPrice = variant.unitPrice; // This line was the issue - it was sellingPrice
+        }
+      } else {
+        line.productVariantId = "";
+        line.productVariant = undefined;
+        if (line.product) {
+          line.unitPrice = line.product.sellingPrice;
+        }
       }
     } else {
-      line.productVariantId = "";
-      line.productVariant = undefined;
-      if (line.product) {
-        line.unitPrice = line.product.sellingPrice;
-      }
+      (line as any)[field] = value;
     }
-  } else {
-    (line as any)[field] = value;
-  }
 
-  setOrderLines(newLines);
-};
+    setOrderLines(newLines);
+  };
 
   const calculateTotal = () => {
-    return orderLines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
+    return orderLines.reduce(
+      (sum, line) => sum + line.quantity * line.unitPrice,
+      0,
+    );
   };
 
   const onSubmit = async (data: CustomerOrderForm) => {
@@ -214,9 +233,14 @@ export function CustomerOrderCreateClient({
       toast.error("Please add at least one order line");
       return;
     }
-    const invalidOrderLine = orderLines.some(line => line.productId === "" || line.quantity <= 0 || line.unitPrice < 0);
+    const invalidOrderLine = orderLines.some(
+      (line) =>
+        line.productId === "" || line.quantity <= 0 || line.unitPrice < 0,
+    );
     if (invalidOrderLine) {
-      toast.error("Please ensure all order lines have a selected product, quantity greater than 0, and a valid unit price.");
+      toast.error(
+        "Please ensure all order lines have a selected product, quantity greater than 0, and a valid unit price.",
+      );
       return;
     }
 
@@ -236,7 +260,7 @@ export function CustomerOrderCreateClient({
 
       const result = await createCustomerOrder(orderData);
       toast.success("Customer order created successfully!");
-      router.push(`/admin/customer-orders/${result.id}`);
+      router.push(`/admin/customer-orders-v2/${result.id}`);
     } catch (error) {
       console.error("Error creating customer order:", error);
       toast.error("Failed to create customer order");
@@ -251,12 +275,17 @@ export function CustomerOrderCreateClient({
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h3 className="text-lg font-semibold">Select Customer</h3>
-        <p className="text-muted-foreground">Choose the customer for this order.</p>
+        <p className="text-muted-foreground">
+          Choose the customer for this order.
+        </p>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="customer">Customer</Label>
-        <Select value={customerId || ""} onValueChange={(value) => setValue("customerId", value)}>
+        <Select
+          value={customerId || ""}
+          onValueChange={(value) => setValue("customerId", value)}
+        >
           <SelectTrigger>
             <SelectValue placeholder="Select a customer" />
           </SelectTrigger>
@@ -265,14 +294,18 @@ export function CustomerOrderCreateClient({
               <SelectItem key={customer.id} value={customer.id}>
                 <div className="flex flex-col">
                   <span>{customer.name}</span>
-                  <span className="text-sm text-muted-foreground">{customer.email}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {customer.email}
+                  </span>
                 </div>
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         {errors.customerId && (
-          <p className="text-sm text-destructive mt-1">{errors.customerId.message}</p>
+          <p className="text-sm text-destructive mt-1">
+            {errors.customerId.message}
+          </p>
         )}
       </div>
 
@@ -283,10 +316,20 @@ export function CustomerOrderCreateClient({
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
-              <div><strong>Name:</strong> {selectedCustomer.name}</div>
-              <div><strong>Email:</strong> {selectedCustomer.email}</div>
-              <div><strong>Phone:</strong> {selectedCustomer.phone}</div>
-              {selectedCustomer.address && <div><strong>Address:</strong> {selectedCustomer.address}</div>}
+              <div>
+                <strong>Name:</strong> {selectedCustomer.name}
+              </div>
+              <div>
+                <strong>Email:</strong> {selectedCustomer.email}
+              </div>
+              <div>
+                <strong>Phone:</strong> {selectedCustomer.phone}
+              </div>
+              {selectedCustomer.address && (
+                <div>
+                  <strong>Address:</strong> {selectedCustomer.address}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -298,7 +341,9 @@ export function CustomerOrderCreateClient({
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h3 className="text-lg font-semibold">Add Order Items</h3>
-        <p className="text-muted-foreground">Add products and quantities for this order.</p>
+        <p className="text-muted-foreground">
+          Add products and quantities for this order.
+        </p>
       </div>
 
       <div className="flex justify-between items-center">
@@ -340,7 +385,9 @@ export function CustomerOrderCreateClient({
                     <TableCell>
                       <Select
                         value={line.productId || ""}
-                        onValueChange={(value) => updateOrderLine(index, "productId", value)}
+                        onValueChange={(value) =>
+                          updateOrderLine(index, "productId", value)
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select product" />
@@ -351,7 +398,8 @@ export function CustomerOrderCreateClient({
                               <div className="flex flex-col">
                                 <span>{product.name}</span>
                                 <span className="text-sm text-muted-foreground">
-                                  {product.sku} - {formatCurrencyPHP(product.unitPrice)}
+                                  {product.sku} -{" "}
+                                  {formatCurrencyPHP(product.unitPrice)}
                                 </span>
                               </div>
                             </SelectItem>
@@ -365,7 +413,9 @@ export function CustomerOrderCreateClient({
                         <>
                           <Select
                             value={line.productVariantId || "none"}
-                            onValueChange={(value) => updateOrderLine(index, "productVariantId", value)}
+                            onValueChange={(value) =>
+                              updateOrderLine(index, "productVariantId", value)
+                            }
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select variant" />
@@ -377,7 +427,8 @@ export function CustomerOrderCreateClient({
                                   <div className="flex flex-col">
                                     <span>{variant.displayName}</span>
                                     <span className="text-sm text-muted-foreground">
-                                      {variant.sku} - {formatCurrencyPHP(variant.unitPrice)}
+                                      {variant.sku} -{" "}
+                                      {formatCurrencyPHP(variant.unitPrice)}
                                     </span>
                                   </div>
                                 </SelectItem>
@@ -386,7 +437,9 @@ export function CustomerOrderCreateClient({
                           </Select>
                         </>
                       ) : (
-                        <span className="text-muted-foreground text-sm">No variants</span>
+                        <span className="text-muted-foreground text-sm">
+                          No variants
+                        </span>
                       )}
                     </TableCell>
 
@@ -395,22 +448,45 @@ export function CustomerOrderCreateClient({
                         type="number"
                         min="1"
                         value={line.quantity ?? 1}
-                        onChange={(e) => updateOrderLine(index, "quantity", parseInt(e.target.value) || 1)}
+                        onChange={(e) =>
+                          updateOrderLine(
+                            index,
+                            "quantity",
+                            parseInt(e.target.value) || 1,
+                          )
+                        }
                       />
                     </TableCell>
                     <TableCell>
-                       <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={line.unitPrice ?? 0}
-                          readOnly={!line.product || !line.product.hasVariants || !line.productVariantId || line.productVariantId === "none"}
-                          onChange={(e) => updateOrderLine(index, "unitPrice", parseFloat(e.target.value) || 0)}
-                        />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={line.unitPrice ?? 0}
+                        readOnly={
+                          !line.product ||
+                          !line.product.hasVariants ||
+                          !line.productVariantId ||
+                          line.productVariantId === "none"
+                        }
+                        onChange={(e) =>
+                          updateOrderLine(
+                            index,
+                            "unitPrice",
+                            parseFloat(e.target.value) || 0,
+                          )
+                        }
+                      />
                     </TableCell>
-                    <TableCell>{formatCurrencyPHP(line.quantity * line.unitPrice)}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => removeOrderLine(index)}>
+                      {formatCurrencyPHP(line.quantity * line.unitPrice)}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeOrderLine(index)}
+                      >
                         <X className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -424,7 +500,9 @@ export function CustomerOrderCreateClient({
 
       {orderLines.length > 0 && (
         <div className="text-right">
-          <div className="text-lg font-semibold">Total: {formatCurrencyPHP(calculateTotal())}</div>
+          <div className="text-lg font-semibold">
+            Total: {formatCurrencyPHP(calculateTotal())}
+          </div>
         </div>
       )}
     </div>
@@ -434,7 +512,9 @@ export function CustomerOrderCreateClient({
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h3 className="text-lg font-semibold">Order Details</h3>
-        <p className="text-muted-foreground">Set the required date and add any notes for this order.</p>
+        <p className="text-muted-foreground">
+          Set the required date and add any notes for this order.
+        </p>
       </div>
 
       <div className="space-y-4">
@@ -447,7 +527,9 @@ export function CustomerOrderCreateClient({
             onChange={(e) => setValue("requiredDate", e.target.value)}
           />
           {errors.requiredDate && (
-            <p className="text-sm text-destructive mt-1">{errors.requiredDate.message}</p>
+            <p className="text-sm text-destructive mt-1">
+              {errors.requiredDate.message}
+            </p>
           )}
         </div>
 
@@ -469,7 +551,9 @@ export function CustomerOrderCreateClient({
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h3 className="text-lg font-semibold">Review Order</h3>
-        <p className="text-muted-foreground">Please review your order details before submitting.</p>
+        <p className="text-muted-foreground">
+          Please review your order details before submitting.
+        </p>
       </div>
 
       <div className="space-y-4">
@@ -480,9 +564,15 @@ export function CustomerOrderCreateClient({
           <CardContent>
             {selectedCustomer && (
               <div className="space-y-2 text-sm">
-                <div><strong>Name:</strong> {selectedCustomer.name}</div>
-                <div><strong>Email:</strong> {selectedCustomer.email}</div>
-                <div><strong>Phone:</strong> {selectedCustomer.phone}</div>
+                <div>
+                  <strong>Name:</strong> {selectedCustomer.name}
+                </div>
+                <div>
+                  <strong>Email:</strong> {selectedCustomer.email}
+                </div>
+                <div>
+                  <strong>Phone:</strong> {selectedCustomer.phone}
+                </div>
               </div>
             )}
           </CardContent>
@@ -494,10 +584,21 @@ export function CustomerOrderCreateClient({
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
-              <div><strong>Required Date:</strong> {watch("requiredDate")}</div>
-              {watch("notes") && <div><strong>Notes:</strong> {watch("notes")}</div>}
-              <div><strong>Total Items:</strong> {orderLines.length}</div>
-              <div><strong>Total Amount:</strong> {formatCurrencyPHP(calculateTotal())}</div>
+              <div>
+                <strong>Required Date:</strong> {watch("requiredDate")}
+              </div>
+              {watch("notes") && (
+                <div>
+                  <strong>Notes:</strong> {watch("notes")}
+                </div>
+              )}
+              <div>
+                <strong>Total Items:</strong> {orderLines.length}
+              </div>
+              <div>
+                <strong>Total Amount:</strong>{" "}
+                {formatCurrencyPHP(calculateTotal())}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -509,19 +610,26 @@ export function CustomerOrderCreateClient({
           <CardContent>
             <div className="space-y-2">
               {orderLines.map((line, index) => (
-                <div key={index} className="flex justify-between items-center p-2 border rounded">
+                <div
+                  key={index}
+                  className="flex justify-between items-center p-2 border rounded"
+                >
                   <div>
                     <div className="font-medium">
                       {line.product?.name}
                       {line.productVariant && (
-                        <span className="text-muted-foreground ml-2">({line.productVariant.displayName})</span>
+                        <span className="text-muted-foreground ml-2">
+                          ({line.productVariant.displayName})
+                        </span>
                       )}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Qty: {line.quantity} × {formatCurrencyPHP(line.unitPrice)}
                     </div>
                   </div>
-                  <div className="font-medium">{formatCurrencyPHP(line.quantity * line.unitPrice)}</div>
+                  <div className="font-medium">
+                    {formatCurrencyPHP(line.quantity * line.unitPrice)}
+                  </div>
                 </div>
               ))}
             </div>
@@ -555,7 +663,8 @@ export function CustomerOrderCreateClient({
             <h1 className="text-lg font-semibold">Create Customer Order</h1>
           </div>
           <p className="text-muted-foreground text-sm mt-1">
-            Create an order independently for archiving. Production planning happens separately.
+            Create an order independently for archiving. Production planning
+            happens separately.
           </p>
         </div>
 
@@ -585,8 +694,8 @@ export function CustomerOrderCreateClient({
                   isActive
                     ? "bg-primary/10 border-2 border-primary/20"
                     : isCompleted
-                    ? "bg-green-50 border border-green-200"
-                    : "bg-muted/30 border border-border"
+                      ? "bg-green-50 border border-green-200"
+                      : "bg-muted/30 border border-border"
                 }`}
               >
                 <div
@@ -594,15 +703,17 @@ export function CustomerOrderCreateClient({
                     isCompleted
                       ? "bg-green-600 text-white"
                       : isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {isCompleted ? <Check className="w-4 h-4" /> : index + 1}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm">{step.title}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{step.description}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {step.description}
+                  </div>
                 </div>
               </div>
             );
@@ -630,7 +741,11 @@ export function CustomerOrderCreateClient({
                 {isSubmitting ? "Creating..." : "Create Order"}
               </Button>
             ) : (
-              <Button onClick={nextStep} disabled={!canGoNext()} className="flex-1">
+              <Button
+                onClick={nextStep}
+                disabled={!canGoNext()}
+                className="flex-1"
+              >
                 Next
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -652,8 +767,12 @@ export function CustomerOrderCreateClient({
         <div className="flex-1 overflow-y-auto">
           <Card className="max-w-4xl">
             <CardHeader className="pb-4">
-              <CardTitle className="text-xl">{STEPS[currentStep]?.title}</CardTitle>
-              <p className="text-muted-foreground text-sm">{STEPS[currentStep]?.description}</p>
+              <CardTitle className="text-xl">
+                {STEPS[currentStep]?.title}
+              </CardTitle>
+              <p className="text-muted-foreground text-sm">
+                {STEPS[currentStep]?.description}
+              </p>
             </CardHeader>
             <CardContent>{renderCurrentStep()}</CardContent>
           </Card>
@@ -680,7 +799,11 @@ export function CustomerOrderCreateClient({
                 {isSubmitting ? "Creating..." : "Create Order"}
               </Button>
             ) : (
-              <Button onClick={nextStep} disabled={!canGoNext()} className="flex-1">
+              <Button
+                onClick={nextStep}
+                disabled={!canGoNext()}
+                className="flex-1"
+              >
                 Next
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

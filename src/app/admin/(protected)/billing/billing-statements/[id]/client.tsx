@@ -4,7 +4,24 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Edit, Save, X, FileText, Download, Trash2, CheckCircle, Clock, AlertCircle, Loader2, Eye, Mail, Share2, Copy, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft,
+  Edit,
+  Save,
+  X,
+  FileText,
+  Download,
+  Trash2,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Loader2,
+  Eye,
+  Mail,
+  Share2,
+  Copy,
+  ExternalLink,
+} from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -45,16 +62,16 @@ import {
 } from "@/components/ui/alert-dialog";
 
 // Import types and server actions
-import { 
+import {
   BillingStatus,
   BillingStatementWithRelations,
-  BillingStatementFormData, 
+  BillingStatementFormData,
   billingStatementSchema,
 } from "@/types/admin/billing";
 import { SerializableData } from "@/lib/utils/decimal-serializer";
 import { formatCurrencyPHP } from "@/lib/constant";
 import { formatDate } from "@/components/global/table/table-utils";
-import { 
+import {
   getBillingStatementById,
   updateBillingStatement,
   deleteBillingStatement,
@@ -63,7 +80,8 @@ import {
 import { ShareLinkButton } from "@/components/shared/ShareLinkButton";
 import { DirectShareLink } from "@/components/shared/DirectShareLink";
 
-type SerializedBillingStatement = SerializableData<BillingStatementWithRelations>;
+type SerializedBillingStatement =
+  SerializableData<BillingStatementWithRelations>;
 
 interface BillingStatementClientProps {
   billingStatement: SerializedBillingStatement;
@@ -71,15 +89,16 @@ interface BillingStatementClientProps {
   initialIsEditing?: boolean;
 }
 
-export function BillingStatementClient({ 
-  billingStatement: initialBillingStatement, 
+export function BillingStatementClient({
+  billingStatement: initialBillingStatement,
   billingStatementId,
   initialIsEditing = false,
 }: BillingStatementClientProps) {
   const router = useRouter();
-  
+
   // States
-  const [billingStatement, setBillingStatement] = useState<SerializedBillingStatement>(initialBillingStatement);
+  const [billingStatement, setBillingStatement] =
+    useState<SerializedBillingStatement>(initialBillingStatement);
   const [isEditing, setIsEditing] = useState(initialIsEditing);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -96,17 +115,20 @@ export function BillingStatementClient({
       taxRate: Number(billingStatement.salesInvoice?.taxRate || 0),
       discountAmount: Number(billingStatement.discountAmount || 0),
       paymentTerms: billingStatement.salesInvoice?.paymentTerms || "",
-      dueDate: billingStatement.dueDate ? new Date(billingStatement.dueDate as unknown as string) : undefined,
-      invoiceItems: billingStatement.salesInvoice?.invoiceItems?.map(item => ({
-        productId: item.productId || "",
-        description: item.description,
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
-        productCode: item.productCode || "",
-        unit: item.unit || "PCS",
-        discountPercent: Number(item.discountPercent || 0),
-        taxable: item.taxable,
-      })) || [],
+      dueDate: billingStatement.dueDate
+        ? new Date(billingStatement.dueDate as unknown as string)
+        : undefined,
+      invoiceItems:
+        billingStatement.salesInvoice?.invoiceItems?.map((item) => ({
+          productId: item.productId || "",
+          description: item.description,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          productCode: item.productCode || "",
+          unit: item.unit || "PCS",
+          discountPercent: Number(item.discountPercent || 0),
+          taxable: item.taxable,
+        })) || [],
       notes: billingStatement.notes || "",
       poNumber: billingStatement.salesInvoice?.poNumber || "",
       terms: billingStatement.salesInvoice?.terms || "",
@@ -116,7 +138,12 @@ export function BillingStatementClient({
 
   // Safely convert a Date/string/number to yyyy-mm-dd for date inputs
   const toDateInput = (v: unknown) => {
-    const d = v instanceof Date ? v : (typeof v === "string" || typeof v === "number") ? new Date(v as any) : null;
+    const d =
+      v instanceof Date
+        ? v
+        : typeof v === "string" || typeof v === "number"
+          ? new Date(v as any)
+          : null;
     return d && !isNaN(d.getTime()) ? d.toISOString().split("T")[0] : "";
   };
 
@@ -130,14 +157,14 @@ export function BillingStatementClient({
   // Copy shareable link to clipboard
   const copyShareableLink = async () => {
     if (isCopyingLink) return;
-    
+
     setIsCopyingLink(true);
     try {
       const shareUrl = getShareableLink();
       await navigator.clipboard.writeText(shareUrl);
       toast.success("Share link copied to clipboard!");
     } catch (error) {
-      console.error('Error copying link:', error);
+      console.error("Error copying link:", error);
       toast.error("Failed to copy link to clipboard");
     } finally {
       setTimeout(() => setIsCopyingLink(false), 1000);
@@ -146,10 +173,10 @@ export function BillingStatementClient({
 
   const onSubmit = async (data: BillingStatementFormData) => {
     setIsSubmitting(true);
-    
+
     try {
       const result = await updateBillingStatement(billingStatementId, data);
-      
+
       if (result.success) {
         toast.success("Billing statement updated successfully");
         setIsEditing(false);
@@ -172,8 +199,11 @@ export function BillingStatementClient({
   // Handle mark as paid
   const handleMarkAsPaid = async () => {
     try {
-      const result = await updateBillingStatementStatus(billingStatementId, BillingStatus.PAID);
-      
+      const result = await updateBillingStatementStatus(
+        billingStatementId,
+        BillingStatus.PAID,
+      );
+
       if (result.success) {
         toast.success("Billing statement marked as paid");
         // Refresh data
@@ -193,10 +223,10 @@ export function BillingStatementClient({
   // Handle delete
   const handleDelete = async () => {
     setIsDeleting(true);
-    
+
     try {
       const result = await deleteBillingStatement(billingStatementId);
-      
+
       if (result.success) {
         toast.success("Billing statement deleted successfully");
         router.push("/admin/billing/billing-statements");
@@ -251,22 +281,24 @@ export function BillingStatementClient({
     <PageBody className="flex flex-col gap-6">
       {/* Page Header */}
       <div className="flex">
-          <Link href="/admin/billing/billing-statements">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Statements
-              </Button>
-            </Link>
-        </div>
+        <Link href="/admin/billing/billing-statements">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Statements
+          </Button>
+        </Link>
+      </div>
       <div className="flex items-center justify-between">
-        
         <div className="flex items-center gap-4">
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold tracking-tight">
                 {billingStatement.statementNumber}
               </h1>
-              <Badge variant={getStatusBadgeVariant(billingStatement.status)} className="flex items-center gap-1">
+              <Badge
+                variant={getStatusBadgeVariant(billingStatement.status)}
+                className="flex items-center gap-1"
+              >
                 {getStatusIcon(billingStatement.status)}
                 {billingStatement.status}
               </Badge>
@@ -279,10 +311,10 @@ export function BillingStatementClient({
         <div className="flex items-center gap-2">
           {!isEditing ? (
             <>
-              <Button 
+              <Button
                 onClick={copyShareableLink}
                 disabled={isCopyingLink}
-                variant="outline" 
+                variant="outline"
                 size="sm"
                 className="gap-2"
               >
@@ -302,16 +334,21 @@ export function BillingStatementClient({
                 <Download className="mr-2 h-4 w-4" />
                 Download PDF
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+              >
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
               </Button>
-              {billingStatement.status !== "PAID" && billingStatement.status !== "CANCELLED" && (
-                <Button size="sm" onClick={handleMarkAsPaid}>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Mark as Paid
-                </Button>
-              )}
+              {billingStatement.status !== "PAID" &&
+                billingStatement.status !== "CANCELLED" && (
+                  <Button size="sm" onClick={handleMarkAsPaid}>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Mark as Paid
+                  </Button>
+                )}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" size="sm">
@@ -321,9 +358,12 @@ export function BillingStatementClient({
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Billing Statement</AlertDialogTitle>
+                    <AlertDialogTitle>
+                      Delete Billing Statement
+                    </AlertDialogTitle>
                     <AlertDialogDescription>
-                      Are you sure you want to delete this billing statement? This action cannot be undone.
+                      Are you sure you want to delete this billing statement?
+                      This action cannot be undone.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -346,9 +386,9 @@ export function BillingStatementClient({
             </>
           ) : (
             <>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   setIsEditing(false);
                   form.reset();
@@ -358,8 +398,8 @@ export function BillingStatementClient({
                 <X className="mr-2 h-4 w-4" />
                 Cancel
               </Button>
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 onClick={form.handleSubmit(onSubmit)}
                 disabled={isSubmitting}
               >
@@ -381,7 +421,9 @@ export function BillingStatementClient({
           {/* Billing Statement Details */}
           <Card className="bg-card border rounded-lg">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Billing Statement Details</CardTitle>
+              <CardTitle className="text-lg">
+                Billing Statement Details
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {isEditing ? (
@@ -389,20 +431,26 @@ export function BillingStatementClient({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Statement Number</Label>
-                      <Input value={billingStatement.statementNumber} disabled />
+                      <Input
+                        value={billingStatement.statementNumber}
+                        disabled
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>Customer</Label>
                       <Input value={billingStatement.customer.name} disabled />
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Billing Date</Label>
-                      <Input 
-                        value={formatDate(billingStatement.billingDate as unknown as string, "—")} 
-                        disabled 
+                      <Input
+                        value={formatDate(
+                          billingStatement.billingDate as unknown as string,
+                          "—",
+                        )}
+                        disabled
                       />
                     </div>
                     <FormField
@@ -415,7 +463,13 @@ export function BillingStatementClient({
                             <Input
                               type="date"
                               value={toDateInput(field.value)}
-                              onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value
+                                    ? new Date(e.target.value)
+                                    : null,
+                                )
+                              }
                             />
                           </FormControl>
                           <FormMessage />
@@ -446,29 +500,52 @@ export function BillingStatementClient({
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Statement Number</Label>
-                      <p className="text-sm">{billingStatement.statementNumber}</p>
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        Statement Number
+                      </Label>
+                      <p className="text-sm">
+                        {billingStatement.statementNumber}
+                      </p>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Customer</Label>
-                      <p className="text-sm">{billingStatement.customer.name}</p>
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        Customer
+                      </Label>
+                      <p className="text-sm">
+                        {billingStatement.customer.name}
+                      </p>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Billing Date</Label>
-                      <p className="text-sm">{formatDate(billingStatement.billingDate as unknown as string)}</p>
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        Billing Date
+                      </Label>
+                      <p className="text-sm">
+                        {formatDate(
+                          billingStatement.billingDate as unknown as string,
+                        )}
+                      </p>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
-                      <p className="text-sm">{formatDate(billingStatement.dueDate as unknown as string, "Not set")}</p>
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        Due Date
+                      </Label>
+                      <p className="text-sm">
+                        {formatDate(
+                          billingStatement.dueDate as unknown as string,
+                          "Not set",
+                        )}
+                      </p>
                     </div>
                   </div>
 
                   {billingStatement.notes && (
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Notes</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        Notes
+                      </Label>
                       <p className="text-sm">{billingStatement.notes}</p>
                     </div>
                   )}
@@ -494,27 +571,31 @@ export function BillingStatementClient({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {billingStatement.salesInvoice?.invoiceItems?.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{item.description}</p>
-                            {item.productCode && (
-                              <p className="text-sm text-muted-foreground">SKU: {item.productCode}</p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {Number(item.quantity)} {item.unit || 'PCS'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrencyPHP(Number(item.unitPrice))}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrencyPHP(Number(item.totalPrice))}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {billingStatement.salesInvoice?.invoiceItems?.map(
+                      (item, index) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{item.description}</p>
+                              {item.productCode && (
+                                <p className="text-sm text-muted-foreground">
+                                  SKU: {item.productCode}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {Number(item.quantity)} {item.unit || "PCS"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrencyPHP(Number(item.unitPrice))}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrencyPHP(Number(item.totalPrice))}
+                          </TableCell>
+                        </TableRow>
+                      ),
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -522,7 +603,10 @@ export function BillingStatementClient({
           </Card>
 
           {/* Related Information */}
-          {(billingStatement.customerOrder || billingStatement.productionOrder || (billingStatement.deliveryReceipts && billingStatement.deliveryReceipts.length > 0)) && (
+          {(billingStatement.customerOrder ||
+            billingStatement.productionOrder ||
+            (billingStatement.deliveryReceipts &&
+              billingStatement.deliveryReceipts.length > 0)) && (
             <Card className="bg-card border rounded-lg">
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg">Related Information</CardTitle>
@@ -530,11 +614,17 @@ export function BillingStatementClient({
               <CardContent className="space-y-4">
                 {billingStatement.customerOrder && (
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Customer Order</Label>
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Customer Order
+                    </Label>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">{billingStatement.customerOrder.orderNumber}</Badge>
+                      <Badge variant="outline">
+                        {billingStatement.customerOrder.orderNumber}
+                      </Badge>
                       <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/admin/customer-orders/${billingStatement.customerOrder.id}`}>
+                        <Link
+                          href={`/admin/customer-orders-v2/${billingStatement.customerOrder.id}`}
+                        >
                           <Eye className="mr-2 h-4 w-4" />
                           View Order
                         </Link>
@@ -542,14 +632,20 @@ export function BillingStatementClient({
                     </div>
                   </div>
                 )}
-                
+
                 {billingStatement.productionOrder && (
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Production Order</Label>
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Production Order
+                    </Label>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">Production #{billingStatement.productionOrder.id}</Badge>
+                      <Badge variant="outline">
+                        Production #{billingStatement.productionOrder.id}
+                      </Badge>
                       <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/admin/production/${billingStatement.productionOrder.id}`}>
+                        <Link
+                          href={`/admin/production/${billingStatement.productionOrder.id}`}
+                        >
                           <Eye className="mr-2 h-4 w-4" />
                           View Production
                         </Link>
@@ -557,25 +653,35 @@ export function BillingStatementClient({
                     </div>
                   </div>
                 )}
-                
-                {billingStatement.deliveryReceipts && billingStatement.deliveryReceipts.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Delivery Receipts</Label>
+
+                {billingStatement.deliveryReceipts &&
+                  billingStatement.deliveryReceipts.length > 0 && (
                     <div className="space-y-2">
-                      {billingStatement.deliveryReceipts.map((receipt) => (
-                        <div key={receipt.id} className="flex items-center gap-2">
-                          <Badge variant="outline">{receipt.receiptNumber}</Badge>
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/admin/billing/delivery-receipts/${receipt.id}`}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Receipt
-                            </Link>
-                          </Button>
-                        </div>
-                      ))}
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        Delivery Receipts
+                      </Label>
+                      <div className="space-y-2">
+                        {billingStatement.deliveryReceipts.map((receipt) => (
+                          <div
+                            key={receipt.id}
+                            className="flex items-center gap-2"
+                          >
+                            <Badge variant="outline">
+                              {receipt.receiptNumber}
+                            </Badge>
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link
+                                href={`/admin/billing/delivery-receipts/${receipt.id}`}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Receipt
+                              </Link>
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </CardContent>
             </Card>
           )}
@@ -591,24 +697,38 @@ export function BillingStatementClient({
             <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal:</span>
-                <span className="font-medium">{formatCurrencyPHP(Number(billingStatement.salesInvoice?.subtotal))}</span>
+                <span className="font-medium">
+                  {formatCurrencyPHP(
+                    Number(billingStatement.salesInvoice?.subtotal),
+                  )}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Tax ({Number(billingStatement.salesInvoice?.taxRate)}%):</span>
-                <span className="font-medium">{formatCurrencyPHP(Number(billingStatement.taxAmount))}</span>
+                <span className="text-muted-foreground">
+                  Tax ({Number(billingStatement.salesInvoice?.taxRate)}%):
+                </span>
+                <span className="font-medium">
+                  {formatCurrencyPHP(Number(billingStatement.taxAmount))}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Discount:</span>
-                <span className="font-medium">-{formatCurrencyPHP(Number(billingStatement.discountAmount))}</span>
+                <span className="font-medium">
+                  -{formatCurrencyPHP(Number(billingStatement.discountAmount))}
+                </span>
               </div>
               <Separator />
               <div className="flex justify-between">
                 <span className="font-medium">Total Amount:</span>
-                <span className="font-bold text-lg">{formatCurrencyPHP(Number(billingStatement.totalAmount))}</span>
+                <span className="font-bold text-lg">
+                  {formatCurrencyPHP(Number(billingStatement.totalAmount))}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">Net Amount:</span>
-                <span className="font-bold text-lg text-green-600">{formatCurrencyPHP(Number(billingStatement.netAmount))}</span>
+                <span className="font-bold text-lg text-green-600">
+                  {formatCurrencyPHP(Number(billingStatement.netAmount))}
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -621,19 +741,31 @@ export function BillingStatementClient({
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Status:</span>
-                <Badge variant={getStatusBadgeVariant(billingStatement.status)} className="flex items-center gap-1">
+                <Badge
+                  variant={getStatusBadgeVariant(billingStatement.status)}
+                  className="flex items-center gap-1"
+                >
                   {getStatusIcon(billingStatement.status)}
                   {billingStatement.status}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Payment Terms:</span>
-                <span className="text-sm">{billingStatement.salesInvoice?.paymentTerms || "Not specified"}</span>
+                <span className="text-sm text-muted-foreground">
+                  Payment Terms:
+                </span>
+                <span className="text-sm">
+                  {billingStatement.salesInvoice?.paymentTerms ||
+                    "Not specified"}
+                </span>
               </div>
               {billingStatement.paidDate && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Paid Date:</span>
-                  <span className="text-sm">{formatDate(billingStatement.paidDate as unknown as string)}</span>
+                  <span className="text-sm text-muted-foreground">
+                    Paid Date:
+                  </span>
+                  <span className="text-sm">
+                    {formatDate(billingStatement.paidDate as unknown as string)}
+                  </span>
                 </div>
               )}
             </CardContent>
@@ -647,7 +779,9 @@ export function BillingStatementClient({
             <CardContent className="space-y-3">
               <div className="space-y-1">
                 <p className="font-medium">{billingStatement.customer.name}</p>
-                <p className="text-sm text-muted-foreground">Code: {billingStatement.customer.code}</p>
+                <p className="text-sm text-muted-foreground">
+                  Code: {billingStatement.customer.code}
+                </p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm">{billingStatement.customer.email}</p>
@@ -661,8 +795,10 @@ export function BillingStatementClient({
                       billingStatement.customer.city,
                       billingStatement.customer.state,
                       billingStatement.customer.postalCode,
-                      billingStatement.customer.country
-                    ].filter(Boolean).join(", ")}
+                      billingStatement.customer.country,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
                   </p>
                 </div>
               )}
@@ -689,16 +825,24 @@ export function BillingStatementClient({
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Created:</span>
-                <span className="text-sm">{formatDate(billingStatement.createdAt as unknown as string)}</span>
+                <span className="text-sm">
+                  {formatDate(billingStatement.createdAt as unknown as string)}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Updated:</span>
-                <span className="text-sm">{formatDate(billingStatement.updatedAt as unknown as string)}</span>
+                <span className="text-sm">
+                  {formatDate(billingStatement.updatedAt as unknown as string)}
+                </span>
               </div>
               {billingStatement.createdByUser && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Created by:</span>
-                  <span className="text-sm">{billingStatement.createdByUser.email}</span>
+                  <span className="text-sm text-muted-foreground">
+                    Created by:
+                  </span>
+                  <span className="text-sm">
+                    {billingStatement.createdByUser.email}
+                  </span>
                 </div>
               )}
             </CardContent>

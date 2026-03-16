@@ -444,7 +444,7 @@ export async function createCustomerOrderSuperadmin(input: {
     });
 
     revalidatePath("/superadmin/customer-orders");
-    revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
 
     return {
       success: true,
@@ -587,7 +587,7 @@ export async function bulkUpdateCustomerOrderStatus(
     });
 
     revalidatePath("/superadmin/customer-orders");
-    revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
 
     return {
       success: true,

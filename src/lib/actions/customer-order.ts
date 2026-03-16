@@ -965,7 +965,7 @@ export async function createCustomerOrder(data: CreateCustomerOrderInput) {
     // Production orders are now created separately through the order analysis workflow
     // This allows for better control over production planning and mixed fulfillment scenarios
 
-    revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
 
     // Return the created customer order
     // Production orders can be created separately through the order analysis workflow
@@ -1070,7 +1070,7 @@ export async function updateCustomerOrder(
       })),
     };
 
-    revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
     return updatedOrder;
   } catch (error) {
     console.error("Error updating customer order:", error);
@@ -1168,13 +1168,10 @@ export async function deleteCustomerOrder(id: string) {
       });
     });
 
-    revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
     revalidatePath("/admin/production");
   } catch (error) {
     console.error("Error deleting customer order:", error);
-    if (error instanceof Error) {
-      throw new Error(error.message);
-    }
     throw new Error("Failed to delete customer order");
   }
 }
@@ -1791,7 +1788,7 @@ export async function createProductionOrdersWithDecisions(
     );
 
     // Clear Next.js caches
-    revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
     revalidatePath("/admin/production");
 
     return createdOrders;
@@ -2105,9 +2102,6 @@ export async function updateCustomerOrderWithLines(
     }
 
     // Revalidate related pages
-    revalidatePath("/admin/customer-orders");
-    revalidatePath(`/admin/customer-orders/${id}`);
-    // Also revalidate the new v2 routes
     revalidatePath("/admin/customer-orders-v2");
     revalidatePath(`/admin/customer-orders-v2/${id}`);
     revalidatePath("/admin/production");

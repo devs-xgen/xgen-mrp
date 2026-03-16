@@ -28,7 +28,6 @@
 // import { Textarea } from "@/components/ui/textarea";
 // import { Input } from "@/components/ui/input";
 
-
 // interface WorkCenter {
 //   id: string;
 //   name: string;
@@ -141,7 +140,7 @@
 //       });
 
 //       setOpen(false);
-      
+
 //       if (onOperationUpdated) {
 //         await onOperationUpdated();
 //       }
@@ -251,7 +250,6 @@
 //   );
 // }
 
-
 // src/components/module/worker/tasks/edit-operation-dialog.tsx
 "use client";
 
@@ -260,7 +258,7 @@ import { Status } from "@prisma/client";
 import { Loader2, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 // Updated import path to match your provided actions file structure
-import { updateOperation } from "@/lib/actions/production-order"; 
+import { updateOperation } from "@/lib/actions/worker/production-order";
 
 import {
   Dialog,
@@ -282,7 +280,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-
 
 interface WorkCenter {
   id: string;
@@ -332,10 +329,10 @@ export function EditOperationDialog({
       const formatDateTimeLocal = (date: Date) => {
         const d = new Date(date);
         const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const hours = String(d.getHours()).padStart(2, '0');
-        const minutes = String(d.getMinutes()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        const hours = String(d.getHours()).padStart(2, "0");
+        const minutes = String(d.getMinutes()).padStart(2, "0");
         return `${year}-${month}-${day}T${hours}:${minutes}`;
       };
 
@@ -398,7 +395,7 @@ export function EditOperationDialog({
       });
 
       setOpen(false);
-      
+
       if (onOperationUpdated) {
         await onOperationUpdated();
       }
@@ -436,11 +433,11 @@ export function EditOperationDialog({
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="workCenter">Work Center</Label>
-              <Select 
-                value={workCenterId} 
+              <Select
+                value={workCenterId}
                 onValueChange={setWorkCenterId}
                 // Disable if the operation is not PENDING (as enforced by server action)
-                disabled={operation.status !== 'PENDING'} 
+                disabled={operation.status !== "PENDING"}
               >
                 <SelectTrigger id="workCenter">
                   <SelectValue placeholder="Select work center" />
@@ -464,7 +461,7 @@ export function EditOperationDialog({
                 onChange={(e) => setStartTime(e.target.value)}
                 required
                 // Disable if the operation is not PENDING (as enforced by server action)
-                disabled={operation.status !== 'PENDING'} 
+                disabled={operation.status !== "PENDING"}
               />
             </div>
 
@@ -477,7 +474,7 @@ export function EditOperationDialog({
                 onChange={(e) => setEndTime(e.target.value)}
                 required
                 // Disable if the operation is not PENDING (as enforced by server action)
-                disabled={operation.status !== 'PENDING'} 
+                disabled={operation.status !== "PENDING"}
               />
             </div>
 
@@ -491,7 +488,7 @@ export function EditOperationDialog({
                 rows={3}
                 // Allow notes editing even if not PENDING, though the server will prevent save if other fields change
                 // However, given the server only allows PENDING edits, disabling this field for non-PENDING is safer
-                disabled={operation.status !== 'PENDING'} 
+                disabled={operation.status !== "PENDING"}
               />
             </div>
           </div>
@@ -504,7 +501,10 @@ export function EditOperationDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || operation.status !== 'PENDING'}>
+            <Button
+              type="submit"
+              disabled={isSubmitting || operation.status !== "PENDING"}
+            >
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

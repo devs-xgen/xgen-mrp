@@ -59,7 +59,7 @@ export async function createTransactionForOrder(input: CreateTransactionInput) {
     }
 
     // Revalidate key pages that show customer orders and payments
-    revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
     revalidatePath("/admin/customer-orders-v2");
 
     return serializeDecimals(tx);

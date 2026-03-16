@@ -458,7 +458,7 @@ export async function createProductionOrdersForItems(
       }
     }
 
-    revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
     revalidatePath("/admin/production");
 
     return {
@@ -513,7 +513,7 @@ export async function allocateStockForOrder(
 
     const errors = batchResult.errors || [];
 
-    revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
 
     return {
       success: errors.length === 0,

@@ -130,7 +130,7 @@ export async function reserveStockForOrderLine(
       });
     }
 
-    revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
     revalidatePath("/admin/products");
 
     return {
@@ -250,7 +250,7 @@ export async function allocateStockForOrderLine(
       },
     });
 
-    revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
     revalidatePath("/admin/products");
 
     return {
@@ -372,7 +372,7 @@ export async function releaseStockReservation(
       ? orderLine.productVariant.currentStock
       : orderLine.product.currentStock;
 
-    revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
     revalidatePath("/admin/products");
 
     return {
@@ -453,7 +453,7 @@ export async function completeFulfillment(
       },
     });
 
-    revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
 
     return {
       success: true,
@@ -592,7 +592,7 @@ export async function updateFulfillmentStatus(
       }
     }
 
-    revalidatePath("/admin/customer-orders");
+    revalidatePath("/admin/customer-orders-v2");
     return {
       success: true,
       message: "Fulfillment status updated successfully",

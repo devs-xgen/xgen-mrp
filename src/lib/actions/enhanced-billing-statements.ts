@@ -219,7 +219,7 @@ async function createCustomerOrderBilling(
   }
 
   revalidatePath("/admin/billing/billing-statements");
-  revalidatePath("/admin/customer-orders");
+  revalidatePath("/admin/customer-orders-v2");
   revalidatePath("/admin/billing/delivery-receipts");
   return serializeDecimals(result.billingStatement);
 }

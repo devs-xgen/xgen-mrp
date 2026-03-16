@@ -4,7 +4,16 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Save, Plus, X, Edit, Package, Calendar, User } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Plus,
+  X,
+  Edit,
+  Package,
+  Calendar,
+  User,
+} from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -39,7 +48,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 import { formatCurrencyPHP } from "@/lib/constant";
-import { customerOrderEditSchema, type CustomerOrderEditForm } from "@/lib/validation/customer-order-edit";
+import {
+  customerOrderEditSchema,
+  type CustomerOrderEditForm,
+} from "@/lib/validation/customer-order-edit";
 import { updateCustomerOrderWithLines } from "@/lib/actions/customer-order";
 import type { Customer } from "@prisma/client";
 
@@ -99,20 +111,22 @@ export function CustomerOrderEditClient({
 }: CustomerOrderEditClientProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [orderLines, setOrderLines] = useState<OrderLine[]>(order.orderLines || []);
+  const [orderLines, setOrderLines] = useState<OrderLine[]>(
+    order.orderLines || [],
+  );
 
   const form = useForm<CustomerOrderEditForm>({
     resolver: zodResolver(customerOrderEditSchema),
     defaultValues: {
       id: order.id,
       customerId: order.customerId,
-      orderDate: new Date(order.orderDate).toISOString().split('T')[0], // Convert to YYYY-MM-DD format
-      requiredDate: new Date(order.requiredDate).toISOString().split('T')[0],
+      orderDate: new Date(order.orderDate).toISOString().split("T")[0], // Convert to YYYY-MM-DD format
+      requiredDate: new Date(order.requiredDate).toISOString().split("T")[0],
       shippingAddress: order.shippingAddress || "",
       billingAddress: order.billingAddress || "",
       notes: order.notes || "",
       status: order.status,
-      orderLines: order.orderLines.map(line => ({
+      orderLines: order.orderLines.map((line) => ({
         id: line.id,
         productId: line.productId,
         productVariantId: line.productVariantId || undefined,
@@ -124,24 +138,31 @@ export function CustomerOrderEditClient({
     },
   });
 
-  const { handleSubmit, setValue, watch, formState: { errors, isDirty } } = form;
+  const {
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isDirty },
+  } = form;
 
   // Watch for changes to update order lines state
   const watchedOrderLines = watch("orderLines");
-  
+
   useEffect(() => {
-    setOrderLines(watchedOrderLines.map(line => {
-      const product = products.find(p => p.id === line.productId);
-      const variant = line.productVariantId 
-        ? product?.variants?.find((v: any) => v.id === line.productVariantId)
-        : undefined;
-      
-      return {
-        ...line,
-        product,
-        productVariant: variant,
-      };
-    }));
+    setOrderLines(
+      watchedOrderLines.map((line) => {
+        const product = products.find((p) => p.id === line.productId);
+        const variant = line.productVariantId
+          ? product?.variants?.find((v: any) => v.id === line.productVariantId)
+          : undefined;
+
+        return {
+          ...line,
+          product,
+          productVariant: variant,
+        };
+      }),
+    );
   }, [watchedOrderLines, products]);
 
   const addOrderLine = () => {
@@ -158,15 +179,18 @@ export function CustomerOrderEditClient({
 
   const removeOrderLine = (index: number) => {
     const currentLines = form.getValues("orderLines");
-    setValue("orderLines", currentLines.filter((_, i) => i !== index));
+    setValue(
+      "orderLines",
+      currentLines.filter((_, i) => i !== index),
+    );
   };
 
   const updateOrderLine = (index: number, field: string, value: any) => {
     const currentLines = form.getValues("orderLines");
     const updatedLines = [...currentLines];
-    
+
     if (field === "productId") {
-      const product = products.find(p => p.id === value);
+      const product = products.find((p) => p.id === value);
       updatedLines[index] = {
         ...updatedLines[index],
         productId: value,
@@ -174,8 +198,13 @@ export function CustomerOrderEditClient({
         unitPrice: product?.sellingPrice || 0,
       };
     } else if (field === "productVariantId") {
-      const product = products.find(p => p.id === updatedLines[index].productId);
-      const variant = value !== "no-variant" ? product?.variants?.find((v: any) => v.id === value) : undefined;
+      const product = products.find(
+        (p) => p.id === updatedLines[index].productId,
+      );
+      const variant =
+        value !== "no-variant"
+          ? product?.variants?.find((v: any) => v.id === value)
+          : undefined;
       updatedLines[index] = {
         ...updatedLines[index],
         productVariantId: value === "no-variant" ? undefined : value,
@@ -187,13 +216,13 @@ export function CustomerOrderEditClient({
         [field]: value,
       };
     }
-    
+
     setValue("orderLines", updatedLines);
   };
 
   const calculateTotal = () => {
     return orderLines.reduce((total, line) => {
-      return total + (line.quantity * line.unitPrice);
+      return total + line.quantity * line.unitPrice;
     }, 0);
   };
 
@@ -204,7 +233,7 @@ export function CustomerOrderEditClient({
         ...data,
         totalAmount: calculateTotal(),
         modifiedBy: "current-user", // Replace with actual user ID
-        orderLines: data.orderLines.map(line => ({
+        orderLines: data.orderLines.map((line) => ({
           ...line,
           createdBy: line.id ? undefined : "current-user", // Only for new lines
           modifiedBy: "current-user",
@@ -217,7 +246,7 @@ export function CustomerOrderEditClient({
       // Server action succeeded if we reach here
 
       toast.success("Order updated successfully!");
-      router.push(`/admin/customer-orders/${order.id}`);
+      router.push(`/admin/customer-orders-v2/${order.id}`);
       router.refresh();
     } catch (error) {
       console.error("Error updating order:", error);
@@ -243,7 +272,7 @@ export function CustomerOrderEditClient({
       {/* Header Actions */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href={`/admin/customer-orders/${order.id}`}>
+          <Link href={`/admin/customer-orders-v2/${order.id}`}>
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Order
@@ -439,14 +468,19 @@ export function CustomerOrderEditClient({
                           <TableCell>
                             <Select
                               value={line.productId}
-                              onValueChange={(value) => updateOrderLine(index, "productId", value)}
+                              onValueChange={(value) =>
+                                updateOrderLine(index, "productId", value)
+                              }
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Select product" />
                               </SelectTrigger>
                               <SelectContent>
                                 {products.map((product) => (
-                                  <SelectItem key={product.id} value={product.id}>
+                                  <SelectItem
+                                    key={product.id}
+                                    value={product.id}
+                                  >
                                     {product.name} ({product.sku})
                                   </SelectItem>
                                 ))}
@@ -454,25 +488,39 @@ export function CustomerOrderEditClient({
                             </Select>
                           </TableCell>
                           <TableCell>
-                            {line.product?.variants && line.product.variants.length > 0 ? (
+                            {line.product?.variants &&
+                            line.product.variants.length > 0 ? (
                               <Select
                                 value={line.productVariantId || "no-variant"}
-                                onValueChange={(value) => updateOrderLine(index, "productVariantId", value === "no-variant" ? undefined : value)}
+                                onValueChange={(value) =>
+                                  updateOrderLine(
+                                    index,
+                                    "productVariantId",
+                                    value === "no-variant" ? undefined : value,
+                                  )
+                                }
                               >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select variant" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="no-variant">No variant</SelectItem>
+                                  <SelectItem value="no-variant">
+                                    No variant
+                                  </SelectItem>
                                   {line.product.variants.map((variant: any) => (
-                                    <SelectItem key={variant.id} value={variant.id}>
+                                    <SelectItem
+                                      key={variant.id}
+                                      value={variant.id}
+                                    >
                                       {variant.displayName}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
                             ) : (
-                              <span className="text-sm text-muted-foreground">No variants</span>
+                              <span className="text-sm text-muted-foreground">
+                                No variants
+                              </span>
                             )}
                           </TableCell>
                           <TableCell>
@@ -480,7 +528,13 @@ export function CustomerOrderEditClient({
                               type="number"
                               min="1"
                               value={line.quantity}
-                              onChange={(e) => updateOrderLine(index, "quantity", parseInt(e.target.value) || 1)}
+                              onChange={(e) =>
+                                updateOrderLine(
+                                  index,
+                                  "quantity",
+                                  parseInt(e.target.value) || 1,
+                                )
+                              }
                               className="w-20"
                             />
                           </TableCell>
@@ -490,26 +544,38 @@ export function CustomerOrderEditClient({
                               step="0.01"
                               min="0"
                               value={line.unitPrice}
-                              onChange={(e) => updateOrderLine(index, "unitPrice", parseFloat(e.target.value) || 0)}
+                              onChange={(e) =>
+                                updateOrderLine(
+                                  index,
+                                  "unitPrice",
+                                  parseFloat(e.target.value) || 0,
+                                )
+                              }
                               className="w-28"
                             />
                           </TableCell>
                           <TableCell>
                             <span className="font-medium">
-                              {formatCurrencyPHP(line.quantity * line.unitPrice)}
+                              {formatCurrencyPHP(
+                                line.quantity * line.unitPrice,
+                              )}
                             </span>
                           </TableCell>
                           <TableCell>
                             <Select
                               value={line.status || "ACTIVE"}
-                              onValueChange={(value) => updateOrderLine(index, "status", value)}
+                              onValueChange={(value) =>
+                                updateOrderLine(index, "status", value)
+                              }
                             >
                               <SelectTrigger className="w-28">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="ACTIVE">Active</SelectItem>
-                                <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                                <SelectItem value="CANCELLED">
+                                  Cancelled
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </TableCell>
@@ -532,8 +598,12 @@ export function CustomerOrderEditClient({
                   {/* Order Total */}
                   <div className="flex justify-end pt-4 border-t">
                     <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Total Amount</p>
-                      <p className="text-2xl font-bold">{formatCurrencyPHP(calculateTotal())}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Total Amount
+                      </p>
+                      <p className="text-2xl font-bold">
+                        {formatCurrencyPHP(calculateTotal())}
+                      </p>
                     </div>
                   </div>
                 </div>
