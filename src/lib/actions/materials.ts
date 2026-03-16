@@ -250,6 +250,7 @@ export async function getAllMaterials(): Promise<Material[]> {
     const materials = await prisma.material.findMany({
       where: {
         status: { not: Status.ARCHIVED },
+        deletedAt: null,
       },
       include: {
         type: {
@@ -843,5 +844,97 @@ export async function getMaterialStats() {
       inactiveMaterials: 0,
       lowStockCount: 0,
     };
+  }
+}
+
+// ---------------- Soft Delete / Trash ----------------
+
+export async function softDeleteMaterial(materialId: string, reason?: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const existing = await prisma.material.findUnique({ where: { id: materialId } });
+    if (!existing) throw new Error("Material not found");
+    if (existing.deletedAt) throw new Error("Material is already in trash");
+
+    await prisma.material.update({
+      where: { id: materialId },
+      data: {
+        deletedAt: new Date(),
+        deletedBy: session.user.id,
+        deletedReason: reason ?? null,
+      },
+    });
+
+    revalidatePath("/admin/materials");
+    revalidatePath("/admin/materials/trash");
+  } catch (error) {
+    console.error("Error soft-deleting material:", error);
+    throw error instanceof Error ? error : new Error("Failed to move material to trash");
+  }
+}
+
+export async function restoreMaterial(materialId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const existing = await prisma.material.findUnique({ where: { id: materialId } });
+    if (!existing) throw new Error("Material not found");
+    if (!existing.deletedAt) throw new Error("Material is not in trash");
+
+    await prisma.material.update({
+      where: { id: materialId },
+      data: {
+        deletedAt: null,
+        deletedBy: null,
+        deletedReason: null,
+      },
+    });
+
+    revalidatePath("/admin/materials");
+    revalidatePath("/admin/materials/trash");
+  } catch (error) {
+    console.error("Error restoring material:", error);
+    throw error instanceof Error ? error : new Error("Failed to restore material");
+  }
+}
+
+export async function getTrashedMaterials() {
+  try {
+    const materials = await prisma.material.findMany({
+      where: { deletedAt: { not: null } },
+      include: {
+        type: true,
+        unitOfMeasure: true,
+        supplier: true,
+      },
+      orderBy: { deletedAt: "desc" },
+    });
+    return materials;
+  } catch (error) {
+    console.error("Error fetching trashed materials:", error);
+    throw new Error("Failed to fetch trashed materials");
+  }
+}
+
+export async function purgeExpiredTrashedMaterials() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+
+    const result = await prisma.material.deleteMany({
+      where: { deletedAt: { not: null, lte: cutoff } },
+    });
+
+    revalidatePath("/admin/materials/trash");
+    return { purged: result.count };
+  } catch (error) {
+    console.error("Error purging expired trashed materials:", error);
+    throw error instanceof Error ? error : new Error("Failed to purge expired materials");
   }
 }

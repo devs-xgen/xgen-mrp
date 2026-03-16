@@ -53,7 +53,7 @@ This folder is the canonical planning area for implementation scopes that are no
 
 1. ~~Export and import stabilization~~ — **Done (v1.5.14)**
 2. ~~Reset password entry points for all role logins~~ — **Done (v1.5.15)**
-3. Soft delete and restore
+3. ~~Soft delete and restore~~ — **Done (v1.5.17)**
 4. ~~Customer orders homepage route fix~~ — **Done (v1.5.16)**
 5. ~~Delivery task view error~~ — **Done (v1.5.16)**
 6. Superadmin role scope decision
@@ -64,7 +64,7 @@ This folder is the canonical planning area for implementation scopes that are no
 | -------- | --------- | --------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --- |
 | P1       | Completed | Done            | Export and import stabilization across the system                                       | [completed/P1-export-import-stabilization.md](./completed/P1-export-import-stabilization.md)               | Shipped v1.5.14 — fixed fake Excel, added Customer Orders + Production Orders exports        |
 | P2       | Completed | Done            | Reset password entry points for all role logins                                         | [completed/P2-reset-password-entrypoints.md](./completed/P2-reset-password-entrypoints.md)                 | Shipped v1.5.15 — security guard, portal context, portal-aware back link, disclaimer in card |     |
-| P3       | Active    | Planned         | Soft delete and restore for customer orders, production orders, materials, and products | [active/P3-soft-delete-and-restore.md](./active/P3-soft-delete-and-restore.md)                             | Separate from existing archive behavior                                                      |
+| P3       | Completed | Done            | Soft delete and restore for customer orders, production orders, materials, and products | [completed/P3-soft-delete-and-restore.md](./completed/P3-soft-delete-and-restore.md)                       | Shipped v1.5.17 — Trash pages, row actions, server actions, query filters, sidebar nav links |
 | P4       | Completed | Done            | Customer orders homepage 404 and route consistency                                      | [completed/P4-customer-orders-homepage-route-fix.md](./completed/P4-customer-orders-homepage-route-fix.md) | Shipped v1.5.16 — all stale /admin/customer-orders links + revalidatePaths updated to v2     |
 | P5       | Completed | Done            | Delivery task detail error investigation and stabilization                              | [completed/P5-delivery-task-view-error.md](./completed/P5-delivery-task-view-error.md)                     | Shipped v1.5.16 — hardened error handling, recoverable fallback UI, confirmed no dead nav    |
 | D1       | Decision  | Decision Needed | Superadmin role scope review                                                            | [decisions/D1-superadmin-role-scope.md](./decisions/D1-superadmin-role-scope.md)                           | On hold pending discussion with boss ma'am                                                   |

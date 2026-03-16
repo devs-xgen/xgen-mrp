@@ -235,6 +235,7 @@ export async function getCustomerOrdersWithFulfillment(): Promise<
 > {
   try {
     const orders = await prisma.customerOrder.findMany({
+      where: { deletedAt: null },
       include: {
         customer: {
           select: {
@@ -357,6 +358,7 @@ export async function getCustomerOrdersWithFulfillment(): Promise<
 export async function getCustomerOrders(): Promise<CustomerOrder[]> {
   try {
     const orders = await prisma.customerOrder.findMany({
+      where: { deletedAt: null },
       include: {
         customer: {
           select: {
@@ -2634,5 +2636,96 @@ export async function exportCustomerOrdersExcel(filters?: {
   const base64 = Buffer.from(buffer).toString("base64");
   const ts = new Date().toISOString().split("T")[0];
   return { base64, filename: `customer-orders-export-${ts}.xlsx` };
+}
+
+// ---------------- Soft Delete / Trash ----------------
+
+export async function softDeleteCustomerOrder(orderId: string, reason?: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const existing = await prisma.customerOrder.findUnique({ where: { id: orderId } });
+    if (!existing) throw new Error("Customer order not found");
+    if (existing.deletedAt) throw new Error("Customer order is already in trash");
+
+    await prisma.customerOrder.update({
+      where: { id: orderId },
+      data: {
+        deletedAt: new Date(),
+        deletedBy: session.user.id,
+        deletedReason: reason ?? null,
+      },
+    });
+
+    revalidatePath("/admin/customer-orders-v2");
+    revalidatePath("/admin/customer-orders-v2/trash");
+  } catch (error) {
+    console.error("Error soft-deleting customer order:", error);
+    throw error instanceof Error ? error : new Error("Failed to move customer order to trash");
+  }
+}
+
+export async function restoreCustomerOrder(orderId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const existing = await prisma.customerOrder.findUnique({ where: { id: orderId } });
+    if (!existing) throw new Error("Customer order not found");
+    if (!existing.deletedAt) throw new Error("Customer order is not in trash");
+
+    await prisma.customerOrder.update({
+      where: { id: orderId },
+      data: {
+        deletedAt: null,
+        deletedBy: null,
+        deletedReason: null,
+      },
+    });
+
+    revalidatePath("/admin/customer-orders-v2");
+    revalidatePath("/admin/customer-orders-v2/trash");
+  } catch (error) {
+    console.error("Error restoring customer order:", error);
+    throw error instanceof Error ? error : new Error("Failed to restore customer order");
+  }
+}
+
+export async function getTrashedCustomerOrders() {
+  try {
+    const orders = await prisma.customerOrder.findMany({
+      where: { deletedAt: { not: null } },
+      include: {
+        customer: true,
+        orderLines: { include: { product: true } },
+      },
+      orderBy: { deletedAt: "desc" },
+    });
+    return orders;
+  } catch (error) {
+    console.error("Error fetching trashed customer orders:", error);
+    throw new Error("Failed to fetch trashed customer orders");
+  }
+}
+
+export async function purgeExpiredTrashedCustomerOrders() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+
+    const result = await prisma.customerOrder.deleteMany({
+      where: { deletedAt: { not: null, lte: cutoff } },
+    });
+
+    revalidatePath("/admin/customer-orders-v2/trash");
+    return { purged: result.count };
+  } catch (error) {
+    console.error("Error purging expired trashed customer orders:", error);
+    throw error instanceof Error ? error : new Error("Failed to purge expired customer orders");
+  }
 }
 

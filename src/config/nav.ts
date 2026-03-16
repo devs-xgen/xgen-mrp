@@ -28,6 +28,7 @@ import {
   CreditCard,
   MessageCircle,
   Shield,
+  Trash2,
 } from "lucide-react";
 
 interface NavItem {
@@ -56,10 +57,22 @@ export const adminNavItems: NavItem[] = [
         description: "Manage product catalog",
       },
       {
+        icon: Trash2,
+        label: "Products Trash",
+        href: "/admin/products/trash",
+        description: "Recently deleted products",
+      },
+      {
         icon: Warehouse,
         label: "Materials",
         href: "/admin/materials",
         description: "Raw materials inventory management",
+      },
+      {
+        icon: Trash2,
+        label: "Materials Trash",
+        href: "/admin/materials/trash",
+        description: "Recently deleted materials",
       },
     ],
   },
@@ -71,6 +84,12 @@ export const adminNavItems: NavItem[] = [
         label: "Production Orders",
         href: "/admin/production",
         description: "Production orders and scheduling",
+      },
+      {
+        icon: Trash2,
+        label: "Production Trash",
+        href: "/admin/production/trash",
+        description: "Recently deleted production orders",
       },
       {
         label: "Work Centers",
@@ -103,6 +122,12 @@ export const adminNavItems: NavItem[] = [
         label: "Customer Orders V2",
         href: "/admin/customer-orders-v2",
         description: "Enhanced customer order management with advanced features",
+      },
+      {
+        icon: Trash2,
+        label: "Orders Trash",
+        href: "/admin/customer-orders-v2/trash",
+        description: "Recently deleted customer orders",
       },
     ],
   },

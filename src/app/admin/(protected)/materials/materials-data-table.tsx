@@ -9,9 +9,22 @@ import {
 } from "@/components/global/table/column-helpers";
 import { getTableConfig } from "@/components/global/table/table-utils";
 import { EditMaterialDialog } from "@/components/module/admin/materials/edit-material-dialog";
-import { deleteMaterial } from "@/lib/actions/materials";
-import { Material, MaterialType, UnitOfMeasure, Supplier } from "@/types/admin/materials";
-import { AlertTriangle, MoreHorizontal, Pencil, Archive, Eye, Search } from "lucide-react";
+import { deleteMaterial, softDeleteMaterial } from "@/lib/actions/materials";
+import {
+  Material,
+  MaterialType,
+  UnitOfMeasure,
+  Supplier,
+} from "@/types/admin/materials";
+import {
+  AlertTriangle,
+  MoreHorizontal,
+  Pencil,
+  Archive,
+  Eye,
+  Search,
+  Trash2,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,7 +80,7 @@ function MaterialActionsCell({
   materialTypes,
   unitOfMeasures,
   suppliers,
-  onRefresh
+  onRefresh,
 }: {
   material: Material;
   materialTypes: MaterialType[];
@@ -82,9 +95,38 @@ function MaterialActionsCell({
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmationText, setConfirmationText] = useState("");
   const [reason, setReason] = useState("");
+  const [trashOpen, setTrashOpen] = useState(false);
+  const [trashReason, setTrashReason] = useState("");
+  const [isTrashing, setIsTrashing] = useState(false);
 
   const confirmationRequired = "ARCHIVE";
-  const isConfirmationValid = confirmationText.toUpperCase() === confirmationRequired;
+  const isConfirmationValid =
+    confirmationText.toUpperCase() === confirmationRequired;
+
+  const handleMoveToTrash = async () => {
+    try {
+      setIsTrashing(true);
+      await softDeleteMaterial(material.id, trashReason || undefined);
+      toast({
+        title: "Moved to Trash",
+        description: `"${material.name}" moved to trash. Restorable within 30 days.`,
+      });
+      setTrashOpen(false);
+      setTrashReason("");
+      onRefresh();
+    } catch (error) {
+      toast({
+        title: "Failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to move material to trash",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTrashing(false);
+    }
+  };
 
   const handleDelete = async () => {
     try {
@@ -103,7 +145,8 @@ function MaterialActionsCell({
     } catch (error) {
       toast({
         title: "❌ Archive Failed",
-        description: error instanceof Error ? error.message : "Failed to archive material",
+        description:
+          error instanceof Error ? error.message : "Failed to archive material",
         variant: "destructive",
       });
     } finally {
@@ -121,7 +164,9 @@ function MaterialActionsCell({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[180px]">
-          <DropdownMenuItem onClick={() => router.push(`/admin/materials/${material.id}`)}>
+          <DropdownMenuItem
+            onClick={() => router.push(`/admin/materials/${material.id}`)}
+          >
             <Eye className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
             View
           </DropdownMenuItem>
@@ -132,10 +177,17 @@ function MaterialActionsCell({
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={() => setDeleteOpen(true)}
-            className="text-destructive focus:text-destructive"
+            className="text-amber-600 focus:text-amber-600"
           >
             <Archive className="mr-2 h-3.5 w-3.5" />
             Archive
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setTrashOpen(true)}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash2 className="mr-2 h-3.5 w-3.5" />
+            Move to Trash
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -150,15 +202,54 @@ function MaterialActionsCell({
         onSuccess={onRefresh}
       />
 
+      <AlertDialog open={trashOpen} onOpenChange={setTrashOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Move to Trash</AlertDialogTitle>
+            <AlertDialogDescription>
+              Move &quot;{material.name}&quot; to trash. It will be permanently
+              deleted after 30 days unless restored.
+              <div className="mt-3">
+                <Label htmlFor="trash-reason">Reason (optional)</Label>
+                <Textarea
+                  id="trash-reason"
+                  value={trashReason}
+                  onChange={(e) => setTrashReason(e.target.value)}
+                  placeholder="Why is this material being deleted?"
+                  rows={3}
+                  className="mt-2"
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleMoveToTrash}
+              disabled={isTrashing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isTrashing ? "Moving..." : "Move to Trash"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-destructive">Archive Material</AlertDialogTitle>
+            <AlertDialogTitle className="text-destructive">
+              Archive Material
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Archiving will hide &quot;{material.name}&quot; from listings and prevent future use in orders, BOMs, or purchases. Existing records that reference it will be preserved.
+              Archiving will hide &quot;{material.name}&quot; from listings and
+              prevent future use in orders, BOMs, or purchases. Existing records
+              that reference it will be preserved.
               <div className="mt-4 space-y-4">
                 <div>
-                  <Label htmlFor="archive-reason">Archive Reason (optional)</Label>
+                  <Label htmlFor="archive-reason">
+                    Archive Reason (optional)
+                  </Label>
                   <Textarea
                     id="archive-reason"
                     value={reason}
@@ -170,7 +261,11 @@ function MaterialActionsCell({
                 </div>
                 <div>
                   <Label htmlFor="confirmation">
-                    Type <code className="bg-muted px-1 rounded">{confirmationRequired}</code> to confirm:
+                    Type{" "}
+                    <code className="bg-muted px-1 rounded">
+                      {confirmationRequired}
+                    </code>{" "}
+                    to confirm:
                   </Label>
                   <Input
                     id="confirmation"
@@ -205,7 +300,7 @@ export function MaterialsDataTable({
   materialTypes,
   unitOfMeasures,
   suppliers,
-  onRefresh
+  onRefresh,
 }: MaterialsDataTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -263,7 +358,9 @@ export function MaterialsDataTable({
         return (
           <div>
             <div className="font-medium">{material.name}</div>
-            <div className="text-xs text-muted-foreground">SKU: {material.sku}</div>
+            <div className="text-xs text-muted-foreground">
+              SKU: {material.sku}
+            </div>
           </div>
         );
       },
@@ -376,10 +473,15 @@ export function MaterialsDataTable({
   };
 
   const onPaginationChange = (
-    updaterOrValue: PaginationState | ((old: PaginationState) => PaginationState)
+    updaterOrValue:
+      | PaginationState
+      | ((old: PaginationState) => PaginationState),
   ) => {
     const previous = pagination;
-    const next = typeof updaterOrValue === "function" ? updaterOrValue(previous) : updaterOrValue;
+    const next =
+      typeof updaterOrValue === "function"
+        ? updaterOrValue(previous)
+        : updaterOrValue;
 
     applyFilters({
       page: (next.pageIndex + 1).toString(),
@@ -402,7 +504,11 @@ export function MaterialsDataTable({
               />
             </div>
             {searchValue && (
-              <Button variant="ghost" size="sm" onClick={() => setSearchValue("")}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchValue("")}
+              >
                 Clear
               </Button>
             )}

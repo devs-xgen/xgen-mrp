@@ -2,6 +2,20 @@
   "project": "XGen MRP",
   "entries": [
     {
+      "version": "1.5.17",
+      "date": "2026-03-11",
+      "changes": [
+        "FEATURE: Soft delete (Trash) implemented for Products, Materials, Customer Orders, and Production Orders — records moved to trash are hidden from all default views but preserved in the database",
+        "FEATURE: Restore from Trash — any soft-deleted record can be fully restored within 30 days via dedicated Trash pages",
+        "FEATURE: Purge Expired Trash — manual purge action on each Trash page permanently deletes records older than 30 days",
+        "FEATURE: Trash pages added at /admin/products/trash, /admin/materials/trash, /admin/customer-orders-v2/trash, /admin/production/trash",
+        "FEATURE: Move to Trash row action added to Products, Materials, Customer Orders V2, and Production Orders tables",
+        "FEATURE: ProductionOrder soft delete blocked when status is IN_PROGRESS — must be completed or cancelled first",
+        "SCHEMA: Added nullable deletedAt, deletedBy, deletedReason fields to Product, Material, CustomerOrder, ProductionOrder models (non-destructive, prisma db push)",
+        "NAV: Trash sub-links added to Item Management, Production, and Orders sidebar sections"
+      ]
+    },
+    {
       "version": "1.5.16",
       "date": "2026-03-10",
       "changes": [

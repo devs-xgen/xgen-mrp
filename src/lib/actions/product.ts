@@ -352,7 +352,7 @@ export async function exportProductsExcel(filters?: {
 export async function getAllProducts() {
   try {
     const products = await prisma.product.findMany({
-      where: { status: { not: "ARCHIVED" as Status } },
+      where: { status: { not: "ARCHIVED" as Status }, deletedAt: null },
       include: {
         category: {
           select: {
@@ -1542,5 +1542,93 @@ export async function getPaginatedProducts({
   } catch (error) {
     console.error("❌ Error fetching paginated products:", error);
     throw new Error("Failed to fetch paginated products");
+  }
+}
+
+// ---------------- Soft Delete / Trash ----------------
+
+export async function softDeleteProduct(productId: string, reason?: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const existing = await prisma.product.findUnique({ where: { id: productId } });
+    if (!existing) throw new Error("Product not found");
+    if (existing.deletedAt) throw new Error("Product is already in trash");
+
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        deletedAt: new Date(),
+        deletedBy: session.user.id,
+        deletedReason: reason ?? null,
+      },
+    });
+
+    revalidatePath("/admin/products");
+    revalidatePath("/admin/products/trash");
+  } catch (error) {
+    console.error("Error soft-deleting product:", error);
+    throw error instanceof Error ? error : new Error("Failed to move product to trash");
+  }
+}
+
+export async function restoreProduct(productId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const existing = await prisma.product.findUnique({ where: { id: productId } });
+    if (!existing) throw new Error("Product not found");
+    if (!existing.deletedAt) throw new Error("Product is not in trash");
+
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        deletedAt: null,
+        deletedBy: null,
+        deletedReason: null,
+      },
+    });
+
+    revalidatePath("/admin/products");
+    revalidatePath("/admin/products/trash");
+  } catch (error) {
+    console.error("Error restoring product:", error);
+    throw error instanceof Error ? error : new Error("Failed to restore product");
+  }
+}
+
+export async function getTrashedProducts() {
+  try {
+    const products = await prisma.product.findMany({
+      where: { deletedAt: { not: null } },
+      include: { category: true },
+      orderBy: { deletedAt: "desc" },
+    });
+    return products;
+  } catch (error) {
+    console.error("Error fetching trashed products:", error);
+    throw new Error("Failed to fetch trashed products");
+  }
+}
+
+export async function purgeExpiredTrashedProducts() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+
+    const result = await prisma.product.deleteMany({
+      where: { deletedAt: { not: null, lte: cutoff } },
+    });
+
+    revalidatePath("/admin/products/trash");
+    return { purged: result.count };
+  } catch (error) {
+    console.error("Error purging expired trashed products:", error);
+    throw error instanceof Error ? error : new Error("Failed to purge expired products");
   }
 }

@@ -1,7 +1,15 @@
 // src/components/module/admin/products/columns.tsx
 "use client";
 import { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, Factory, Edit, Archive, Eye, MoreHorizontal } from "lucide-react";
+import {
+  AlertTriangle,
+  Factory,
+  Edit,
+  Archive,
+  Eye,
+  MoreHorizontal,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +32,19 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 import { Separator } from "@/components/ui/separator";
 import { DeleteProductDialog } from "./delete-product-dialog";
+import { useState, useTransition } from "react";
+import { softDeleteProduct } from "@/lib/actions/product";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 // Define the Product type with relations and variants
 export type ProductWithRelations = Product & {
@@ -48,12 +69,41 @@ interface ProductRowActionsProps {
 }
 
 function ProductRowActions({ product, onSuccess }: ProductRowActionsProps) {
+  const { toast } = useToast();
+  const [showTrashDialog, setShowTrashDialog] = useState(false);
+  const [trashReason, setTrashReason] = useState("");
+  const [isPending, startTransition] = useTransition();
+
   const handleViewDetails = () => {
     window.location.href = `/admin/products/${product.id}`;
   };
 
   const handleEditPage = () => {
     window.location.href = `/admin/products/${product.id}/edit`;
+  };
+
+  const handleMoveToTrash = () => {
+    startTransition(async () => {
+      try {
+        await softDeleteProduct(product.id, trashReason || undefined);
+        toast({
+          title: "Moved to Trash",
+          description: `"${product.name}" moved to trash. Restorable within 30 days.`,
+        });
+        setShowTrashDialog(false);
+        setTrashReason("");
+        await onSuccess?.();
+      } catch (error) {
+        toast({
+          title: "Failed",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Failed to move product to trash",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   return (
@@ -91,7 +141,7 @@ function ProductRowActions({ product, onSuccess }: ProductRowActionsProps) {
             trigger={
               <DropdownMenuItem
                 onSelect={(e) => e.preventDefault()}
-                className="text-red-600"
+                className="text-amber-600"
               >
                 <Archive className="mr-2 h-4 w-4" />
                 Archive
@@ -99,14 +149,63 @@ function ProductRowActions({ product, onSuccess }: ProductRowActionsProps) {
             }
             onSuccess={onSuccess}
           />
+          <DropdownMenuItem
+            onSelect={(e) => e.preventDefault()}
+            onClick={() => setShowTrashDialog(true)}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Move to Trash
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <Dialog open={showTrashDialog} onOpenChange={setShowTrashDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move to Trash</DialogTitle>
+            <DialogDescription>
+              Move &quot;{product.name}&quot; to trash. It will be permanently
+              deleted after 30 days unless restored.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="trash-reason-product">Reason (optional)</Label>
+            <Textarea
+              id="trash-reason-product"
+              value={trashReason}
+              onChange={(e) => setTrashReason(e.target.value)}
+              placeholder="Why is this product being deleted?"
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowTrashDialog(false);
+                setTrashReason("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleMoveToTrash}
+              disabled={isPending}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {isPending ? "Moving..." : "Move to Trash"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 }
 
 export const createColumns = (
-  onSuccess?: () => Promise<void>
+  onSuccess?: () => Promise<void>,
 ): ColumnDef<ProductWithRelations>[] => [
   {
     id: "select",
@@ -116,8 +215,8 @@ export const createColumns = (
           table.getIsAllPageRowsSelected()
             ? true
             : table.getIsSomePageRowsSelected()
-            ? "indeterminate"
-            : false
+              ? "indeterminate"
+              : false
         }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Select all"
@@ -149,7 +248,7 @@ export const createColumns = (
                 href={`/admin/products/${row.original.id}`}
                 className="font-medium hover:text-blue-600 hover:underline cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-sm"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
+                  if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     window.location.href = `/admin/products/${row.original.id}`;
                   }
@@ -187,18 +286,21 @@ export const createColumns = (
     header: "Selling Price",
     cell: ({ row }) => {
       const product = row.original;
-      if (product.hasVariants && product.variants && product.variants.length > 0) {
-        const prices = product.variants.map(variant => variant.sellingPrice);
+      if (
+        product.hasVariants &&
+        product.variants &&
+        product.variants.length > 0
+      ) {
+        const prices = product.variants.map((variant) => variant.sellingPrice);
         const minPrice = Math.min(...prices);
         const maxPrice = Math.max(...prices);
-        
+
         return (
           <div className="flex flex-col">
             <span className="font-semibold">
-              {minPrice === maxPrice 
-                ? formatCurrencyPHP(minPrice) 
-                : `${formatCurrencyPHP(minPrice)} - ${formatCurrencyPHP(maxPrice)}`
-              }
+              {minPrice === maxPrice
+                ? formatCurrencyPHP(minPrice)
+                : `${formatCurrencyPHP(minPrice)} - ${formatCurrencyPHP(maxPrice)}`}
             </span>
             <span className="text-xs text-muted-foreground italic">
               (From variants)
@@ -223,14 +325,21 @@ export const createColumns = (
     ),
     cell: ({ row }) => {
       const product = row.original;
-      
-      const totalVariantStock = product.hasVariants && product.variants && product.variants.length > 0
-        ? product.variants.reduce((sum, variant) => sum + variant.currentStock, 0)
-        : null;
-      
-      const isLowStock = Number(product.currentStock) <= product.minimumStockLevel;
-      const isVariantLowStock = totalVariantStock !== null && totalVariantStock <= product.minimumStockLevel;
-      
+
+      const totalVariantStock =
+        product.hasVariants && product.variants && product.variants.length > 0
+          ? product.variants.reduce(
+              (sum, variant) => sum + variant.currentStock,
+              0,
+            )
+          : null;
+
+      const isLowStock =
+        Number(product.currentStock) <= product.minimumStockLevel;
+      const isVariantLowStock =
+        totalVariantStock !== null &&
+        totalVariantStock <= product.minimumStockLevel;
+
       return (
         <div className="flex flex-col space-y-1">
           {totalVariantStock === null ? (
@@ -246,9 +355,7 @@ export const createColumns = (
             <>
               <div className="flex items-center text-sm font-normal">
                 <span className="text-muted-foreground mr-1">Base:</span>
-                <span className="font-medium">
-                  {product.currentStock}
-                </span>
+                <span className="font-medium">{product.currentStock}</span>
                 {isLowStock && (
                   <TooltipProvider>
                     <Tooltip>
@@ -265,9 +372,7 @@ export const createColumns = (
               <Separator className="my-1" />
               <div className="flex items-center text-sm font-normal">
                 <span className="text-muted-foreground mr-1">Variants:</span>
-                <span className="font-medium">
-                  {totalVariantStock}
-                </span>
+                <span className="font-medium">{totalVariantStock}</span>
                 {isVariantLowStock && (
                   <TooltipProvider>
                     <Tooltip>
@@ -300,11 +405,14 @@ export const createColumns = (
         typeof row.original._count?.productionOrders === "number"
           ? (row.original._count?.productionOrders as number)
           : (row.original as any).productionOrders?.length || 0;
-      
+
       return (
         <div className="flex items-center">
           {productionOrders > 0 ? (
-            <Badge variant="secondary" className="bg-blue-100 text-blue-800 flex items-center gap-1">
+            <Badge
+              variant="secondary"
+              className="bg-blue-100 text-blue-800 flex items-center gap-1"
+            >
               <Factory className="h-3 w-3" />
               {productionOrders} orders
             </Badge>
@@ -323,16 +431,20 @@ export const createColumns = (
     cell: ({ row }) => {
       const status = row.getValue("status") as Status;
       const product = row.original;
-      
-      const totalStock = product.hasVariants && product.variants && product.variants.length > 0
-        ? product.variants.reduce((sum, variant) => sum + variant.currentStock, 0)
-        : Number(product.currentStock);
-        
+
+      const totalStock =
+        product.hasVariants && product.variants && product.variants.length > 0
+          ? product.variants.reduce(
+              (sum, variant) => sum + variant.currentStock,
+              0,
+            )
+          : Number(product.currentStock);
+
       const minStock = product.minimumStockLevel;
-      
+
       let stockStatus: "default" | "secondary" | "destructive" = "default";
       let stockLabel = "In Stock";
-      
+
       if (totalStock === 0) {
         stockStatus = "destructive";
         stockLabel = "Out of Stock";
@@ -366,10 +478,7 @@ export const createColumns = (
   {
     id: "actions",
     cell: ({ row }) => (
-      <ProductRowActions 
-        product={row.original} 
-        onSuccess={onSuccess} 
-      />
+      <ProductRowActions product={row.original} onSuccess={onSuccess} />
     ),
     enableSorting: false,
     enableHiding: false,

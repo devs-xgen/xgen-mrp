@@ -4,11 +4,11 @@
 // import { useState } from "react"
 // import { Row } from "@tanstack/react-table"
 // import { useRouter } from "next/navigation"
-// import { 
-//   MoreHorizontal, 
-//   EyeIcon, 
-//   PlayCircle, 
-//   Trash2, 
+// import {
+//   MoreHorizontal,
+//   EyeIcon,
+//   PlayCircle,
+//   Trash2,
 //   AlertTriangle,
 //   Loader2,
 //   ShieldAlert,
@@ -59,7 +59,7 @@
 //   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 //   const [isDeleting, setIsDeleting] = useState(false)
 //   const [confirmationText, setConfirmationText] = useState("")
-  
+
 //   const productionOrder = row.original
 
 //   const handleView = () => {
@@ -71,12 +71,12 @@
 //     try {
 //       const { updateProductionOrderStatus } = await import("@/lib/actions/production-order")
 //       await updateProductionOrderStatus(productionOrder.id, "IN_PROGRESS")
-      
+
 //       toast({
 //         title: "✅ Production Started",
 //         description: `Production for "${productionOrder.productName}" has been started successfully`,
 //       })
-      
+
 //       // Refresh the page to update the list
 //       if (onSuccess) {
 //         await onSuccess()
@@ -91,17 +91,17 @@
 //   const handleDelete = async () => {
 //     try {
 //       setIsDeleting(true)
-      
+
 //       await deleteProductionOrder(productionOrder.id)
-      
+
 //       toast({
 //         title: "✅ Success",
 //         description: `Production order "${productionOrder.productName}" has been deleted successfully`,
 //       })
-      
+
 //       setDeleteDialogOpen(false)
 //       setConfirmationText("")
-      
+
 //       // Refresh the page to update the list
 //       if (onSuccess) {
 //         await onSuccess()
@@ -110,7 +110,7 @@
 //       }
 //     } catch (error) {
 //       toast({
-//         title: "❌ Delete Failed", 
+//         title: "❌ Delete Failed",
 //         description: error instanceof Error ? error.message : "Failed to delete production order",
 //         variant: "destructive",
 //       })
@@ -126,7 +126,7 @@
 
 //   // Check if order can be deleted (business rules)
 //   const canDelete = productionOrder.status === "PENDING" || productionOrder.status === "CANCELLED"
-//   const deleteTooltip = canDelete 
+//   const deleteTooltip = canDelete
 //     ? "Delete this production order"
 //     : "Cannot delete orders that are in progress or completed"
 
@@ -149,8 +149,8 @@
 //     <>
 //       <DropdownMenu>
 //         <DropdownMenuTrigger asChild>
-//           <Button 
-//             variant="ghost" 
+//           <Button
+//             variant="ghost"
 //             className="flex h-8 w-8 p-0 data-[state=open]:bg-muted"
 //           >
 //             <span className="sr-only">Open menu</span>
@@ -162,7 +162,7 @@
 //             <EyeIcon className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
 //             View Details
 //           </DropdownMenuItem>
-          
+
 //           {/* Pre-Production Verification - Only show for PENDING orders */}
 //           {productionOrder.status === "PENDING" && (
 //             <DropdownMenuItem
@@ -173,7 +173,7 @@
 //               Verify & Start
 //             </DropdownMenuItem>
 //           )}
-          
+
 //           <DropdownMenuItem
 //             disabled={isLoading}
 //             onClick={() => setDialogOpen(true)}
@@ -181,9 +181,9 @@
 //             <PlayCircle className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
 //             Manage
 //           </DropdownMenuItem>
-          
+
 //           <DropdownMenuSeparator />
-          
+
 //           <DropdownMenuItem
 //             disabled={!canDelete || isDeleting}
 //             onClick={() => setDeleteDialogOpen(true)}
@@ -229,14 +229,14 @@
 //                       <Package className="w-4 h-4" />
 //                       Production Order Details
 //                     </h4>
-//                     <Badge 
-//                       variant="outline" 
+//                     <Badge
+//                       variant="outline"
 //                       className={`${getStatusColor(productionOrder.status)} text-white border-0`}
 //                     >
 //                       {productionOrder.status}
 //                     </Badge>
 //                   </div>
-                  
+
 //                   <div className="grid grid-cols-2 gap-2 text-sm">
 //                     <div>
 //                       <span className="text-muted-foreground">Product:</span>
@@ -265,7 +265,7 @@
 //                     <AlertTriangle className="w-4 h-4" />
 //                     <h4 className="font-medium">This action will permanently:</h4>
 //                   </div>
-                  
+
 //                   <ul className="text-sm space-y-2 pl-4">
 //                     <li className="flex items-center gap-2">
 //                       <div className="w-1.5 h-1.5 bg-destructive rounded-full"></div>
@@ -307,8 +307,8 @@
 //                     onChange={(e) => setConfirmationText(e.target.value)}
 //                     placeholder="Type DELETE to confirm"
 //                     className={`${
-//                       confirmationText && !isConfirmationValid 
-//                         ? "border-destructive focus:border-destructive" 
+//                       confirmationText && !isConfirmationValid
+//                         ? "border-destructive focus:border-destructive"
 //                         : ""
 //                     }`}
 //                     disabled={isDeleting}
@@ -331,9 +331,9 @@
 //               </div>
 //             </AlertDialogDescription>
 //           </AlertDialogHeader>
-          
+
 //           <AlertDialogFooter className="gap-2">
-//             <AlertDialogCancel 
+//             <AlertDialogCancel
 //               disabled={isDeleting}
 //               onClick={handleCancelDelete}
 //             >
@@ -364,11 +364,11 @@
 //   )
 // }
 
-"use client"
+"use client";
 
-import { useState } from "react"
-import type { Row } from "@tanstack/react-table"
-import { useRouter } from "next/navigation"
+import { useState } from "react";
+import type { Row } from "@tanstack/react-table";
+import { useRouter } from "next/navigation";
 import {
   MoreHorizontal,
   EyeIcon,
@@ -379,15 +379,15 @@ import {
   ShieldAlert,
   Package,
   Clock,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -397,129 +397,182 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { useToast } from "@/hooks/use-toast"
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
 // Import the new deleteProductionOrder from your actions file
-import { deleteProductionOrder, updateProductionOrderStatus } from "@/lib/actions/production-order"
-import type { ProductionOrderColumn } from "@/types/admin/production-order"
-import { ProductionOrderActionDialog } from "./production-order-action-dialog"
-import { PreProductionVerificationDialog } from "./pre-production-verification-dialog"
-import { formatDate } from "@/lib/utils"
+import {
+  deleteProductionOrder,
+  updateProductionOrderStatus,
+  softDeleteProductionOrder,
+} from "@/lib/actions/production-order";
+import type { ProductionOrderColumn } from "@/types/admin/production-order";
+import { ProductionOrderActionDialog } from "./production-order-action-dialog";
+import { PreProductionVerificationDialog } from "./pre-production-verification-dialog";
+import { formatDate } from "@/lib/utils";
 
 interface DataTableRowActionsProps {
-  row: Row<ProductionOrderColumn>
-  onSuccess?: () => Promise<void>
+  row: Row<ProductionOrderColumn>;
+  onSuccess?: () => Promise<void>;
 }
 
-export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps) {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [verificationDialogOpen, setVerificationDialogOpen] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [confirmationText, setConfirmationText] = useState("")
+export function DataTableRowActions({
+  row,
+  onSuccess,
+}: DataTableRowActionsProps) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmationText, setConfirmationText] = useState("");
+  const [trashDialogOpen, setTrashDialogOpen] = useState(false);
+  const [trashReason, setTrashReason] = useState("");
+  const [isTrashing, setIsTrashing] = useState(false);
 
-  const productionOrder = row.original
+  const productionOrder = row.original;
 
   const handleView = () => {
-    router.push(`/admin/production/${productionOrder.id}`)
-  }
+    router.push(`/admin/production/${productionOrder.id}`);
+  };
 
   const handleStartProduction = async (notes?: string) => {
     // This will be called from the verification dialog
     try {
       // The updateProductionOrderStatus is already imported from "@/lib/actions/production-order"
-      await updateProductionOrderStatus(productionOrder.id, "IN_PROGRESS", notes)
+      await updateProductionOrderStatus(
+        productionOrder.id,
+        "IN_PROGRESS",
+        notes,
+      );
 
       toast({
         title: "✅ Production Started",
         description: `Production for "${productionOrder.productName}" has been started successfully. ${notes ? `Notes: ${notes}` : ""}`,
-      })
+      });
 
       // Refresh the page to update the list
       if (onSuccess) {
-        await onSuccess()
+        await onSuccess();
       } else {
-        window.location.reload()
+        window.location.reload();
       }
     } catch (error) {
-      throw error // Re-throw to let the dialog handle it
+      throw error; // Re-throw to let the dialog handle it
     }
-  }
+  };
 
   const handleDelete = async () => {
     try {
-      setIsDeleting(true)
+      setIsDeleting(true);
       // Call the updated deleteProductionOrder action with confirmation text as notes
-      await deleteProductionOrder(productionOrder.id, `User confirmed deletion by typing "${confirmationText}"`)
+      await deleteProductionOrder(
+        productionOrder.id,
+        `User confirmed deletion by typing "${confirmationText}"`,
+      );
 
       toast({
         title: "✅ Success",
         description: `Production order "${productionOrder.productName}" has been deleted successfully`,
-      })
+      });
 
-      setDeleteDialogOpen(false)
-      setConfirmationText("")
+      setDeleteDialogOpen(false);
+      setConfirmationText("");
 
       // Refresh the page to update the list
       if (onSuccess) {
-        await onSuccess()
+        await onSuccess();
       } else {
-        window.location.reload()
+        window.location.reload();
       }
     } catch (error) {
       toast({
         title: "❌ Delete Failed",
-        description: error instanceof Error ? error.message : "Failed to delete production order",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to delete production order",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsDeleting(false)
+      setIsDeleting(false);
     }
-  }
+  };
 
   const handleCancelDelete = () => {
-    setDeleteDialogOpen(false)
-    setConfirmationText("")
-  }
+    setDeleteDialogOpen(false);
+    setConfirmationText("");
+  };
+
+  const handleMoveToTrash = async () => {
+    try {
+      setIsTrashing(true);
+      await softDeleteProductionOrder(
+        productionOrder.id,
+        trashReason || undefined,
+      );
+      toast({
+        title: "Moved to Trash",
+        description: `Production order moved to trash. Restorable within 30 days.`,
+      });
+      setTrashDialogOpen(false);
+      setTrashReason("");
+      if (onSuccess) await onSuccess();
+      else window.location.reload();
+    } catch (error) {
+      toast({
+        title: "Failed",
+        description:
+          error instanceof Error ? error.message : "Failed to move to trash",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTrashing(false);
+    }
+  };
 
   // Check if order can be deleted (business rules)
-  const canDelete = productionOrder.status === "PENDING" || productionOrder.status === "CANCELLED"
+  const canDelete =
+    productionOrder.status === "PENDING" ||
+    productionOrder.status === "CANCELLED";
   const deleteTooltip = canDelete
     ? "Delete this production order"
-    : "Cannot delete orders that are in progress or completed"
+    : "Cannot delete orders that are in progress or completed";
 
   // Check if confirmation text matches
-  const confirmationRequired = "DELETE"
-  const isConfirmationValid = confirmationText.toUpperCase() === confirmationRequired
+  const confirmationRequired = "DELETE";
+  const isConfirmationValid =
+    confirmationText.toUpperCase() === confirmationRequired;
 
   // Get status color
   const getStatusColor = (status: string) => {
     switch (status) {
       case "PENDING":
-        return "bg-yellow-500"
+        return "bg-yellow-500";
       case "IN_PROGRESS":
-        return "bg-blue-500"
+        return "bg-blue-500";
       case "COMPLETED":
-        return "bg-green-500"
+        return "bg-green-500";
       case "CANCELLED":
-        return "bg-red-500"
+        return "bg-red-500";
       default:
-        return "bg-gray-500"
+        return "bg-gray-500";
     }
-  }
+  };
 
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="flex h-8 w-8 p-0 data-[state=open]:bg-muted">
+          <Button
+            variant="ghost"
+            className="flex h-8 w-8 p-0 data-[state=open]:bg-muted"
+          >
             <span className="sr-only">Open menu</span>
             <MoreHorizontal className="h-4 w-4" />
           </Button>
@@ -532,13 +585,19 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
 
           {/* Pre-Production Verification - Only show for PENDING orders */}
           {productionOrder.status === "PENDING" && (
-            <DropdownMenuItem disabled={isLoading} onClick={() => setVerificationDialogOpen(true)}>
+            <DropdownMenuItem
+              disabled={isLoading}
+              onClick={() => setVerificationDialogOpen(true)}
+            >
               <ShieldAlert className="mr-2 h-3.5 w-3.5 text-blue-600" />
               Verify & Start
             </DropdownMenuItem>
           )}
 
-          <DropdownMenuItem disabled={isLoading} onClick={() => setDialogOpen(true)}>
+          <DropdownMenuItem
+            disabled={isLoading}
+            onClick={() => setDialogOpen(true)}
+          >
             <PlayCircle className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
             Manage
           </DropdownMenuItem>
@@ -546,13 +605,17 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
           <DropdownMenuSeparator />
 
           <DropdownMenuItem
-            disabled={!canDelete || isDeleting}
-            onClick={() => setDeleteDialogOpen(true)}
+            disabled={productionOrder.status === "IN_PROGRESS" || isTrashing}
+            onClick={() => setTrashDialogOpen(true)}
             className="text-destructive focus:text-destructive"
-            title={deleteTooltip}
+            title={
+              productionOrder.status === "IN_PROGRESS"
+                ? "Cannot trash in-progress orders"
+                : "Move to trash (restorable)"
+            }
           >
             <Trash2 className="mr-2 h-3.5 w-3.5" />
-            Delete
+            Move to Trash
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -575,6 +638,52 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
         // that allows it to log actions with specific notes.
         // For example: onUpdateStatus={(status, notes) => updateProductionOrderStatus(productionOrder.id, status, notes)}
       />
+
+      {/* Trash Dialog */}
+      <AlertDialog open={trashDialogOpen} onOpenChange={setTrashDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Move to Trash</AlertDialogTitle>
+            <AlertDialogDescription>
+              Move production order for &quot;{productionOrder.productName}
+              &quot; to trash. It will be permanently deleted after 30 days
+              unless restored.
+              {productionOrder.status === "IN_PROGRESS" && (
+                <p className="mt-2 text-destructive font-medium">
+                  ⚠ Cannot trash in-progress orders. Complete or cancel it
+                  first.
+                </p>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="px-6 pb-2 space-y-2">
+            <Label htmlFor="trash-reason-prod">Reason (optional)</Label>
+            <Input
+              id="trash-reason-prod"
+              value={trashReason}
+              onChange={(e) => setTrashReason(e.target.value)}
+              placeholder="Why is this production order being deleted?"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setTrashDialogOpen(false);
+                setTrashReason("");
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleMoveToTrash}
+              disabled={isTrashing || productionOrder.status === "IN_PROGRESS"}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isTrashing ? "Moving..." : "Move to Trash"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Enhanced Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={handleCancelDelete}>
@@ -604,19 +713,27 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">Product:</span>
-                      <p className="font-medium">{productionOrder.productName}</p>
+                      <p className="font-medium">
+                        {productionOrder.productName}
+                      </p>
                     </div>
                     <div>
                       <span className="text-muted-foreground">SKU:</span>
-                      <p className="font-mono text-xs">{productionOrder.productSku}</p>
+                      <p className="font-mono text-xs">
+                        {productionOrder.productSku}
+                      </p>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Quantity:</span>
-                      <p className="font-medium">{productionOrder.quantity} units</p>
+                      <p className="font-medium">
+                        {productionOrder.quantity} units
+                      </p>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Due Date:</span>
-                      <p className="text-xs">{formatDate(productionOrder.dueDate)}</p>
+                      <p className="text-xs">
+                        {formatDate(productionOrder.dueDate)}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -625,7 +742,9 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-destructive">
                     <AlertTriangle className="w-4 h-4" />
-                    <h4 className="font-medium">This action will permanently:</h4>
+                    <h4 className="font-medium">
+                      This action will permanently:
+                    </h4>
                   </div>
 
                   <ul className="text-sm space-y-2 pl-4">
@@ -635,7 +754,9 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
                     </li>
                     <li className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 bg-destructive rounded-full"></div>
-                      <span>Release any reserved materials back to inventory</span>
+                      <span>
+                        Release any reserved materials back to inventory
+                      </span>
                     </li>
                     <li className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 bg-destructive rounded-full"></div>
@@ -667,18 +788,25 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
                     onChange={(e) => setConfirmationText(e.target.value)}
                     placeholder="Type DELETE to confirm"
                     className={`${
-                      confirmationText && !isConfirmationValid ? "border-destructive focus:border-destructive" : ""
+                      confirmationText && !isConfirmationValid
+                        ? "border-destructive focus:border-destructive"
+                        : ""
                     }`}
                     disabled={isDeleting}
                   />
                   {confirmationText && !isConfirmationValid && (
-                    <p className="text-xs text-destructive">Please type &quot;DELETE&quot; exactly as shown above</p>
+                    <p className="text-xs text-destructive">
+                      Please type &quot;DELETE&quot; exactly as shown above
+                    </p>
                   )}
                 </div>
                 <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
-                  <p className="text-sm font-medium text-red-800">⚠️ This action cannot be undone</p>
+                  <p className="text-sm font-medium text-red-800">
+                    ⚠️ This action cannot be undone
+                  </p>
                   <p className="text-xs text-red-600 mt-1">
-                    Make sure you have backed up any important data before proceeding.
+                    Make sure you have backed up any important data before
+                    proceeding.
                   </p>
                 </div>
               </div>
@@ -686,7 +814,10 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
           </AlertDialogHeader>
 
           <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel disabled={isDeleting} onClick={handleCancelDelete}>
+            <AlertDialogCancel
+              disabled={isDeleting}
+              onClick={handleCancelDelete}
+            >
               <Clock className="mr-2 h-4 w-4" />
               Cancel
             </AlertDialogCancel>
@@ -711,5 +842,5 @@ export function DataTableRowActions({ row, onSuccess }: DataTableRowActionsProps
         </AlertDialogContent>
       </AlertDialog>
     </>
-  )
+  );
 }

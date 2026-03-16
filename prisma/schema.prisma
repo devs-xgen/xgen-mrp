@@ -56,22 +56,22 @@ model User {
 }
 
 model LoginHistory {
-  id            String    @id @default(cuid())
-  userId        String
-  ipAddress     String?
-  userAgent     String?   @db.Text
-  browser       String?
+  id             String   @id @default(cuid())
+  userId         String
+  ipAddress      String?
+  userAgent      String?  @db.Text
+  browser        String?
   browserVersion String?
-  device        String?
-  deviceType    String?   // desktop, mobile, tablet
-  os            String?
-  osVersion     String?
-  portal        String
-  loginAt       DateTime  @default(now())
-  successful    Boolean   @default(true)
-  failureReason String?
-  location      String?   // Optional: city, country from IP
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device         String?
+  deviceType     String? // desktop, mobile, tablet
+  os             String?
+  osVersion      String?
+  portal         String
+  loginAt        DateTime @default(now())
+  successful     Boolean  @default(true)
+  failureReason  String?
+  location       String? // Optional: city, country from IP
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([loginAt])
@@ -208,6 +208,9 @@ model Product {
   archivedAt               DateTime?
   archivedBy               String?
   archivedReason           String?
+  deletedAt                DateTime?
+  deletedBy                String?
+  deletedReason            String?
   isVariantTemplate        Boolean                 @default(false)
   parentProductId          String?
   variantAttributes        Json?
@@ -386,6 +389,9 @@ model Material {
   archivedAt            DateTime?
   archivedBy            String?
   archivedReason        String?
+  deletedAt             DateTime?
+  deletedBy             String?
+  deletedReason         String?
   boms                  BOM[]
   costVariances         CostVariance[]
   inventoryMovements    InventoryMovement[]
@@ -466,6 +472,9 @@ model ProductionOrder {
   materialVariance      Decimal                         @default(0) @db.Decimal(12, 2)
   completedQuantity     Int                             @default(0)
   completedAt           DateTime?
+  deletedAt             DateTime?
+  deletedBy             String?
+  deletedReason         String?
   billingStatements     BillingStatement[]
   costVariances         CostVariance[]
   delivery              DeliveryAssignment?
@@ -639,6 +648,9 @@ model CustomerOrder {
   updatedAt         DateTime           @updatedAt
   createdBy         String?
   modifiedBy        String?
+  deletedAt         DateTime?
+  deletedBy         String?
+  deletedReason     String?
   billingStatements BillingStatement[]
   customer          Customer           @relation(fields: [customerId], references: [id])
   orderLines        OrderLine[]
@@ -1369,7 +1381,7 @@ model SavedReport {
   name        String
   description String?
   createdBy   String
-  config      Json     // Report configuration (entities, fields, filters, joins, etc.)
+  config      Json // Report configuration (entities, fields, filters, joins, etc.)
   isPublic    Boolean  @default(false) // Share with other SuperAdmins
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -1382,26 +1394,26 @@ model SavedReport {
 
 // Organization/Client Management
 model Organization {
-  id                String              @id @default(cuid())
-  name              String
-  slug              String              @unique
-  contactEmail      String
-  contactPhone      String?
-  contactPerson     String?
-  address           String?
-  city              String?
-  country           String?
-  status            OrganizationStatus  @default(ACTIVE)
-  settings          Json?               // Custom settings (operating hours, defaults, branding)
-  resourceLimits    Json?               // { maxUsers, maxOrders, storageQuotaMB, etc. }
-  notes             String?             @db.Text
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  createdBy         String
-  archivedAt        DateTime?
-  archivedBy        String?
-  archivedReason    String?
-  creator           User                @relation("CreatedOrganizations", fields: [createdBy], references: [id])
+  id             String             @id @default(cuid())
+  name           String
+  slug           String             @unique
+  contactEmail   String
+  contactPhone   String?
+  contactPerson  String?
+  address        String?
+  city           String?
+  country        String?
+  status         OrganizationStatus @default(ACTIVE)
+  settings       Json? // Custom settings (operating hours, defaults, branding)
+  resourceLimits Json? // { maxUsers, maxOrders, storageQuotaMB, etc. }
+  notes          String?            @db.Text
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  createdBy      String
+  archivedAt     DateTime?
+  archivedBy     String?
+  archivedReason String?
+  creator        User               @relation("CreatedOrganizations", fields: [createdBy], references: [id])
 
   @@index([status])
   @@index([createdAt])
@@ -1419,26 +1431,26 @@ enum OrganizationStatus {
 model SystemMetric {
   id         String   @id @default(cuid())
   timestamp  DateTime @default(now())
-  metricType String   // "request", "error", "database", "memory", "disk"
-  metricName String   // Specific metric identifier (e.g., "api.response_time", "db.query_duration")
+  metricType String // "request", "error", "database", "memory", "disk"
+  metricName String // Specific metric identifier (e.g., "api.response_time", "db.query_duration")
   value      Float
-  metadata   Json?    // Additional context (endpoint, query, user, etc.)
+  metadata   Json? // Additional context (endpoint, query, user, etc.)
 
   @@index([timestamp, metricType])
   @@index([metricName])
 }
 
 model SystemError {
-  id               String    @id @default(cuid())
-  timestamp        DateTime  @default(now())
-  errorType        String    // Error class name or type
-  message          String
-  stackTrace       String?   @db.Text
-  context          Json?     // Request details, user, session info
-  resolved         Boolean   @default(false)
-  resolvedAt       DateTime?
-  resolvedBy       String?
-  resolutionNotes  String?
+  id              String    @id @default(cuid())
+  timestamp       DateTime  @default(now())
+  errorType       String // Error class name or type
+  message         String
+  stackTrace      String?   @db.Text
+  context         Json? // Request details, user, session info
+  resolved        Boolean   @default(false)
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  resolutionNotes String?
 
   @@index([timestamp, errorType])
   @@index([resolved])
@@ -1448,10 +1460,10 @@ model AlertRule {
   id          String         @id @default(cuid())
   name        String
   description String?
-  condition   Json           // { metric: "errorRate", operator: ">", threshold: 5, duration: 300 }
+  condition   Json // { metric: "errorRate", operator: ">", threshold: 5, duration: 300 }
   enabled     Boolean        @default(true)
-  channels    String[]       // ["email", "slack", "sms"]
-  recipients  String[]       // Email addresses, Slack webhook URLs, phone numbers
+  channels    String[] // ["email", "slack", "sms"]
+  recipients  String[] // Email addresses, Slack webhook URLs, phone numbers
   createdBy   String
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
@@ -1463,16 +1475,16 @@ model AlertRule {
 }
 
 model AlertHistory {
-  id              String    @id @default(cuid())
-  ruleId          String
-  triggeredAt     DateTime  @default(now())
-  resolvedAt      DateTime?
-  acknowledged    Boolean   @default(false)
-  acknowledgedBy  String?
-  acknowledgedAt  DateTime?
-  notificationsSent Json?   // Record of which notifications were sent
-  metricValue     Float?    // Value that triggered the alert
-  rule            AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  ruleId            String
+  triggeredAt       DateTime  @default(now())
+  resolvedAt        DateTime?
+  acknowledged      Boolean   @default(false)
+  acknowledgedBy    String?
+  acknowledgedAt    DateTime?
+  notificationsSent Json? // Record of which notifications were sent
+  metricValue       Float? // Value that triggered the alert
+  rule              AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
 
   @@index([ruleId])
   @@index([triggeredAt])

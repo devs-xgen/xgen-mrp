@@ -4582,6 +4582,7 @@ import { convertDecimals } from "@/lib/convertDecimals";
 export async function getProductionOrders() {
   try {
     const orders = await prisma.productionOrder.findMany({
+      where: { deletedAt: null },
       include: {
         product: {
           select: {
@@ -7817,4 +7818,104 @@ export async function exportProductionOrdersExcelAdmin(filters?: {
   const base64 = Buffer.from(buffer).toString("base64");
   const ts = new Date().toISOString().split("T")[0];
   return { base64, filename: `production-orders-export-${ts}.xlsx` };
+}
+
+// ---------------- Soft Delete / Trash ----------------
+
+export async function softDeleteProductionOrder(orderId: string, reason?: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const existing = await prisma.productionOrder.findUnique({ where: { id: orderId } });
+    if (!existing) throw new Error("Production order not found");
+    if (existing.deletedAt) throw new Error("Production order is already in trash");
+
+    if (existing.status === "IN_PROGRESS") {
+      throw new Error(
+        "Cannot move an in-progress production order to trash. Complete or cancel it first."
+      );
+    }
+
+    await prisma.productionOrder.update({
+      where: { id: orderId },
+      data: {
+        deletedAt: new Date(),
+        deletedBy: session.user.id,
+        deletedReason: reason ?? null,
+      },
+    });
+
+    revalidatePath("/admin/production");
+    revalidatePath("/admin/production/trash");
+    revalidatePath("/admin/customer-orders-v2");
+  } catch (error) {
+    console.error("Error soft-deleting production order:", error);
+    throw error instanceof Error ? error : new Error("Failed to move production order to trash");
+  }
+}
+
+export async function restoreProductionOrder(orderId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const existing = await prisma.productionOrder.findUnique({ where: { id: orderId } });
+    if (!existing) throw new Error("Production order not found");
+    if (!existing.deletedAt) throw new Error("Production order is not in trash");
+
+    await prisma.productionOrder.update({
+      where: { id: orderId },
+      data: {
+        deletedAt: null,
+        deletedBy: null,
+        deletedReason: null,
+      },
+    });
+
+    revalidatePath("/admin/production");
+    revalidatePath("/admin/production/trash");
+    revalidatePath("/admin/customer-orders-v2");
+  } catch (error) {
+    console.error("Error restoring production order:", error);
+    throw error instanceof Error ? error : new Error("Failed to restore production order");
+  }
+}
+
+export async function getTrashedProductionOrders() {
+  try {
+    const orders = await prisma.productionOrder.findMany({
+      where: { deletedAt: { not: null } },
+      include: {
+        product: true,
+        productVariant: true,
+        customerOrder: { include: { customer: true } },
+      },
+      orderBy: { deletedAt: "desc" },
+    });
+    return orders;
+  } catch (error) {
+    console.error("Error fetching trashed production orders:", error);
+    throw new Error("Failed to fetch trashed production orders");
+  }
+}
+
+export async function purgeExpiredTrashedProductionOrders() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+
+    const result = await prisma.productionOrder.deleteMany({
+      where: { deletedAt: { not: null, lte: cutoff } },
+    });
+
+    revalidatePath("/admin/production/trash");
+    return { purged: result.count };
+  } catch (error) {
+    console.error("Error purging expired trashed production orders:", error);
+    throw error instanceof Error ? error : new Error("Failed to purge expired production orders");
+  }
 }

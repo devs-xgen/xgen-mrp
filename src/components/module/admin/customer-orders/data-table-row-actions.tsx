@@ -6,6 +6,7 @@ import {
   Eye,
   MoreHorizontal,
   Trash,
+  Trash2,
   Factory,
   Plus,
   FileText,
@@ -22,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CustomerOrderColumn } from "@/types/admin/customer-order";
-// Server actions will be passed as props instead of direct imports
+import { softDeleteCustomerOrder } from "@/lib/actions/customer-order";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import {
@@ -58,6 +59,7 @@ interface DataTableRowActionsProps {
     id: string,
     reason: string,
   ) => Promise<{ success: boolean; message: string }>;
+  onTrash?: (id: string, reason?: string) => Promise<void>;
 }
 
 export function DataTableRowActions({
@@ -67,6 +69,9 @@ export function DataTableRowActions({
 }: DataTableRowActionsProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [showTrashDialog, setShowTrashDialog] = useState(false);
+  const [trashReason, setTrashReason] = useState("");
+  const [isTrashPending, setIsTrashPending] = useState(false);
   const [showProductionDialog, setShowProductionDialog] = useState(false);
   const [showCreateProductionDialog, setShowCreateProductionDialog] =
     useState(false);
@@ -102,6 +107,31 @@ export function DataTableRowActions({
         description: "Failed to delete customer order",
         variant: "destructive",
       });
+    }
+  };
+
+  const onMoveToTrash = async () => {
+    setIsTrashPending(true);
+    try {
+      await softDeleteCustomerOrder(customerOrder.id, trashReason || undefined);
+      toast({
+        title: "Moved to Trash",
+        description: `Order ${customerOrder.orderNumber} moved to trash. It can be restored within 30 days.`,
+      });
+      setShowTrashDialog(false);
+      setTrashReason("");
+      router.refresh();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to move order to trash",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTrashPending(false);
     }
   };
 
@@ -220,11 +250,11 @@ export function DataTableRowActions({
           </DropdownMenuItem>
 
           <DropdownMenuItem
-            onClick={() => setShowDeleteDialog(true)}
+            onClick={() => setShowTrashDialog(true)}
             className="text-destructive focus:text-destructive"
           >
-            <Trash className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
-            Delete
+            <Trash2 className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+            Move to Trash
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -286,6 +316,50 @@ export function DataTableRowActions({
             <Button onClick={onArchive} disabled={!archiveReason.trim()}>
               <Archive className="h-4 w-4 mr-2" />
               Archive Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Trash Dialog */}
+      <Dialog open={showTrashDialog} onOpenChange={setShowTrashDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move to Trash</DialogTitle>
+            <DialogDescription>
+              Move order {customerOrder.orderNumber} to trash. It will be
+              permanently deleted after 30 days unless restored.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="trashReason">Reason (optional)</Label>
+              <Textarea
+                id="trashReason"
+                placeholder="Why is this order being deleted?"
+                value={trashReason}
+                onChange={(e) => setTrashReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowTrashDialog(false);
+                setTrashReason("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={onMoveToTrash}
+              disabled={isTrashPending}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {isTrashPending ? "Moving..." : "Move to Trash"}
             </Button>
           </DialogFooter>
         </DialogContent>
