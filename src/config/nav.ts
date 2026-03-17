@@ -28,7 +28,6 @@ import {
   CreditCard,
   MessageCircle,
   Shield,
-  Trash2,
 } from "lucide-react";
 
 interface NavItem {
@@ -36,6 +35,8 @@ interface NavItem {
   label: string;
   href?: string;
   description?: string;
+  trashHref?: string;
+  trashLabel?: string;
   items?: NavItem[];
 }
 
@@ -55,24 +56,16 @@ export const adminNavItems: NavItem[] = [
         label: "Products",
         href: "/admin/products",
         description: "Manage product catalog",
-      },
-      {
-        icon: Trash2,
-        label: "Products Trash",
-        href: "/admin/products/trash",
-        description: "Recently deleted products",
+        trashHref: "/admin/products/trash",
+        trashLabel: "Products Trash",
       },
       {
         icon: Warehouse,
         label: "Materials",
         href: "/admin/materials",
         description: "Raw materials inventory management",
-      },
-      {
-        icon: Trash2,
-        label: "Materials Trash",
-        href: "/admin/materials/trash",
-        description: "Recently deleted materials",
+        trashHref: "/admin/materials/trash",
+        trashLabel: "Materials Trash",
       },
     ],
   },
@@ -84,12 +77,8 @@ export const adminNavItems: NavItem[] = [
         label: "Production Orders",
         href: "/admin/production",
         description: "Production orders and scheduling",
-      },
-      {
-        icon: Trash2,
-        label: "Production Trash",
-        href: "/admin/production/trash",
-        description: "Recently deleted production orders",
+        trashHref: "/admin/production/trash",
+        trashLabel: "Production Trash",
       },
       {
         label: "Work Centers",
@@ -122,12 +111,8 @@ export const adminNavItems: NavItem[] = [
         label: "Customer Orders V2",
         href: "/admin/customer-orders-v2",
         description: "Enhanced customer order management with advanced features",
-      },
-      {
-        icon: Trash2,
-        label: "Orders Trash",
-        href: "/admin/customer-orders-v2/trash",
-        description: "Recently deleted customer orders",
+        trashHref: "/admin/customer-orders-v2/trash",
+        trashLabel: "Orders Trash",
       },
     ],
   },

@@ -1,0 +1,4 @@
+interface:
+  display_name: "XGen Code Guard"
+  short_description: "Preserve repo patterns, React checks, and docs"
+  default_prompt: "Use $xgen-code-guard to make this XGen MRP change, run React Doctor when needed, and document the work in docs."

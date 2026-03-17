@@ -20,11 +20,16 @@ export const metadata: Metadata = {
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const page = Number(searchParams.page) || 1;
-  const limit = Number(searchParams.limit) || 10;
-  const search = typeof searchParams.search === "string" ? searchParams.search : "";
+  const resolvedSearchParams = await searchParams;
+  const pageParam = resolvedSearchParams.page;
+  const limitParam = resolvedSearchParams.limit;
+  const searchParam = resolvedSearchParams.search;
+
+  const page = Number(Array.isArray(pageParam) ? pageParam[0] : pageParam) || 1;
+  const limit = Number(Array.isArray(limitParam) ? limitParam[0] : limitParam) || 10;
+  const search = typeof searchParam === "string" ? searchParam : "";
 
   const usersData = await getPaginatedUsers({ page, limit, search });
 

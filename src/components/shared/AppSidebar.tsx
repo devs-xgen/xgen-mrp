@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Loader2,
   HelpCircle,
+  Trash2,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,12 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleOnboardingDialog } from "@/components/shared/RoleOnboardingDialog";
 import { UserRoleKey } from "@/data/onboarding-content";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // No props needed for AppSidebar
 
@@ -34,6 +41,9 @@ interface NavItem {
   label: string;
   href?: string;
   icon?: LucideIcon;
+  description?: string;
+  trashHref?: string;
+  trashLabel?: string;
   items?: NavItem[];
 }
 
@@ -56,29 +66,18 @@ function NavItem({
   openItemId,
   itemId,
 }: NavItemProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [localIsOpen, setLocalIsOpen] = useState(false);
   const pathname = usePathname();
-
-  useEffect(() => {
-    if (isCollapsed) {
-      setIsOpen(false);
-    }
-  }, [isCollapsed]);
-
-  // Control open state based on parent's control
-  useEffect(() => {
-    if (openItemId !== itemId && openItemId !== undefined) {
-      setIsOpen(false);
-    }
-  }, [openItemId, itemId]);
+  const isParentControlled = onToggle !== undefined;
+  const isOpen = !isCollapsed && (isParentControlled ? openItemId === itemId : localIsOpen);
 
   const handleToggle = (state: boolean) => {
-    setIsOpen(state);
-    if (onToggle && state) {
-      onToggle(itemId);
-    } else if (onToggle && !state) {
-      onToggle("");
+    if (isParentControlled) {
+      onToggle(state ? itemId : "");
+      return;
     }
+
+    setLocalIsOpen(state);
   };
 
   if (item.items) {
@@ -90,7 +89,7 @@ function NavItem({
             "min-w-0", // Prevent overflow in collapsed state
             isOpen
               ? "text-slate-100"
-              : "text-slate-300 hover:bg-slate-700 hover:text-slate-100"
+              : "text-slate-300 hover:bg-slate-700 hover:text-slate-100",
           )}
         >
           {item.icon && <item.icon className="h-5 w-5 shrink-0" />}
@@ -98,7 +97,7 @@ function NavItem({
             className={cn(
               "transition-all duration-300 truncate text-left",
               isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto flex-1",
-              item.icon ? "ml-3" : "ml-0"
+              item.icon ? "ml-3" : "ml-0",
             )}
           >
             {item.label}
@@ -107,7 +106,7 @@ function NavItem({
             <ChevronDown
               className={cn(
                 "h-4 w-4 transition-transform ml-auto",
-                isOpen && "transform rotate-180"
+                isOpen && "transform rotate-180",
               )}
             />
           )}
@@ -129,20 +128,22 @@ function NavItem({
             "data-[state=open]:opacity-100 data-[state=closed]:opacity-0",
             "data-[state=open]:translate-y-0 data-[state=closed]:-translate-y-1",
             // Named group to toggle descendant styles based on state
-            "group/cc"
+            "group/cc",
           )}
         >
-          <div className={cn(
-          "relative space-y-0.5 before:absolute before:left-0 before:top-1 before:bottom-1 before:w-px before:bg-slate-700/60 before:transition-opacity group-data-[state=closed]/cc:before:opacity-0 group-data-[state=open]/cc:before:opacity-100 min-w-0",
-          isCollapsed ? "ml-0 pl-0" : "ml-4 pl-3"
-        )}>
+          <div
+            className={cn(
+              "relative space-y-0.5 before:absolute before:left-0 before:top-1 before:bottom-1 before:w-px before:bg-slate-700/60 before:transition-opacity group-data-[state=closed]/cc:before:opacity-0 group-data-[state=open]/cc:before:opacity-100 min-w-0",
+              isCollapsed ? "ml-0 pl-0" : "ml-4 pl-3",
+            )}
+          >
             {item.items.map((subItem, idx) => (
               <div
                 key={`wrap-${subItem.href || subItem.label}`}
                 className={cn(
                   "transition-all duration-200",
                   "group-data-[state=open]/cc:opacity-100 group-data-[state=open]/cc:translate-y-0",
-                  "group-data-[state=closed]/cc:opacity-0 group-data-[state=closed]/cc:-translate-y-1"
+                  "group-data-[state=closed]/cc:opacity-0 group-data-[state=closed]/cc:-translate-y-1",
                 )}
                 style={{ transitionDelay: `${idx * 30}ms` }}
               >
@@ -163,36 +164,64 @@ function NavItem({
   }
 
   return (
-    <Link
-      href={item.href || "#"}
-      className={cn(
-        "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group min-w-0",
-        isActive
-          ? "bg-slate-700 text-slate-100"
-          : "text-slate-300 hover:bg-slate-700 hover:text-slate-100",
-        isChild && !isCollapsed && "pl-9"
-      )}
-    >
-      {item.icon && <item.icon className="h-5 w-5 shrink-0" />}
+    <div className="relative group min-w-0">
+      <Link
+        href={item.href || "#"}
+        className={cn(
+          "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors relative min-w-0",
+          isActive
+            ? "bg-slate-700 text-slate-100"
+            : "text-slate-300 hover:bg-slate-700 hover:text-slate-100",
+          isChild && !isCollapsed && "pl-9",
+          item.trashHref && !isCollapsed && "pr-11",
+        )}
+      >
+        {item.icon && <item.icon className="h-5 w-5 shrink-0" />}
 
-      {!isCollapsed || item.items ? (
-        <span
-          className={cn(
-            "transition-all duration-300 truncate text-left",
-            isCollapsed ? "opacity-50 w-0" : "opacity-100 w-auto flex-1",
-            item.icon ? "ml-3" : "ml-0"
-          )}
-        >
-          {item.label}
-        </span>
-      ) : null}
+        {!isCollapsed || item.items ? (
+          <span
+            className={cn(
+              "transition-all duration-300 truncate text-left",
+              isCollapsed ? "opacity-50 w-0" : "opacity-100 w-auto flex-1",
+              item.icon ? "ml-3" : "ml-0",
+            )}
+          >
+            {item.label}
+          </span>
+        ) : null}
 
-      {isCollapsed && !item.items && (
-        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-slate-700 text-slate-100 text-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-          {item.label}
-        </div>
+        {isCollapsed && !item.items && (
+          <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-slate-700 text-slate-100 text-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+            {item.label}
+          </div>
+        )}
+      </Link>
+
+      {item.trashHref && !isCollapsed && (
+        <TooltipProvider delayDuration={150}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                href={item.trashHref}
+                aria-label={item.trashLabel || `Open ${item.label} trash`}
+                className={cn(
+                  "absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-md transition-all",
+                  pathname === item.trashHref
+                    ? "opacity-100 bg-slate-600 text-slate-100"
+                    : "opacity-0 text-slate-400 group-hover:opacity-100 hover:bg-slate-600 hover:text-slate-100",
+                )}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>{item.trashLabel || `${item.label} Trash`}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
-    </Link>
+    </div>
   );
 }
 
@@ -215,7 +244,7 @@ export default function AppSidebar() {
   const [openItemId, setOpenItemId] = useState<string>("");
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
 
-  const normalizedRole = useMemo<UserRoleKey>(() => {
+  const normalizedRole = (() => {
     const currentRole = session?.user?.role?.toUpperCase() ?? "ADMIN";
     const allowedRoles: UserRoleKey[] = [
       "ADMIN",
@@ -229,12 +258,9 @@ export default function AppSidebar() {
     return allowedRoles.includes(currentRole as UserRoleKey)
       ? (currentRole as UserRoleKey)
       : "ADMIN";
-  }, [session?.user?.role]);
+  })();
 
-  const onboardingStorageKey = useMemo(
-    () => `xgen-onboarding-${normalizedRole.toLowerCase()}`,
-    [normalizedRole]
-  );
+  const onboardingStorageKey = `xgen-onboarding-${normalizedRole.toLowerCase()}`;
 
   // Get user data from session
   const user = session?.user;
@@ -262,12 +288,25 @@ export default function AppSidebar() {
   const navItems = getNavItems(role) as NavItem[];
 
   // Derived user display info
-  const displayName = user?.name || (user?.email ? user.email.split("@")[0] : "User");
+  const displayName =
+    user?.name || (user?.email ? user.email.split("@")[0] : "User");
   const initial = (displayName?.trim()?.charAt(0) || "U").toUpperCase();
 
   // Handle open/close of nav items to ensure only one is open at a time
   const handleNavItemToggle = (itemId: string) => {
     setOpenItemId(itemId);
+  };
+
+  const handleSidebarCollapseToggle = () => {
+    setIsCollapsed((previouslyCollapsed) => {
+      const nextIsCollapsed = !previouslyCollapsed;
+
+      if (nextIsCollapsed) {
+        setOpenItemId("");
+      }
+
+      return nextIsCollapsed;
+    });
   };
 
   useEffect(() => {
@@ -293,7 +332,7 @@ export default function AppSidebar() {
     <div
       className={cn(
         "flex h-full flex-col bg-neutral-800 text-slate-100 transition-all duration-300 relative border-r border-slate-700",
-        isCollapsed ? "w-20" : "w-64"
+        isCollapsed ? "w-20" : "w-64",
       )}
     >
       {/* Header section - Fixed at top */}
@@ -301,7 +340,7 @@ export default function AppSidebar() {
         <div
           className={cn(
             "transition-opacity duration-300",
-            isCollapsed ? "opacity-0" : "opacity-100"
+            isCollapsed ? "opacity-0" : "opacity-100",
           )}
         >
           {isLoading ? (
@@ -320,7 +359,7 @@ export default function AppSidebar() {
           variant="ghost"
           size="icon"
           className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-100"
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={handleSidebarCollapseToggle}
         >
           {isCollapsed ? (
             <ChevronRight className="h-5 w-5" />
@@ -359,7 +398,7 @@ export default function AppSidebar() {
           <div
             className={cn(
               "text-sm text-slate-400 px-3 py-2 flex items-center",
-              isCollapsed && "justify-center"
+              isCollapsed && "justify-center",
             )}
           >
             {!isCollapsed && "No navigation items"}
@@ -372,7 +411,7 @@ export default function AppSidebar() {
       <div
         className={cn(
           "p-4 border-t border-slate-700 flex-shrink-0",
-          isCollapsed ? "items-center" : ""
+          isCollapsed ? "items-center" : "",
         )}
       >
         {/* Profile section */}
@@ -387,7 +426,9 @@ export default function AppSidebar() {
                 </Avatar>
                 <div className="min-w-0">
                   <div className="font-medium truncate">{displayName}</div>
-                  <div className="text-xs text-slate-400 truncate">{portalType} • {role || "User"}</div>
+                  <div className="text-xs text-slate-400 truncate">
+                    {portalType} • {role || "User"}
+                  </div>
                 </div>
               </div>
             ) : (

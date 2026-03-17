@@ -1,0 +1,4 @@
+interface:
+  display_name: "Feature Scope Planner"
+  short_description: "Plan repo-aware feature scopes like a senior PM"
+  default_prompt: "Use $feature-scope-planner to inspect this repo and produce a structured feature plan before implementation."
