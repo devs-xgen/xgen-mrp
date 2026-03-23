@@ -13,6 +13,7 @@ import { UnitOfMeasureDialog } from "@/components/module/admin/materials/unit-of
 import { revalidatePath } from "next/cache";
 import MaterialsDashboard from "@/components/module/admin/materials/materialDashboard";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import {
   PageContainer,
   PageHeader,
@@ -92,7 +93,7 @@ export default async function MaterialsPage({
           </PageHeaderMain>
           <PageHeaderActions>
             <Button variant="outline" size="sm" asChild>
-              <a href="/admin/materials/archived">View Archived</a>
+              <Link href="/admin/materials/trash">View Trash</Link>
             </Button>
             <MaterialTypeDialog
               materialTypes={materialTypes}
@@ -103,7 +104,7 @@ export default async function MaterialsPage({
               onSuccess={revalidateData}
             />
             <Button size="sm" asChild>
-              <a href="/admin/materials/create">Add Material</a>
+              <Link href="/admin/materials/create">Add Material</Link>
             </Button>
           </PageHeaderActions>
         </PageHeader>
@@ -156,7 +157,7 @@ export default async function MaterialsPage({
               There was an error loading the materials management page. Please try again later.
             </p>
             <Button asChild>
-              <a href="/admin/materials">Try Again</a>
+              <Link href="/admin/materials">Try Again</Link>
             </Button>
           </div>
         </div>

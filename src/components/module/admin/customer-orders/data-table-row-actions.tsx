@@ -5,8 +5,6 @@ import { Row } from "@tanstack/react-table";
 import {
   Eye,
   MoreHorizontal,
-  Trash,
-  Trash2,
   Factory,
   Plus,
   FileText,
@@ -27,16 +25,6 @@ import { softDeleteCustomerOrder } from "@/lib/actions/customer-order";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -54,72 +42,31 @@ import { ViewBillingDocumentsDialog } from "./view-billing-documents-dialog";
 
 interface DataTableRowActionsProps {
   row: Row<CustomerOrderColumn>;
-  onDelete?: (id: string) => Promise<void>;
-  onArchive?: (
-    id: string,
-    reason: string,
-  ) => Promise<{ success: boolean; message: string }>;
-  onTrash?: (id: string, reason?: string) => Promise<void>;
 }
 
-export function DataTableRowActions({
-  row,
-  onDelete: onDeleteProp,
-  onArchive: onArchiveProp,
-}: DataTableRowActionsProps) {
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
-  const [showTrashDialog, setShowTrashDialog] = useState(false);
-  const [trashReason, setTrashReason] = useState("");
-  const [isTrashPending, setIsTrashPending] = useState(false);
+  const [archiveReason, setArchiveReason] = useState("");
+  const [isArchivePending, setIsArchivePending] = useState(false);
   const [showProductionDialog, setShowProductionDialog] = useState(false);
   const [showCreateProductionDialog, setShowCreateProductionDialog] =
     useState(false);
   const [showCreateBillingDialog, setShowCreateBillingDialog] = useState(false);
   const [showViewBillingDialog, setShowViewBillingDialog] = useState(false);
-  const [archiveReason, setArchiveReason] = useState("");
   const { toast } = useToast();
   const router = useRouter();
   const customerOrder = row.original;
 
-  const onDelete = async () => {
-    if (!onDeleteProp) {
-      toast({
-        title: "Error",
-        description: "Delete function not available",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const onArchive = async () => {
+    setIsArchivePending(true);
     try {
-      await onDeleteProp(customerOrder.id);
+      await softDeleteCustomerOrder(customerOrder.id, archiveReason || undefined);
       toast({
-        title: "Success",
-        description: "Customer order deleted successfully",
+        title: "Order Archived",
+        description: `Order ${customerOrder.orderNumber} moved to Trash. It can be restored within 30 days.`,
       });
-      setShowDeleteDialog(false);
-      // Refresh the page to update the list
-      router.refresh();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete customer order",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const onMoveToTrash = async () => {
-    setIsTrashPending(true);
-    try {
-      await softDeleteCustomerOrder(customerOrder.id, trashReason || undefined);
-      toast({
-        title: "Moved to Trash",
-        description: `Order ${customerOrder.orderNumber} moved to trash. It can be restored within 30 days.`,
-      });
-      setShowTrashDialog(false);
-      setTrashReason("");
+      setShowArchiveDialog(false);
+      setArchiveReason("");
       router.refresh();
     } catch (error) {
       toast({
@@ -127,58 +74,11 @@ export function DataTableRowActions({
         description:
           error instanceof Error
             ? error.message
-            : "Failed to move order to trash",
+            : "Failed to archive order",
         variant: "destructive",
       });
     } finally {
-      setIsTrashPending(false);
-    }
-  };
-
-  const onArchive = async () => {
-    if (!archiveReason.trim()) {
-      toast({
-        title: "Archive Reason Required",
-        description: "Please provide a reason for archiving this order.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!onArchiveProp) {
-      toast({
-        title: "Error",
-        description: "Archive function not available",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const result = await onArchiveProp(customerOrder.id, archiveReason);
-
-      if (result.success) {
-        toast({
-          title: "Order Archived",
-          description: result.message,
-        });
-        setShowArchiveDialog(false);
-        setArchiveReason("");
-        // Refresh the page to update the list
-        router.refresh();
-      } else {
-        toast({
-          title: "Archive Failed",
-          description: result.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to archive customer order",
-        variant: "destructive",
-      });
+      setIsArchivePending(false);
     }
   };
 
@@ -246,39 +146,10 @@ export function DataTableRowActions({
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setShowArchiveDialog(true)}>
             <Archive className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
-            Archive Order
-          </DropdownMenuItem>
-
-          <DropdownMenuItem
-            onClick={() => setShowTrashDialog(true)}
-            className="text-destructive focus:text-destructive"
-          >
-            <Trash2 className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
-            Move to Trash
+            Archive
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the customer order{" "}
-              {customerOrder.orderNumber}. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={onDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Archive Dialog */}
       <Dialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
@@ -286,17 +157,17 @@ export function DataTableRowActions({
           <DialogHeader>
             <DialogTitle>Archive Order</DialogTitle>
             <DialogDescription>
-              Archive order {customerOrder.orderNumber} with complete history
-              preservation. The order will be moved to archives but can be
-              restored if needed.
+              Archive order {customerOrder.orderNumber} by moving it to Trash.
+              It can be restored within 30 days before being permanently
+              deleted.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="archiveReason">Archive Reason</Label>
+              <Label htmlFor="archiveReason">Reason (optional)</Label>
               <Textarea
                 id="archiveReason"
-                placeholder="Please provide a reason for archiving this order..."
+                placeholder="Why is this order being archived?"
                 value={archiveReason}
                 onChange={(e) => setArchiveReason(e.target.value)}
                 rows={3}
@@ -313,53 +184,9 @@ export function DataTableRowActions({
             >
               Cancel
             </Button>
-            <Button onClick={onArchive} disabled={!archiveReason.trim()}>
+            <Button onClick={onArchive} disabled={isArchivePending}>
               <Archive className="h-4 w-4 mr-2" />
-              Archive Order
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Trash Dialog */}
-      <Dialog open={showTrashDialog} onOpenChange={setShowTrashDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Move to Trash</DialogTitle>
-            <DialogDescription>
-              Move order {customerOrder.orderNumber} to trash. It will be
-              permanently deleted after 30 days unless restored.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="trashReason">Reason (optional)</Label>
-              <Textarea
-                id="trashReason"
-                placeholder="Why is this order being deleted?"
-                value={trashReason}
-                onChange={(e) => setTrashReason(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowTrashDialog(false);
-                setTrashReason("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={onMoveToTrash}
-              disabled={isTrashPending}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              {isTrashPending ? "Moving..." : "Move to Trash"}
+              {isArchivePending ? "Archiving..." : "Archive"}
             </Button>
           </DialogFooter>
         </DialogContent>

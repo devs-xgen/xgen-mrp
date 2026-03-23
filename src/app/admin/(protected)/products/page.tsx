@@ -16,6 +16,7 @@ import { ProductCategoryDialog } from "@/components/module/admin/products/produc
 import { InventoryFlowInfoSheet } from "@/components/module/admin/products/inventory-flow-info-sheet";
 import { revalidatePath } from "next/cache";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Products",
@@ -91,10 +92,10 @@ export default async function ProductsPage({
         <PageHeaderActions>
           <InventoryFlowInfoSheet />
           <Button variant="outline" size="sm" asChild>
-            <a href="/admin/products/archived">View Archived</a>
+            <Link href="/admin/products/trash">View Trash</Link>
           </Button>
           <Button asChild>
-            <a href="/admin/products/create">Create Product</a>
+            <Link href="/admin/products/create">Create Product</Link>
           </Button>
           <ProductCategoryDialog categories={categories as any} onSuccess={refreshData} />
         </PageHeaderActions>

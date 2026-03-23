@@ -9,7 +9,7 @@ import {
 } from "@/components/global/table/column-helpers";
 import { getTableConfig } from "@/components/global/table/table-utils";
 import { EditMaterialDialog } from "@/components/module/admin/materials/edit-material-dialog";
-import { deleteMaterial, softDeleteMaterial } from "@/lib/actions/materials";
+import { softDeleteMaterial } from "@/lib/actions/materials";
 import {
   Material,
   MaterialType,
@@ -23,7 +23,6 @@ import {
   Archive,
   Eye,
   Search,
-  Trash2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -91,28 +90,20 @@ function MaterialActionsCell({
   const { toast } = useToast();
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [confirmationText, setConfirmationText] = useState("");
-  const [reason, setReason] = useState("");
-  const [trashOpen, setTrashOpen] = useState(false);
-  const [trashReason, setTrashReason] = useState("");
-  const [isTrashing, setIsTrashing] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiveReason, setArchiveReason] = useState("");
+  const [isArchiving, setIsArchiving] = useState(false);
 
-  const confirmationRequired = "ARCHIVE";
-  const isConfirmationValid =
-    confirmationText.toUpperCase() === confirmationRequired;
-
-  const handleMoveToTrash = async () => {
+  const handleArchive = async () => {
     try {
-      setIsTrashing(true);
-      await softDeleteMaterial(material.id, trashReason || undefined);
+      setIsArchiving(true);
+      await softDeleteMaterial(material.id, archiveReason || undefined);
       toast({
-        title: "Moved to Trash",
-        description: `"${material.name}" moved to trash. Restorable within 30 days.`,
+        title: "Archived",
+        description: `"${material.name}" moved to Trash. Restorable within 30 days.`,
       });
-      setTrashOpen(false);
-      setTrashReason("");
+      setArchiveOpen(false);
+      setArchiveReason("");
       onRefresh();
     } catch (error) {
       toast({
@@ -120,37 +111,11 @@ function MaterialActionsCell({
         description:
           error instanceof Error
             ? error.message
-            : "Failed to move material to trash",
+            : "Failed to archive material",
         variant: "destructive",
       });
     } finally {
-      setIsTrashing(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    try {
-      setIsDeleting(true);
-      await deleteMaterial(material.id, reason || undefined);
-
-      toast({
-        title: "✅ Success",
-        description: `Material "${material.name}" has been archived successfully`,
-      });
-
-      setDeleteOpen(false);
-      setConfirmationText("");
-      setReason("");
-      onRefresh();
-    } catch (error) {
-      toast({
-        title: "❌ Archive Failed",
-        description:
-          error instanceof Error ? error.message : "Failed to archive material",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
+      setIsArchiving(false);
     }
   };
 
@@ -176,18 +141,11 @@ function MaterialActionsCell({
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onClick={() => setDeleteOpen(true)}
+            onClick={() => setArchiveOpen(true)}
             className="text-amber-600 focus:text-amber-600"
           >
             <Archive className="mr-2 h-3.5 w-3.5" />
             Archive
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => setTrashOpen(true)}
-            className="text-destructive focus:text-destructive"
-          >
-            <Trash2 className="mr-2 h-3.5 w-3.5" />
-            Move to Trash
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -202,20 +160,20 @@ function MaterialActionsCell({
         onSuccess={onRefresh}
       />
 
-      <AlertDialog open={trashOpen} onOpenChange={setTrashOpen}>
+      <AlertDialog open={archiveOpen} onOpenChange={setArchiveOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Move to Trash</AlertDialogTitle>
+            <AlertDialogTitle>Archive Material</AlertDialogTitle>
             <AlertDialogDescription>
-              Move &quot;{material.name}&quot; to trash. It will be permanently
-              deleted after 30 days unless restored.
+              Archive &quot;{material.name}&quot; by moving it to Trash. It can
+              be restored within 30 days before being permanently deleted.
               <div className="mt-3">
-                <Label htmlFor="trash-reason">Reason (optional)</Label>
+                <Label htmlFor="archive-reason">Reason (optional)</Label>
                 <Textarea
-                  id="trash-reason"
-                  value={trashReason}
-                  onChange={(e) => setTrashReason(e.target.value)}
-                  placeholder="Why is this material being deleted?"
+                  id="archive-reason"
+                  value={archiveReason}
+                  onChange={(e) => setArchiveReason(e.target.value)}
+                  placeholder="Why is this material being archived?"
                   rows={3}
                   className="mt-2"
                 />
@@ -225,67 +183,11 @@ function MaterialActionsCell({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleMoveToTrash}
-              disabled={isTrashing}
+              onClick={handleArchive}
+              disabled={isArchiving}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isTrashing ? "Moving..." : "Move to Trash"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-destructive">
-              Archive Material
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Archiving will hide &quot;{material.name}&quot; from listings and
-              prevent future use in orders, BOMs, or purchases. Existing records
-              that reference it will be preserved.
-              <div className="mt-4 space-y-4">
-                <div>
-                  <Label htmlFor="archive-reason">
-                    Archive Reason (optional)
-                  </Label>
-                  <Textarea
-                    id="archive-reason"
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    placeholder="Add a brief reason for archiving..."
-                    rows={3}
-                    className="mt-2"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="confirmation">
-                    Type{" "}
-                    <code className="bg-muted px-1 rounded">
-                      {confirmationRequired}
-                    </code>{" "}
-                    to confirm:
-                  </Label>
-                  <Input
-                    id="confirmation"
-                    value={confirmationText}
-                    onChange={(e) => setConfirmationText(e.target.value)}
-                    placeholder="Type ARCHIVE to confirm"
-                    className="mt-2"
-                  />
-                </div>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={!isConfirmationValid || isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? "Archiving..." : "Archive"}
+              {isArchiving ? "Archiving..." : "Archive"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

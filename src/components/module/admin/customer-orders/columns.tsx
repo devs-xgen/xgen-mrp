@@ -11,12 +11,7 @@ import { formatDate } from "@/lib/utils"
 import { formatCurrencyPHP } from "@/lib/constant"
 import { createSelectionColumn } from "@/components/global/table"
 
-interface ColumnsOptions {
-  onDelete?: (id: string) => Promise<void>
-  onArchive?: (id: string, reason: string) => Promise<{ success: boolean; message: string }>
-}
-
-export const createColumns = (options: ColumnsOptions = {}): ColumnDef<CustomerOrderColumn>[] => [
+export const createColumns = (): ColumnDef<CustomerOrderColumn>[] => [
   // Selection checkbox column
   createSelectionColumn<CustomerOrderColumn>(),
   {
@@ -170,11 +165,7 @@ export const createColumns = (options: ColumnsOptions = {}): ColumnDef<CustomerO
   {
     id: "actions",
     cell: ({ row }) => (
-      <DataTableRowActions 
-        row={row} 
-        onDelete={options.onDelete}
-        onArchive={options.onArchive}
-      />
+      <DataTableRowActions row={row} />
     ),
   },
 ]

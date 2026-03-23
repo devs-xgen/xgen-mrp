@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
     CustomerOrder,
@@ -11,13 +12,137 @@ import {
     createStatusColumn,
     createCurrencyColumn,
     createDateColumn,
-    createActionsColumn,
     createSortableHeader,
 } from "@/components/global/table";
-import { Eye, Edit, Factory, ClipboardCheck, Truck, CheckCircle2, PauseCircle, ExternalLink } from "lucide-react";
+import { Eye, Edit, Factory, ClipboardCheck, Truck, CheckCircle2, PauseCircle, ExternalLink, Archive, MoreHorizontal } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { softDeleteCustomerOrder } from "@/lib/actions/customer-order";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
+function CustomerOrderActionsCell({ order }: { order: CustomerOrder }) {
+    const router = useRouter();
+    const { toast } = useToast();
+    const [archiveOpen, setArchiveOpen] = useState(false);
+    const [archiveReason, setArchiveReason] = useState("");
+    const [isArchiving, setIsArchiving] = useState(false);
+
+    const handleArchive = async () => {
+        try {
+            setIsArchiving(true);
+            await softDeleteCustomerOrder(order.id, archiveReason || undefined);
+            toast({
+                title: "Order Archived",
+                description: `Order ${order.orderNumber} moved to Trash. It can be restored within 30 days.`,
+            });
+            setArchiveOpen(false);
+            setArchiveReason("");
+            router.refresh();
+        } catch (error) {
+            toast({
+                title: "Archive Failed",
+                description:
+                    error instanceof Error ? error.message : "Failed to archive order",
+                variant: "destructive",
+            });
+        } finally {
+            setIsArchiving(false);
+        }
+    };
+
+    return (
+        <>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        className="flex h-8 w-8 p-0 data-[state=open]:bg-muted"
+                    >
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Open menu</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[180px]">
+                    <DropdownMenuItem onClick={() => router.push(`/admin/customer-orders-v2/${order.id}`)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push(`/admin/customer-orders-v2/${order.id}/edit`)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit Order
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push(`/admin/customer-orders-v2/${order.id}/production-planning`)}>
+                        <Factory className="mr-2 h-4 w-4" />
+                        Production Planning
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                        onClick={() => setArchiveOpen(true)}
+                        className="text-amber-600 focus:text-amber-600"
+                    >
+                        <Archive className="mr-2 h-4 w-4" />
+                        Archive
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Archive Order</DialogTitle>
+                        <DialogDescription>
+                            Archive order {order.orderNumber} by moving it to Trash.
+                            It can be restored within 30 days before being permanently deleted.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2">
+                        <Label htmlFor={`archive-reason-${order.id}`}>Reason (optional)</Label>
+                        <Textarea
+                            id={`archive-reason-${order.id}`}
+                            placeholder="Why is this order being archived?"
+                            value={archiveReason}
+                            onChange={(event) => setArchiveReason(event.target.value)}
+                            rows={3}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setArchiveOpen(false);
+                                setArchiveReason("");
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button onClick={handleArchive} disabled={isArchiving}>
+                            <Archive className="mr-2 h-4 w-4" />
+                            {isArchiving ? "Archiving..." : "Archive"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
+    );
+}
 
 export const columns: ColumnDef<CustomerOrder>[] = [
     // Order Number
@@ -158,22 +283,8 @@ export const columns: ColumnDef<CustomerOrder>[] = [
         },
     },
 
-    // Actions
-    createActionsColumn<CustomerOrder>([
-        {
-            label: "View Details",
-            icon: Eye,
-            href: (order) => `/admin/customer-orders-v2/${order.id}`,
-        },
-        {
-            label: "Edit Order",
-            icon: Edit,
-            href: (order) => `/admin/customer-orders-v2/${order.id}/edit`,
-        },
-        {
-            label: "Production Planning",
-            icon: Factory,
-            href: (order) => `/admin/customer-orders-v2/${order.id}/production-planning`,
-        },
-    ]),
+    {
+        id: "actions",
+        cell: ({ row }) => <CustomerOrderActionsCell order={row.original} />,
+    },
 ];

@@ -8,7 +8,6 @@ import {
   Archive,
   Eye,
   MoreHorizontal,
-  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +30,6 @@ import type { Product, ProductCategory, Status } from "@prisma/client";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 import { Separator } from "@/components/ui/separator";
-import { DeleteProductDialog } from "./delete-product-dialog";
 import { useState, useTransition } from "react";
 import { softDeleteProduct } from "@/lib/actions/product";
 import { useToast } from "@/hooks/use-toast";
@@ -136,26 +134,13 @@ function ProductRowActions({ product, onSuccess }: ProductRowActionsProps) {
             Edit
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DeleteProductDialog
-            product={product}
-            trigger={
-              <DropdownMenuItem
-                onSelect={(e) => e.preventDefault()}
-                className="text-amber-600"
-              >
-                <Archive className="mr-2 h-4 w-4" />
-                Archive
-              </DropdownMenuItem>
-            }
-            onSuccess={onSuccess}
-          />
           <DropdownMenuItem
             onSelect={(e) => e.preventDefault()}
             onClick={() => setShowTrashDialog(true)}
-            className="text-destructive focus:text-destructive"
+            className="text-amber-600 focus:text-amber-600"
           >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Move to Trash
+            <Archive className="mr-2 h-4 w-4" />
+            Archive
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -163,10 +148,10 @@ function ProductRowActions({ product, onSuccess }: ProductRowActionsProps) {
       <Dialog open={showTrashDialog} onOpenChange={setShowTrashDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Move to Trash</DialogTitle>
+            <DialogTitle>Archive Product</DialogTitle>
             <DialogDescription>
-              Move &quot;{product.name}&quot; to trash. It will be permanently
-              deleted after 30 days unless restored.
+              Archive &quot;{product.name}&quot; by moving it to Trash. It can
+              be restored within 30 days before being permanently deleted.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
@@ -194,8 +179,8 @@ function ProductRowActions({ product, onSuccess }: ProductRowActionsProps) {
               onClick={handleMoveToTrash}
               disabled={isPending}
             >
-              <Trash2 className="h-4 w-4 mr-2" />
-              {isPending ? "Moving..." : "Move to Trash"}
+              <Archive className="h-4 w-4 mr-2" />
+              {isPending ? "Archiving..." : "Archive"}
             </Button>
           </DialogFooter>
         </DialogContent>

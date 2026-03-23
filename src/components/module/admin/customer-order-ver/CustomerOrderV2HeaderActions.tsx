@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, BarChart3, Archive, Factory, Plus } from "lucide-react";
+import { ChevronDown, BarChart3, Factory, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -38,9 +38,9 @@ export function CustomerOrderV2HeaderActions() {
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/admin/customer-orders-v2/archives">
-              <Archive className="mr-2 h-4 w-4" />
-              Archives
+            <Link href="/admin/customer-orders-v2/trash">
+              <Trash2 className="mr-2 h-4 w-4" />
+              Trash
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />

@@ -2,6 +2,17 @@
   "project": "XGen MRP",
   "entries": [
     {
+      "version": "1.5.18",
+      "date": "2026-03-23",
+      "changes": [
+        "UI/UX: Standardized active-list record removal for Products, Materials, Customer Orders V2, and Production Orders so tables now expose a single Archive action backed by the Trash flow",
+        "FIX: Removed mixed Archive, Move to Trash, and Delete combinations from in-scope admin table action menus to reduce confusion and align with the Trash lifecycle",
+        "UX: Products and Materials page header shortcuts now point to /trash instead of legacy /archived pages",
+        "UX: Customer Orders V2 header actions now link to Trash instead of Archives",
+        "STABILITY: Production Orders active table no longer carries the unreachable permanent-delete dialog flow; only the trash-backed archive path remains in the admin list UI"
+      ]
+    },
+    {
       "version": "1.5.17",
       "date": "2026-03-11",
       "changes": [
