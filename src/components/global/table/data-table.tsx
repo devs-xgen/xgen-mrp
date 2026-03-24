@@ -29,6 +29,34 @@ import { DataTableProps } from "./types";
 import { DataTableToolbar } from "./data-table-toolbar";
 import { DataTablePagination } from "./data-table-pagination";
 
+const EMPTY_FILTER_OPTIONS: DataTableProps<unknown, unknown>["filterOptions"] = [];
+
+function formatColumnLabel(column: ReturnType<typeof useReactTable<any>>["getAllColumns"][number]) {
+  const header = column.columnDef.header;
+
+  if (typeof header === "string") {
+    return header;
+  }
+
+  const sourceLabel =
+    (typeof column.columnDef.accessorKey === "string" && column.columnDef.accessorKey) ||
+    column.id;
+
+  return sourceLabel
+    .replace(/_/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function isActionColumn(column: ReturnType<typeof useReactTable<any>>["getAllColumns"][number]) {
+  if (column.id === "actions") {
+    return true;
+  }
+
+  const header = column.columnDef.header;
+  return typeof header === "string" && header.toLowerCase() === "actions";
+}
+
 export function DataTable<TData, TValue>({
   columns,
   data,
@@ -43,7 +71,7 @@ export function DataTable<TData, TValue>({
   pageSize = 10,
   className,
   emptyMessage = "No results found.",
-  filterOptions = [],
+  filterOptions = EMPTY_FILTER_OPTIONS,
   customToolbarActions,
   manualPagination = false,
   pageCount = -1,
@@ -107,7 +135,51 @@ export function DataTable<TData, TValue>({
         />
       )}
 
-      <div className="rounded-md border overflow-hidden">
+      <div className="space-y-3 md:hidden">
+        {rowsToRender?.length ? (
+          rowsToRender.map((row) => {
+            const visibleCells = row.getVisibleCells();
+            const actionCell = visibleCells.find((cell) => isActionColumn(cell.column));
+            const contentCells = visibleCells.filter((cell) => !isActionColumn(cell.column));
+
+            return (
+              <div
+                key={row.id}
+                data-state={row.getIsSelected() && "selected"}
+                className="rounded-xl border bg-card p-4 shadow-sm"
+              >
+                {actionCell && (
+                  <div className="mb-3 flex justify-end">
+                    {flexRender(actionCell.column.columnDef.cell, actionCell.getContext())}
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  {contentCells.map((cell) => (
+                    <div
+                      key={cell.id}
+                      className="grid gap-1 border-b border-border/60 pb-3 last:border-b-0 last:pb-0"
+                    >
+                      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {formatColumnLabel(cell.column)}
+                      </div>
+                      <div className="text-sm">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="rounded-xl border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
+            {emptyMessage}
+          </div>
+        )}
+      </div>
+
+      <div className="hidden overflow-hidden rounded-md border md:block">
         <Table>
           <TableHeader className="bg-muted/50">
             {table.getHeaderGroups().map((headerGroup) => (

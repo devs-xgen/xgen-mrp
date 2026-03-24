@@ -2,6 +2,15 @@
   "project": "XGen MRP",
   "entries": [
     {
+      "version": "1.5.19",
+      "date": "2026-03-24",
+      "changes": [
+        "UI/UX: Shared admin DataTable now switches to a mobile-friendly card layout on small screens instead of rendering a compressed table",
+        "UX: Mobile DataTable cards preserve per-row action menus so record actions remain accessible on phones and smaller devices",
+        "RESPONSIVE: Desktop and tablet table rendering remains unchanged while mobile users get clearer labels and stacked field content for easier scanning"
+      ]
+    },
+    {
       "version": "1.5.18",
       "date": "2026-03-23",
       "changes": [
