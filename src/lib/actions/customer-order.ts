@@ -2716,7 +2716,7 @@ export async function getTrashedCustomerOrders() {
       },
       orderBy: { deletedAt: "desc" },
     });
-    return orders;
+    return serializeDecimals(orders);
   } catch (error) {
     console.error("Error fetching trashed customer orders:", error);
     throw new Error("Failed to fetch trashed customer orders");
