@@ -4707,7 +4707,7 @@ export async function getProductionOrder(id: string) {
 export async function getProductionOrdersByCustomerOrder(customerOrderId: string) {
   try {
     const orders = await prisma.productionOrder.findMany({
-      where: { customerOrderId },
+      where: { customerOrderId, deletedAt: null },
       include: {
         product: {
           select: {
@@ -7495,6 +7495,8 @@ export async function getPaginatedProductionOrders({
 
     const where: any = {};
 
+    where.deletedAt = null;
+
     if (search) {
       where.OR = [
         { product: { name: { contains: search, mode: "insensitive" } } },
@@ -7575,13 +7577,20 @@ export async function getPaginatedProductionOrders({
 export async function getProductionStats() {
   try {
     const [total, completed, inProgress, pending, overdue] = await Promise.all([
-      prisma.productionOrder.count(),
-      prisma.productionOrder.count({ where: { status: "COMPLETED" } }),
-      prisma.productionOrder.count({ where: { status: "IN_PROGRESS" } }),
-      prisma.productionOrder.count({ where: { status: "PENDING" } }),
+      prisma.productionOrder.count({ where: { deletedAt: null } }),
+      prisma.productionOrder.count({
+        where: { status: "COMPLETED", deletedAt: null },
+      }),
+      prisma.productionOrder.count({
+        where: { status: "IN_PROGRESS", deletedAt: null },
+      }),
+      prisma.productionOrder.count({
+        where: { status: "PENDING", deletedAt: null },
+      }),
       prisma.productionOrder.count({
         where: {
           status: { not: "COMPLETED" },
+          deletedAt: null,
           dueDate: { lt: new Date() },
         },
       }),

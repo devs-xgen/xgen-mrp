@@ -104,14 +104,13 @@ function MaterialActionsCell({
       });
       setArchiveOpen(false);
       setArchiveReason("");
-      onRefresh();
+      await onRefresh();
+      router.refresh();
     } catch (error) {
       toast({
         title: "Failed",
         description:
-          error instanceof Error
-            ? error.message
-            : "Failed to archive material",
+          error instanceof Error ? error.message : "Failed to archive material",
         variant: "destructive",
       });
     } finally {

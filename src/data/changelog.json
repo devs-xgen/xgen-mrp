@@ -2,6 +2,17 @@
   "project": "XGen MRP",
   "entries": [
     {
+      "version": "1.5.20",
+      "date": "2026-03-30",
+      "changes": [
+        "FIX: Active Products, Materials, Customer Orders V2, and Production Orders pages now consistently exclude trashed records from paginated lists after archive actions",
+        "FIX: Materials, Customer Orders V2, and Production Orders dashboard/list stats now ignore soft-deleted rows so active totals match visible table results",
+        "STABILITY: Customer-order related loaders now exclude soft-deleted production orders to keep billing selectors, workflow summaries, and linked production views aligned with Trash state",
+        "UX: Materials archive flow now forces a stronger page refresh after success so archived rows disappear from the active table immediately",
+        "UX: Production Orders page now includes a View Trash shortcut to make the archive destination easier to reach"
+      ]
+    },
+    {
       "version": "1.5.19",
       "date": "2026-03-24",
       "changes": [

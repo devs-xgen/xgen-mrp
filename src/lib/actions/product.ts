@@ -1430,6 +1430,8 @@ export async function getPaginatedProducts({
 
     const where: Prisma.ProductWhereInput = {};
 
+    where.deletedAt = null;
+
     if (status) {
       where.status = status;
     } else {

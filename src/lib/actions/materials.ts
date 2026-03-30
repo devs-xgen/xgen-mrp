@@ -757,6 +757,8 @@ export async function getPaginatedMaterials({
 
     const where: Prisma.MaterialWhereInput = {};
 
+    where.deletedAt = null;
+
     if (status) {
       where.status = status;
     } else {
@@ -819,11 +821,16 @@ export async function getPaginatedMaterials({
 export async function getMaterialStats() {
   try {
     const [total, active, lowStock] = await Promise.all([
-      prisma.material.count({ where: { status: { not: Status.ARCHIVED } } }),
-      prisma.material.count({ where: { status: Status.ACTIVE } }),
+      prisma.material.count({
+        where: { status: { not: Status.ARCHIVED }, deletedAt: null },
+      }),
+      prisma.material.count({
+        where: { status: Status.ACTIVE, deletedAt: null },
+      }),
       prisma.material.findMany({
         where: {
           status: { not: Status.ARCHIVED },
+          deletedAt: null,
           currentStock: { lte: prisma.material.fields.minimumStockLevel },
         },
         select: { id: true },

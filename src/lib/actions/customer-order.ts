@@ -55,6 +55,8 @@ export async function getCustomerOrdersForBilling(options?: {
     // Build where clause
     const where: any = {};
 
+    where.deletedAt = null;
+
     // Search filter
     if (search) {
       where.OR = [
@@ -120,6 +122,9 @@ export async function getCustomerOrdersForBilling(options?: {
           },
         },
         productionOrders: {
+          where: {
+            deletedAt: null,
+          },
           include: {
             product: {
               select: {
@@ -2142,6 +2147,8 @@ export async function getPaginatedCustomerOrders({
 
     const where: any = {};
 
+    where.deletedAt = null;
+
     if (search) {
       where.OR = [
         { orderNumber: { contains: search, mode: "insensitive" } },
@@ -2197,6 +2204,9 @@ export async function getPaginatedCustomerOrders({
             },
           },
           productionOrders: {
+            where: {
+              deletedAt: null,
+            },
             include: {
               delivery: {
                 select: {
@@ -2388,21 +2398,23 @@ export async function getPaginatedCustomerOrders({
 export async function getCustomerOrderStats() {
   try {
     const [total, pending, completed, cancelled, totalAmountResult, pendingAmountResult] = await Promise.all([
-      prisma.customerOrder.count(),
-      prisma.customerOrder.count({ where: { status: "PENDING" } }),
-      prisma.customerOrder.count({ where: { status: "COMPLETED" } }),
-      prisma.customerOrder.count({ where: { status: "CANCELLED" } }),
+      prisma.customerOrder.count({ where: { deletedAt: null } }),
+      prisma.customerOrder.count({ where: { status: "PENDING", deletedAt: null } }),
+      prisma.customerOrder.count({ where: { status: "COMPLETED", deletedAt: null } }),
+      prisma.customerOrder.count({ where: { status: "CANCELLED", deletedAt: null } }),
       prisma.customerOrder.aggregate({
+        where: { deletedAt: null },
         _sum: { totalAmount: true },
       }),
       prisma.customerOrder.aggregate({
-        where: { status: "PENDING" },
+        where: { status: "PENDING", deletedAt: null },
         _sum: { totalAmount: true },
       }),
     ]);
 
     // Get most recent order
     const mostRecentOrder = await prisma.customerOrder.findFirst({
+      where: { deletedAt: null },
       orderBy: { createdAt: 'desc' },
       select: { orderNumber: true, createdAt: true }
     });
@@ -2416,6 +2428,7 @@ export async function getCustomerOrderStats() {
     const [currentMonthOrders, lastMonthOrders] = await Promise.all([
       prisma.customerOrder.count({
         where: {
+          deletedAt: null,
           createdAt: {
             gte: currentMonthStart
           }
@@ -2423,6 +2436,7 @@ export async function getCustomerOrderStats() {
       }),
       prisma.customerOrder.count({
         where: {
+          deletedAt: null,
           createdAt: {
             gte: lastMonthStart,
             lte: lastMonthEnd

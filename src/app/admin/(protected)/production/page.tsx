@@ -86,6 +86,9 @@ export default async function ProductionOrdersPage({
         </PageHeaderMain>
         <PageHeaderActions>
           <ProductionOrdersExportButton />
+          <Link href="/admin/production/trash">
+            <Button variant="outline">View Trash</Button>
+          </Link>
           <Link href="/admin/production/create">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
