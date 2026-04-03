@@ -11,6 +11,7 @@ This repository is not a thin demo. It has a broad operational surface:
 - 22 inspector pages
 - 9 delivery pages
 - 35 superadmin pages
+- 6 developer pages
 - 54 API route handlers
 - 59 Prisma models
 
@@ -35,8 +36,14 @@ The codebase has separate route trees and login pages for:
 - `/inspector`
 - `/delivery`
 - `/superadmin`
+- `/developer`
 
-The Prisma `Role` enum also includes `DEVELOPER`, and the auth layer contains a developer login path mapping.
+The Prisma `Role` enum includes `DEVELOPER` with hardcoded credentials:
+
+- Email: `dev@xgen-mrp.local`
+- Password: `dev123!@#`
+- Access: All portals via role-gated middleware
+- Bypasses rate limiting for system maintenance
 
 ### Shared Cross-Cutting Features
 
@@ -44,7 +51,8 @@ The Prisma `Role` enum also includes `DEVELOPER`, and the auth layer contains a 
 - Share-link and public document access for billing and production
 - PDF generation for billing and delivery documents
 - QR code generation and QR scanning
-- Support-ticket APIs and UI
+- Support-ticket system with real-time messaging (`/support`, `/api/support/**`)
+- Database Studio for backups and exports (`/developer/database-studio`)
 - Maintenance mode and enhanced error handling
 
 ## Dependency Inventory
@@ -154,6 +162,7 @@ The schema in `prisma/schema.prisma` defines 59 models. Major domain clusters:
 - Inventory: `InventoryItem`, `Location`, `InventoryMovement`, `MaterialReservation`, `MaterialRequest`
 - Commercial records: `Customer`, `CustomerOrder`, `OrderLine`, `Supplier`, `PurchaseOrder`, `Transaction`
 - Document and finance: `BillingStatement`, `SalesInvoice`, `DeliveryReceipt`, `ShareableLink`
+- Support system: `SupportTicket`, `SupportMessage` (with `SupportStatus`, `SupportPriority` enums)
 - Platform/admin: `Organization`, `SavedReport`, `SystemMetric`, `SystemError`, `AlertRule`, `AlertHistory`
 
 ## Codebase Assessment
@@ -173,6 +182,35 @@ The schema in `prisma/schema.prisma` defines 59 models. Major domain clusters:
 - The root `README.md` still contains stale references and some missing-file links
 - `electron/main.js` requires `electron-is-dev`, but that package is not listed in `package.json`; the Electron shell needs dependency reconciliation before it can be treated as fully documented/verified
 
+## Developer Portal Features
+
+### Database Studio (`/developer/database-studio`)
+
+Rate-limited endpoints for PostgreSQL operations:
+
+- `GET /api/developer/database/tables` - List all database tables with schema
+- `POST /api/developer/database/backup` - Stream SQL backup (full or selective tables)
+- `POST /api/developer/database/export` - Export to Excel (.xlsx)
+- `POST /api/developer/database/export-csv` - Export to CSV ZIP archive
+
+**Environment Variables:**
+
+- `PG_BACKUP_URL` - Direct PostgreSQL connection (required for backups, bypasses Prisma Accelerate)
+- `PG_DUMP_PATH` - Custom path to `pg_dump` executable
+
+### Support System APIs (`/api/support/**`)
+
+Universal support ticket system accessible by all roles:
+
+- `GET /api/support/tickets` - List tickets (filtered by role: users see own, admins see all)
+- `POST /api/support/tickets` - Create new ticket
+- `GET /api/support/tickets/[id]` - Get ticket details with messages
+- `PATCH /api/support/tickets/[id]` - Update status/priority (admin/developer only)
+- `POST /api/support/tickets/[id]/messages` - Add message to ticket
+
+**Status Flow:** OPEN → IN_PROGRESS → RESOLVED → CLOSED
+**Priority Levels:** LOW, MEDIUM, HIGH, URGENT
+
 ### Practical Reading Order For Engineers
 
 1. `package.json`
@@ -186,5 +224,6 @@ The schema in `prisma/schema.prisma` defines 59 models. Major domain clusters:
 
 - [Documentation Home](../README.md)
 - [Admin](../roles/admin/README.md)
+- [Developer](../roles/developer/README.md)
 - [Production](../features/production/README.md)
 - [Billing](../features/billing/README.md)

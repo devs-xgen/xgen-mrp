@@ -18,6 +18,8 @@ If you need one thing fast, start here:
 - Inspector portal scope and quality flows: [roles/inspector/README.md](./roles/inspector/README.md)
 - Delivery portal scope and delivery flows: [roles/delivery/README.md](./roles/delivery/README.md)
 - Superadmin portal scope and platform-wide control: [roles/superadmin/README.md](./roles/superadmin/README.md)
+- Developer portal scope and database tools: [roles/developer/README.md](./roles/developer/README.md)
+- Support ticket system (universal): [roles/admin/README.md](./roles/admin/README.md) (admin view) or `/support` route (all roles)
 - Planning, active scopes, and completed implementation notes: [plan-spec/README.md](./plan-spec/README.md)
 - Error and failure behavior: [ERROR_HANDLING.md](./ERROR_HANDLING.md)
 - Maintenance-mode behavior: [MAINTENANCE_MODE.md](./MAINTENANCE_MODE.md)
@@ -33,7 +35,8 @@ docs/
 │   ├── worker/
 │   ├── inspector/
 │   ├── delivery/
-│   └── superadmin/
+│   ├── superadmin/
+│   └── developer/                # DEVELOPER-only portal docs
 ├── plan-spec/                    # Planned, active, completed scopes and decisions
 │   ├── active/
 │   ├── completed/
@@ -53,6 +56,7 @@ Use the role docs first:
 - Inspector: [roles/inspector/README.md](./roles/inspector/README.md)
 - Delivery: [roles/delivery/README.md](./roles/delivery/README.md)
 - Superadmin: [roles/superadmin/README.md](./roles/superadmin/README.md)
+- Developer: [roles/developer/README.md](./roles/developer/README.md)
 
 ### 2. I need to know where implementation files live
 
@@ -166,6 +170,29 @@ Extra superadmin docs:
 - [roles/superadmin/QUICKSTART.md](./roles/superadmin/QUICKSTART.md)
 - [roles/superadmin/FEATURES.md](./roles/superadmin/FEATURES.md)
 - [roles/superadmin/technical/README.md](./roles/superadmin/technical/README.md)
+
+### Developer
+
+Start here: [roles/developer/README.md](./roles/developer/README.md)
+
+Primary feature areas:
+
+- Database Studio: PostgreSQL backups, exports, table management
+- System diagnostics: login history, audit logs
+- Support escalation: full access to all support tickets
+- Cross-portal user lookup and management
+
+Main code targets:
+
+- `src/app/developer/(protected)/**`
+- `src/components/module/developer/**`
+- `src/app/api/developer/**`
+
+Authentication notes:
+
+- Hardcoded credentials: `dev@xgen-mrp.local` / `dev123!@#`
+- Requires `DEVELOPER` role in database
+- Bypasses standard rate limiting
 
 ## Suggested Reading Order For AI Agents
 

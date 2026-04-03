@@ -56,17 +56,21 @@ This folder is the canonical planning area for implementation scopes that are no
 3. ~~Soft delete and restore~~ — **Done (v1.5.17)**
 4. ~~Customer orders homepage route fix~~ — **Done (v1.5.16)**
 5. ~~Delivery task view error~~ — **Done (v1.5.16)**
-6. Superadmin role scope decision
+6. ~~Customer support ticket system~~ — **Done**
+7. ~~Developer Portal with Database Studio~~ — **Done**
+8. Superadmin role scope decision
 
 ## Scope Index
 
-| Priority | Type      | Status          | Scope                                                                                   | File                                                                                                       | Notes                                                                                        |
+| Priority | Type      | Status          | Scope                                                                                   | File                                                                                                       | Notes                                                                                        | --- |
 | -------- | --------- | --------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --- |
 | P1       | Completed | Done            | Export and import stabilization across the system                                       | [completed/P1-export-import-stabilization.md](./completed/P1-export-import-stabilization.md)               | Shipped v1.5.14 — fixed fake Excel, added Customer Orders + Production Orders exports        |
 | P2       | Completed | Done            | Reset password entry points for all role logins                                         | [completed/P2-reset-password-entrypoints.md](./completed/P2-reset-password-entrypoints.md)                 | Shipped v1.5.15 — security guard, portal context, portal-aware back link, disclaimer in card |     |
 | P3       | Completed | Done            | Soft delete and restore for customer orders, production orders, materials, and products | [completed/P3-soft-delete-and-restore.md](./completed/P3-soft-delete-and-restore.md)                       | Shipped v1.5.17 — Trash pages, row actions, server actions, query filters, sidebar nav links |
 | P4       | Completed | Done            | Customer orders homepage 404 and route consistency                                      | [completed/P4-customer-orders-homepage-route-fix.md](./completed/P4-customer-orders-homepage-route-fix.md) | Shipped v1.5.16 — all stale /admin/customer-orders links + revalidatePaths updated to v2     |
 | P5       | Completed | Done            | Delivery task detail error investigation and stabilization                              | [completed/P5-delivery-task-view-error.md](./completed/P5-delivery-task-view-error.md)                     | Shipped v1.5.16 — hardened error handling, recoverable fallback UI, confirmed no dead nav    |
+| P6       | Completed | Done            | Customer support ticket system with real-time messaging                                 | [completed/P6-customer-support-system.md](./completed/P6-customer-support-system.md)                       | Shipped — SupportTicket, SupportMessage models, /support route, /api/support/\*\* APIs       |
+| P7       | Completed | Done            | Developer Portal with Database Studio                                                   | [completed/P7-developer-portal-database-studio.md](./completed/P7-developer-portal-database-studio.md)     | Shipped — DEVELOPER role, database backup/export, login history, /developer routes           |
 | D1       | Decision  | Decision Needed | Superadmin role scope review                                                            | [decisions/D1-superadmin-role-scope.md](./decisions/D1-superadmin-role-scope.md)                           | On hold pending discussion with boss ma'am                                                   |
 
 ## Planning File Template
